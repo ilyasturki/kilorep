@@ -15,14 +15,18 @@
         "lint:fix": "oxlint --fix"
     },
     "dependencies": {
+        "@nuxt/fonts": "0.14.0",
+        "@tailwindcss/vite": "^4.3.0",
         "@vueuse/nuxt": "14.3.0",
         "nuxt": "^4.4.6",
+        "tailwindcss": "^4.3.0",
         "vue": "^3.5.35",
         "vue-router": "^5.1.0"
     },
     "devDependencies": {
         "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
         "prettier": "^3.8.3",
-        "prettier-plugin-tailwindcss": "^0.8.0"
+        "prettier-plugin-tailwindcss": "^0.8.0",
+        "vue-tsc": "^3.3.3"
     }
 }
