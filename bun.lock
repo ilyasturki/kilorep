@@ -5,7 +5,6 @@
     "": {
       "name": "workout-manager",
       "dependencies": {
-        "@nuxt/fonts": "0.14.0",
         "@nuxt/ui": "^4.8.1",
         "@tailwindcss/vite": "^4.3.0",
         "@vueuse/nuxt": "14.3.0",
