@@ -25,6 +25,9 @@
     "lsp": {
         "tailwindcss-language-server": {
             "settings": {
+                // Nuxt UI: class completions in the `:ui` prop and in defineAppConfig({ ui })
+                "classAttributes": ["class", "ui"],
+                "classFunctions": ["defineAppConfig"],
                 "experimental": {
                     // https://www.tailwind-variants.org/docs/getting-started#intellisense-setup-optional
                     "classRegex": [
