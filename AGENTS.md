@@ -8,3 +8,5 @@ Workout session manager for gym and weight tracker. Simple and minimalist.
 - Tailwind CSS 4
 - Bun as package manager
 - UI components : NuxtUI
+- hosted on nixos vps
+- (later) native android mobile app that will use the nitro backend
