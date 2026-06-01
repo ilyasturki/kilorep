@@ -1,0 +1,15 @@
+{
+    "hooks": {
+        "PostToolUse": [
+            {
+                "matcher": "Write|Edit|MultiEdit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "file_path=$(jq -r '.tool_input.file_path'); [ -n \"$file_path\" ] && bunx prettier --write --ignore-unknown -- \"$file_path\""
+                    }
+                ]
+            }
+        ]
+    }
+}
