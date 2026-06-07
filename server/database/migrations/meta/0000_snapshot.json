@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bce2f322-0ca0-48cd-9fd2-408c190e148d",
+  "id": "523a70c5-66f3-4dda-9cc6-6788382c3dc0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "exercises": {
@@ -16,6 +16,20 @@
         },
         "name": {
           "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "equipment": {
+          "name": "equipment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

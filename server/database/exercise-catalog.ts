@@ -1,104 +1,598 @@
 import type { NewExercise } from './schema'
 
 /**
- * Default exercise catalog injected into the `exercises` table on first
- * startup. Ordered by muscle group as authored; edit freely — the seed step
- * inserts any new entries on the next launch and leaves existing rows alone.
+ * Default exercise catalog seeded into the `exercises` table on first startup.
+ *
+ * Curated to common gym movements only, grouped by the primary region they
+ * train. Each entry records its main piece of equipment, whether it is a
+ * compound or isolation movement, and the muscles it works with a relative
+ * intensity (`high` = prime mover, `medium`/`low` = assisting). Muscle names
+ * use specific heads (e.g. `upper chest`, `side delts`) so a flat bench and an
+ * incline press, or a bench press and a pec fly, read differently.
+ *
+ * The seed step inserts any new entries on the next launch and leaves existing
+ * rows alone, so edit freely.
  */
 export const EXERCISE_CATALOG: NewExercise[] = [
-    // chest
-    { name: 'bench press', muscles: 'chest' },
-    { name: 'bench press inclined', muscles: 'chest' },
-    { name: 'bench press declined', muscles: 'chest' },
-    { name: 'bench press dumbbell', muscles: 'chest' },
-    { name: 'bench press dumbbell 15°', muscles: 'chest' },
-    { name: 'bench press dumbbell 30°', muscles: 'chest' },
-    { name: 'bench press machine', muscles: 'chest' },
-    { name: 'pec fly bench', muscles: 'chest' },
-    { name: 'pec deck', muscles: 'chest' },
-    { name: 'pec deck machine', muscles: 'chest' },
-    { name: 'chest press', muscles: 'chest' },
-    { name: 'chest press inclined', muscles: 'chest' },
-    { name: 'dips large', muscles: 'chest' },
+    // ── Chest ────────────────────────────────────────────────────────────────
+    {
+        name: 'Barbell Bench Press',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'medium' },
+            { muscle: 'triceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Incline Barbell Bench Press',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'upper chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'medium' },
+            { muscle: 'triceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Dumbbell Bench Press',
+        equipment: 'dumbbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'medium' },
+            { muscle: 'triceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Incline Dumbbell Bench Press',
+        equipment: 'dumbbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'upper chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'medium' },
+            { muscle: 'triceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Machine Chest Press',
+        equipment: 'machine',
+        type: 'compound',
+        muscles: [
+            { muscle: 'chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'low' },
+            { muscle: 'triceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Incline Machine Chest Press',
+        equipment: 'machine',
+        type: 'compound',
+        muscles: [
+            { muscle: 'upper chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'low' },
+            { muscle: 'triceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Pec Deck Fly',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Cable Fly',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Incline Cable Fly',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'upper chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Dumbbell Fly',
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'chest', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Push-Up',
+        equipment: 'bodyweight',
+        type: 'compound',
+        muscles: [
+            { muscle: 'chest', intensity: 'high' },
+            { muscle: 'triceps', intensity: 'medium' },
+            { muscle: 'front delts', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Chest Dip',
+        equipment: 'bodyweight',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lower chest', intensity: 'high' },
+            { muscle: 'triceps', intensity: 'high' },
+            { muscle: 'front delts', intensity: 'medium' },
+        ],
+    },
 
-    // triceps
-    { name: 'dips', muscles: 'triceps' },
-    { name: 'dips machine', muscles: 'triceps' },
-    { name: 'cable overhead triceps', muscles: 'triceps' },
-    { name: 'cable overhead triceps rope', muscles: 'triceps' },
-    { name: 'dumbell overhead triceps', muscles: 'triceps' },
-    { name: 'skullcrusher', muscles: 'triceps' },
-    { name: 'cable triceps extension', muscles: 'triceps' },
-    { name: 'cable triceps extension rope', muscles: 'triceps' },
-    { name: 'cable triceps kickback', muscles: 'triceps' },
+    // ── Shoulders ────────────────────────────────────────────────────────────
+    {
+        name: 'Overhead Press',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'front delts', intensity: 'high' },
+            { muscle: 'side delts', intensity: 'medium' },
+            { muscle: 'triceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Dumbbell Shoulder Press',
+        equipment: 'dumbbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'front delts', intensity: 'high' },
+            { muscle: 'side delts', intensity: 'medium' },
+            { muscle: 'triceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Machine Shoulder Press',
+        equipment: 'machine',
+        type: 'compound',
+        muscles: [
+            { muscle: 'front delts', intensity: 'high' },
+            { muscle: 'side delts', intensity: 'medium' },
+            { muscle: 'triceps', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Arnold Press',
+        equipment: 'dumbbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'front delts', intensity: 'high' },
+            { muscle: 'side delts', intensity: 'medium' },
+            { muscle: 'triceps', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Dumbbell Lateral Raise',
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [{ muscle: 'side delts', intensity: 'high' }],
+    },
+    {
+        name: 'Cable Lateral Raise',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [{ muscle: 'side delts', intensity: 'high' }],
+    },
+    {
+        name: 'Machine Lateral Raise',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [{ muscle: 'side delts', intensity: 'high' }],
+    },
+    {
+        name: 'Reverse Pec Deck',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'rear delts', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Dumbbell Rear Delt Fly',
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'rear delts', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Face Pull',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'rear delts', intensity: 'high' },
+            { muscle: 'traps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Barbell Shrug',
+        equipment: 'barbell',
+        type: 'isolation',
+        muscles: [{ muscle: 'traps', intensity: 'high' }],
+    },
+    {
+        name: 'Dumbbell Shrug',
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [{ muscle: 'traps', intensity: 'high' }],
+    },
 
-    // shoulders
-    { name: 'shoulder press dumbbell', muscles: 'shoulders' },
-    { name: 'shoulder press machine', muscles: 'shoulders' },
-    { name: 'shoulder press barbell', muscles: 'shoulders' },
-    { name: 'lateral raise cable', muscles: 'shoulders' },
-    { name: 'lateral raise dumbell', muscles: 'shoulders' },
-    { name: 'reverse butterfly', muscles: 'shoulders' },
-    { name: 'reverse butterfly dumbell', muscles: 'shoulders' },
-    { name: 'cable reverse butterfly unilateral', muscles: 'shoulders' },
-    { name: 'face pull', muscles: 'shoulders' },
+    // ── Back ─────────────────────────────────────────────────────────────────
+    {
+        name: 'Deadlift',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lower back', intensity: 'high' },
+            { muscle: 'glutes', intensity: 'high' },
+            { muscle: 'hamstrings', intensity: 'high' },
+            { muscle: 'traps', intensity: 'medium' },
+            { muscle: 'lats', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Pull-Up',
+        equipment: 'bodyweight',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'medium' },
+            { muscle: 'biceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Chin-Up',
+        equipment: 'bodyweight',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'biceps', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Lat Pulldown',
+        equipment: 'cable',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'medium' },
+            { muscle: 'biceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Close-Grip Lat Pulldown',
+        equipment: 'cable',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'biceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Barbell Row',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'high' },
+            { muscle: 'traps', intensity: 'medium' },
+            { muscle: 'biceps', intensity: 'medium' },
+            { muscle: 'lower back', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Dumbbell Row',
+        equipment: 'dumbbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'medium' },
+            { muscle: 'biceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Seated Cable Row',
+        equipment: 'cable',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'high' },
+            { muscle: 'biceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'T-Bar Row',
+        equipment: 'machine',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'high' },
+            { muscle: 'traps', intensity: 'medium' },
+            { muscle: 'biceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Machine Row',
+        equipment: 'machine',
+        type: 'compound',
+        muscles: [
+            { muscle: 'lats', intensity: 'high' },
+            { muscle: 'rhomboids', intensity: 'high' },
+            { muscle: 'biceps', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Straight-Arm Pulldown',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [{ muscle: 'lats', intensity: 'high' }],
+    },
 
-    // back
-    { name: 'pull up pronated', muscles: 'back' },
-    { name: 'pull up neutral', muscles: 'back' },
-    { name: 'pull up wide', muscles: 'back' },
-    { name: 'pull up supinated', muscles: 'back' },
-    { name: 'lat pulldown pronated', muscles: 'back' },
-    { name: 'lat pulldown neutral', muscles: 'back' },
-    { name: 'lat pulldown wide', muscles: 'back' },
-    { name: 'lat pulldown close', muscles: 'back' },
-    { name: 'lat pulldown machine', muscles: 'back' },
-    { name: 'lat pulldown supinated', muscles: 'back' },
-    { name: 'lat pulldown cbum', muscles: 'back' },
-    { name: 'rowing barbell', muscles: 'back' },
-    { name: 'rowing cable', muscles: 'back' },
-    { name: 'rowing cable wide', muscles: 'back' },
-    { name: 'rowing machine', muscles: 'back' },
-    { name: 'rowing machine wide', muscles: 'back' },
-    { name: 'rowing machine 2', muscles: 'back' },
-    { name: 'rowing machine 2 wide', muscles: 'back' },
-    { name: 't bar row', muscles: 'back' },
-    { name: 'unilateral rowing', muscles: 'back' },
-    { name: 'pullover cable', muscles: 'back' },
+    // ── Biceps ───────────────────────────────────────────────────────────────
+    {
+        name: 'Barbell Curl',
+        equipment: 'barbell',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'biceps', intensity: 'high' },
+            { muscle: 'forearms', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Dumbbell Curl',
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'biceps', intensity: 'high' },
+            { muscle: 'forearms', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Hammer Curl',
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'brachialis', intensity: 'high' },
+            { muscle: 'biceps', intensity: 'medium' },
+            { muscle: 'forearms', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Incline Dumbbell Curl',
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [{ muscle: 'biceps', intensity: 'high' }],
+    },
+    {
+        name: 'Preacher Curl',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [{ muscle: 'biceps', intensity: 'high' }],
+    },
+    {
+        name: 'Cable Curl',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'biceps', intensity: 'high' },
+            { muscle: 'forearms', intensity: 'low' },
+        ],
+    },
 
-    // biceps
-    { name: '21s biceps curl barbell', muscles: 'biceps' },
-    { name: '21s biceps curl dumbell', muscles: 'biceps' },
-    { name: 'biceps curl barbell', muscles: 'biceps' },
-    { name: 'biceps curl machine', muscles: 'biceps' },
-    { name: 'larry scott', muscles: 'biceps' },
-    { name: 'hammer curl', muscles: 'biceps' },
-    { name: 'incline curl dumbell', muscles: 'biceps' },
-    { name: 'cable curl', muscles: 'biceps' },
+    // ── Triceps ──────────────────────────────────────────────────────────────
+    {
+        name: 'Close-Grip Bench Press',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'triceps', intensity: 'high' },
+            { muscle: 'chest', intensity: 'medium' },
+            { muscle: 'front delts', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Triceps Dip',
+        equipment: 'bodyweight',
+        type: 'compound',
+        muscles: [
+            { muscle: 'triceps', intensity: 'high' },
+            { muscle: 'chest', intensity: 'medium' },
+            { muscle: 'front delts', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Cable Triceps Pushdown',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [{ muscle: 'triceps', intensity: 'high' }],
+    },
+    {
+        name: 'Overhead Cable Triceps Extension',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [{ muscle: 'triceps', intensity: 'high' }],
+    },
+    {
+        name: 'Overhead Dumbbell Triceps Extension',
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [{ muscle: 'triceps', intensity: 'high' }],
+    },
+    {
+        name: 'Skull Crusher',
+        equipment: 'barbell',
+        type: 'isolation',
+        muscles: [{ muscle: 'triceps', intensity: 'high' }],
+    },
 
-    // quads
-    { name: 'squat', muscles: 'quads' },
-    { name: 'hack squat', muscles: 'quads' },
-    { name: 'squat smith machine', muscles: 'quads' },
-    { name: 'bulgarian split squat', muscles: 'quads' },
+    // ── Quads ────────────────────────────────────────────────────────────────
+    {
+        name: 'Back Squat',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'quads', intensity: 'high' },
+            { muscle: 'glutes', intensity: 'high' },
+            { muscle: 'hamstrings', intensity: 'medium' },
+            { muscle: 'lower back', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Front Squat',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'quads', intensity: 'high' },
+            { muscle: 'glutes', intensity: 'medium' },
+            { muscle: 'lower back', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Hack Squat',
+        equipment: 'machine',
+        type: 'compound',
+        muscles: [
+            { muscle: 'quads', intensity: 'high' },
+            { muscle: 'glutes', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Leg Press',
+        equipment: 'machine',
+        type: 'compound',
+        muscles: [
+            { muscle: 'quads', intensity: 'high' },
+            { muscle: 'glutes', intensity: 'high' },
+            { muscle: 'hamstrings', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Bulgarian Split Squat',
+        equipment: 'dumbbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'quads', intensity: 'high' },
+            { muscle: 'glutes', intensity: 'high' },
+            { muscle: 'hamstrings', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Walking Lunge',
+        equipment: 'dumbbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'quads', intensity: 'high' },
+            { muscle: 'glutes', intensity: 'high' },
+            { muscle: 'hamstrings', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Leg Extension',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [{ muscle: 'quads', intensity: 'high' }],
+    },
 
-    // glutes
-    { name: 'deadlift', muscles: 'glutes' },
-    { name: 'romanian deadlift', muscles: 'glutes' },
-    { name: 'deadlift machine', muscles: 'glutes' },
+    // ── Hamstrings & Glutes ──────────────────────────────────────────────────
+    {
+        name: 'Romanian Deadlift',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'hamstrings', intensity: 'high' },
+            { muscle: 'glutes', intensity: 'high' },
+            { muscle: 'lower back', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Seated Leg Curl',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [{ muscle: 'hamstrings', intensity: 'high' }],
+    },
+    {
+        name: 'Lying Leg Curl',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [{ muscle: 'hamstrings', intensity: 'high' }],
+    },
+    {
+        name: 'Hip Thrust',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [
+            { muscle: 'glutes', intensity: 'high' },
+            { muscle: 'hamstrings', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Hip Abduction',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [{ muscle: 'glutes', intensity: 'high' }],
+    },
 
-    // quads
-    { name: 'leg press', muscles: 'quads' },
-    { name: 'leg extension', muscles: 'quads' },
+    // ── Calves ───────────────────────────────────────────────────────────────
+    {
+        name: 'Standing Calf Raise',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [{ muscle: 'calves', intensity: 'high' }],
+    },
+    {
+        name: 'Seated Calf Raise',
+        equipment: 'machine',
+        type: 'isolation',
+        muscles: [{ muscle: 'calves', intensity: 'high' }],
+    },
 
-    // glutes
-    { name: 'leg curl seated', muscles: 'glutes' },
-    { name: 'leg curl lying', muscles: 'glutes' },
-
-    // calves
-    { name: 'calf standing', muscles: 'calves' },
-    { name: 'calf seated', muscles: 'calves' },
-
-    // glutes
-    { name: 'hip thrust', muscles: 'glutes' },
+    // ── Core ─────────────────────────────────────────────────────────────────
+    {
+        name: 'Hanging Leg Raise',
+        equipment: 'bodyweight',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'abs', intensity: 'high' },
+            { muscle: 'obliques', intensity: 'low' },
+        ],
+    },
+    {
+        name: 'Cable Crunch',
+        equipment: 'cable',
+        type: 'isolation',
+        muscles: [{ muscle: 'abs', intensity: 'high' }],
+    },
+    {
+        name: 'Plank',
+        equipment: 'bodyweight',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'abs', intensity: 'high' },
+            { muscle: 'obliques', intensity: 'medium' },
+        ],
+    },
+    {
+        name: 'Russian Twist',
+        equipment: 'bodyweight',
+        type: 'isolation',
+        muscles: [
+            { muscle: 'obliques', intensity: 'high' },
+            { muscle: 'abs', intensity: 'medium' },
+        ],
+    },
 ]
