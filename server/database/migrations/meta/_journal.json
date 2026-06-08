@@ -8,6 +8,27 @@
       "when": 1780783668110,
       "tag": "0000_shiny_senator_kelly",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1780840052181,
+      "tag": "0001_lovely_steel_serpent",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780841421323,
+      "tag": "0002_great_joystick",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1780841705094,
+      "tag": "0003_ambiguous_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

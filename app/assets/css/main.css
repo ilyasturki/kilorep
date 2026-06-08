@@ -1,2 +1,10 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
+
+/* Scale the rem base so every text utility grows proportionally; % keeps the
+   user's browser font-size accessibility setting intact. */
+@layer base {
+    html {
+        font-size: 112.5%;
+    }
+}
