@@ -165,8 +165,7 @@ function planBlocks(session: SessionWithEntries) {
 
 <template>
     <div>
-        <div class="mb-5 flex items-end justify-between gap-4">
-            <span class="kicker">Templates · {{ sessions?.length ?? 0 }}</span>
+        <div class="mb-5 flex items-end justify-end gap-4">
             <button
                 v-if="!builderOpen"
                 type="button"

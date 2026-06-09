@@ -75,8 +75,7 @@ async function confirmDelete() {
 
 <template>
     <div>
-        <div class="mb-5 flex items-end justify-between gap-4">
-            <span class="kicker">Log · {{ workouts?.length ?? 0 }}</span>
+        <div class="mb-5 flex items-end justify-end gap-4">
             <button
                 type="button"
                 class="btn-primary"
