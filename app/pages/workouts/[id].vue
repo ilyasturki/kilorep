@@ -68,15 +68,10 @@ const blocks = computed(() => {
 
 const totals = computed(() => workoutStats(draft.value))
 
-const duration = computed(() => {
-    const w = workout.value
-    if (!w?.completedAt) return null
-    const ms =
-        new Date(w.completedAt).getTime() - new Date(w.startedAt).getTime()
-    return Math.max(0, Math.round(ms / 60000))
-})
+const duration = computed(() =>
+    workout.value ? workoutDurationMin(workout.value) : null,
+)
 
-const pad = (n: number) => String(n).padStart(2, '0')
 const fmtWeight = (w: number | undefined | null) =>
     w == null ? '—' : `${w} kg`
 const exVolume = (ex: ExerciseDraft) => setVolume(ex.sets)
@@ -84,10 +79,6 @@ const exVolume = (ex: ExerciseDraft) => setVolume(ex.sets)
 // The workout's day is editable anytime (even once completed). Only the calendar
 // day moves: the original time-of-day is kept and the PUT shifts completedAt by
 // the same delta, so a moved workout keeps its duration.
-const toDateInput = (d: string | Date) => {
-    const date = new Date(d)
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
 const dateValue = ref(workout.value ? toDateInput(workout.value.startedAt) : '')
 const today = toDateInput(new Date())
 
@@ -280,8 +271,9 @@ async function changeDate() {
     cancelSave()
     saving.value = true
     try {
+        // Saves silently like the rest of the workout — no confirmation toast;
+        // only a failure (below) surfaces.
         await enqueue(() => persist(!editing.value))
-        toast.add({ title: 'Date updated', color: 'success' })
     } catch (error: unknown) {
         if (workout.value)
             dateValue.value = toDateInput(workout.value.startedAt)
@@ -309,14 +301,12 @@ async function changeDate() {
     </div>
     <div v-else>
         <div class="wk-stats mb-8">
-            <input
+            <UiDatePicker
                 v-model="dateValue"
-                type="date"
-                class="date-input"
                 :max="today"
                 :disabled="saving"
                 aria-label="Workout date"
-                @change="changeDate"
+                @update:model-value="changeDate"
             />
             <div class="wk-stat">
                 <span class="stat-num mono">{{ totals.volume }}</span>
