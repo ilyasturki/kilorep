@@ -1,22 +1,15 @@
 <script setup lang="ts">
-import {
-    Activity,
-    Dumbbell,
-    ListChecks,
-    PanelLeftClose,
-    PanelLeftOpen,
-} from 'lucide-vue-next'
-
 const route = useRoute()
+const header = usePageHeader()
 
 const collapsed = useCookie<boolean>('sidebar-collapsed', {
     default: () => false,
 })
 
 const links = [
-    { label: 'Workouts', to: '/workouts', icon: Activity },
-    { label: 'Sessions', to: '/sessions', icon: ListChecks },
-    { label: 'Exercises', to: '/exercises', icon: Dumbbell },
+    { label: 'Workouts', to: '/workouts', icon: 'tabler:activity' },
+    { label: 'Sessions', to: '/sessions', icon: 'tabler:list-check' },
+    { label: 'Exercises', to: '/exercises', icon: 'tabler:dumbbell' },
 ]
 
 const APP_NAME = 'Kilorep'
@@ -27,7 +20,10 @@ const section = computed(
 const title = computed(() => section.value ?? APP_NAME)
 
 useHead({
-    title: () => (section.value ? `${section.value} · ${APP_NAME}` : APP_NAME),
+    title: () => {
+        const name = header.value?.title ?? section.value
+        return name ? `${name} · ${APP_NAME}` : APP_NAME
+    },
 })
 </script>
 
@@ -52,8 +48,12 @@ useHead({
                     :aria-expanded="!collapsed"
                     @click="collapsed = !collapsed"
                 >
-                    <component
-                        :is="collapsed ? PanelLeftOpen : PanelLeftClose"
+                    <Icon
+                        :name="
+                            collapsed ?
+                                'tabler:layout-sidebar-left-expand'
+                            :   'tabler:layout-sidebar-left-collapse'
+                        "
                         :size="18"
                     />
                 </button>
@@ -68,8 +68,8 @@ useHead({
                     :class="{ on: route.path.startsWith(link.to) }"
                     :title="collapsed ? link.label : undefined"
                 >
-                    <component
-                        :is="link.icon"
+                    <Icon
+                        :name="link.icon"
                         :size="20"
                     />
                     <span>{{ link.label }}</span>
@@ -80,7 +80,36 @@ useHead({
         <div class="main">
             <header class="topbar">
                 <div class="topbar-l">
-                    <h1 class="topbar-title">{{ title }}</h1>
+                    <div
+                        v-if="header"
+                        class="topbar-head"
+                    >
+                        <NuxtLink
+                            v-if="header.back"
+                            :to="header.back"
+                            class="topbar-back"
+                            aria-label="Back"
+                        >
+                            <Icon
+                                name="tabler:chevron-left"
+                                :size="22"
+                            />
+                        </NuxtLink>
+                        <h1 class="topbar-title">{{ header.title }}</h1>
+                        <span
+                            v-if="header.tag"
+                            class="tag"
+                            :class="{ 'tag--accent': header.tag.accent }"
+                        >
+                            {{ header.tag.label }}
+                        </span>
+                    </div>
+                    <h1
+                        v-else
+                        class="topbar-title"
+                    >
+                        {{ title }}
+                    </h1>
                 </div>
             </header>
 
@@ -99,8 +128,8 @@ useHead({
                 class="tab"
                 :class="{ 'is-active': route.path.startsWith(link.to) }"
             >
-                <component
-                    :is="link.icon"
+                <Icon
+                    :name="link.icon"
                     :size="22"
                 />
                 <span class="tab-label">{{ link.label }}</span>
