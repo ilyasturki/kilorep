@@ -19,7 +19,6 @@
         "db:studio": "drizzle-kit studio"
     },
     "dependencies": {
-        "@nuxt/ui": "^4.8.2",
         "@tailwindcss/vite": "^4.3.0",
         "@vueuse/nuxt": "14.3.0",
         "better-sqlite3": "^12.10.0",

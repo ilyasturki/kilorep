@@ -1,4 +1,15 @@
 <script setup lang="ts">
+import {
+    Check,
+    Layers,
+    Link2,
+    Minus,
+    Pencil,
+    Plus,
+    Trash2,
+    X,
+} from 'lucide-vue-next'
+
 import type { Exercise, SessionWithEntries } from '~~/server/database/schema'
 
 const [{ data: sessions, status, refresh }, { data: exercises }] =
@@ -11,7 +22,7 @@ const exerciseItems = computed(() =>
     (exercises.value ?? []).map((e) => ({ label: e.name, value: e.id })),
 )
 
-type SetDraft = { reps: number | null }
+type SetDraft = { reps: number }
 type ExerciseDraft = { exerciseId: number | undefined; sets: SetDraft[] }
 type EntryDraft = { exercises: ExerciseDraft[] }
 type SessionDraft = { name: string; entries: EntryDraft[] }
@@ -145,297 +156,310 @@ const setSummary = (sets: { reps: number }[]) => {
             `${sets.length} × ${reps[0]}`
         :   reps.join(', ')
 }
+
+// Flatten a session into display blocks, numbering exercises 01..N across the
+// whole session (superset members included) like the design's plan readout.
+function planBlocks(session: SessionWithEntries) {
+    let n = 0
+    return session.entries.map((entry) => ({
+        key: entry.id,
+        isSuperset: entry.exercises.length > 1,
+        exercises: entry.exercises.map((se) => ({
+            key: se.id,
+            n: ++n,
+            name: exerciseName(se.exerciseId),
+            summary: setSummary(se.sets),
+        })),
+    }))
+}
 </script>
 
 <template>
-    <UContainer class="py-8">
-        <div class="mb-6 flex items-end justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-bold">Sessions</h1>
-            </div>
-            <UButton
+    <div>
+        <div class="mb-5 flex items-end justify-between gap-4">
+            <span class="kicker">Templates · {{ sessions?.length ?? 0 }}</span>
+            <button
                 v-if="!builderOpen"
-                icon="i-lucide-plus"
-                label="New session"
+                type="button"
+                class="btn-primary"
                 @click="openBuilder"
-            />
+            >
+                <Plus :size="16" /> New session
+            </button>
         </div>
 
         <!-- Builder -->
-        <UCard
+        <div
             v-if="builderOpen"
-            class="mb-8"
+            class="card mb-8"
         >
-            <template #header>
-                <h2 class="font-semibold">
+            <div class="card-head mb-4">
+                <span class="kicker kicker--accent">
                     {{ editingId ? 'Edit session' : 'New session' }}
-                </h2>
-            </template>
+                </span>
+            </div>
 
             <div class="space-y-4">
-                <UFormField
-                    label="Name"
-                    required
-                >
-                    <UInput
+                <div class="field">
+                    <label class="field-label">
+                        Name <span class="req">*</span>
+                    </label>
+                    <input
                         v-model="draft.name"
+                        class="input"
                         placeholder="Push Day"
-                        class="w-full"
                     />
-                </UFormField>
+                </div>
 
                 <div class="space-y-3">
                     <div
                         v-for="(entry, entryIndex) in draft.entries"
                         :key="entryIndex"
-                        class="rounded-lg border border-default p-3"
+                        class="builder-block"
+                        :class="{
+                            'builder-block--ss': entry.exercises.length > 1,
+                        }"
                     >
-                        <div class="mb-2 flex items-center justify-between">
-                            <UBadge
-                                :color="
-                                    entry.exercises.length > 1 ?
-                                        'primary'
-                                    :   'neutral'
-                                "
-                                variant="soft"
+                        <div class="mb-3 flex items-center justify-between">
+                            <span
+                                class="tag"
+                                :class="{
+                                    'tag--accent': entry.exercises.length > 1,
+                                }"
                             >
                                 {{
                                     entry.exercises.length > 1 ?
                                         'Superset'
                                     :   'Exercise'
                                 }}
-                            </UBadge>
-                            <UButton
-                                icon="i-lucide-trash-2"
-                                color="neutral"
-                                variant="ghost"
-                                size="xs"
+                            </span>
+                            <button
+                                type="button"
+                                class="icon-btn sm icon-btn--danger"
+                                aria-label="Remove block"
                                 @click="removeEntry(entryIndex)"
-                            />
+                            >
+                                <Trash2 :size="15" />
+                            </button>
                         </div>
 
-                        <div class="space-y-3">
+                        <div class="space-y-4">
                             <div
                                 v-for="(exercise, exIndex) in entry.exercises"
                                 :key="exIndex"
                                 class="space-y-2"
                             >
                                 <div class="flex items-center gap-2">
-                                    <USelectMenu
-                                        v-model="exercise.exerciseId"
-                                        :items="exerciseItems"
-                                        value-key="value"
-                                        placeholder="Pick an exercise"
-                                        class="flex-1"
-                                    />
-                                    <UButton
+                                    <div class="min-w-0 flex-1">
+                                        <UiSelect
+                                            v-model="exercise.exerciseId"
+                                            :items="exerciseItems"
+                                            placeholder="Pick an exercise"
+                                        />
+                                    </div>
+                                    <button
                                         v-if="entry.exercises.length > 1"
-                                        icon="i-lucide-x"
-                                        color="neutral"
-                                        variant="ghost"
-                                        size="xs"
+                                        type="button"
+                                        class="icon-btn"
+                                        aria-label="Remove exercise"
                                         @click="
                                             removeExerciseFromEntry(
                                                 entry,
                                                 exIndex,
                                             )
                                         "
-                                    />
+                                    >
+                                        <X :size="16" />
+                                    </button>
                                 </div>
 
-                                <div class="space-y-1 pl-1">
+                                <div class="space-y-2 pl-1">
                                     <div
                                         v-for="(set, setIndex) in exercise.sets"
                                         :key="setIndex"
-                                        class="flex items-center gap-2"
+                                        class="set-row"
                                     >
-                                        <span class="text-muted w-10 text-xs">
-                                            Set {{ setIndex + 1 }}
+                                        <span class="set-lab">
+                                            SET {{ setIndex + 1 }}
                                         </span>
-                                        <UInputNumber
+                                        <UiNumberField
                                             v-model="set.reps"
                                             :min="1"
-                                            placeholder="reps"
-                                            class="w-24"
                                         />
-                                        <span class="text-muted text-xs">
-                                            reps
-                                        </span>
-                                        <UButton
+                                        <span class="set-lab">reps</span>
+                                        <button
                                             v-if="exercise.sets.length > 1"
-                                            icon="i-lucide-minus"
-                                            color="neutral"
-                                            variant="ghost"
-                                            size="xs"
+                                            type="button"
+                                            class="icon-btn sm"
+                                            aria-label="Remove set"
                                             @click="
                                                 removeSet(exercise, setIndex)
                                             "
-                                        />
+                                        >
+                                            <Minus :size="15" />
+                                        </button>
                                     </div>
-                                    <UButton
-                                        icon="i-lucide-plus"
-                                        label="Add set"
-                                        color="neutral"
-                                        variant="link"
-                                        size="xs"
+                                    <button
+                                        type="button"
+                                        class="btn-link"
                                         @click="addSet(exercise)"
-                                    />
+                                    >
+                                        <Plus :size="14" /> Add set
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <UButton
-                            icon="i-lucide-link"
-                            label="Add exercise to superset"
-                            color="neutral"
-                            variant="link"
-                            size="xs"
-                            class="mt-2"
+                        <button
+                            type="button"
+                            class="btn-link mt-3"
                             @click="addExerciseToEntry(entry)"
-                        />
+                        >
+                            <Link2 :size="14" /> Add exercise to superset
+                        </button>
                     </div>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    <UButton
-                        icon="i-lucide-plus"
-                        label="Add exercise"
-                        color="neutral"
-                        variant="outline"
-                        size="sm"
+                    <button
+                        type="button"
+                        class="btn-ghost sm"
                         @click="addExercise"
-                    />
-                    <UButton
-                        icon="i-lucide-layers"
-                        label="Add superset"
-                        color="neutral"
-                        variant="outline"
-                        size="sm"
+                    >
+                        <Plus :size="15" /> Add exercise
+                    </button>
+                    <button
+                        type="button"
+                        class="btn-ghost sm"
                         @click="addSuperset"
-                    />
+                    >
+                        <Layers :size="15" /> Add superset
+                    </button>
                 </div>
             </div>
 
-            <template #footer>
-                <div class="flex justify-end gap-2">
-                    <UButton
-                        label="Cancel"
-                        color="neutral"
-                        variant="ghost"
-                        @click="closeBuilder"
-                    />
-                    <UButton
-                        :label="editingId ? 'Save changes' : 'Save session'"
-                        icon="i-lucide-check"
-                        :loading="saving"
-                        @click="save"
-                    />
-                </div>
-            </template>
-        </UCard>
+            <div class="modal-foot">
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="closeBuilder"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="saving"
+                    @click="save"
+                >
+                    <Check :size="16" />
+                    {{
+                        saving ? 'Saving…'
+                        : editingId ? 'Save changes'
+                        : 'Save session'
+                    }}
+                </button>
+            </div>
+        </div>
 
         <!-- List -->
         <div
-            v-if="status === 'pending'"
-            class="text-muted text-sm"
+            v-if="status === 'pending' && !sessions?.length"
+            class="empty"
         >
             Loading…
         </div>
         <div
             v-else-if="!sessions?.length"
-            class="rounded-lg border border-dashed border-default p-8 text-center"
+            class="empty"
         >
-            <p class="text-muted text-sm">
-                No sessions yet. Create your first routine.
-            </p>
+            No sessions yet. Create your first routine.
         </div>
         <div
             v-else
             class="space-y-4"
         >
-            <UCard
+            <div
                 v-for="session in sessions"
                 :key="session.id"
+                class="card"
             >
-                <template #header>
-                    <div class="flex items-center justify-between gap-4">
-                        <h3 class="font-semibold">{{ session.name }}</h3>
-                        <div class="flex items-center gap-1">
-                            <UButton
-                                icon="i-lucide-pencil"
-                                color="neutral"
-                                variant="ghost"
-                                size="xs"
-                                aria-label="Edit session"
-                                @click="editSession(session)"
-                            />
-                            <UButton
-                                icon="i-lucide-trash-2"
-                                color="error"
-                                variant="ghost"
-                                size="xs"
-                                aria-label="Delete session"
-                                @click="deleteTarget = session"
-                            />
+                <div class="card-head">
+                    <h3 class="session-name">{{ session.name }}</h3>
+                    <div class="flex items-center gap-1">
+                        <button
+                            type="button"
+                            class="icon-btn sm"
+                            aria-label="Edit session"
+                            @click="editSession(session)"
+                        >
+                            <Pencil :size="15" />
+                        </button>
+                        <button
+                            type="button"
+                            class="icon-btn sm icon-btn--danger"
+                            aria-label="Delete session"
+                            @click="deleteTarget = session"
+                        >
+                            <Trash2 :size="15" />
+                        </button>
+                    </div>
+                </div>
+
+                <div class="plan-list">
+                    <div
+                        v-for="block in planBlocks(session)"
+                        :key="block.key"
+                        class="plan-block"
+                        :class="{ 'plan-block--ss': block.isSuperset }"
+                    >
+                        <span
+                            v-if="block.isSuperset"
+                            class="ss-tag"
+                        >
+                            SUPERSET
+                        </span>
+                        <div
+                            v-for="ex in block.exercises"
+                            :key="ex.key"
+                            class="plan-ex"
+                        >
+                            <span class="plan-ex-idx">
+                                {{ String(ex.n).padStart(2, '0') }}
+                            </span>
+                            <span class="plan-ex-name">{{ ex.name }}</span>
+                            <span class="plan-ex-target">{{ ex.summary }}</span>
                         </div>
                     </div>
-                </template>
-
-                <ol class="space-y-2">
-                    <li
-                        v-for="entry in session.entries"
-                        :key="entry.id"
-                        class="rounded-md border border-default p-2"
-                    >
-                        <UBadge
-                            v-if="entry.exercises.length > 1"
-                            color="primary"
-                            variant="soft"
-                            size="sm"
-                            class="mb-1"
-                        >
-                            Superset
-                        </UBadge>
-                        <div
-                            v-for="se in entry.exercises"
-                            :key="se.id"
-                            class="flex items-baseline justify-between gap-3 text-sm"
-                        >
-                            <span class="font-medium">
-                                {{ exerciseName(se.exerciseId) }}
-                            </span>
-                            <span class="text-muted">
-                                {{ setSummary(se.sets) }}
-                            </span>
-                        </div>
-                    </li>
-                </ol>
-            </UCard>
+                </div>
+            </div>
         </div>
 
-        <UModal
+        <!-- Delete session -->
+        <UiModal
             :open="deleteTarget !== null"
             title="Delete session"
             :description="`Delete “${deleteTarget?.name}”? This can't be undone.`"
-            @update:open="deleteTarget = null"
+            @update:open="(open) => !open && (deleteTarget = null)"
         >
             <template #footer>
-                <div class="flex w-full justify-end gap-2">
-                    <UButton
-                        label="Cancel"
-                        color="neutral"
-                        variant="ghost"
-                        @click="deleteTarget = null"
-                    />
-                    <UButton
-                        label="Delete"
-                        color="error"
-                        icon="i-lucide-trash-2"
-                        :loading="deleting"
-                        @click="confirmDelete"
-                    />
-                </div>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="deleteTarget = null"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-danger"
+                    :disabled="deleting"
+                    @click="confirmDelete"
+                >
+                    <Trash2 :size="15" />
+                    {{ deleting ? 'Deleting…' : 'Delete' }}
+                </button>
             </template>
-        </UModal>
-    </UContainer>
+        </UiModal>
+    </div>
 </template>

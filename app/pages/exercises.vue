@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui'
+import { Plus, Trash2, X } from 'lucide-vue-next'
 
 import type {
     Equipment,
@@ -20,41 +20,32 @@ const {
     refresh,
 } = await useFetch<Exercise[]>('/api/exercises')
 
-// Each specific muscle head rolls up to a broad region, which drives its color.
-const muscleRegion: Record<string, string> = {
-    'upper chest': 'chest',
-    chest: 'chest',
-    'lower chest': 'chest',
-    'front delts': 'shoulders',
-    'side delts': 'shoulders',
-    'rear delts': 'shoulders',
-    lats: 'back',
-    rhomboids: 'back',
-    traps: 'back',
-    'lower back': 'back',
-    biceps: 'arms',
-    brachialis: 'arms',
-    forearms: 'arms',
-    triceps: 'arms',
-    quads: 'legs',
-    hamstrings: 'legs',
-    glutes: 'legs',
-    calves: 'legs',
-    abs: 'core',
-    obliques: 'core',
-}
+// The muscle vocabulary the form offers and the table knows how to render.
+const muscleOptions = [
+    'upper chest',
+    'chest',
+    'lower chest',
+    'front delts',
+    'side delts',
+    'rear delts',
+    'lats',
+    'rhomboids',
+    'traps',
+    'lower back',
+    'biceps',
+    'brachialis',
+    'forearms',
+    'triceps',
+    'quads',
+    'hamstrings',
+    'glutes',
+    'calves',
+    'abs',
+    'obliques',
+]
 
-const regionColor: Record<string, string> = {
-    chest: 'error',
-    shoulders: 'secondary',
-    back: 'info',
-    arms: 'primary',
-    legs: 'success',
-    core: 'warning',
-}
-
-// Intensity is encoded by how filled the badge is: solid = prime mover, down
-// to a thin outline for muscles that only assist.
+// Intensity is encoded by how filled the badge is: solid = prime mover, soft =
+// secondary, down to a thin outline for muscles that only assist.
 const intensityVariant: Record<MuscleIntensity, 'solid' | 'soft' | 'outline'> =
     {
         high: 'solid',
@@ -67,8 +58,10 @@ const intensityRank: Record<MuscleIntensity, number> = {
     low: 1,
 }
 
-// The add form offers the same muscle vocabulary the table knows how to color.
-const muscleOptions = Object.keys(muscleRegion)
+const sortedMuscles = (muscles: MuscleTarget[]) =>
+    muscles.toSorted(
+        (a, b) => intensityRank[b.intensity] - intensityRank[a.intensity],
+    )
 
 type MuscleField = { muscle: string; intensity: MuscleIntensity }
 const blankMuscle = (): MuscleField => ({ muscle: '', intensity: 'high' })
@@ -146,239 +139,208 @@ async function deleteExercise() {
         deleting.value = false
     }
 }
-
-const columns: TableColumn<Exercise>[] = [
-    {
-        accessorKey: 'name',
-        header: 'Name',
-        meta: { class: { td: 'font-medium' } },
-    },
-    {
-        accessorKey: 'equipment',
-        header: 'Equipment',
-        cell: ({ row }) =>
-            h(
-                resolveComponent('UBadge'),
-                {
-                    color: 'neutral',
-                    variant: 'subtle',
-                    class: 'capitalize',
-                },
-                () => row.getValue<string>('equipment'),
-            ),
-    },
-    {
-        accessorKey: 'type',
-        header: 'Type',
-        cell: ({ row }) => {
-            const type = row.getValue<string>('type')
-            return h(
-                resolveComponent('UBadge'),
-                {
-                    color: type === 'compound' ? 'primary' : 'neutral',
-                    variant: 'soft',
-                    class: 'capitalize',
-                },
-                () => type,
-            )
-        },
-    },
-    {
-        accessorKey: 'muscles',
-        header: 'Muscles',
-        cell: ({ row }) => {
-            const muscles = row
-                .getValue<MuscleTarget[]>('muscles')
-                .toSorted(
-                    (a, b) =>
-                        intensityRank[b.intensity] - intensityRank[a.intensity],
-                )
-            return h(
-                'div',
-                { class: 'flex flex-wrap gap-1' },
-                muscles.map((m) =>
-                    h(
-                        resolveComponent('UBadge'),
-                        {
-                            color:
-                                regionColor[muscleRegion[m.muscle] ?? '']
-                                ?? 'neutral',
-                            variant: intensityVariant[m.intensity],
-                            class: 'capitalize',
-                            title: `${m.muscle} — ${m.intensity} intensity`,
-                        },
-                        () => m.muscle,
-                    ),
-                ),
-            )
-        },
-    },
-    {
-        id: 'actions',
-        meta: { class: { td: 'w-0 text-right', th: 'text-right' } },
-        cell: ({ row }) =>
-            h(resolveComponent('UButton'), {
-                icon: 'i-lucide-trash-2',
-                color: 'error',
-                variant: 'ghost',
-                size: 'sm',
-                'aria-label': `Delete ${row.original.name}`,
-                onClick: () => {
-                    exerciseToDelete.value = row.original
-                },
-            }),
-    },
-]
 </script>
 
 <template>
-    <UContainer class="py-8">
-        <div class="mb-6 flex items-end justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-bold">Exercises</h1>
-            </div>
-
-            <UModal
-                v-model:open="isAddOpen"
-                title="Add exercise"
-                description="Add a new movement to your catalog."
+    <div>
+        <div class="mb-5 flex items-end justify-between gap-4">
+            <span class="kicker">Catalog · {{ exercises?.length ?? 0 }}</span>
+            <button
+                type="button"
+                class="btn-primary"
+                @click="isAddOpen = true"
             >
-                <UButton
-                    icon="i-lucide-plus"
-                    label="Add"
-                />
-
-                <template #body>
-                    <UForm
-                        :state="form"
-                        class="space-y-4"
-                        @submit.prevent="submit"
-                    >
-                        <UFormField
-                            label="Name"
-                            required
-                        >
-                            <UInput
-                                v-model="form.name"
-                                placeholder="e.g. Barbell Bench Press"
-                                class="w-full"
-                                autofocus
-                            />
-                        </UFormField>
-
-                        <div class="flex gap-4">
-                            <UFormField
-                                label="Equipment"
-                                class="flex-1"
-                            >
-                                <USelect
-                                    v-model="form.equipment"
-                                    :items="[...EQUIPMENT]"
-                                    class="w-full capitalize"
-                                />
-                            </UFormField>
-                            <UFormField
-                                label="Type"
-                                class="flex-1"
-                            >
-                                <USelect
-                                    v-model="form.type"
-                                    :items="[...EXERCISE_TYPES]"
-                                    class="w-full capitalize"
-                                />
-                            </UFormField>
-                        </div>
-
-                        <UFormField
-                            label="Muscles"
-                            required
-                        >
-                            <div class="space-y-2">
-                                <div
-                                    v-for="(m, index) in form.muscles"
-                                    :key="index"
-                                    class="flex gap-2"
-                                >
-                                    <USelect
-                                        v-model="m.muscle"
-                                        :items="muscleOptions"
-                                        placeholder="Muscle"
-                                        class="flex-1 capitalize"
-                                    />
-                                    <USelect
-                                        v-model="m.intensity"
-                                        :items="[...MUSCLE_INTENSITIES]"
-                                        class="w-32 capitalize"
-                                    />
-                                    <UButton
-                                        icon="i-lucide-x"
-                                        color="neutral"
-                                        variant="ghost"
-                                        :disabled="form.muscles.length === 1"
-                                        @click="removeMuscle(index)"
-                                    />
-                                </div>
-                                <UButton
-                                    icon="i-lucide-plus"
-                                    label="Add muscle"
-                                    color="neutral"
-                                    variant="soft"
-                                    size="sm"
-                                    @click="addMuscle"
-                                />
-                            </div>
-                        </UFormField>
-                    </UForm>
-                </template>
-
-                <template #footer>
-                    <div class="flex w-full justify-end gap-2">
-                        <UButton
-                            label="Cancel"
-                            color="neutral"
-                            variant="ghost"
-                            @click="isAddOpen = false"
-                        />
-                        <UButton
-                            label="Add exercise"
-                            :loading="submitting"
-                            :disabled="!canSubmit"
-                            @click="submit"
-                        />
-                    </div>
-                </template>
-            </UModal>
+                <Plus :size="16" /> Add
+            </button>
         </div>
 
-        <UTable
-            :data="exercises ?? []"
-            :columns="columns"
-            :loading="status === 'pending'"
-            class="rounded-lg border border-default"
-        />
+        <div class="xtable">
+            <div class="xhead">
+                <span class="kicker">Name</span>
+                <span class="kicker">Equipment</span>
+                <span class="kicker">Type</span>
+                <span class="kicker">Muscles</span>
+                <span />
+            </div>
 
-        <UModal
+            <div
+                v-if="status === 'pending' && !exercises?.length"
+                class="xempty"
+            >
+                Loading…
+            </div>
+            <div
+                v-else-if="!exercises?.length"
+                class="xempty"
+            >
+                No exercises yet. Add your first movement.
+            </div>
+
+            <div
+                v-for="exercise in exercises"
+                :key="exercise.id"
+                class="xrow"
+            >
+                <span class="xname">{{ exercise.name }}</span>
+                <div class="xtags">
+                    <span class="tag">{{ exercise.equipment }}</span>
+                    <span
+                        class="tag"
+                        :class="{ 'tag--accent': exercise.type === 'compound' }"
+                    >
+                        {{ exercise.type }}
+                    </span>
+                </div>
+                <div class="xmuscles">
+                    <span
+                        v-for="m in sortedMuscles(exercise.muscles)"
+                        :key="m.muscle"
+                        class="badge"
+                        :class="`badge--${intensityVariant[m.intensity]}`"
+                        :title="`${m.muscle} — ${m.intensity} intensity`"
+                    >
+                        {{ m.muscle }}
+                    </span>
+                </div>
+                <div class="xcell-actions">
+                    <button
+                        type="button"
+                        class="icon-btn sm icon-btn--danger"
+                        :aria-label="`Delete ${exercise.name}`"
+                        @click="exerciseToDelete = exercise"
+                    >
+                        <Trash2 :size="16" />
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add exercise -->
+        <UiModal
+            v-model:open="isAddOpen"
+            title="Add exercise"
+            description="Add a new movement to your catalog."
+        >
+            <form
+                class="space-y-4"
+                @submit.prevent="submit"
+            >
+                <div class="field">
+                    <label class="field-label">
+                        Name <span class="req">*</span>
+                    </label>
+                    <input
+                        v-model="form.name"
+                        class="input"
+                        placeholder="e.g. Barbell Bench Press"
+                    />
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="field flex-1">
+                        <label class="field-label">Equipment</label>
+                        <UiSelect
+                            v-model="form.equipment"
+                            :items="[...EQUIPMENT]"
+                        />
+                    </div>
+                    <div class="field flex-1">
+                        <label class="field-label">Type</label>
+                        <UiSelect
+                            v-model="form.type"
+                            :items="[...EXERCISE_TYPES]"
+                        />
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="field-label">
+                        Muscles <span class="req">*</span>
+                    </label>
+                    <div class="space-y-2">
+                        <div
+                            v-for="(m, index) in form.muscles"
+                            :key="index"
+                            class="flex gap-2"
+                        >
+                            <div class="min-w-0 flex-1">
+                                <UiSelect
+                                    v-model="m.muscle"
+                                    :items="muscleOptions"
+                                    placeholder="Muscle"
+                                />
+                            </div>
+                            <div class="w-32">
+                                <UiSelect
+                                    v-model="m.intensity"
+                                    :items="[...MUSCLE_INTENSITIES]"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                class="icon-btn"
+                                :disabled="form.muscles.length === 1"
+                                aria-label="Remove muscle"
+                                @click="removeMuscle(index)"
+                            >
+                                <X :size="16" />
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            class="btn-link"
+                            @click="addMuscle"
+                        >
+                            <Plus :size="14" /> Add muscle
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="isAddOpen = false"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="!canSubmit || submitting"
+                    @click="submit"
+                >
+                    {{ submitting ? 'Adding…' : 'Add exercise' }}
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Delete exercise -->
+        <UiModal
             :open="exerciseToDelete !== null"
             title="Delete exercise"
             :description="`Delete ${exerciseToDelete?.name}? This can't be undone.`"
-            @update:open="exerciseToDelete = null"
+            @update:open="(open) => !open && (exerciseToDelete = null)"
         >
             <template #footer>
-                <div class="flex w-full justify-end gap-2">
-                    <UButton
-                        label="Cancel"
-                        color="neutral"
-                        variant="ghost"
-                        @click="exerciseToDelete = null"
-                    />
-                    <UButton
-                        label="Delete"
-                        color="error"
-                        :loading="deleting"
-                        @click="deleteExercise"
-                    />
-                </div>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="exerciseToDelete = null"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-danger"
+                    :disabled="deleting"
+                    @click="deleteExercise"
+                >
+                    <Trash2 :size="15" />
+                    {{ deleting ? 'Deleting…' : 'Delete' }}
+                </button>
             </template>
-        </UModal>
-    </UContainer>
+        </UiModal>
+    </div>
 </template>
