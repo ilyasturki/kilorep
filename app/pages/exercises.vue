@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Trash2, X } from 'lucide-vue-next'
+import { Pencil, Plus, Trash2, X } from 'lucide-vue-next'
 
 import type {
     Equipment,
@@ -73,13 +73,35 @@ const blankForm = () => ({
 })
 
 const toast = useToast()
-const isAddOpen = ref(false)
+const isFormOpen = ref(false)
+const editingId = ref<number | null>(null)
 const submitting = ref(false)
 const form = reactive(blankForm())
 
+const isEditing = computed(() => editingId.value !== null)
 const canSubmit = computed(
     () => form.name.trim().length > 0 && form.muscles.some((m) => m.muscle),
 )
+
+function openAdd() {
+    editingId.value = null
+    Object.assign(form, blankForm())
+    isFormOpen.value = true
+}
+
+function openEdit(exercise: Exercise) {
+    editingId.value = exercise.id
+    Object.assign(form, {
+        name: exercise.name,
+        equipment: exercise.equipment,
+        type: exercise.type,
+        muscles:
+            exercise.muscles.length ?
+                exercise.muscles.map((m) => ({ ...m }))
+            :   [blankMuscle()],
+    })
+    isFormOpen.value = true
+}
 
 function addMuscle() {
     form.muscles.push(blankMuscle())
@@ -92,9 +114,10 @@ function removeMuscle(index: number) {
 async function submit() {
     if (!canSubmit.value) return
     submitting.value = true
+    const id = editingId.value
     try {
-        await $fetch('/api/exercises', {
-            method: 'POST',
+        await $fetch(id === null ? '/api/exercises' : `/api/exercises/${id}`, {
+            method: id === null ? 'POST' : 'PATCH',
             body: {
                 name: form.name.trim(),
                 equipment: form.equipment,
@@ -103,12 +126,17 @@ async function submit() {
             },
         })
         await refresh()
-        isAddOpen.value = false
-        Object.assign(form, blankForm())
-        toast.add({ title: 'Exercise added', color: 'success' })
+        isFormOpen.value = false
+        toast.add({
+            title: id === null ? 'Exercise added' : 'Exercise updated',
+            color: 'success',
+        })
     } catch (error) {
         toast.add({
-            title: 'Could not add exercise',
+            title:
+                id === null ?
+                    'Could not add exercise'
+                :   'Could not update exercise',
             description: errorMessage(error, 'Please try again.'),
             color: 'error',
         })
@@ -148,7 +176,7 @@ async function deleteExercise() {
             <button
                 type="button"
                 class="btn-primary"
-                @click="isAddOpen = true"
+                @click="openAdd"
             >
                 <Plus :size="16" /> Add
             </button>
@@ -205,6 +233,14 @@ async function deleteExercise() {
                 <div class="xcell-actions">
                     <button
                         type="button"
+                        class="icon-btn sm"
+                        :aria-label="`Edit ${exercise.name}`"
+                        @click="openEdit(exercise)"
+                    >
+                        <Pencil :size="16" />
+                    </button>
+                    <button
+                        type="button"
                         class="icon-btn sm icon-btn--danger"
                         :aria-label="`Delete ${exercise.name}`"
                         @click="exerciseToDelete = exercise"
@@ -215,11 +251,15 @@ async function deleteExercise() {
             </div>
         </div>
 
-        <!-- Add exercise -->
+        <!-- Add / edit exercise -->
         <UiModal
-            v-model:open="isAddOpen"
-            title="Add exercise"
-            description="Add a new movement to your catalog."
+            v-model:open="isFormOpen"
+            :title="isEditing ? 'Edit exercise' : 'Add exercise'"
+            :description="
+                isEditing ?
+                    'Update this movement in your catalog.'
+                :   'Add a new movement to your catalog.'
+            "
         >
             <form
                 class="space-y-4"
@@ -236,20 +276,28 @@ async function deleteExercise() {
                     />
                 </div>
 
-                <div class="flex gap-4">
-                    <div class="field flex-1">
+                <div class="flex flex-wrap items-start gap-x-6 gap-y-4">
+                    <div class="field w-44">
                         <label class="field-label">Equipment</label>
                         <UiSelect
                             v-model="form.equipment"
                             :items="[...EQUIPMENT]"
                         />
                     </div>
-                    <div class="field flex-1">
+                    <div class="field">
                         <label class="field-label">Type</label>
-                        <UiSelect
-                            v-model="form.type"
-                            :items="[...EXERCISE_TYPES]"
-                        />
+                        <div class="toggle">
+                            <button
+                                v-for="t in EXERCISE_TYPES"
+                                :key="t"
+                                type="button"
+                                class="toggle-opt"
+                                :class="{ on: form.type === t }"
+                                @click="form.type = t"
+                            >
+                                {{ t }}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -301,7 +349,7 @@ async function deleteExercise() {
                 <button
                     type="button"
                     class="btn-ghost"
-                    @click="isAddOpen = false"
+                    @click="isFormOpen = false"
                 >
                     Cancel
                 </button>
@@ -311,7 +359,12 @@ async function deleteExercise() {
                     :disabled="!canSubmit || submitting"
                     @click="submit"
                 >
-                    {{ submitting ? 'Adding…' : 'Add exercise' }}
+                    <template v-if="isEditing">
+                        {{ submitting ? 'Saving…' : 'Save changes' }}
+                    </template>
+                    <template v-else>
+                        {{ submitting ? 'Adding…' : 'Add exercise' }}
+                    </template>
                 </button>
             </template>
         </UiModal>
