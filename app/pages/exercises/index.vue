@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { Pencil, Plus, Trash2, X } from 'lucide-vue-next'
-
 import type {
     Equipment,
     Exercise,
     ExerciseType,
     MuscleIntensity,
-    MuscleTarget,
 } from '~~/server/database/schema'
 import {
     EQUIPMENT,
@@ -43,25 +40,6 @@ const muscleOptions = [
     'abs',
     'obliques',
 ]
-
-// Intensity is encoded by how filled the badge is: solid = prime mover, soft =
-// secondary, down to a thin outline for muscles that only assist.
-const intensityVariant: Record<MuscleIntensity, 'solid' | 'soft' | 'outline'> =
-    {
-        high: 'solid',
-        medium: 'soft',
-        low: 'outline',
-    }
-const intensityRank: Record<MuscleIntensity, number> = {
-    high: 3,
-    medium: 2,
-    low: 1,
-}
-
-const sortedMuscles = (muscles: MuscleTarget[]) =>
-    muscles.toSorted(
-        (a, b) => intensityRank[b.intensity] - intensityRank[a.intensity],
-    )
 
 type MuscleField = { muscle: string; intensity: MuscleIntensity }
 const blankMuscle = (): MuscleField => ({ muscle: '', intensity: 'high' })
@@ -178,7 +156,11 @@ async function deleteExercise() {
                 class="btn-primary"
                 @click="openAdd"
             >
-                <Plus :size="16" /> Add
+                <Icon
+                    name="tabler:plus"
+                    :size="16"
+                />
+                Add
             </button>
         </div>
 
@@ -209,7 +191,12 @@ async function deleteExercise() {
                 :key="exercise.id"
                 class="xrow"
             >
-                <span class="xname">{{ exercise.name }}</span>
+                <NuxtLink
+                    :to="`/exercises/${exercise.id}`"
+                    class="xname xname--link"
+                >
+                    {{ exercise.name }}
+                </NuxtLink>
                 <div class="xtags">
                     <span class="tag">{{ exercise.equipment }}</span>
                     <span
@@ -237,7 +224,10 @@ async function deleteExercise() {
                         :aria-label="`Edit ${exercise.name}`"
                         @click="openEdit(exercise)"
                     >
-                        <Pencil :size="16" />
+                        <Icon
+                            name="tabler:pencil"
+                            :size="16"
+                        />
                     </button>
                     <button
                         type="button"
@@ -245,7 +235,10 @@ async function deleteExercise() {
                         :aria-label="`Delete ${exercise.name}`"
                         @click="exerciseToDelete = exercise"
                     >
-                        <Trash2 :size="16" />
+                        <Icon
+                            name="tabler:trash"
+                            :size="16"
+                        />
                     </button>
                 </div>
             </div>
@@ -331,7 +324,10 @@ async function deleteExercise() {
                                 aria-label="Remove muscle"
                                 @click="removeMuscle(index)"
                             >
-                                <X :size="16" />
+                                <Icon
+                                    name="tabler:x"
+                                    :size="16"
+                                />
                             </button>
                         </div>
                         <button
@@ -339,7 +335,11 @@ async function deleteExercise() {
                             class="btn-link"
                             @click="addMuscle"
                         >
-                            <Plus :size="14" /> Add muscle
+                            <Icon
+                                name="tabler:plus"
+                                :size="14"
+                            />
+                            Add muscle
                         </button>
                     </div>
                 </div>
@@ -390,7 +390,10 @@ async function deleteExercise() {
                     :disabled="deleting"
                     @click="deleteExercise"
                 >
-                    <Trash2 :size="15" />
+                    <Icon
+                        name="tabler:trash"
+                        :size="15"
+                    />
                     {{ deleting ? 'Deleting…' : 'Delete' }}
                 </button>
             </template>

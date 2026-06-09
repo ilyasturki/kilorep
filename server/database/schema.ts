@@ -187,3 +187,34 @@ export type WorkoutEntryWithExercises = WorkoutEntry & {
 export type WorkoutWithEntries = Workout & {
     entries: WorkoutEntryWithExercises[]
 }
+
+/** One logged set of an exercise, surfaced in its history view. */
+export type ExerciseHistorySet = Pick<LoggedSet, 'reps' | 'weight' | 'done'>
+
+/** A past workout that included an exercise, with the sets logged for it. */
+export type ExerciseHistoryWorkout = {
+    workoutId: number
+    name: string
+    startedAt: Workout['startedAt']
+    completedAt: Workout['completedAt']
+    sets: ExerciseHistorySet[]
+}
+
+/** The heaviest set ever logged for an exercise, or null if never performed. */
+export type ExerciseBestSet = {
+    weight: number
+    reps: number
+    workoutId: number
+    name: string
+    startedAt: Workout['startedAt']
+} | null
+
+/**
+ * An exercise enriched with where it's programmed and how it's been performed —
+ * the payload of `GET /api/exercises/:id`.
+ */
+export type ExerciseDetail = Exercise & {
+    sessions: Pick<Session, 'id' | 'name'>[]
+    history: ExerciseHistoryWorkout[]
+    best: ExerciseBestSet
+}
