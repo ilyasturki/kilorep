@@ -41,7 +41,7 @@ export function parseBodyweightInput(
         badRequest(`Weight must be between ${MIN_WEIGHT} and ${MAX_WEIGHT} kg`)
     }
 
-    // One decimal is all a scale gives; pin it so 82.40000001 never lands in the
-    // store and the chart stays clean.
-    return { date, weight: Math.round(weight * 10) / 10 }
+    // Pin to two decimals so averaged weigh-ins keep their precision while float
+    // garbage like 82.40000001 never lands in the store.
+    return { date, weight: Math.round(weight * 100) / 100 }
 }

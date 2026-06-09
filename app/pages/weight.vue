@@ -10,12 +10,13 @@ const {
 const toast = useToast()
 
 const toMs = (d: string) => parseLocalDay(d).getTime()
-const fmt1 = (n: number) => n.toFixed(1)
-const signed = (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(1)}`
+const fmt2 = (n: number) => n.toFixed(2)
+const signed = (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`
 
 const todayStr = toDateInput(new Date())
 
 const RANGES = [
+    { key: '1W', label: '1W' },
     { key: '1M', label: '1M' },
     { key: '3M', label: '3M' },
     { key: '1Y', label: '1Y' },
@@ -33,7 +34,8 @@ const rangeLabel = computed(
 function cutoff(): number | null {
     if (range.value === 'all') return null
     const d = new Date()
-    if (range.value === '1M') d.setMonth(d.getMonth() - 1)
+    if (range.value === '1W') d.setDate(d.getDate() - 7)
+    else if (range.value === '1M') d.setMonth(d.getMonth() - 1)
     else if (range.value === '3M') d.setMonth(d.getMonth() - 3)
     else d.setFullYear(d.getFullYear() - 1)
     return d.getTime()
@@ -49,7 +51,7 @@ const points = computed(() =>
     ranged.value.map((e) => ({ x: toMs(e.date), y: e.weight })),
 )
 const timeUnit = computed<'day' | 'week' | 'month'>(() =>
-    range.value === '1M' ? 'day'
+    range.value === '1W' || range.value === '1M' ? 'day'
     : range.value === '3M' ? 'week'
     : 'month',
 )
@@ -62,7 +64,7 @@ const latest = computed(() => {
 const rangeChange = computed(() => {
     const r = ranged.value
     if (r.length < 2) return null
-    return Math.round((r[r.length - 1]!.weight - r[0]!.weight) * 10) / 10
+    return Math.round((r[r.length - 1]!.weight - r[0]!.weight) * 100) / 100
 })
 const minMax = computed(() => {
     const ws = ranged.value.map((e) => e.weight)
@@ -78,7 +80,9 @@ const logRows = computed(() => {
         return {
             ...e,
             delta:
-                older ? Math.round((e.weight - older.weight) * 10) / 10 : null,
+                older ?
+                    Math.round((e.weight - older.weight) * 100) / 100
+                :   null,
         }
     })
 })
@@ -174,7 +178,7 @@ async function confirmDelete() {
             <template v-if="entries?.length">
                 <div class="wk-stat">
                     <span class="stat-num mono">
-                        {{ latest ? fmt1(latest.weight) : '—' }}
+                        {{ latest ? fmt2(latest.weight) : '—' }}
                     </span>
                     <span class="stat-lab">CURRENT · KG</span>
                 </div>
@@ -188,14 +192,14 @@ async function confirmDelete() {
                     v-if="minMax"
                     class="wk-stat"
                 >
-                    <span class="stat-num mono">{{ fmt1(minMax.min) }}</span>
+                    <span class="stat-num mono">{{ fmt2(minMax.min) }}</span>
                     <span class="stat-lab">LOWEST · KG</span>
                 </div>
                 <div
                     v-if="minMax"
                     class="wk-stat"
                 >
-                    <span class="stat-num mono">{{ fmt1(minMax.max) }}</span>
+                    <span class="stat-num mono">{{ fmt2(minMax.max) }}</span>
                     <span class="stat-lab">HIGHEST · KG</span>
                 </div>
             </template>
@@ -277,7 +281,7 @@ async function confirmDelete() {
                     fmtDate(parseLocalDay(row.date))
                 }}</span>
                 <span class="wlog-weight mono">
-                    {{ fmt1(row.weight) }}<span class="wlog-unit">kg</span>
+                    {{ fmt2(row.weight) }}<span class="wlog-unit">kg</span>
                 </span>
                 <span class="wlog-delta mono">
                     {{ row.delta == null ? '' : signed(row.delta) }}
@@ -341,7 +345,7 @@ async function confirmDelete() {
                         v-model="draft.weight"
                         :min="20"
                         :max="400"
-                        :step="0.1"
+                        :step="0.01"
                     />
                 </div>
             </form>
