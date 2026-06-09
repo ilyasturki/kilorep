@@ -22,10 +22,6 @@ type SessionTx = Parameters<
     Parameters<ReturnType<typeof useDrizzle>['transaction']>[0]
 >[0]
 
-function badRequest(message: string): never {
-    throw createError({ statusCode: 400, statusMessage: message })
-}
-
 /**
  * Validates and normalises a create/update payload, dropping incomplete rows
  * (exercises without a valid catalog id, sets without positive reps) and

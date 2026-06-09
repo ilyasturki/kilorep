@@ -3,16 +3,6 @@ import type {
     SessionWithEntries,
 } from '~~/server/database/schema'
 
-function groupBy<T, K>(items: T[], key: (item: T) => K): Map<K, T[]> {
-    const groups = new Map<K, T[]>()
-    for (const item of items) {
-        const list = groups.get(key(item))
-        if (list) list.push(item)
-        else groups.set(key(item), [item])
-    }
-    return groups
-}
-
 export default defineEventHandler((): SessionWithEntries[] => {
     const db = useDrizzle()
 
