@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { Check, ChevronLeft, Minus, Pencil, Plus, X } from 'lucide-vue-next'
-
 import type {
     Exercise,
     Workout,
@@ -37,6 +35,20 @@ const draft = ref<EntryDraft[]>(
 // Edit when the workout is unfinished; review (read-only) once completed, until
 // the lifter reopens it.
 const editing = ref(!workout.value?.completedAt)
+
+// Drive the global topbar with the session name + status instead of "Workouts".
+// usePageHeader owns the client-only watch + reset.
+usePageHeader(() => {
+    if (!workout.value) return null
+    return {
+        title: workout.value.name,
+        tag: {
+            label: editing.value ? 'In progress' : 'Completed',
+            accent: editing.value,
+        },
+        back: '/workouts',
+    }
+})
 
 // Flatten to render blocks numbered 01..N across the whole workout, mirroring
 // the session plan readout. The wrapped exercises keep their draft references so
@@ -105,6 +117,22 @@ function removeExercise(entryIndex: number, exIndex: number) {
     if (entry.exercises.length === 0) draft.value.splice(entryIndex, 1)
 }
 
+// Confirm before dropping an exercise — a stray tap on the X would otherwise
+// wipe all its logged sets with no undo.
+const removeTarget = ref<{
+    entryIndex: number
+    exIndex: number
+    name: string
+}>()
+function promptRemove(entryIndex: number, exIndex: number, name: string) {
+    removeTarget.value = { entryIndex, exIndex, name }
+}
+function confirmRemove() {
+    if (!removeTarget.value) return
+    removeExercise(removeTarget.value.entryIndex, removeTarget.value.exIndex)
+    removeTarget.value = undefined
+}
+
 const exerciseItems = computed(() =>
     (exercises.value ?? []).map((e) => ({ label: e.name, value: e.id })),
 )
@@ -148,10 +176,11 @@ const saving = ref(false)
 
 // Persist the whole workout and sync the returned timestamps back, so the date
 // stat and duration reflect any day shift the server applied.
-async function persist(completed: boolean) {
+async function persist(completed: boolean, opts?: { keepalive?: boolean }) {
     const updated = await $fetch<Workout>(`/api/workouts/${id}`, {
         method: 'PUT',
         body: buildBody(completed),
+        keepalive: opts?.keepalive,
     })
     if (workout.value) {
         workout.value.startedAt = updated.startedAt
@@ -161,25 +190,61 @@ async function persist(completed: boolean) {
     return updated
 }
 
-async function saveProgress() {
-    saving.value = true
-    try {
-        await persist(false)
-        toast.add({ title: 'Progress saved', color: 'success' })
-    } catch (error: unknown) {
-        toast.add({
-            title: errorMessage(error, 'Could not save the workout'),
-            color: 'error',
-        })
-    } finally {
-        saving.value = false
-    }
+// Serialize writes so a debounced autosave landing right as the lifter hits
+// Finish can't commit after it and silently clear the completed flag.
+let chain: Promise<unknown> = Promise.resolve()
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const run = chain.then(task, task)
+    chain = run.catch(() => {})
+    return run
 }
 
+// Auto-save replaces the old save button: edits persist on their own ~1s after
+// they settle, silently. Explicit actions (finish/reopen/date) cancel a pending
+// save and supersede it; only errors surface, as a toast.
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+function cancelSave() {
+    clearTimeout(saveTimer)
+    saveTimer = undefined
+}
+function scheduleSave() {
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+        saveTimer = undefined
+        enqueue(() => persist(false)).catch((error: unknown) => {
+            toast.add({
+                title: errorMessage(error, 'Could not save the workout'),
+                color: 'error',
+            })
+        })
+    }, 1000)
+}
+
+watch(
+    draft,
+    () => {
+        if (editing.value) scheduleSave()
+    },
+    { deep: true },
+)
+
+// Don't lose the last edit when leaving before the debounce fires.
+onBeforeRouteLeave(async () => {
+    if (!saveTimer) return
+    cancelSave()
+    await enqueue(() => persist(false)).catch(() => {})
+})
+useEventListener('beforeunload', () => {
+    if (!saveTimer) return
+    // keepalive lets the flush outlive the page on a hard close/refresh.
+    persist(false, { keepalive: true }).catch(() => {})
+})
+
 async function finish() {
+    cancelSave()
     saving.value = true
     try {
-        await persist(true)
+        await enqueue(() => persist(true))
         toast.add({ title: 'Workout finished', color: 'success' })
         await navigateTo('/workouts')
     } catch (error: unknown) {
@@ -193,9 +258,10 @@ async function finish() {
 }
 
 async function reopen() {
+    cancelSave()
     saving.value = true
     try {
-        await persist(false)
+        await enqueue(() => persist(false))
         editing.value = true
         toast.add({ title: 'Workout reopened', color: 'success' })
     } catch (error: unknown) {
@@ -211,9 +277,10 @@ async function reopen() {
 // The date saves on its own — it's metadata, editable in both modes without the
 // review view needing a save button. Keep the current completed state.
 async function changeDate() {
+    cancelSave()
     saving.value = true
     try {
-        await persist(!editing.value)
+        await enqueue(() => persist(!editing.value))
         toast.add({ title: 'Date updated', color: 'success' })
     } catch (error: unknown) {
         if (workout.value)
@@ -241,35 +308,16 @@ async function changeDate() {
         </div>
     </div>
     <div v-else>
-        <div class="wk-head">
-            <div class="wk-head-title">
-                <h2 class="session-name">{{ workout.name }}</h2>
-                <span
-                    class="tag"
-                    :class="{ 'tag--accent': editing }"
-                >
-                    {{ editing ? 'In progress' : 'Completed' }}
-                </span>
-            </div>
-            <NuxtLink
-                to="/workouts"
-                class="btn-link"
-            >
-                <ChevronLeft :size="14" /> Workouts
-            </NuxtLink>
-        </div>
-
-        <input
-            v-model="dateValue"
-            type="date"
-            class="date-input mt-4"
-            :max="today"
-            :disabled="saving"
-            aria-label="Workout date"
-            @change="changeDate"
-        />
-
         <div class="wk-stats mb-8">
+            <input
+                v-model="dateValue"
+                type="date"
+                class="date-input"
+                :max="today"
+                :disabled="saving"
+                aria-label="Workout date"
+                @change="changeDate"
+            />
             <div class="wk-stat">
                 <span class="stat-num mono">{{ totals.volume }}</span>
                 <span class="stat-lab">VOLUME · KG</span>
@@ -288,24 +336,19 @@ async function changeDate() {
         </div>
 
         <div class="wk-actions">
-            <template v-if="editing">
-                <button
-                    type="button"
-                    class="btn-ghost"
-                    :disabled="saving"
-                    @click="saveProgress"
-                >
-                    {{ saving ? 'Saving…' : 'Save progress' }}
-                </button>
-                <button
-                    type="button"
-                    class="btn-primary"
-                    :disabled="saving"
-                    @click="finish"
-                >
-                    <Check :size="16" /> Finish workout
-                </button>
-            </template>
+            <button
+                v-if="editing"
+                type="button"
+                class="btn-primary"
+                :disabled="saving"
+                @click="finish"
+            >
+                <Icon
+                    name="tabler:check"
+                    :size="16"
+                />
+                Finish workout
+            </button>
             <button
                 v-else
                 type="button"
@@ -313,7 +356,11 @@ async function changeDate() {
                 :disabled="saving"
                 @click="reopen"
             >
-                <Pencil :size="15" /> Reopen to edit
+                <Icon
+                    name="tabler:pencil"
+                    :size="15"
+                />
+                Reopen to edit
             </button>
         </div>
 
@@ -350,13 +397,17 @@ async function changeDate() {
                                     class="icon-btn sm icon-btn--danger"
                                     aria-label="Remove exercise"
                                     @click="
-                                        removeExercise(
+                                        promptRemove(
                                             block.entryIndex,
                                             item.exIndex,
+                                            item.ex.name,
                                         )
                                     "
                                 >
-                                    <X :size="15" />
+                                    <Icon
+                                        name="tabler:x"
+                                        :size="15"
+                                    />
                                 </button>
                             </div>
 
@@ -388,7 +439,10 @@ async function changeDate() {
                                     :disabled="item.ex.sets.length <= 1"
                                     @click="removeSet(item.ex, si)"
                                 >
-                                    <Minus :size="15" />
+                                    <Icon
+                                        name="tabler:minus"
+                                        :size="15"
+                                    />
                                 </button>
                             </div>
 
@@ -397,7 +451,11 @@ async function changeDate() {
                                 class="btn-link mt-2"
                                 @click="addSet(item.ex)"
                             >
-                                <Plus :size="14" /> Add set
+                                <Icon
+                                    name="tabler:plus"
+                                    :size="14"
+                                />
+                                Add set
                             </button>
                         </div>
                     </div>
@@ -409,7 +467,11 @@ async function changeDate() {
                 class="btn-ghost sm mt-3"
                 @click="addOpen = true"
             >
-                <Plus :size="15" /> Add exercise
+                <Icon
+                    name="tabler:plus"
+                    :size="15"
+                />
+                Add exercise
             </button>
         </template>
 
@@ -459,7 +521,10 @@ async function changeDate() {
                                 class="logline-check"
                                 :class="{ skipped: !set.done }"
                             >
-                                <Check :size="15" />
+                                <Icon
+                                    name="tabler:check"
+                                    :size="15"
+                                />
                             </span>
                         </div>
                     </div>
@@ -492,7 +557,40 @@ async function changeDate() {
                     :disabled="!addExerciseId"
                     @click="confirmAdd"
                 >
-                    <Plus :size="16" /> Add
+                    <Icon
+                        name="tabler:plus"
+                        :size="16"
+                    />
+                    Add
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Remove exercise -->
+        <UiModal
+            :open="removeTarget != null"
+            title="Remove exercise"
+            :description="`Remove ${removeTarget?.name ?? 'this exercise'} and all its sets from this workout?`"
+            @update:open="(open) => !open && (removeTarget = undefined)"
+        >
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="removeTarget = undefined"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-danger"
+                    @click="confirmRemove"
+                >
+                    <Icon
+                        name="tabler:trash"
+                        :size="16"
+                    />
+                    Remove
                 </button>
             </template>
         </UiModal>

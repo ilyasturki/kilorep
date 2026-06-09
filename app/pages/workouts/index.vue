@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ChevronRight, Play, Plus, Trash2 } from 'lucide-vue-next'
-
 import type {
     SessionWithEntries,
     WorkoutWithEntries,
@@ -23,13 +21,6 @@ const ordered = computed(() => {
         ...all.filter((w) => w.completedAt),
     ].map((w) => ({ ...w, stats: workoutStats(w.entries) }))
 })
-
-const fmtDate = (d: string | Date) =>
-    new Date(d).toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    })
 
 const sessionSummary = (s: SessionWithEntries) => {
     const count = s.entries.reduce((n, e) => n + e.exercises.length, 0)
@@ -91,7 +82,11 @@ async function confirmDelete() {
                 class="btn-primary"
                 @click="pickerOpen = true"
             >
-                <Plus :size="16" /> Start workout
+                <Icon
+                    name="tabler:plus"
+                    :size="16"
+                />
+                Start workout
             </button>
         </div>
 
@@ -140,7 +135,10 @@ async function confirmDelete() {
                             aria-label="Delete workout"
                             @click="deleteTarget = w"
                         >
-                            <Trash2 :size="15" />
+                            <Icon
+                                name="tabler:trash"
+                                :size="15"
+                            />
                         </button>
                     </div>
                 </div>
@@ -162,20 +160,28 @@ async function confirmDelete() {
                     </div>
                 </div>
 
-                <div class="wk-actions">
+                <div class="card-actions">
                     <NuxtLink
                         v-if="!w.completedAt"
                         :to="`/workouts/${w.id}`"
                         class="btn-primary"
                     >
-                        <Play :size="16" /> Resume
+                        <Icon
+                            name="tabler:player-play-filled"
+                            :size="16"
+                        />
+                        Resume
                     </NuxtLink>
                     <NuxtLink
                         v-else
                         :to="`/workouts/${w.id}`"
                         class="btn-ghost"
                     >
-                        Review <ChevronRight :size="16" />
+                        Review
+                        <Icon
+                            name="tabler:chevron-right"
+                            :size="16"
+                        />
                     </NuxtLink>
                 </div>
             </div>
@@ -239,7 +245,10 @@ async function confirmDelete() {
                     :disabled="deleting"
                     @click="confirmDelete"
                 >
-                    <Trash2 :size="15" />
+                    <Icon
+                        name="tabler:trash"
+                        :size="15"
+                    />
                     {{ deleting ? 'Deleting…' : 'Delete' }}
                 </button>
             </template>
