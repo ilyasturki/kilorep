@@ -128,15 +128,43 @@
         letter-spacing: -0.03em;
     }
 
+    .topbar-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .topbar-head .topbar-title {
+        text-transform: capitalize;
+    }
+
+    .topbar-back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: -6px;
+        color: var(--ink-2);
+        transition: color 0.12s;
+    }
+
+    .topbar-back:hover {
+        color: var(--accent-text);
+    }
+
+    /* Top inset lives on .page, not here: a sticky child (the workout action
+       bar) pins at the scroll container's content edge, so top padding here
+       would leave a gap above the pinned bar that scrolled rows peek through. */
     .main-scroll {
         flex: 1;
-        padding: 22px 22px 96px;
+        padding: 0 22px 96px;
     }
 
     .page {
         width: 100%;
         max-width: 1080px;
         margin: 0 auto;
+        padding-top: 22px;
     }
 
     /* ----- Mobile bottom tab bar ----- */
@@ -288,9 +316,13 @@
         }
 
         .main-scroll {
-            padding: 32px 40px 48px;
+            padding: 0 40px 48px;
             overflow-y: auto;
             min-height: 0;
+        }
+
+        .page {
+            padding-top: 32px;
         }
     }
 
@@ -351,6 +383,19 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+    }
+
+    /* Plain button row at the foot of a card — no sticky-bar chrome (kept
+       distinct from .wk-actions, which pins the workout's finish bar). */
+    .card-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .card-actions .btn-primary,
+    .card-actions .btn-ghost {
+        flex: 1;
     }
 
     .dotsep {
@@ -540,6 +585,17 @@
     .badge--solid {
         background: var(--accent);
         color: var(--accent-ink);
+        /* Without a rim the bright fill optically blooms past its box and the
+           badge reads taller than the bordered variants. A darker-green edge
+           contains it so all intensities line up at the same height. */
+        border-color: color-mix(in oklab, var(--accent) 62%, #000);
+    }
+
+    /* The global ::selection is accent-on-ink — identical to a solid badge,
+       so highlighted text would vanish into the fill. Invert it here. */
+    .badge--solid::selection {
+        background: var(--accent-ink);
+        color: var(--accent);
     }
 
     .badge--soft {
@@ -1116,28 +1172,16 @@
     }
 
     /* ===== Workout tracking ============================== */
-    /* Session title + status share one row, with the back link beneath. The row
-       holds a fixed height so a longer/shorter status tag or title can't shift
-       the stats and tracking list below. */
-    .wk-head {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .wk-head-title {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        min-height: 32px;
-    }
-
     .wk-stats {
         display: flex;
         flex-wrap: wrap;
-        gap: 22px 28px;
-        margin-top: 14px;
+        align-items: center;
+        gap: 16px 28px;
+    }
+
+    /* Date leads on the left; push the stats group to the right edge. */
+    .wk-stats .date-input {
+        margin-right: auto;
     }
 
     .wk-stat {
@@ -1150,15 +1194,17 @@
         font-size: 22px;
     }
 
-    /* Pinned under the header so Save/Finish stay reachable without scrolling
-       to the end of a long set list. Opaque bg + border so rows scroll behind. */
+    /* Pins flush under the header so Finish/Reopen stay reachable on a long set
+       list. No top padding: the button docks straight onto the topbar instead
+       of floating in a dark band. Opaque bg + bottom border so rows scroll
+       behind it cleanly. */
     .wk-actions {
         position: sticky;
         top: 0;
         z-index: 20;
         display: flex;
         gap: 10px;
-        padding: 14px 0;
+        padding-bottom: 14px;
         margin-bottom: 18px;
         background: var(--bg);
         border-bottom: 1px solid var(--line);
@@ -1306,6 +1352,233 @@
 
     .logline-check.skipped {
         color: var(--ink-3);
+    }
+
+    /* ===== Exercise detail =============================== */
+    .detail-section {
+        margin-top: 30px;
+    }
+
+    .detail-section > .kicker {
+        display: block;
+        margin-bottom: 12px;
+    }
+
+    /* "How to" opens a YouTube search for the movement in a new tab rather than
+       embedding a player: no video is stored per exercise, and a search link
+       can never render as a broken embed. */
+    .video-card {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 17px;
+        background: var(--surface);
+        border: 1px solid var(--line-2);
+        color: var(--ink);
+        text-decoration: none;
+        transition: border-color 0.12s;
+    }
+
+    .video-card:hover {
+        border-color: var(--accent);
+    }
+
+    .video-play {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 46px;
+        height: 46px;
+        background: var(--accent);
+        color: var(--accent-ink);
+    }
+
+    .video-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 0;
+    }
+
+    .video-title {
+        font-size: 16px;
+        font-weight: 700;
+        text-transform: capitalize;
+    }
+
+    .video-ext {
+        margin-left: auto;
+        color: var(--ink-3);
+        flex: none;
+    }
+
+    /* ----- Muscle map ----- */
+    .musclemap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 28px;
+        align-items: flex-start;
+    }
+
+    .mm-view {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 9px;
+    }
+
+    .mm-view svg {
+        width: 130px;
+        height: auto;
+    }
+
+    /* Region fill encodes how hard the muscle works: full accent = prime mover,
+       mixed = secondary, faint = assists, surface = untouched. */
+    .mm-region {
+        fill: var(--surface-2);
+        stroke: var(--line-2);
+        stroke-width: 0.8;
+        transition: fill 0.15s;
+    }
+
+    .mm-low {
+        fill: color-mix(in oklab, var(--accent) 30%, var(--surface-2));
+        stroke: color-mix(in oklab, var(--accent) 42%, var(--line-2));
+    }
+
+    .mm-med {
+        fill: color-mix(in oklab, var(--accent) 62%, var(--surface-2));
+        stroke: color-mix(in oklab, var(--accent) 70%, var(--line-2));
+    }
+
+    .mm-high {
+        fill: var(--accent);
+        stroke: var(--accent);
+    }
+
+    .mm-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin-top: 16px;
+    }
+
+    .mm-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12.5px;
+        color: var(--ink-2);
+    }
+
+    .mm-swatch {
+        width: 12px;
+        height: 12px;
+        flex: none;
+        border: 1px solid transparent;
+    }
+
+    .mm-swatch--high {
+        background: var(--accent);
+    }
+
+    .mm-swatch--med {
+        background: color-mix(in oklab, var(--accent) 62%, var(--surface-2));
+        border-color: color-mix(in oklab, var(--accent) 70%, var(--line-2));
+    }
+
+    .mm-swatch--low {
+        background: color-mix(in oklab, var(--accent) 30%, var(--surface-2));
+        border-color: var(--line-2);
+    }
+
+    /* ----- Exercise history ----- */
+    .hist-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 7px 14px;
+        padding: 11px 0;
+        border-top: 1px solid var(--line);
+    }
+
+    .hist-row:first-child {
+        border-top: none;
+    }
+
+    .hist-date {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--ink-2);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 0.12s;
+    }
+
+    .hist-date:hover {
+        color: var(--accent-text);
+    }
+
+    .hist-sets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .set-chip {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--ink);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        padding: 3px 8px;
+    }
+
+    .set-chip .x {
+        color: var(--ink-3);
+        margin: 0 3px;
+    }
+
+    .set-chip--off {
+        color: var(--ink-3);
+        border-style: dashed;
+    }
+
+    /* ----- Programmed-in session chips ----- */
+    .sess-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .chip-link {
+        display: inline-flex;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: capitalize;
+        color: var(--ink);
+        background: var(--surface-2);
+        border: 1px solid var(--line-2);
+        padding: 7px 12px;
+        text-decoration: none;
+        transition: border-color 0.12s;
+    }
+
+    .chip-link:hover {
+        border-color: var(--accent);
+    }
+
+    /* Exercise-name link in the catalog table */
+    .xname--link {
+        text-decoration: none;
+        color: var(--ink);
+        transition: color 0.12s;
+    }
+
+    .xname--link:hover {
+        color: var(--accent-text);
     }
 
     @keyframes fade {
