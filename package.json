@@ -45,5 +45,6 @@
         "prettier": "^3.8.3",
         "prettier-plugin-tailwindcss": "^0.8.0",
         "vue-tsc": "^3.3.3"
-    }
+    },
+    "version": "0.0.1"
 }
