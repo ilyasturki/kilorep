@@ -103,6 +103,7 @@
         display: flex;
         flex-direction: column;
         min-width: 0;
+        min-height: 0;
     }
 
     .topbar {
@@ -228,8 +229,12 @@
 
     /* Desktop: swap bottom tabs for a left sidebar */
     @media (min-width: 860px) {
+        /* App-shell: pin sidebar + topbar, scroll only the content. Lets the
+           workout action bar stick to the top of .main-scroll. */
         .shell {
             flex-direction: row;
+            height: 100dvh;
+            overflow: hidden;
         }
 
         .tabbar {
@@ -285,6 +290,7 @@
         .main-scroll {
             padding: 32px 40px 48px;
             overflow-y: auto;
+            min-height: 0;
         }
     }
 
@@ -1110,6 +1116,23 @@
     }
 
     /* ===== Workout tracking ============================== */
+    /* Session title + status share one row, with the back link beneath. The row
+       holds a fixed height so a longer/shorter status tag or title can't shift
+       the stats and tracking list below. */
+    .wk-head {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .wk-head-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 32px;
+    }
+
     .wk-stats {
         display: flex;
         flex-wrap: wrap;
@@ -1127,10 +1150,18 @@
         font-size: 22px;
     }
 
+    /* Pinned under the header so Save/Finish stay reachable without scrolling
+       to the end of a long set list. Opaque bg + border so rows scroll behind. */
     .wk-actions {
+        position: sticky;
+        top: 0;
+        z-index: 20;
         display: flex;
         gap: 10px;
-        margin-top: 22px;
+        padding: 14px 0;
+        margin-bottom: 18px;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
     }
 
     .wk-actions .btn-ghost,
@@ -1183,7 +1214,7 @@
     /* Column grid shared by the header labels and each logged set row */
     .logset {
         display: grid;
-        grid-template-columns: 30px 1fr 1fr 40px 30px;
+        grid-template-columns: 28px 1fr 1fr 38px;
         align-items: center;
         gap: 8px;
     }
@@ -1196,12 +1227,43 @@
         width: 100%;
     }
 
-    /* On phones the five-column set grid leaves each number field barely wider
-       than its two 36px steppers, clipping the value to an unreadable sliver.
-       Drop the steppers so the input fills the field; the input's
-       inputmode="decimal" brings up the numeric keypad for entry. */
+    /* Match the remove button to the number fields' height (their 1px border
+       makes them a touch taller than a stock icon-btn) by stretching it to the
+       row instead of hardcoding a value that drifts with sub-pixel rounding. */
+    .logset .icon-btn {
+        align-self: stretch;
+        height: auto;
+    }
+
+    /* Keep the +/- steppers on phones; trim them and the input padding so a
+       3-digit weight still reads in the field. */
     @media (max-width: 480px) {
+        .logset {
+            gap: 6px;
+            grid-template-columns: 22px 1fr 1fr 38px;
+        }
+
         .logset .numfield button {
+            width: 24px;
+        }
+
+        .logset .numfield input {
+            padding-left: 2px;
+            padding-right: 2px;
+            font-size: 14px;
+        }
+    }
+
+    /* Very narrow phones: keep the steppers and a readable value field by
+       dropping the set-number column — the least useful cell — rather than
+       letting the inputs crush or the row overflow. The KG/REPS labels and
+       fields shift left to fill the freed space. */
+    @media (max-width: 360px) {
+        .logset {
+            grid-template-columns: 1fr 1fr 38px;
+        }
+
+        .logset > :first-child {
             display: none;
         }
     }
@@ -1210,32 +1272,6 @@
     .logset .set-lab {
         width: auto;
         text-align: center;
-    }
-
-    .set-done {
-        width: 40px;
-        height: 38px;
-        border: 1px solid var(--line-2);
-        background: var(--surface);
-        color: var(--ink-3);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition:
-            background 0.12s,
-            border-color 0.12s,
-            color 0.12s;
-    }
-
-    .set-done:hover {
-        color: var(--ink-2);
-    }
-
-    .set-done.on {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: var(--accent-ink);
     }
 
     /* Review mode: one read-only "weight × reps" line per logged set */

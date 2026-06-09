@@ -80,7 +80,6 @@ useHead({
         <div class="main">
             <header class="topbar">
                 <div class="topbar-l">
-                    <span class="kicker">{{ APP_NAME }}</span>
                     <h1 class="topbar-title">{{ title }}</h1>
                 </div>
             </header>

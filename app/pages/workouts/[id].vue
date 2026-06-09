@@ -92,7 +92,7 @@ function addSet(ex: ExerciseDraft) {
     ex.sets.push({
         reps: last?.reps ?? 8,
         weight: last?.weight,
-        done: false,
+        done: true,
     })
 }
 function removeSet(ex: ExerciseDraft, index: number) {
@@ -119,7 +119,7 @@ function confirmAdd() {
             {
                 exerciseId: picked.id,
                 name: picked.name,
-                sets: [{ reps: 8, weight: undefined, done: false }],
+                sets: [{ reps: 8, weight: undefined, done: true }],
             },
         ],
     })
@@ -241,33 +241,33 @@ async function changeDate() {
         </div>
     </div>
     <div v-else>
-        <NuxtLink
-            to="/workouts"
-            class="btn-link"
-        >
-            <ChevronLeft :size="14" /> Workouts
-        </NuxtLink>
-
-        <div class="card-head mt-3 items-start">
-            <div>
+        <div class="wk-head">
+            <div class="wk-head-title">
                 <h2 class="session-name">{{ workout.name }}</h2>
-                <input
-                    v-model="dateValue"
-                    type="date"
-                    class="date-input mt-2"
-                    :max="today"
-                    :disabled="saving"
-                    aria-label="Workout date"
-                    @change="changeDate"
-                />
+                <span
+                    class="tag"
+                    :class="{ 'tag--accent': editing }"
+                >
+                    {{ editing ? 'In progress' : 'Completed' }}
+                </span>
             </div>
-            <span
-                class="tag"
-                :class="{ 'tag--accent': editing }"
+            <NuxtLink
+                to="/workouts"
+                class="btn-link"
             >
-                {{ editing ? 'In progress' : 'Completed' }}
-            </span>
+                <ChevronLeft :size="14" /> Workouts
+            </NuxtLink>
         </div>
+
+        <input
+            v-model="dateValue"
+            type="date"
+            class="date-input mt-4"
+            :max="today"
+            :disabled="saving"
+            aria-label="Workout date"
+            @change="changeDate"
+        />
 
         <div class="wk-stats mb-8">
             <div class="wk-stat">
@@ -285,6 +285,36 @@ async function changeDate() {
                 <span class="stat-num mono">{{ duration }}</span>
                 <span class="stat-lab">MINUTES</span>
             </div>
+        </div>
+
+        <div class="wk-actions">
+            <template v-if="editing">
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    :disabled="saving"
+                    @click="saveProgress"
+                >
+                    {{ saving ? 'Saving…' : 'Save progress' }}
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="saving"
+                    @click="finish"
+                >
+                    <Check :size="16" /> Finish workout
+                </button>
+            </template>
+            <button
+                v-else
+                type="button"
+                class="btn-ghost"
+                :disabled="saving"
+                @click="reopen"
+            >
+                <Pencil :size="15" /> Reopen to edit
+            </button>
         </div>
 
         <!-- Tracking -->
@@ -335,7 +365,6 @@ async function changeDate() {
                                 <span class="set-lab">KG</span>
                                 <span class="set-lab">REPS</span>
                                 <span />
-                                <span />
                             </div>
                             <div
                                 v-for="(set, si) in item.ex.sets"
@@ -354,18 +383,7 @@ async function changeDate() {
                                 />
                                 <button
                                     type="button"
-                                    class="set-done"
-                                    :class="{ on: set.done }"
-                                    :aria-label="
-                                        set.done ? 'Set done' : 'Mark set done'
-                                    "
-                                    @click="set.done = !set.done"
-                                >
-                                    <Check :size="16" />
-                                </button>
-                                <button
-                                    type="button"
-                                    class="icon-btn sm"
+                                    class="icon-btn"
                                     aria-label="Remove set"
                                     :disabled="item.ex.sets.length <= 1"
                                     @click="removeSet(item.ex, si)"
@@ -393,25 +411,6 @@ async function changeDate() {
             >
                 <Plus :size="15" /> Add exercise
             </button>
-
-            <div class="wk-actions">
-                <button
-                    type="button"
-                    class="btn-ghost"
-                    :disabled="saving"
-                    @click="saveProgress"
-                >
-                    {{ saving ? 'Saving…' : 'Save progress' }}
-                </button>
-                <button
-                    type="button"
-                    class="btn-primary"
-                    :disabled="saving"
-                    @click="finish"
-                >
-                    <Check :size="16" /> Finish workout
-                </button>
-            </div>
         </template>
 
         <!-- Review -->
@@ -465,17 +464,6 @@ async function changeDate() {
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="wk-actions">
-                <button
-                    type="button"
-                    class="btn-ghost"
-                    :disabled="saving"
-                    @click="reopen"
-                >
-                    <Pencil :size="15" /> Reopen to edit
-                </button>
             </div>
         </template>
 
