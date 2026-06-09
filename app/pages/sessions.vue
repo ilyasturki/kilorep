@@ -221,12 +221,7 @@ function planBlocks(session: SessionWithEntries) {
                         }"
                     >
                         <div class="mb-3 flex items-center justify-between">
-                            <span
-                                class="tag"
-                                :class="{
-                                    'tag--accent': entry.exercises.length > 1,
-                                }"
-                            >
+                            <span class="tag">
                                 {{
                                     entry.exercises.length > 1 ?
                                         'Superset'
