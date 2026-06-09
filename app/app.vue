@@ -1,27 +1,62 @@
 <script setup lang="ts">
-import { Dumbbell, ListChecks, Moon, Sun } from 'lucide-vue-next'
+import {
+    Activity,
+    Dumbbell,
+    ListChecks,
+    PanelLeftClose,
+    PanelLeftOpen,
+} from 'lucide-vue-next'
 
 const route = useRoute()
-const { isDark, set, toggle } = useTheme()
+
+const collapsed = useCookie<boolean>('sidebar-collapsed', {
+    default: () => false,
+})
 
 const links = [
-    { label: 'Exercises', to: '/exercises', icon: Dumbbell },
+    { label: 'Workouts', to: '/workouts', icon: Activity },
     { label: 'Sessions', to: '/sessions', icon: ListChecks },
+    { label: 'Exercises', to: '/exercises', icon: Dumbbell },
 ]
 
-const title = computed(
-    () =>
-        links.find((link) => route.path.startsWith(link.to))?.label
-        ?? 'Workout Manager',
+const APP_NAME = 'Kilorep'
+
+const section = computed(
+    () => links.find((link) => route.path.startsWith(link.to))?.label,
 )
+const title = computed(() => section.value ?? APP_NAME)
+
+useHead({
+    title: () => (section.value ? `${section.value} · ${APP_NAME}` : APP_NAME),
+})
 </script>
 
 <template>
     <div class="shell">
-        <aside class="sidebar">
+        <aside
+            class="sidebar"
+            :class="{ collapsed }"
+        >
             <div class="brand">
-                <span class="brand-dot" />
-                <span class="brand-name">Workout</span>
+                <span class="brand-mark">
+                    <UiLogo class="brand-logo" />
+                    <span class="brand-name">{{ APP_NAME }}</span>
+                </span>
+                <button
+                    type="button"
+                    class="side-toggle"
+                    :aria-label="
+                        collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+                    "
+                    :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+                    :aria-expanded="!collapsed"
+                    @click="collapsed = !collapsed"
+                >
+                    <component
+                        :is="collapsed ? PanelLeftOpen : PanelLeftClose"
+                        :size="18"
+                    />
+                </button>
             </div>
 
             <nav class="nav">
@@ -31,6 +66,7 @@ const title = computed(
                     :to="link.to"
                     class="nav-item"
                     :class="{ on: route.path.startsWith(link.to) }"
+                    :title="collapsed ? link.label : undefined"
                 >
                     <component
                         :is="link.icon"
@@ -39,54 +75,14 @@ const title = computed(
                     <span>{{ link.label }}</span>
                 </NuxtLink>
             </nav>
-
-            <div class="side-foot">
-                <div>
-                    <div class="kicker">Workout Manager</div>
-                    <div class="side-split mono">GYM · WEIGHT TRACKER</div>
-                </div>
-                <div class="seg">
-                    <span
-                        class="seg-opt"
-                        :class="{ on: isDark }"
-                        role="button"
-                        @click="set('dark')"
-                    >
-                        Dark
-                    </span>
-                    <span
-                        class="seg-opt"
-                        :class="{ on: !isDark }"
-                        role="button"
-                        @click="set('light')"
-                    >
-                        Light
-                    </span>
-                </div>
-            </div>
         </aside>
 
         <div class="main">
             <header class="topbar">
                 <div class="topbar-l">
-                    <span class="kicker">Workout Manager</span>
+                    <span class="kicker">{{ APP_NAME }}</span>
                     <h1 class="topbar-title">{{ title }}</h1>
                 </div>
-                <button
-                    type="button"
-                    class="icon-btn theme-toggle-mobile"
-                    aria-label="Toggle theme"
-                    @click="toggle"
-                >
-                    <Moon
-                        v-if="isDark"
-                        :size="18"
-                    />
-                    <Sun
-                        v-else
-                        :size="18"
-                    />
-                </button>
             </header>
 
             <main class="main-scroll">
