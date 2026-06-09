@@ -19,6 +19,8 @@
         "db:studio": "drizzle-kit studio"
     },
     "dependencies": {
+        "@nuxt/fonts": "^0.14.0",
+        "@nuxt/icon": "^2.2.3",
         "@tailwindcss/vite": "^4.3.0",
         "@vueuse/nuxt": "14.3.0",
         "better-sqlite3": "^12.10.0",
@@ -30,6 +32,7 @@
     },
     "devDependencies": {
         "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+        "@iconify-json/tabler": "^1.2.35",
         "@types/better-sqlite3": "^7.6.13",
         "drizzle-kit": "^0.31.10",
         "oxlint": "^1.68.0",
