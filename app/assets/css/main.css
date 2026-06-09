@@ -3,16 +3,14 @@
 /* ============================================================
    Lift — brutalist-sharp design system
    Dark-first, near-square corners, hairline borders, one volt
-   accent. Tokens switch on [data-theme] set on <html> so that
-   portalled overlays (dialogs, toasts) inherit them too.
+   accent. Tokens follow the system color scheme via
+   prefers-color-scheme; dark is the default.
    ============================================================ */
 
 :root {
     --accent: #c5f53a;
     --accent-ink: #0b0b0c;
-}
 
-[data-theme='dark'] {
     --bg: #0b0b0c;
     --surface: #141416;
     --surface-2: #1a1a1d;
@@ -26,18 +24,20 @@
     color-scheme: dark;
 }
 
-[data-theme='light'] {
-    --bg: #ecebe6;
-    --surface: #ffffff;
-    --surface-2: #f4f3ef;
-    --line: rgba(0, 0, 0, 0.12);
-    --line-2: rgba(0, 0, 0, 0.22);
-    --ink: #17171a;
-    --ink-2: #5c5c62;
-    --ink-3: #9a9a9f;
-    --accent-tint: color-mix(in oklab, var(--accent) 18%, transparent);
-    --accent-text: color-mix(in oklab, var(--accent) 58%, #000);
-    color-scheme: light;
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg: #ecebe6;
+        --surface: #ffffff;
+        --surface-2: #f4f3ef;
+        --line: rgba(0, 0, 0, 0.12);
+        --line-2: rgba(0, 0, 0, 0.22);
+        --ink: #17171a;
+        --ink-2: #5c5c62;
+        --ink-3: #9a9a9f;
+        --accent-tint: color-mix(in oklab, var(--accent) 18%, transparent);
+        --accent-text: color-mix(in oklab, var(--accent) 58%, #000);
+        color-scheme: light;
+    }
 }
 
 @layer base {
@@ -146,7 +146,8 @@
         right: 0;
         z-index: 30;
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
         padding: 8px 18px calc(8px + env(safe-area-inset-bottom));
         border-top: 1px solid var(--line);
         background: color-mix(in oklab, var(--bg) 92%, transparent);
@@ -179,13 +180,42 @@
     .brand {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 11px;
     }
 
-    .brand-dot {
-        width: 14px;
-        height: 14px;
-        background: var(--accent);
+    .brand-mark {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        min-width: 0;
+    }
+
+    .side-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 32px;
+        height: 32px;
+        background: none;
+        border: 1px solid var(--line-2);
+        color: var(--ink-3);
+        cursor: pointer;
+        transition:
+            color 0.12s,
+            background 0.12s;
+    }
+
+    .side-toggle:hover {
+        color: var(--ink);
+        background: var(--surface-2);
+    }
+
+    .brand-logo {
+        width: 22px;
+        height: 22px;
+        color: var(--accent-text);
         flex: none;
     }
 
@@ -216,10 +246,32 @@
             flex-direction: column;
             padding: 30px 22px;
             border-right: 1px solid var(--line);
+            transition: width 0.18s ease;
+        }
+
+        .sidebar.collapsed {
+            width: 76px;
+            padding: 30px 14px;
         }
 
         .brand {
             padding: 0 6px 36px;
+        }
+
+        .sidebar.collapsed .brand {
+            flex-direction: column;
+            gap: 18px;
+            padding: 0 0 36px;
+        }
+
+        .sidebar.collapsed .brand-name,
+        .sidebar.collapsed .nav-item span {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding-inline: 0;
         }
 
         .topbar {
@@ -233,10 +285,6 @@
         .main-scroll {
             padding: 32px 40px 48px;
             overflow-y: auto;
-        }
-
-        .icon-btn.theme-toggle-mobile {
-            display: none;
         }
     }
 
@@ -270,20 +318,6 @@
         color: var(--ink);
         border-left-color: var(--accent);
         background: var(--surface);
-    }
-
-    .side-foot {
-        margin-top: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        padding: 0 6px;
-    }
-
-    .side-split {
-        font-size: 10px;
-        color: var(--ink-3);
-        letter-spacing: 0.06em;
     }
 
     /* ===== Primitives ==================================== */
@@ -461,27 +495,6 @@
         border-color: var(--accent);
     }
 
-    /* ----- Segmented control (theme toggle) ----- */
-    .seg {
-        display: inline-flex;
-        border: 1px solid var(--line-2);
-        background: none;
-        cursor: pointer;
-        padding: 0;
-    }
-
-    .seg-opt {
-        font-size: 13px;
-        font-weight: 600;
-        padding: 8px 16px;
-        color: var(--ink-3);
-    }
-
-    .seg-opt.on {
-        background: var(--accent);
-        color: var(--accent-ink);
-    }
-
     /* ----- Tags & badges ----- */
     .tag {
         display: inline-flex;
@@ -580,7 +593,7 @@
         font-size: 15px;
         font-weight: 500;
         text-transform: capitalize;
-        padding-right: 44px;
+        padding-right: 82px;
     }
 
     .xtags {
@@ -599,6 +612,8 @@
         position: absolute;
         top: 13px;
         right: 12px;
+        display: flex;
+        gap: 6px;
     }
 
     .xempty {
@@ -614,7 +629,7 @@
             display: grid;
             grid-template-columns:
                 minmax(0, 1.5fr) 132px 116px minmax(0, 2fr)
-                44px;
+                78px;
             gap: 18px;
             align-items: center;
         }
@@ -668,7 +683,7 @@
 
     .plan-block--ss {
         border-top: none;
-        border-left: 2px solid var(--accent);
+        border-left: 2px solid var(--line-2);
         padding-left: 14px;
         margin: 8px 0;
     }
@@ -679,7 +694,7 @@
         font-size: 9.5px;
         font-weight: 600;
         letter-spacing: 0.14em;
-        color: var(--accent-text);
+        color: var(--ink-3);
         padding: 6px 0 2px;
     }
 
@@ -717,7 +732,7 @@
     }
 
     .builder-block--ss {
-        border-left: 2px solid var(--accent);
+        border-left: 2px solid var(--line-2);
     }
 
     .set-row {
@@ -772,6 +787,39 @@
 
     .input:focus {
         border-color: var(--accent);
+    }
+
+    /* Segmented toggle for a handful of fixed choices — reads as a choice,
+       not a text field, and stays compact instead of stretching like an input. */
+    .toggle {
+        display: inline-flex;
+        border: 1px solid var(--line-2);
+        background: var(--surface);
+    }
+
+    .toggle-opt {
+        font-size: 14px;
+        font-weight: 600;
+        padding: 11px 18px;
+        color: var(--ink-3);
+        text-transform: capitalize;
+        cursor: pointer;
+        transition:
+            color 0.12s,
+            background 0.12s;
+    }
+
+    .toggle-opt + .toggle-opt {
+        border-left: 1px solid var(--line-2);
+    }
+
+    .toggle-opt:not(.on):hover {
+        color: var(--ink);
+    }
+
+    .toggle-opt.on {
+        background: var(--accent);
+        color: var(--accent-ink);
     }
 
     /* ===== reka-ui Select =============================== */
@@ -1059,6 +1107,169 @@
         text-align: center;
         color: var(--ink-2);
         font-size: 14px;
+    }
+
+    /* ===== Workout tracking ============================== */
+    .wk-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 22px 28px;
+        margin-top: 14px;
+    }
+
+    .wk-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .wk-stat .stat-num {
+        font-size: 22px;
+    }
+
+    .wk-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 22px;
+    }
+
+    .wk-actions .btn-ghost,
+    .wk-actions .btn-primary {
+        flex: 1;
+    }
+
+    /* Editable workout date — native picker tinted by the root color-scheme */
+    .date-input {
+        background: var(--surface);
+        border: 1px solid var(--line-2);
+        color: var(--ink);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        padding: 8px 11px;
+        cursor: pointer;
+        transition: border-color 0.12s;
+    }
+
+    .date-input:hover,
+    .date-input:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .date-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .date-input::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+    }
+
+    /* Exercise header inside a tracking block: name · remove */
+    .wk-ex-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .wk-ex-name {
+        font-size: 16px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    /* Column grid shared by the header labels and each logged set row */
+    .logset {
+        display: grid;
+        grid-template-columns: 30px 1fr 1fr 40px 30px;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .logset + .logset {
+        margin-top: 8px;
+    }
+
+    .logset .numfield {
+        width: 100%;
+    }
+
+    /* On phones the five-column set grid leaves each number field barely wider
+       than its two 36px steppers, clipping the value to an unreadable sliver.
+       Drop the steppers so the input fills the field; the input's
+       inputmode="decimal" brings up the numeric keypad for entry. */
+    @media (max-width: 480px) {
+        .logset .numfield button {
+            display: none;
+        }
+    }
+
+    .logset-head .set-lab,
+    .logset .set-lab {
+        width: auto;
+        text-align: center;
+    }
+
+    .set-done {
+        width: 40px;
+        height: 38px;
+        border: 1px solid var(--line-2);
+        background: var(--surface);
+        color: var(--ink-3);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition:
+            background 0.12s,
+            border-color 0.12s,
+            color 0.12s;
+    }
+
+    .set-done:hover {
+        color: var(--ink-2);
+    }
+
+    .set-done.on {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+    }
+
+    /* Review mode: one read-only "weight × reps" line per logged set */
+    .logline {
+        display: grid;
+        grid-template-columns: 30px 1fr auto;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 0;
+        border-top: 1px solid var(--line);
+    }
+
+    .logline:first-of-type {
+        border-top: none;
+    }
+
+    .logline-load {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        color: var(--ink);
+    }
+
+    .logline-load .x {
+        color: var(--ink-3);
+        margin: 0 6px;
+    }
+
+    .logline-check {
+        display: inline-flex;
+        color: var(--accent-text);
+    }
+
+    .logline-check.skipped {
+        color: var(--ink-3);
     }
 
     @keyframes fade {
