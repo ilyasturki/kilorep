@@ -5,7 +5,19 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 
 import * as schema from '../database/schema'
 
-export { and, asc, desc, eq, gt, gte, lt, lte, or, sql } from 'drizzle-orm'
+export {
+    and,
+    asc,
+    desc,
+    eq,
+    gt,
+    gte,
+    inArray,
+    lt,
+    lte,
+    or,
+    sql,
+} from 'drizzle-orm'
 
 export const tables = schema
 

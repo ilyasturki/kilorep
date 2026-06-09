@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 /** How hard an exercise works a given muscle, relative to the others it hits. */
 export const MUSCLE_INTENSITIES = ['high', 'medium', 'low'] as const
@@ -107,4 +107,83 @@ export type SessionEntryWithExercises = SessionEntry & {
 /** A full session tree as returned by `GET /api/sessions`. */
 export type SessionWithEntries = Session & {
     entries: SessionEntryWithExercises[]
+}
+
+/**
+ * An actual training session — one instance of doing a workout, started from a
+ * template. Where a `session` prescribes reps and leaves the load open, a
+ * `workout` records what was lifted: the reps done and the weight on the bar.
+ */
+export const workouts = sqliteTable('workouts', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    // The template this workout was started from, kept for reference. Nulled if
+    // that template is later deleted — the copied tree and `name` snapshot below
+    // keep the logged history intact on their own.
+    sessionId: integer('session_id').references(() => sessions.id, {
+        onDelete: 'set null',
+    }),
+    name: text('name').notNull(),
+    startedAt: integer('started_at', { mode: 'timestamp' })
+        .notNull()
+        .default(sql`(unixepoch())`),
+    // Null while the workout is in progress; stamped when the lifter finishes.
+    completedAt: integer('completed_at', { mode: 'timestamp' }),
+})
+
+// A workout's own copy of a template entry (plain exercise or superset). The
+// whole tree is copied on start so editing a workout — or later editing the
+// template it came from — never rewrites logged history. Mirrors `sessionEntries`.
+export const workoutEntries = sqliteTable('workout_entries', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    workoutId: integer('workout_id')
+        .notNull()
+        .references(() => workouts.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+})
+
+export const workoutExercises = sqliteTable('workout_exercises', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    entryId: integer('entry_id')
+        .notNull()
+        .references(() => workoutEntries.id, { onDelete: 'cascade' }),
+    exerciseId: integer('exercise_id')
+        .notNull()
+        .references(() => exercises.id),
+    position: integer('position').notNull().default(0),
+})
+
+// A logged set: the reps actually performed and the load lifted, in kilograms.
+// `weight` stays null until entered; `done` flips as the lifter ticks the set
+// off during the workout.
+export const workoutSets = sqliteTable('workout_sets', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    workoutExerciseId: integer('workout_exercise_id')
+        .notNull()
+        .references(() => workoutExercises.id, { onDelete: 'cascade' }),
+    reps: integer('reps').notNull(),
+    weight: real('weight'),
+    done: integer('done', { mode: 'boolean' }).notNull().default(false),
+    position: integer('position').notNull().default(0),
+})
+
+export type Workout = typeof workouts.$inferSelect
+export type NewWorkout = typeof workouts.$inferInsert
+export type WorkoutEntry = typeof workoutEntries.$inferSelect
+export type NewWorkoutEntry = typeof workoutEntries.$inferInsert
+export type WorkoutExercise = typeof workoutExercises.$inferSelect
+export type NewWorkoutExercise = typeof workoutExercises.$inferInsert
+export type LoggedSet = typeof workoutSets.$inferSelect
+export type NewLoggedSet = typeof workoutSets.$inferInsert
+
+/** A workout exercise resolved to its catalog entry and its logged sets. */
+export type WorkoutExerciseWithSets = WorkoutExercise & {
+    exercise: Exercise
+    sets: LoggedSet[]
+}
+export type WorkoutEntryWithExercises = WorkoutEntry & {
+    exercises: WorkoutExerciseWithSets[]
+}
+/** A full workout tree as returned by the workouts API. */
+export type WorkoutWithEntries = Workout & {
+    entries: WorkoutEntryWithExercises[]
 }
