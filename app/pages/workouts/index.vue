@@ -12,19 +12,72 @@ const [{ data: workouts, status, refresh }, { data: sessions }] =
 
 const toast = useToast()
 
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
 // In-progress workouts first, then finished history. Each group already arrives
-// newest-first from the API.
+// newest-first from the API. Flatten each workout's entry tree into numbered
+// glance rows (01..N across supersets) so the card shows what was trained at a
+// glance instead of hiding it behind "Review".
 const ordered = computed(() => {
     const all = workouts.value ?? []
     return [
         ...all.filter((w) => !w.completedAt),
         ...all.filter((w) => w.completedAt),
-    ].map((w) => ({ ...w, stats: workoutStats(w.entries) }))
+    ].map((w) => {
+        let n = 0
+        const blocks = w.entries.map((entry) => ({
+            isSuperset: entry.exercises.length > 1,
+            exercises: entry.exercises.map((ex) => {
+                const weights = ex.sets
+                    .map((s) => s.weight)
+                    .filter((x): x is number => x != null)
+                return {
+                    key: ex.id,
+                    exerciseId: ex.exerciseId,
+                    name: ex.exercise.name,
+                    setCount: ex.sets.length,
+                    top: weights.length ? Math.max(...weights) : null,
+                    n: ++n,
+                }
+            }),
+        }))
+        return { ...w, stats: workoutStats(w.entries), blocks }
+    })
 })
+
+type GlanceExercise =
+    (typeof ordered.value)[number]['blocks'][number]['exercises'][number]
+
+// Top weight stands in for the working load; just the count when nothing's logged.
+const exSummary = (ex: GlanceExercise) =>
+    ex.top != null ?
+        `${plural(ex.setCount, 'set')} · ${ex.top} kg`
+    :   plural(ex.setCount, 'set')
+
+const metaLine = (w: (typeof ordered.value)[number]) => {
+    const parts = [
+        plural(w.stats.exercises, 'exercise'),
+        plural(w.stats.sets, 'set'),
+        `${w.stats.volume.toLocaleString()} kg`,
+    ]
+    const d = workoutDurationMin(w)
+    if (d != null) parts.push(`${d} min`)
+    return parts.join(' · ')
+}
+
+// Resolved on the client only: relative labels depend on "now", so SSR renders
+// the absolute date and the client swaps in "Today"/"Yesterday" after mount —
+// no hydration mismatch, and the right day in the viewer's own timezone.
+const now = ref<Date>()
+onMounted(() => {
+    now.value = new Date()
+})
+const dayLabel = (w: WorkoutWithEntries) =>
+    now.value ? fmtRelativeDay(w.startedAt, now.value) : fmtDate(w.startedAt)
 
 const sessionSummary = (s: SessionWithEntries) => {
     const count = s.entries.reduce((n, e) => n + e.exercises.length, 0)
-    return `${count} exercise${count === 1 ? '' : 's'}`
+    return plural(count, 'exercise')
 }
 
 const pickerOpen = ref(false)
@@ -119,14 +172,10 @@ async function confirmDelete() {
                     </NuxtLink>
                     <div class="flex items-center gap-2">
                         <span
-                            class="tag"
+                            class="tag tag--lg"
                             :class="{ 'tag--accent': !w.completedAt }"
                         >
-                            {{
-                                w.completedAt ?
-                                    fmtDate(w.startedAt)
-                                :   'In progress'
-                            }}
+                            {{ w.completedAt ? dayLabel(w) : 'In progress' }}
                         </span>
                         <button
                             type="button"
@@ -142,20 +191,36 @@ async function confirmDelete() {
                     </div>
                 </div>
 
-                <div class="wk-stats">
-                    <div class="wk-stat">
-                        <span class="stat-num mono">{{
-                            w.stats.exercises
-                        }}</span>
-                        <span class="stat-lab">EXERCISES</span>
-                    </div>
-                    <div class="wk-stat">
-                        <span class="stat-num mono">{{ w.stats.sets }}</span>
-                        <span class="stat-lab">SETS</span>
-                    </div>
-                    <div class="wk-stat">
-                        <span class="stat-num mono">{{ w.stats.volume }}</span>
-                        <span class="stat-lab">VOLUME · KG</span>
+                <p class="wk-meta">{{ metaLine(w) }}</p>
+
+                <div
+                    v-if="w.blocks.length"
+                    class="wk-glance"
+                >
+                    <div
+                        v-for="(block, bi) in w.blocks"
+                        :key="bi"
+                        class="plan-block"
+                        :class="{ 'plan-block--ss': block.isSuperset }"
+                    >
+                        <span
+                            v-if="block.isSuperset"
+                            class="ss-tag"
+                        >
+                            SUPERSET
+                        </span>
+                        <NuxtLink
+                            v-for="ex in block.exercises"
+                            :key="ex.key"
+                            :to="`/exercises/${ex.exerciseId}`"
+                            class="plan-ex plan-ex--link"
+                        >
+                            <span class="plan-ex-idx">{{ pad(ex.n) }}</span>
+                            <span class="plan-ex-name">{{ ex.name }}</span>
+                            <span class="plan-ex-target">{{
+                                exSummary(ex)
+                            }}</span>
+                        </NuxtLink>
                     </div>
                 </div>
 

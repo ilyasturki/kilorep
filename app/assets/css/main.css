@@ -568,6 +568,13 @@
         border-color: color-mix(in oklab, var(--accent) 40%, var(--line));
     }
 
+    /* Header badge sitting beside a 32px delete icon-btn — match its height so
+       the workout card header lines up instead of floating short. */
+    .tag--lg {
+        height: 32px;
+        padding-block: 0;
+    }
+
     /* Muscle-intensity badge: fill encodes how hard the muscle works.
        solid = prime mover, soft = secondary, outline = assists. */
     .badge {
@@ -1169,6 +1176,37 @@
         text-align: center;
         color: var(--ink-2);
         font-size: 14px;
+    }
+
+    /* ===== Workout log card ============================== */
+    /* Compact totals line under the card title (exercises · sets · volume ·
+       duration) — natural-reading mono, not the wide-tracked kicker. */
+    .wk-meta {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        color: var(--ink-2);
+        margin-top: 10px;
+    }
+
+    /* At-a-glance exercise list on a workout card: reuses the session plan
+       readout (.plan-block/.plan-ex) so a logged workout and its template look
+       the same. Divider sets it off from the meta line above. */
+    .wk-glance {
+        margin-top: 14px;
+        padding-top: 4px;
+        border-top: 1px solid var(--line);
+    }
+
+    /* Each glance row links to that exercise's history — tint the name on hover
+       so it reads as tappable without adding link chrome to the dense list. */
+    .plan-ex--link {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .plan-ex--link:hover .plan-ex-name {
+        color: var(--accent-text);
     }
 
     /* ===== Workout tracking ============================== */
