@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { X } from 'lucide-vue-next'
 import {
     DialogClose,
     DialogContent,
@@ -40,7 +39,10 @@ const open = defineModel<boolean>('open', { default: false })
                             class="icon-btn sm"
                             aria-label="Close"
                         >
-                            <X :size="18" />
+                            <Icon
+                                name="tabler:x"
+                                :size="18"
+                            />
                         </DialogClose>
                     </div>
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Minus, Plus } from 'lucide-vue-next'
 import {
     NumberFieldDecrement,
     NumberFieldIncrement,
@@ -25,11 +24,17 @@ const model = defineModel<number>()
         class="numfield"
     >
         <NumberFieldDecrement aria-label="Decrease">
-            <Minus :size="15" />
+            <Icon
+                name="tabler:minus"
+                :size="15"
+            />
         </NumberFieldDecrement>
         <NumberFieldInput />
         <NumberFieldIncrement aria-label="Increase">
-            <Plus :size="15" />
+            <Icon
+                name="tabler:plus"
+                :size="15"
+            />
         </NumberFieldIncrement>
     </NumberFieldRoot>
 </template>

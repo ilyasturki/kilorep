@@ -1,15 +1,4 @@
 <script setup lang="ts">
-import {
-    Check,
-    Layers,
-    Link2,
-    Minus,
-    Pencil,
-    Plus,
-    Trash2,
-    X,
-} from 'lucide-vue-next'
-
 import type { Exercise, SessionWithEntries } from '~~/server/database/schema'
 
 const [{ data: sessions, status, refresh }, { data: exercises }] =
@@ -184,7 +173,11 @@ function planBlocks(session: SessionWithEntries) {
                 class="btn-primary"
                 @click="openBuilder"
             >
-                <Plus :size="16" /> New session
+                <Icon
+                    name="tabler:plus"
+                    :size="16"
+                />
+                New session
             </button>
         </div>
 
@@ -234,7 +227,10 @@ function planBlocks(session: SessionWithEntries) {
                                 aria-label="Remove block"
                                 @click="removeEntry(entryIndex)"
                             >
-                                <Trash2 :size="15" />
+                                <Icon
+                                    name="tabler:trash"
+                                    :size="15"
+                                />
                             </button>
                         </div>
 
@@ -264,7 +260,10 @@ function planBlocks(session: SessionWithEntries) {
                                             )
                                         "
                                     >
-                                        <X :size="16" />
+                                        <Icon
+                                            name="tabler:x"
+                                            :size="16"
+                                        />
                                     </button>
                                 </div>
 
@@ -291,7 +290,10 @@ function planBlocks(session: SessionWithEntries) {
                                                 removeSet(exercise, setIndex)
                                             "
                                         >
-                                            <Minus :size="15" />
+                                            <Icon
+                                                name="tabler:minus"
+                                                :size="15"
+                                            />
                                         </button>
                                     </div>
                                     <button
@@ -299,7 +301,11 @@ function planBlocks(session: SessionWithEntries) {
                                         class="btn-link"
                                         @click="addSet(exercise)"
                                     >
-                                        <Plus :size="14" /> Add set
+                                        <Icon
+                                            name="tabler:plus"
+                                            :size="14"
+                                        />
+                                        Add set
                                     </button>
                                 </div>
                             </div>
@@ -310,7 +316,11 @@ function planBlocks(session: SessionWithEntries) {
                             class="btn-link mt-3"
                             @click="addExerciseToEntry(entry)"
                         >
-                            <Link2 :size="14" /> Add exercise to superset
+                            <Icon
+                                name="tabler:link"
+                                :size="14"
+                            />
+                            Add exercise to superset
                         </button>
                     </div>
                 </div>
@@ -321,14 +331,22 @@ function planBlocks(session: SessionWithEntries) {
                         class="btn-ghost sm"
                         @click="addExercise"
                     >
-                        <Plus :size="15" /> Add exercise
+                        <Icon
+                            name="tabler:plus"
+                            :size="15"
+                        />
+                        Add exercise
                     </button>
                     <button
                         type="button"
                         class="btn-ghost sm"
                         @click="addSuperset"
                     >
-                        <Layers :size="15" /> Add superset
+                        <Icon
+                            name="tabler:stack-2"
+                            :size="15"
+                        />
+                        Add superset
                     </button>
                 </div>
             </div>
@@ -347,7 +365,10 @@ function planBlocks(session: SessionWithEntries) {
                     :disabled="saving"
                     @click="save"
                 >
-                    <Check :size="16" />
+                    <Icon
+                        name="tabler:check"
+                        :size="16"
+                    />
                     {{
                         saving ? 'Saving…'
                         : editingId ? 'Save changes'
@@ -388,7 +409,10 @@ function planBlocks(session: SessionWithEntries) {
                             aria-label="Edit session"
                             @click="editSession(session)"
                         >
-                            <Pencil :size="15" />
+                            <Icon
+                                name="tabler:pencil"
+                                :size="15"
+                            />
                         </button>
                         <button
                             type="button"
@@ -396,7 +420,10 @@ function planBlocks(session: SessionWithEntries) {
                             aria-label="Delete session"
                             @click="deleteTarget = session"
                         >
-                            <Trash2 :size="15" />
+                            <Icon
+                                name="tabler:trash"
+                                :size="15"
+                            />
                         </button>
                     </div>
                 </div>
@@ -451,7 +478,10 @@ function planBlocks(session: SessionWithEntries) {
                     :disabled="deleting"
                     @click="confirmDelete"
                 >
-                    <Trash2 :size="15" />
+                    <Icon
+                        name="tabler:trash"
+                        :size="15"
+                    />
                     {{ deleting ? 'Deleting…' : 'Delete' }}
                 </button>
             </template>

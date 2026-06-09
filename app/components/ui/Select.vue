@@ -1,5 +1,4 @@
 <script setup lang="ts" generic="T extends string | number">
-import { Check, ChevronDown } from 'lucide-vue-next'
 import {
     SelectContent,
     SelectItem,
@@ -41,7 +40,10 @@ const currentLabel = computed(
             <span :class="{ ph: currentLabel == null }">
                 {{ currentLabel ?? placeholder ?? 'Select…' }}
             </span>
-            <ChevronDown :size="16" />
+            <Icon
+                name="tabler:chevron-down"
+                :size="16"
+            />
         </SelectTrigger>
         <SelectPortal>
             <SelectContent
@@ -59,7 +61,10 @@ const currentLabel = computed(
                     >
                         <SelectItemText>{{ option.label }}</SelectItemText>
                         <SelectItemIndicator>
-                            <Check :size="15" />
+                            <Icon
+                                name="tabler:check"
+                                :size="15"
+                            />
                         </SelectItemIndicator>
                     </SelectItem>
                 </SelectViewport>
