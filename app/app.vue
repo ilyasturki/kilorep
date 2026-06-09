@@ -10,6 +10,7 @@ const links = [
     { label: 'Workouts', to: '/workouts', icon: 'tabler:activity' },
     { label: 'Sessions', to: '/sessions', icon: 'tabler:list-check' },
     { label: 'Exercises', to: '/exercises', icon: 'tabler:dumbbell' },
+    { label: 'Weight', to: '/weight', icon: 'tabler:scale' },
 ]
 
 const APP_NAME = 'Kilorep'

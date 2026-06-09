@@ -218,3 +218,19 @@ export type ExerciseDetail = Exercise & {
     history: ExerciseHistoryWorkout[]
     best: ExerciseBestSet
 }
+
+/** A single bodyweight weigh-in, in kilograms — one row per calendar day. */
+export const bodyweight = sqliteTable('bodyweight', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    // The day weighed, as 'YYYY-MM-DD'. Stored as text, not a timestamp, so a
+    // day stays the same day regardless of timezone, and the UNIQUE constraint
+    // pins one weigh-in per date — re-logging a day overwrites its value.
+    date: text('date').notNull().unique(),
+    weight: real('weight').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+        .notNull()
+        .default(sql`(unixepoch())`),
+})
+
+export type Bodyweight = typeof bodyweight.$inferSelect
+export type NewBodyweight = typeof bodyweight.$inferInsert

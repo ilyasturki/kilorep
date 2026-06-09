@@ -1218,8 +1218,13 @@
     }
 
     /* Date leads on the left; push the stats group to the right edge. */
-    .wk-stats .date-input {
+    .wk-stats .datepicker-field {
         margin-right: auto;
+    }
+
+    /* Log action sits opposite the stats group on the same row. */
+    .wk-stats-action {
+        margin-left: auto;
     }
 
     .wk-stat {
@@ -1253,31 +1258,175 @@
         flex: 1;
     }
 
-    /* Editable workout date — native picker tinted by the root color-scheme */
-    .date-input {
+    /* ===== reka-ui DatePicker =========================== */
+    /* Editable workout date — segmented field + popover calendar */
+    .datepicker-field {
+        display: inline-flex;
+        align-items: center;
         background: var(--surface);
         border: 1px solid var(--line-2);
         color: var(--ink);
         font-family: 'JetBrains Mono', monospace;
         font-size: 13px;
-        padding: 8px 11px;
-        cursor: pointer;
+        padding: 3px 3px 3px 10px;
         transition: border-color 0.12s;
     }
 
-    .date-input:hover,
-    .date-input:focus {
-        outline: none;
+    .datepicker-field:hover,
+    .datepicker-field:focus-within {
         border-color: var(--accent);
     }
 
-    .date-input:disabled {
+    .datepicker-field[data-disabled] {
         opacity: 0.5;
-        cursor: not-allowed;
+        pointer-events: none;
     }
 
-    .date-input::-webkit-calendar-picker-indicator {
+    .datepicker-seg {
+        padding: 4px 2px;
+        outline: none;
+        color: var(--ink);
+    }
+
+    .datepicker-seg[data-placeholder] {
+        color: var(--ink-3);
+    }
+
+    .datepicker-seg:focus {
+        background: var(--accent);
+        color: var(--accent-ink);
+    }
+
+    .datepicker-seg--literal {
+        padding: 4px 0;
+        color: var(--ink-3);
+    }
+
+    .datepicker-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        margin-left: 6px;
+        border: none;
+        background: none;
+        color: var(--ink-2);
         cursor: pointer;
+        transition:
+            color 0.12s,
+            background 0.12s;
+    }
+
+    .datepicker-trigger:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+    }
+
+    .datepicker-content {
+        background: var(--bg);
+        border: 1px solid var(--line-2);
+        box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+        padding: 12px;
+        z-index: 60;
+    }
+
+    .datepicker-arrow {
+        fill: var(--line-2);
+    }
+
+    .datepicker-cal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .datepicker-heading {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: var(--ink);
+    }
+
+    .datepicker-nav {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink-2);
+        cursor: pointer;
+        transition:
+            border-color 0.12s,
+            color 0.12s;
+    }
+
+    .datepicker-nav:hover {
+        border-color: var(--accent);
+        color: var(--ink);
+    }
+
+    .datepicker-grid {
+        border-collapse: collapse;
+    }
+
+    .datepicker-row {
+        display: flex;
+    }
+
+    .datepicker-weekday {
+        width: 34px;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        padding-bottom: 6px;
+    }
+
+    .datepicker-day {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        color: var(--ink);
+        cursor: pointer;
+        user-select: none;
+        transition:
+            background 0.12s,
+            color 0.12s;
+    }
+
+    .datepicker-day:hover {
+        background: var(--surface-2);
+    }
+
+    .datepicker-day[data-today] {
+        box-shadow: inset 0 0 0 1px var(--line-2);
+    }
+
+    .datepicker-day[data-selected] {
+        background: var(--accent);
+        color: var(--accent-ink);
+    }
+
+    .datepicker-day[data-outside-view] {
+        color: var(--ink-3);
+    }
+
+    .datepicker-day[data-disabled],
+    .datepicker-day[data-unavailable] {
+        color: var(--ink-3);
+        opacity: 0.4;
+        pointer-events: none;
+        text-decoration: line-through;
     }
 
     /* Exercise header inside a tracking block: name · remove */
@@ -1617,6 +1766,75 @@
 
     .xname--link:hover {
         color: var(--accent-text);
+    }
+
+    /* ===== Weight tracking ============================== */
+    /* Chart.js sizes its canvas to the parent's box, and the parent has no
+       intrinsic height — pin one so the chart has somewhere to draw. */
+    .wchart {
+        position: relative;
+        height: 260px;
+    }
+
+    .wchart-loading {
+        height: 100%;
+        background: var(--surface-2);
+    }
+
+    .wchart-empty {
+        display: flex;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        color: var(--ink-3);
+        font-size: 14px;
+    }
+
+    .wlog {
+        border: 1px solid var(--line-2);
+        background: var(--surface);
+    }
+
+    .wlog-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto auto;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 18px;
+    }
+
+    .wlog-row + .wlog-row {
+        border-top: 1px solid var(--line);
+    }
+
+    .wlog-date {
+        font-size: 14px;
+        color: var(--ink);
+    }
+
+    .wlog-weight {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+
+    .wlog-unit {
+        margin-left: 3px;
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--ink-3);
+    }
+
+    .wlog-delta {
+        min-width: 48px;
+        text-align: right;
+        font-size: 13px;
+        color: var(--ink-2);
+    }
+
+    .wlog-actions {
+        display: flex;
+        gap: 4px;
     }
 
     @keyframes fade {
