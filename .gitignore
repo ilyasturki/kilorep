@@ -26,3 +26,6 @@ logs
 # Nix build symlink
 result
 result-*
+
+# Claude Code project MCP config (may contain bearer tokens)
+.mcp.json
