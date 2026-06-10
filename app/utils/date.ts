@@ -25,17 +25,6 @@ export const toDateInput = (d: string | Date) => {
 // so the rendered day always matches the stored day whatever the runtime tz.
 export const parseLocalDay = (d: string) => new Date(`${d}T00:00:00`)
 
-// Minutes a finished workout took; null while it's still in progress.
-export const workoutDurationMin = (w: {
-    startedAt: string | Date
-    completedAt?: string | Date | null
-}) => {
-    if (!w.completedAt) return null
-    const ms =
-        new Date(w.completedAt).getTime() - new Date(w.startedAt).getTime()
-    return Math.max(0, Math.round(ms / 60000))
-}
-
 const startOfDay = (x: Date) =>
     new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
 

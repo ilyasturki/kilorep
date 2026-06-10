@@ -34,7 +34,7 @@ const draft = ref<EntryDraft[]>(
 
 // Edit when the workout is unfinished; review (read-only) once completed, until
 // the lifter reopens it.
-const editing = ref(!workout.value?.completedAt)
+const editing = ref(!workout.value?.completed)
 
 // Drive the global topbar with the session name + status instead of "Workouts".
 // usePageHeader owns the client-only watch + reset.
@@ -68,17 +68,12 @@ const blocks = computed(() => {
 
 const totals = computed(() => workoutStats(draft.value))
 
-const duration = computed(() =>
-    workout.value ? workoutDurationMin(workout.value) : null,
-)
-
 const fmtWeight = (w: number | undefined | null) =>
     w == null ? '—' : `${w} kg`
 const exVolume = (ex: ExerciseDraft) => setVolume(ex.sets)
 
 // The workout's day is editable anytime (even once completed). Only the calendar
-// day moves: the original time-of-day is kept and the PUT shifts completedAt by
-// the same delta, so a moved workout keeps its duration.
+// day moves: the original time-of-day is kept so same-day ordering is stable.
 const dateValue = ref(workout.value ? toDateInput(workout.value.startedAt) : '')
 const today = toDateInput(new Date())
 
@@ -165,8 +160,8 @@ function buildBody(completed: boolean) {
 
 const saving = ref(false)
 
-// Persist the whole workout and sync the returned timestamps back, so the date
-// stat and duration reflect any day shift the server applied.
+// Persist the whole workout and sync the returned row back, so the date stat
+// reflects any day shift the server applied.
 async function persist(completed: boolean, opts?: { keepalive?: boolean }) {
     const updated = await $fetch<Workout>(`/api/workouts/${id}`, {
         method: 'PUT',
@@ -175,7 +170,7 @@ async function persist(completed: boolean, opts?: { keepalive?: boolean }) {
     })
     if (workout.value) {
         workout.value.startedAt = updated.startedAt
-        workout.value.completedAt = updated.completedAt
+        workout.value.completed = updated.completed
         dateValue.value = toDateInput(updated.startedAt)
     }
     return updated
@@ -315,13 +310,6 @@ async function changeDate() {
             <div class="wk-stat">
                 <span class="stat-num mono">{{ totals.sets }}</span>
                 <span class="stat-lab">SETS</span>
-            </div>
-            <div
-                v-if="duration !== null"
-                class="wk-stat"
-            >
-                <span class="stat-num mono">{{ duration }}</span>
-                <span class="stat-lab">MINUTES</span>
             </div>
         </div>
 

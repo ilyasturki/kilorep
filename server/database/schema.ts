@@ -126,8 +126,9 @@ export const workouts = sqliteTable('workouts', {
     startedAt: integer('started_at', { mode: 'timestamp' })
         .notNull()
         .default(sql`(unixepoch())`),
-    // Null while the workout is in progress; stamped when the lifter finishes.
-    completedAt: integer('completed_at', { mode: 'timestamp' }),
+    completed: integer('completed', { mode: 'boolean' })
+        .notNull()
+        .default(false),
 })
 
 // A workout's own copy of a template entry (plain exercise or superset). The
@@ -196,7 +197,6 @@ export type ExerciseHistoryWorkout = {
     workoutId: number
     name: string
     startedAt: Workout['startedAt']
-    completedAt: Workout['completedAt']
     sets: ExerciseHistorySet[]
 }
 

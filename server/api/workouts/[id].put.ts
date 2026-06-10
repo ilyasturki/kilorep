@@ -15,26 +15,12 @@ export default defineEventHandler(async (event) => {
             })
         }
 
-        // Moving the date shifts the whole workout by the same delta, so its
-        // duration (completedAt − startedAt) is preserved.
-        const startedAt = parsed.startedAt ?? existing.startedAt
-        const delta = startedAt.getTime() - existing.startedAt.getTime()
-        const shiftedCompletedAt =
-            existing.completedAt ?
-                new Date(existing.completedAt.getTime() + delta)
-            :   null
-
-        // Stamp completion on the first finish; reopening clears it. Saving an
-        // already-finished workout keeps its (shifted) timestamp.
-        const completedAt =
-            parsed.completed ? (shiftedCompletedAt ?? new Date()) : null
-
         const updated = tx
             .update(tables.workouts)
             .set({
                 ...(parsed.name ? { name: parsed.name } : {}),
-                startedAt,
-                completedAt,
+                startedAt: parsed.startedAt ?? existing.startedAt,
+                completed: parsed.completed,
             })
             .where(eq(tables.workouts.id, id))
             .returning()

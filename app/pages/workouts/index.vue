@@ -21,8 +21,8 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 const ordered = computed(() => {
     const all = workouts.value ?? []
     return [
-        ...all.filter((w) => !w.completedAt),
-        ...all.filter((w) => w.completedAt),
+        ...all.filter((w) => !w.completed),
+        ...all.filter((w) => w.completed),
     ].map((w) => {
         let n = 0
         const blocks = w.entries.map((entry) => ({
@@ -54,16 +54,12 @@ const exSummary = (ex: GlanceExercise) =>
         `${plural(ex.setCount, 'set')} · ${ex.top} kg`
     :   plural(ex.setCount, 'set')
 
-const metaLine = (w: (typeof ordered.value)[number]) => {
-    const parts = [
+const metaLine = (w: (typeof ordered.value)[number]) =>
+    [
         plural(w.stats.exercises, 'exercise'),
         plural(w.stats.sets, 'set'),
         `${w.stats.volume.toLocaleString()} kg`,
-    ]
-    const d = workoutDurationMin(w)
-    if (d != null) parts.push(`${d} min`)
-    return parts.join(' · ')
-}
+    ].join(' · ')
 
 // Resolved on the client only: relative labels depend on "now", so SSR renders
 // the absolute date and the client swaps in "Today"/"Yesterday" after mount —
@@ -173,9 +169,9 @@ async function confirmDelete() {
                     <div class="flex items-center gap-2">
                         <span
                             class="tag tag--lg"
-                            :class="{ 'tag--accent': !w.completedAt }"
+                            :class="{ 'tag--accent': !w.completed }"
                         >
-                            {{ w.completedAt ? dayLabel(w) : 'In progress' }}
+                            {{ w.completed ? dayLabel(w) : 'In progress' }}
                         </span>
                         <button
                             type="button"
@@ -226,7 +222,7 @@ async function confirmDelete() {
 
                 <div class="card-actions">
                     <NuxtLink
-                        v-if="!w.completedAt"
+                        v-if="!w.completed"
                         :to="`/workouts/${w.id}`"
                         class="btn-primary"
                     >
