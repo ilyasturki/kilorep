@@ -34,9 +34,24 @@ async function copyToken() {
     toast.add({ title: 'Token copied', color: 'success' })
 }
 
+async function copyCommand() {
+    await navigator.clipboard.writeText(mcpCommand.value)
+    toast.add({ title: 'Command copied', color: 'success' })
+}
+
+const scopeItems = [
+    { label: 'Local — this project, just you', value: 'local' },
+    { label: 'Project — shared via .mcp.json', value: 'project' },
+    { label: 'User — all your projects', value: 'user' },
+] as const
+
+const scope = ref<'local' | 'project' | 'user'>('local')
+
 const mcpCommand = computed(() => {
     const origin = useRequestURL().origin
-    return `claude mcp add --transport http kilorep ${origin}/mcp --header "Authorization: Bearer ${token.value}"`
+    // 'local' is the CLI default, so the flag is only worth spelling out otherwise.
+    const scopeFlag = scope.value === 'local' ? '' : `--scope ${scope.value} `
+    return `claude mcp add ${scopeFlag}--transport http kilorep ${origin}/mcp --header "Authorization: Bearer ${token.value}"`
 })
 
 const confirmOpen = ref(false)
@@ -118,7 +133,7 @@ async function signOut() {
                     <code class="token mono">{{ token }}</code>
                     <button
                         type="button"
-                        class="icon-btn sm"
+                        class="icon-btn copy-btn"
                         aria-label="Copy token"
                         @click="copyToken"
                     >
@@ -132,7 +147,27 @@ async function signOut() {
                     Copy it now — it won't be shown again. Then register the
                     server:
                 </p>
-                <code class="token-cmd mono">{{ mcpCommand }}</code>
+                <div class="scope-row">
+                    <span class="scope-label">Scope</span>
+                    <UiSelect
+                        v-model="scope"
+                        :items="scopeItems"
+                    />
+                </div>
+                <div class="cmd-row">
+                    <code class="token-cmd mono">{{ mcpCommand }}</code>
+                    <button
+                        type="button"
+                        class="icon-btn copy-btn"
+                        aria-label="Copy command"
+                        @click="copyCommand"
+                    >
+                        <Icon
+                            name="tabler:copy"
+                            :size="15"
+                        />
+                    </button>
+                </div>
             </template>
         </div>
 
