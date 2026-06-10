@@ -8,5 +8,12 @@ export function errorMessage(error: unknown, fallback: string): string {
                 return data.statusMessage
         }
     }
+    // No structured server response while offline means the write never
+    // reached the server — the missing network is the real cause, so say
+    // that instead of the generic failure copy (reads are cached but
+    // writes need the server).
+    if (import.meta.client && !navigator.onLine) {
+        return "You're offline — nothing was saved."
+    }
     return fallback
 }

@@ -5,6 +5,7 @@
     "scripts": {
         "build": "nuxt build",
         "dev": "nuxt dev",
+        "start": "node .output/server/index.mjs",
         "generate": "nuxt generate",
         "preview": "nuxt preview",
         "postinstall": "nuxt prepare",
@@ -43,6 +44,7 @@
         "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
         "@iconify-json/tabler": "^1.2.35",
         "@types/better-sqlite3": "^7.6.13",
+        "@vite-pwa/nuxt": "^1.1.1",
         "drizzle-kit": "^0.31.10",
         "oxlint": "^1.68.0",
         "oxlint-tsgolint": "^0.23.0",

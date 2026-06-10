@@ -5,21 +5,13 @@
  * and kept in state for the whole visit.
  */
 export default defineNuxtRouteMiddleware(async (to) => {
-    const authEnabled = useState<boolean | null>('auth-enabled', () => null)
+    const authEnabled = useAuthEnabled()
     if (authEnabled.value === null) {
         const mode = await $fetch('/api/auth/mode')
         authEnabled.value = mode.authEnabled
     }
 
-    if (!authEnabled.value) {
-        if (to.path === '/login') return navigateTo('/')
-        return
-    }
-
-    const { loggedIn } = useUserSession()
-    if (loggedIn.value) {
-        if (to.path === '/login') return navigateTo('/')
-        return
-    }
-    if (to.path !== '/login') return navigateTo('/login')
+    const gated = authEnabled.value && !useUserSession().loggedIn.value
+    if (gated && to.path !== '/login') return navigateTo('/login')
+    if (!gated && to.path === '/login') return navigateTo('/')
 })

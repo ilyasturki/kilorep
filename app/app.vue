@@ -2,15 +2,14 @@
 const route = useRoute()
 const header = usePageHeader()
 
-const { loggedIn, user, clear } = useUserSession()
+const { loggedIn, user } = useUserSession()
 
-// The login page stands alone, outside the app shell.
-const bare = computed(() => route.path === '/login')
+const online = useOnline()
 
-async function signOut() {
-    await clear()
-    await navigateTo('/login')
-}
+// Pages flagged bare via definePageMeta (login) stand outside the app shell.
+const bare = computed(() => route.meta.bare === true)
+
+const signOut = useSignOut()
 
 const collapsed = useCookie<boolean>('sidebar-collapsed', {
     default: () => false,
@@ -44,6 +43,7 @@ useHead({
 </script>
 
 <template>
+    <NuxtPwaManifest />
     <div v-if="bare">
         <NuxtPage />
         <UiToaster />
@@ -134,6 +134,12 @@ useHead({
         </aside>
 
         <div class="main">
+            <div
+                v-if="!online"
+                class="offline-bar"
+            >
+                Offline — showing cached data
+            </div>
             <header class="topbar">
                 <div class="topbar-l">
                     <div

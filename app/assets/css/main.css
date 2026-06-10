@@ -124,6 +124,18 @@
         min-height: 0;
     }
 
+    .offline-bar {
+        padding: 6px 18px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--line);
+    }
+
     .topbar {
         display: flex;
         align-items: flex-end;

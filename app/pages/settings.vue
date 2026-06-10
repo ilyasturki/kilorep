@@ -3,13 +3,13 @@
 // creds bounce home (the auth middleware has filled the state by now).
 definePageMeta({
     middleware: () => {
-        const authEnabled = useState<boolean | null>('auth-enabled')
-        if (authEnabled.value === false) return navigateTo('/')
+        if (useAuthEnabled().value === false) return navigateTo('/')
     },
 })
 
-const { user, clear } = useUserSession()
+const { user } = useUserSession()
 const toast = useToast()
+const signOut = useSignOut()
 
 const token = ref<string | null>(null)
 const minting = ref(false)
@@ -28,15 +28,9 @@ async function generateToken() {
     }
 }
 
-async function copyToken() {
-    if (!token.value) return
-    await navigator.clipboard.writeText(token.value)
-    toast.add({ title: 'Token copied', color: 'success' })
-}
-
-async function copyCommand() {
-    await navigator.clipboard.writeText(mcpCommand.value)
-    toast.add({ title: 'Command copied', color: 'success' })
+async function copy(text: string, label: string) {
+    await navigator.clipboard.writeText(text)
+    toast.add({ title: `${label} copied`, color: 'success' })
 }
 
 const scopeItems = [
@@ -47,8 +41,9 @@ const scopeItems = [
 
 const scope = ref<'local' | 'project' | 'user'>('local')
 
+const origin = useRequestURL().origin
+
 const mcpCommand = computed(() => {
-    const origin = useRequestURL().origin
     // 'local' is the CLI default, so the flag is only worth spelling out otherwise.
     const scopeFlag = scope.value === 'local' ? '' : `--scope ${scope.value} `
     return `claude mcp add ${scopeFlag}--transport http kilorep ${origin}/mcp --header "Authorization: Bearer ${token.value}"`
@@ -61,17 +56,11 @@ async function deleteAccount() {
     deleting.value = true
     try {
         await $fetch('/api/account', { method: 'DELETE' })
-        await clear()
-        await navigateTo('/login')
+        await signOut()
     } catch {
         toast.add({ title: 'Could not delete the account', color: 'error' })
         deleting.value = false
     }
-}
-
-async function signOut() {
-    await clear()
-    await navigateTo('/login')
 }
 </script>
 
@@ -135,7 +124,7 @@ async function signOut() {
                         type="button"
                         class="icon-btn copy-btn"
                         aria-label="Copy token"
-                        @click="copyToken"
+                        @click="copy(token, 'Token')"
                     >
                         <Icon
                             name="tabler:copy"
@@ -160,7 +149,7 @@ async function signOut() {
                         type="button"
                         class="icon-btn copy-btn"
                         aria-label="Copy command"
-                        @click="copyCommand"
+                        @click="copy(mcpCommand, 'Command')"
                     >
                         <Icon
                             name="tabler:copy"

@@ -1,6 +1,12 @@
 <script setup lang="ts">
+definePageMeta({ bare: true })
+
 const route = useRoute()
 const failed = computed(() => route.query.error != null)
+
+// Belt-and-braces alongside the sign-out wipe: whoever signs in next must
+// not inherit the previous account's cached data.
+onMounted(clearUserCaches)
 
 useHead({ title: 'Sign in · Kilorep' })
 </script>
