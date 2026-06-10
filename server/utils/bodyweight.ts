@@ -1,3 +1,5 @@
+import type { Bodyweight } from '~~/server/database/schema'
+
 export type BodyweightInput = {
     date: string
     weight: number
@@ -44,4 +46,19 @@ export function parseBodyweightInput(
     // Pin to two decimals so averaged weigh-ins keep their precision while float
     // garbage like 82.40000001 never lands in the store.
     return { date, weight: Math.round(weight * 100) / 100 }
+}
+
+// One weigh-in per day: logging a date that already exists overwrites its
+// weight rather than erroring or stacking a second point on the chart.
+// Shared by `POST /api/bodyweight` and the MCP weigh-in tool.
+export function upsertBodyweight(values: BodyweightInput): Bodyweight {
+    return useDrizzle()
+        .insert(tables.bodyweight)
+        .values(values)
+        .onConflictDoUpdate({
+            target: tables.bodyweight.date,
+            set: { weight: values.weight },
+        })
+        .returning()
+        .get()
 }

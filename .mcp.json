@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+        "kilorep": {
+            "type": "http",
+            "url": "http://localhost:4001/mcp"
+        }
+    }
+}
