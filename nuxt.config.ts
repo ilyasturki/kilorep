@@ -3,8 +3,14 @@ import tailwindcss from '@tailwindcss/vite'
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
-    modules: ['@vueuse/nuxt', 'reka-ui/nuxt', '@nuxt/icon'],
+    modules: ['@vueuse/nuxt', 'reka-ui/nuxt', '@nuxt/icon', 'nuxt-auth-utils'],
     css: ['./app/assets/css/main.css'],
+    runtimeConfig: {
+        // Sealed-cookie session lifetime (nuxt-auth-utils): 30 days.
+        session: {
+            maxAge: 60 * 60 * 24 * 30,
+        },
+    },
     // Bundle the locally-installed @iconify-json/tabler set so icons resolve
     // offline with no Iconify API calls.
     icon: {

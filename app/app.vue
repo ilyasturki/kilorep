@@ -2,6 +2,16 @@
 const route = useRoute()
 const header = usePageHeader()
 
+const { loggedIn, user, clear } = useUserSession()
+
+// The login page stands alone, outside the app shell.
+const bare = computed(() => route.path === '/login')
+
+async function signOut() {
+    await clear()
+    await navigateTo('/login')
+}
+
 const collapsed = useCookie<boolean>('sidebar-collapsed', {
     default: () => false,
 })
@@ -29,7 +39,14 @@ useHead({
 </script>
 
 <template>
-    <div class="shell">
+    <div v-if="bare">
+        <NuxtPage />
+        <UiToaster />
+    </div>
+    <div
+        v-else
+        class="shell"
+    >
         <aside
             class="sidebar"
             :class="{ collapsed }"
@@ -76,6 +93,34 @@ useHead({
                     <span>{{ link.label }}</span>
                 </NuxtLink>
             </nav>
+
+            <div
+                v-if="loggedIn"
+                class="side-user"
+            >
+                <img
+                    v-if="user?.avatarUrl"
+                    :src="user.avatarUrl"
+                    class="side-avatar"
+                    alt=""
+                    referrerpolicy="no-referrer"
+                />
+                <span class="side-user-name">{{
+                    user?.name ?? user?.email
+                }}</span>
+                <button
+                    type="button"
+                    class="side-signout"
+                    title="Sign out"
+                    aria-label="Sign out"
+                    @click="signOut"
+                >
+                    <Icon
+                        name="tabler:logout"
+                        :size="18"
+                    />
+                </button>
+            </div>
         </aside>
 
         <div class="main">

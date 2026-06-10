@@ -1,3 +1,4 @@
+import type { User } from '../database/schema'
 import { EXERCISE_CATALOG } from '../database/exercise-catalog'
 
 // Memoised per process; the row itself is permanent once created.
@@ -24,6 +25,59 @@ export function ensureLocalUserId(): number {
             .get()
     localUserId = user.id
     return user.id
+}
+
+type GoogleProfile = {
+    sub: string
+    email?: string
+    name?: string
+    picture?: string
+}
+
+/**
+ * Resolves a Google sign-in to an account. Identity is the stable `sub`
+ * claim, never the email — Google lets users change that. First sign-in
+ * creates the account and seeds its own copy of the exercise catalog;
+ * later sign-ins refresh the profile fields.
+ */
+export function findOrCreateGoogleUser(profile: GoogleProfile): User {
+    const db = useDrizzle()
+    const fields = {
+        email: profile.email ?? null,
+        name: profile.name ?? null,
+        avatarUrl: profile.picture ?? null,
+    }
+
+    const existing = db
+        .select()
+        .from(tables.users)
+        .where(
+            and(
+                eq(tables.users.provider, 'google'),
+                eq(tables.users.providerAccountId, profile.sub),
+            ),
+        )
+        .get()
+    if (existing) {
+        return db
+            .update(tables.users)
+            .set(fields)
+            .where(eq(tables.users.id, existing.id))
+            .returning()
+            .get()
+    }
+
+    const user = db
+        .insert(tables.users)
+        .values({
+            provider: 'google',
+            providerAccountId: profile.sub,
+            ...fields,
+        })
+        .returning()
+        .get()
+    syncUserCatalog(user.id, 0)
+    return user
 }
 
 /**

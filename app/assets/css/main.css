@@ -376,6 +376,115 @@
         background: var(--surface);
     }
 
+    /* Signed-in account, pinned to the sidebar foot (auth mode only). */
+    .side-user {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 6px 0;
+        border-top: 1px solid var(--line);
+        min-width: 0;
+    }
+
+    .side-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        flex: none;
+    }
+
+    .side-user-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink-2);
+    }
+
+    .side-signout {
+        display: grid;
+        place-items: center;
+        padding: 6px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--ink-3);
+        transition: color 0.12s;
+    }
+
+    .side-signout:hover {
+        color: var(--ink);
+    }
+
+    .sidebar.collapsed .side-user {
+        flex-direction: column;
+        gap: 10px;
+        padding-inline: 0;
+    }
+
+    .sidebar.collapsed .side-user-name {
+        display: none;
+    }
+
+    /* ===== Login ========================================= */
+    .login-screen {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--ink);
+    }
+
+    .login-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        width: min(380px, 100%);
+        padding: 44px 32px;
+        background: var(--surface);
+        border: 1px solid var(--line-2);
+        text-align: center;
+    }
+
+    .login-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .login-logo {
+        width: 34px;
+        height: 34px;
+    }
+
+    .login-name {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+    }
+
+    .login-tag {
+        font-size: 14px;
+        color: var(--ink-2);
+        text-wrap: balance;
+    }
+
+    .login-cta {
+        text-decoration: none;
+        margin-top: 8px;
+    }
+
+    .login-error {
+        font-size: 13px;
+        color: #f87171;
+    }
+
     /* ===== Primitives ==================================== */
     .kicker {
         font-family: 'JetBrains Mono', monospace;

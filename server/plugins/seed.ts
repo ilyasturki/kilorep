@@ -15,7 +15,9 @@ export default defineNitroPlugin(() => {
     if (import.meta.prerender) return
 
     try {
-        ensureLocalUserId()
+        // The implicit single-user account only exists when auth is off; a
+        // multi-user instance creates accounts at first sign-in instead.
+        if (!authEnabled()) ensureLocalUserId()
         const users = useDrizzle()
             .select({
                 id: tables.users.id,

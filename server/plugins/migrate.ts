@@ -35,8 +35,8 @@ export default defineNitroPlugin(() => {
     sqlite.pragma('foreign_keys = OFF')
     try {
         migrate(drizzle(sqlite), { migrationsFolder })
-        const violations: unknown[] = sqlite.pragma('foreign_key_check')
-        if (violations.length > 0) {
+        const violations = sqlite.pragma('foreign_key_check')
+        if (Array.isArray(violations) && violations.length > 0) {
             throw new Error(
                 `migration left ${violations.length} foreign key violation(s): `
                     + JSON.stringify(violations.slice(0, 5)),

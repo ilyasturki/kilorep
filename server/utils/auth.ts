@@ -7,6 +7,16 @@ declare module 'h3' {
 }
 
 /**
+ * Multi-user mode is on iff Google OAuth credentials are configured
+ * (NUXT_OAUTH_GOOGLE_CLIENT_ID / _CLIENT_SECRET). Without them the app runs
+ * single-user as the implicit local account — there is no separate flag.
+ */
+export function authEnabled(): boolean {
+    const { oauth } = useRuntimeConfig()
+    return Boolean(oauth?.google?.clientId && oauth?.google?.clientSecret)
+}
+
+/**
  * The account this request operates as, resolved by the auth middleware.
  * Every data query must be scoped by this id — handlers take it as a required
  * parameter so an unscoped call can't typecheck.
