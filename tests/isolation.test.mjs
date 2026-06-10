@@ -14,9 +14,10 @@
  * seals them.
  */
 import { strict as assert } from 'node:assert'
-import { randomBytes, webcrypto } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import Database from 'better-sqlite3'
-import { defaults, seal } from 'iron-webcrypto'
+
+import { mintSession } from './mint-session.mjs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:4099'
 const DB_FILE = process.env.DB_FILE_NAME ?? '.data/test-auth.db'
@@ -25,16 +26,7 @@ const PASSWORD =
     ?? 'test-password-at-least-32-characters-long'
 
 async function mintCookie(user) {
-    const session = {
-        id: `iso-${user.id}`,
-        createdAt: Date.now(),
-        data: { user },
-    }
-    const sealed = await seal(webcrypto, session, PASSWORD, {
-        ...defaults,
-        ttl: 60 * 60 * 1000,
-    })
-    return `nuxt-session=${sealed}`
+    return `nuxt-session=${await mintSession(user, PASSWORD, 60 * 60 * 1000)}`
 }
 
 async function api(cookie, path, { method = 'GET', body } = {}) {

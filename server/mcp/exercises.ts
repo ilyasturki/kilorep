@@ -7,12 +7,9 @@ import {
     MUSCLE_INTENSITIES,
 } from '~~/server/database/schema'
 import { eq, tables, useDrizzle } from '~~/server/utils/drizzle'
-import {
-    asDuplicateNameError,
-    getExerciseDetail,
-    parseExerciseInput,
-} from '~~/server/utils/exercises'
-import { formatDate, formatSet, resolveExercise, run } from './helpers'
+import { createExercise, getExerciseDetail } from '~~/server/utils/exercises'
+import { toDateInput } from '~~/shared/utils/date'
+import { formatSet, resolveExercise, run } from './helpers'
 
 export function registerExerciseTools(server: McpServer, userId: number) {
     server.registerTool(
@@ -68,17 +65,8 @@ export function registerExerciseTools(server: McpServer, userId: number) {
         },
         (input) =>
             run(() => {
-                const values = parseExerciseInput(input)
-                try {
-                    const exercise = useDrizzle()
-                        .insert(tables.exercises)
-                        .values({ ...values, userId })
-                        .returning()
-                        .get()
-                    return `Created exercise "${exercise.name}" (${exercise.equipment} ${exercise.type})`
-                } catch (error) {
-                    asDuplicateNameError(error)
-                }
+                const exercise = createExercise(userId, input)
+                return `Created exercise "${exercise.name}" (${exercise.equipment} ${exercise.type})`
             }),
     )
 
@@ -112,7 +100,7 @@ export function registerExerciseTools(server: McpServer, userId: number) {
                 ]
                 lines.push(
                     detail.best ?
-                        `Best: ${detail.best.weight}kg×${detail.best.reps} (${formatDate(new Date(detail.best.startedAt))}, ${detail.best.name} #${detail.best.workoutId})`
+                        `Best: ${detail.best.weight}kg×${detail.best.reps} (${toDateInput(detail.best.startedAt)}, ${detail.best.name} #${detail.best.workoutId})`
                     :   'Best: none logged yet',
                 )
                 if (detail.sessions.length > 0) {
@@ -129,7 +117,7 @@ export function registerExerciseTools(server: McpServer, userId: number) {
                     for (const workout of detail.history.slice(0, limit)) {
                         const sets = workout.sets.map(formatSet).join(', ')
                         lines.push(
-                            `  ${formatDate(new Date(workout.startedAt))} ${workout.name} #${workout.workoutId}: ${sets || 'no sets'}`,
+                            `  ${toDateInput(workout.startedAt)} ${workout.name} #${workout.workoutId}: ${sets || 'no sets'}`,
                         )
                     }
                 }

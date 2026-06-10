@@ -282,3 +282,83 @@ export function stitchWorkoutTree(
         entries: entriesByWorkout.get(workout.id) ?? [],
     }))
 }
+
+/**
+ * Loads full workout trees for the given ids (the user's own only), newest
+ * first. Four flat reads then a stitch: per-user data stays small, so this
+ * beats a fanned-out join or Drizzle's relational layer. Shared by the REST
+ * handlers and the MCP tools so both shape data identically.
+ */
+export function loadWorkoutTrees(
+    userId: number,
+    ids: number[],
+): WorkoutWithEntries[] {
+    if (ids.length === 0) return []
+    const db = useDrizzle()
+
+    const workouts = db
+        .select()
+        .from(tables.workouts)
+        .where(
+            and(
+                inArray(tables.workouts.id, ids),
+                eq(tables.workouts.userId, userId),
+            ),
+        )
+        .orderBy(desc(tables.workouts.startedAt))
+        .all()
+    const ownedIds = workouts.map((workout) => workout.id)
+    if (ownedIds.length === 0) return []
+    const entries = db
+        .select()
+        .from(tables.workoutEntries)
+        .where(inArray(tables.workoutEntries.workoutId, ownedIds))
+        .orderBy(asc(tables.workoutEntries.position))
+        .all()
+    const entryIds = entries.map((entry) => entry.id)
+    const exercises =
+        entryIds.length > 0 ?
+            db
+                .select({
+                    workoutExercise: tables.workoutExercises,
+                    exercise: tables.exercises,
+                })
+                .from(tables.workoutExercises)
+                .innerJoin(
+                    tables.exercises,
+                    eq(tables.workoutExercises.exerciseId, tables.exercises.id),
+                )
+                .where(inArray(tables.workoutExercises.entryId, entryIds))
+                .orderBy(asc(tables.workoutExercises.position))
+                .all()
+        :   []
+    const exerciseIds = exercises.map((row) => row.workoutExercise.id)
+    const sets =
+        exerciseIds.length > 0 ?
+            db
+                .select()
+                .from(tables.workoutSets)
+                .where(
+                    inArray(tables.workoutSets.workoutExerciseId, exerciseIds),
+                )
+                .orderBy(asc(tables.workoutSets.position))
+                .all()
+        :   []
+
+    return stitchWorkoutTree(workouts, entries, exercises, sets)
+}
+
+/**
+ * Deletes a workout the user owns, returning the deleted row or undefined
+ * when no owned workout matches. Entries, exercises and sets cascade away
+ * via their foreign keys. Each caller maps the miss to its own error shape.
+ */
+export function deleteWorkout(userId: number, id: number): Workout | undefined {
+    return useDrizzle()
+        .delete(tables.workouts)
+        .where(
+            and(eq(tables.workouts.id, id), eq(tables.workouts.userId, userId)),
+        )
+        .returning()
+        .get()
+}

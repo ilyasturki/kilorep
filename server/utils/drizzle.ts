@@ -13,7 +13,6 @@ export {
     gt,
     gte,
     inArray,
-    isNull,
     lt,
     lte,
     or,

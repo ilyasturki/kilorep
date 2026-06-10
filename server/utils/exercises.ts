@@ -1,5 +1,6 @@
 import type {
     Equipment,
+    Exercise,
     ExerciseDetail,
     ExerciseHistoryWorkout,
     ExerciseType,
@@ -73,6 +74,27 @@ export function parseExerciseInput(
     }
 
     return { name, equipment, type, muscles }
+}
+
+/**
+ * Validates and inserts a new exercise for the user, translating the unique
+ * (userId, name) violation into a 409. Shared by POST /api/exercises and the
+ * MCP create_exercise tool.
+ */
+export function createExercise(
+    userId: number,
+    input: Record<string, unknown>,
+): Exercise {
+    const values = parseExerciseInput(input)
+    try {
+        return useDrizzle()
+            .insert(tables.exercises)
+            .values({ ...values, userId })
+            .returning()
+            .get()
+    } catch (error) {
+        asDuplicateNameError(error)
+    }
 }
 
 /**

@@ -17,6 +17,16 @@ export function authEnabled(): boolean {
 }
 
 /**
+ * 404s endpoints that only exist in auth mode (OAuth, token minting, account
+ * deletion), so a single-user instance doesn't even reveal they exist.
+ */
+export function requireAuthMode(): void {
+    if (!authEnabled()) {
+        throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    }
+}
+
+/**
  * The account this request operates as, resolved by the auth middleware.
  * Every data query must be scoped by this id — handlers take it as a required
  * parameter so an unscoped call can't typecheck.

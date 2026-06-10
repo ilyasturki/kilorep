@@ -18,8 +18,6 @@ const google = defineOAuthGoogleEventHandler({
 })
 
 export default defineEventHandler((event) => {
-    if (!authEnabled()) {
-        throw createError({ statusCode: 404, statusMessage: 'Not Found' })
-    }
+    requireAuthMode()
     return google(event)
 })

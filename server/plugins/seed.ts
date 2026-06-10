@@ -1,5 +1,3 @@
-import { EXERCISE_CATALOG } from '../database/exercise-catalog'
-
 /**
  * Seeds the default exercise catalog after migrations have run (Nitro
  * registers plugins alphabetically, and "migrate" sorts before "seed").
@@ -26,9 +24,7 @@ export default defineNitroPlugin(() => {
             .from(tables.users)
             .all()
         for (const user of users) {
-            if (user.catalogCursor < EXERCISE_CATALOG.length) {
-                syncUserCatalog(user.id, user.catalogCursor)
-            }
+            syncUserCatalog(user.id, user.catalogCursor)
         }
     } catch (error) {
         console.error('[seed] failed to seed exercise catalog', error)

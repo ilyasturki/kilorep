@@ -7,7 +7,8 @@ import {
 } from '~~/server/utils/bodyweight'
 import { and, desc, eq, tables, useDrizzle } from '~~/server/utils/drizzle'
 import { badRequest } from '~~/server/utils/http'
-import { formatDate, run } from './helpers'
+import { toDateInput } from '~~/shared/utils/date'
+import { run } from './helpers'
 
 export function registerBodyweightTools(server: McpServer, userId: number) {
     server.registerTool(
@@ -29,7 +30,7 @@ export function registerBodyweightTools(server: McpServer, userId: number) {
         },
         (input) =>
             run(() => {
-                const date = input.date ?? formatDate(new Date())
+                const date = input.date ?? toDateInput(new Date())
                 const row = upsertBodyweight(
                     userId,
                     parseBodyweightInput({ date, weight: input.weight }),

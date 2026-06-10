@@ -2,9 +2,7 @@
 // Auth mode only — on a single-user instance "delete my account" would mean
 // wiping the whole database, which is the operator's call, not an endpoint's.
 export default defineEventHandler(async (event) => {
-    if (!authEnabled()) {
-        throw createError({ statusCode: 404, statusMessage: 'Not Found' })
-    }
+    requireAuthMode()
     const userId = requireUserId(event)
 
     useDrizzle().transaction((tx) => {

@@ -13,16 +13,18 @@ import {
 import { badRequest } from '~~/server/utils/http'
 import {
     copySessionToWorkout,
+    deleteWorkout,
+    loadWorkoutTrees,
     parseWorkoutInput,
     writeWorkoutEntries,
 } from '~~/server/utils/workouts'
+import { toDateInput } from '~~/shared/utils/date'
 import {
     countSets,
-    formatDate,
     formatSet,
     formatWorkout,
-    loadWorkoutTrees,
     resolveExercise,
+    resolveExercises,
     resolveSessionTemplate,
     resolveWorkout,
     run,
@@ -92,10 +94,14 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                     input.session ?
                         resolveSessionTemplate(userId, input.session)
                     :   null
-                const entries = input.exercises.map((ex) => ({
+                const resolved = resolveExercises(
+                    userId,
+                    input.exercises.map((ex) => ex.exercise),
+                )
+                const entries = input.exercises.map((ex, index) => ({
                     exercises: [
                         {
-                            exerciseId: resolveExercise(userId, ex.exercise).id,
+                            exerciseId: resolved[index]!.id,
                             sets: ex.sets.map((set) => ({
                                 reps: set.reps,
                                 weight: set.weight ?? null,
@@ -516,18 +522,9 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
         },
         (input) =>
             run(() => {
-                const deleted = useDrizzle()
-                    .delete(tables.workouts)
-                    .where(
-                        and(
-                            eq(tables.workouts.id, input.workout),
-                            eq(tables.workouts.userId, userId),
-                        ),
-                    )
-                    .returning()
-                    .get()
+                const deleted = deleteWorkout(userId, input.workout)
                 if (!deleted) badRequest(`No workout with id ${input.workout}`)
-                return `Deleted workout #${deleted.id} ${deleted.name} (${formatDate(deleted.startedAt)})`
+                return `Deleted workout #${deleted.id} ${deleted.name} (${toDateInput(deleted.startedAt)})`
             }),
     )
 }

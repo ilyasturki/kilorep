@@ -5,24 +5,16 @@ import type {
     Workout,
     WorkoutWithEntries,
 } from '~~/server/database/schema'
-import {
-    and,
-    asc,
-    desc,
-    eq,
-    inArray,
-    tables,
-    useDrizzle,
-} from '~~/server/utils/drizzle'
+import { and, desc, eq, tables, useDrizzle } from '~~/server/utils/drizzle'
 import { badRequest } from '~~/server/utils/http'
-import { stitchWorkoutTree } from '~~/server/utils/workouts'
+import { toDateInput } from '~~/shared/utils/date'
 
 export type ToolResult = {
     content: { type: 'text'; text: string }[]
     isError?: boolean
 }
 
-export function text(message: string): ToolResult {
+function text(message: string): ToolResult {
     return { content: [{ type: 'text', text: message }] }
 }
 
@@ -84,17 +76,23 @@ function resolveByName<T extends { name: string }>(
     )
 }
 
+const EXERCISE_HINT =
+    ' Use list_exercises to browse, or create_exercise if it is new.'
+
 export function resolveExercise(userId: number, name: string): Exercise {
+    return resolveExercises(userId, [name])[0]!
+}
+
+/** Resolves several names against a single catalog read, so a whole
+ * log_workout payload costs one query instead of one per exercise. */
+export function resolveExercises(userId: number, names: string[]): Exercise[] {
     const all = useDrizzle()
         .select()
         .from(tables.exercises)
         .where(eq(tables.exercises.userId, userId))
         .all()
-    return resolveByName(
-        all,
-        name,
-        'exercise',
-        ' Use list_exercises to browse, or create_exercise if it is new.',
+    return names.map((name) =>
+        resolveByName(all, name, 'exercise', EXERCISE_HINT),
     )
 }
 
@@ -155,72 +153,6 @@ export function resolveWorkout(userId: number, id?: number): Workout {
     )
 }
 
-/** Loads full workout trees for the given ids (the user's own only), newest
- * first. */
-export function loadWorkoutTrees(
-    userId: number,
-    ids: number[],
-): WorkoutWithEntries[] {
-    if (ids.length === 0) return []
-    const db = useDrizzle()
-
-    const workouts = db
-        .select()
-        .from(tables.workouts)
-        .where(
-            and(
-                inArray(tables.workouts.id, ids),
-                eq(tables.workouts.userId, userId),
-            ),
-        )
-        .orderBy(desc(tables.workouts.startedAt))
-        .all()
-    const ownedIds = workouts.map((workout) => workout.id)
-    if (ownedIds.length === 0) return []
-    const entries = db
-        .select()
-        .from(tables.workoutEntries)
-        .where(inArray(tables.workoutEntries.workoutId, ownedIds))
-        .orderBy(asc(tables.workoutEntries.position))
-        .all()
-    const entryIds = entries.map((entry) => entry.id)
-    const exercises =
-        entryIds.length > 0 ?
-            db
-                .select({
-                    workoutExercise: tables.workoutExercises,
-                    exercise: tables.exercises,
-                })
-                .from(tables.workoutExercises)
-                .innerJoin(
-                    tables.exercises,
-                    eq(tables.workoutExercises.exerciseId, tables.exercises.id),
-                )
-                .where(inArray(tables.workoutExercises.entryId, entryIds))
-                .orderBy(asc(tables.workoutExercises.position))
-                .all()
-        :   []
-    const exerciseIds = exercises.map((ex) => ex.workoutExercise.id)
-    const sets =
-        exerciseIds.length > 0 ?
-            db
-                .select()
-                .from(tables.workoutSets)
-                .where(
-                    inArray(tables.workoutSets.workoutExerciseId, exerciseIds),
-                )
-                .orderBy(asc(tables.workoutSets.position))
-                .all()
-        :   []
-
-    return stitchWorkoutTree(workouts, entries, exercises, sets)
-}
-
-// 'en-CA' renders the server-local date as YYYY-MM-DD.
-export function formatDate(date: Date): string {
-    return date.toLocaleDateString('en-CA')
-}
-
 export function formatSet(
     set: Pick<LoggedSet, 'weight' | 'reps' | 'done'>,
 ): string {
@@ -246,7 +178,7 @@ export function countSets(workout: WorkoutWithEntries): {
 export function formatWorkout(workout: WorkoutWithEntries): string {
     const status = workout.completed ? 'completed' : 'in progress'
     const lines = [
-        `#${workout.id} ${workout.name} — ${formatDate(workout.startedAt)} (${status})`,
+        `#${workout.id} ${workout.name} — ${toDateInput(workout.startedAt)} (${status})`,
     ]
     workout.entries.forEach((entry, index) => {
         const superset = entry.exercises.length > 1

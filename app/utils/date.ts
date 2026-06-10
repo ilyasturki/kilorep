@@ -12,16 +12,7 @@ export const fmtDateShort = (d: string | Date) =>
         month: 'short',
     })
 
-export const pad = (n: number) => String(n).padStart(2, '0')
-
-// 'YYYY-MM-DD' for a date in the LOCAL timezone (never UTC) — form inputs and
-// the bodyweight store both key off the user's own calendar day.
-export const toDateInput = (d: string | Date) => {
-    const date = new Date(d)
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-// Inverse of toDateInput: parse a 'YYYY-MM-DD' day to a Date at LOCAL midnight,
+// Inverse of toDateInput (shared/utils/date.ts): parse a 'YYYY-MM-DD' day to a Date at LOCAL midnight,
 // so the rendered day always matches the stored day whatever the runtime tz.
 export const parseLocalDay = (d: string) => new Date(`${d}T00:00:00`)
 

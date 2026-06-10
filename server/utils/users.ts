@@ -134,7 +134,7 @@ export function syncUserCatalog(userId: number, cursor: number): void {
     useDrizzle().transaction((tx) => {
         tx.insert(tables.exercises)
             .values(
-                EXERCISE_CATALOG.slice(Math.max(0, cursor)).map((entry) => ({
+                EXERCISE_CATALOG.slice(cursor).map((entry) => ({
                     ...entry,
                     userId,
                 })),
