@@ -43,7 +43,6 @@ useHead({
 </script>
 
 <template>
-    <NuxtPwaManifest />
     <div v-if="bare">
         <NuxtPage />
         <UiToaster />

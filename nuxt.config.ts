@@ -41,6 +41,10 @@ export default defineNuxtConfig({
                 { property: 'og:type', content: 'website' },
             ],
             link: [
+                // Static so the manifest is in the served HTML: routes are
+                // ssr:false and Firefox Android ignores a link injected after
+                // hydration, downgrading install to a plain bookmark.
+                { rel: 'manifest', href: '/manifest.webmanifest' },
                 { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
                 {
                     rel: 'icon',
