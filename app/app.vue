@@ -16,17 +16,22 @@ const collapsed = useCookie<boolean>('sidebar-collapsed', {
     default: () => false,
 })
 
-const links = [
+// Settings only exists for signed-in accounts (token, deletion); a
+// self-hosted instance without auth has nothing to put there.
+const links = computed(() => [
     { label: 'Workouts', to: '/workouts', icon: 'tabler:activity' },
     { label: 'Sessions', to: '/sessions', icon: 'tabler:list-check' },
     { label: 'Exercises', to: '/exercises', icon: 'tabler:dumbbell' },
     { label: 'Weight', to: '/weight', icon: 'tabler:scale' },
-]
+    ...(loggedIn.value ?
+        [{ label: 'Settings', to: '/settings', icon: 'tabler:settings' }]
+    :   []),
+])
 
 const APP_NAME = 'Kilorep'
 
 const section = computed(
-    () => links.find((link) => route.path.startsWith(link.to))?.label,
+    () => links.value.find((link) => route.path.startsWith(link.to))?.label,
 )
 const title = computed(() => section.value ?? APP_NAME)
 
@@ -98,16 +103,21 @@ useHead({
                 v-if="loggedIn"
                 class="side-user"
             >
-                <img
-                    v-if="user?.avatarUrl"
-                    :src="user.avatarUrl"
-                    class="side-avatar"
-                    alt=""
-                    referrerpolicy="no-referrer"
-                />
-                <span class="side-user-name">{{
-                    user?.name ?? user?.email
-                }}</span>
+                <NuxtLink
+                    to="/settings"
+                    class="side-account"
+                >
+                    <img
+                        v-if="user?.avatarUrl"
+                        :src="user.avatarUrl"
+                        class="side-avatar"
+                        alt=""
+                        referrerpolicy="no-referrer"
+                    />
+                    <span class="side-user-name">{{
+                        user?.name ?? user?.email
+                    }}</span>
+                </NuxtLink>
                 <button
                     type="button"
                     class="side-signout"

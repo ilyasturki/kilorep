@@ -18,8 +18,30 @@ export default defineEventHandler(async (event) => {
         return
     }
 
+    // MCP clients can't hold a Google session; /mcp (and only /mcp) also
+    // accepts the bearer token minted on the settings page.
+    if (path === '/mcp') {
+        const header = getHeader(event, 'authorization')
+        if (header?.startsWith('Bearer ')) {
+            const userId = findUserIdByApiToken(
+                header.slice('Bearer '.length).trim(),
+            )
+            if (userId == null) {
+                throw createError({
+                    statusCode: 401,
+                    statusMessage: 'Invalid token',
+                })
+            }
+            event.context.userId = userId
+            return
+        }
+    }
+
     const session = await getUserSession(event)
-    if (!session.user) {
+    // A sealed cookie can outlive its account (deletion has no way to recall
+    // copies), so confirm the row still exists before trusting it.
+    if (!session.user || !userExists(session.user.id)) {
+        await clearUserSession(event)
         throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
     event.context.userId = session.user.id

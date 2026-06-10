@@ -387,6 +387,19 @@
         min-width: 0;
     }
 
+    .side-account {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+        text-decoration: none;
+    }
+
+    .side-account:hover .side-user-name {
+        color: var(--ink);
+    }
+
     .side-avatar {
         width: 26px;
         height: 26px;
@@ -483,6 +496,76 @@
     .login-error {
         font-size: 13px;
         color: #f87171;
+    }
+
+    /* ===== Settings ====================================== */
+    .settings-hint {
+        font-size: 13.5px;
+        line-height: 1.55;
+        color: var(--ink-2);
+    }
+
+    .acct {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .acct-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        flex: none;
+    }
+
+    .acct-id {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .acct-email {
+        font-size: 13px;
+        color: var(--ink-2);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .token-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 14px;
+        min-width: 0;
+    }
+
+    .token {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px;
+        font-size: 13px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .token-cmd {
+        display: block;
+        margin-top: 10px;
+        padding: 10px 12px;
+        font-size: 12.5px;
+        line-height: 1.6;
+        color: var(--ink-2);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .token-row + .settings-hint {
+        margin-top: 12px;
     }
 
     /* ===== Primitives ==================================== */
