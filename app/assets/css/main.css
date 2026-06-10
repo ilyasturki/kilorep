@@ -1462,6 +1462,17 @@
         text-transform: capitalize;
     }
 
+    /* The name doubles as a link to the exercise's history — same quiet hover
+       tint as .plan-ex--link so the tracking view stays free of link chrome. */
+    .wk-ex-name--link {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .wk-ex-name--link:hover {
+        color: var(--accent-text);
+    }
+
     /* Column grid shared by the header labels and each logged set row */
     .logset {
         display: grid;

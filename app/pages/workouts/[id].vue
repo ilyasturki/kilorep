@@ -376,12 +376,15 @@ async function changeDate() {
                             :key="item.exIndex"
                         >
                             <div class="wk-ex-head">
-                                <span class="wk-ex-name">
+                                <NuxtLink
+                                    :to="`/exercises/${item.ex.exerciseId}`"
+                                    class="wk-ex-name wk-ex-name--link"
+                                >
                                     <span class="plan-ex-idx mono">
                                         {{ pad(item.n) }}
                                     </span>
                                     {{ item.ex.name }}
-                                </span>
+                                </NuxtLink>
                                 <button
                                     type="button"
                                     class="icon-btn sm icon-btn--danger"
@@ -486,12 +489,15 @@ async function changeDate() {
                         class="mb-2"
                     >
                         <div class="wk-ex-head">
-                            <span class="wk-ex-name">
+                            <NuxtLink
+                                :to="`/exercises/${item.ex.exerciseId}`"
+                                class="wk-ex-name wk-ex-name--link"
+                            >
                                 <span class="plan-ex-idx mono">
                                     {{ pad(item.n) }}
                                 </span>
                                 {{ item.ex.name }}
-                            </span>
+                            </NuxtLink>
                             <span class="kicker"
                                 >{{ exVolume(item.ex) }} kg</span
                             >

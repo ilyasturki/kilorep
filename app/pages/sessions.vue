@@ -156,6 +156,7 @@ function planBlocks(session: SessionWithEntries) {
         exercises: entry.exercises.map((se) => ({
             key: se.id,
             n: ++n,
+            exerciseId: se.exerciseId,
             name: exerciseName(se.exerciseId),
             summary: setSummary(se.sets),
         })),
@@ -440,17 +441,18 @@ function planBlocks(session: SessionWithEntries) {
                         >
                             SUPERSET
                         </span>
-                        <div
+                        <NuxtLink
                             v-for="ex in block.exercises"
                             :key="ex.key"
-                            class="plan-ex"
+                            :to="`/exercises/${ex.exerciseId}`"
+                            class="plan-ex plan-ex--link"
                         >
                             <span class="plan-ex-idx">
                                 {{ String(ex.n).padStart(2, '0') }}
                             </span>
                             <span class="plan-ex-name">{{ ex.name }}</span>
                             <span class="plan-ex-target">{{ ex.summary }}</span>
-                        </div>
+                        </NuxtLink>
                     </div>
                 </div>
             </div>
