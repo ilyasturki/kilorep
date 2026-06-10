@@ -1,5 +1,23 @@
 @import 'tailwindcss';
 
+/* Self-hosted variable fonts (single woff2 each, full weight axis), so the
+   build needs no network — required for the sandboxed Nix package build. */
+@font-face {
+    font-family: 'Archivo';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/archivo-variable.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 100 800;
+    font-display: swap;
+    src: url('/fonts/jetbrains-mono-variable.woff2') format('woff2');
+}
+
 /* ============================================================
    Lift — brutalist-sharp design system
    Dark-first, near-square corners, hairline borders, one volt

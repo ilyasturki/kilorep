@@ -3,27 +3,8 @@ import tailwindcss from '@tailwindcss/vite'
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
-    modules: ['@vueuse/nuxt', 'reka-ui/nuxt', '@nuxt/fonts', '@nuxt/icon'],
+    modules: ['@vueuse/nuxt', 'reka-ui/nuxt', '@nuxt/icon'],
     css: ['./app/assets/css/main.css'],
-    // Self-hosted via @nuxt/fonts.
-    fonts: {
-        families: [
-            {
-                name: 'Archivo',
-                provider: 'google',
-                // Variable weight range → one file covers the 400–900 weights
-                // the UI uses (body 400, titles 800, wordmark 900).
-                weights: ['100 900'],
-                styles: ['normal'],
-            },
-            {
-                name: 'JetBrains Mono',
-                provider: 'google',
-                weights: [400, 500, 600, 700],
-                styles: ['normal'],
-            },
-        ],
-    },
     // Bundle the locally-installed @iconify-json/tabler set so icons resolve
     // offline with no Iconify API calls.
     icon: {
