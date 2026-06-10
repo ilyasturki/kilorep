@@ -5,11 +5,11 @@ import {
     parseBodyweightInput,
     upsertBodyweight,
 } from '~~/server/utils/bodyweight'
-import { desc, eq, tables, useDrizzle } from '~~/server/utils/drizzle'
+import { and, desc, eq, tables, useDrizzle } from '~~/server/utils/drizzle'
 import { badRequest } from '~~/server/utils/http'
 import { formatDate, run } from './helpers'
 
-export function registerBodyweightTools(server: McpServer) {
+export function registerBodyweightTools(server: McpServer, userId: number) {
     server.registerTool(
         'log_bodyweight',
         {
@@ -31,6 +31,7 @@ export function registerBodyweightTools(server: McpServer) {
             run(() => {
                 const date = input.date ?? formatDate(new Date())
                 const row = upsertBodyweight(
+                    userId,
                     parseBodyweightInput({ date, weight: input.weight }),
                 )
                 return `Logged ${row.weight}kg on ${row.date}`
@@ -58,6 +59,7 @@ export function registerBodyweightTools(server: McpServer) {
                 const rows = useDrizzle()
                     .select()
                     .from(tables.bodyweight)
+                    .where(eq(tables.bodyweight.userId, userId))
                     .orderBy(desc(tables.bodyweight.date))
                     .limit(input.limit ?? 30)
                     .all()
@@ -92,7 +94,12 @@ export function registerBodyweightTools(server: McpServer) {
             run(() => {
                 const deleted = useDrizzle()
                     .delete(tables.bodyweight)
-                    .where(eq(tables.bodyweight.date, input.date))
+                    .where(
+                        and(
+                            eq(tables.bodyweight.date, input.date),
+                            eq(tables.bodyweight.userId, userId),
+                        ),
+                    )
                     .returning()
                     .get()
                 if (!deleted) badRequest(`No weigh-in on ${input.date}`)

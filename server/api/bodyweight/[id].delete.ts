@@ -1,9 +1,15 @@
 export default defineEventHandler((event) => {
+    const userId = requireUserId(event)
     const id = getIdParam(event, 'weigh-in')
 
     const deleted = useDrizzle()
         .delete(tables.bodyweight)
-        .where(eq(tables.bodyweight.id, id))
+        .where(
+            and(
+                eq(tables.bodyweight.id, id),
+                eq(tables.bodyweight.userId, userId),
+            ),
+        )
         .returning()
         .get()
 

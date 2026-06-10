@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+    const userId = requireUserId(event)
     const id = getIdParam(event, 'workout')
     const parsed = parseWorkoutInput(await readBody<WorkoutInput>(event))
 
@@ -6,7 +7,12 @@ export default defineEventHandler(async (event) => {
         const existing = tx
             .select()
             .from(tables.workouts)
-            .where(eq(tables.workouts.id, id))
+            .where(
+                and(
+                    eq(tables.workouts.id, id),
+                    eq(tables.workouts.userId, userId),
+                ),
+            )
             .get()
         if (!existing) {
             throw createError({
@@ -32,7 +38,7 @@ export default defineEventHandler(async (event) => {
         tx.delete(tables.workoutEntries)
             .where(eq(tables.workoutEntries.workoutId, id))
             .run()
-        writeWorkoutEntries(tx, id, parsed.entries)
+        writeWorkoutEntries(tx, userId, id, parsed.entries)
 
         return updated
     })

@@ -17,7 +17,7 @@ import type { NewExercise } from './schema'
  * grouping — and never reorder, remove, or rename entries in place; treat a
  * rename as appending a new entry.
  */
-export const EXERCISE_CATALOG: NewExercise[] = [
+export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     // ── Chest ────────────────────────────────────────────────────────────────
     {
         name: 'Barbell Bench Press',

@@ -4,10 +4,12 @@ import { createMcpServer } from '~~/server/mcp'
 
 /**
  * MCP endpoint (Streamable HTTP, stateless): a fresh server + transport per
- * request, no sessions to track. Exposed exactly like the REST API — the
- * VPN/loopback boundary that guards /api is the auth story here too.
+ * request, no sessions to track. Scoped to the account the auth middleware
+ * resolved, exactly like the REST API.
  */
 export default defineEventHandler(async (event) => {
+    const userId = requireUserId(event)
+
     // Without sessions there is no SSE push channel to GET and no session to
     // DELETE; only POSTed JSON-RPC messages are meaningful.
     if (event.method !== 'POST') {
@@ -19,7 +21,7 @@ export default defineEventHandler(async (event) => {
         }
     }
 
-    const server = createMcpServer()
+    const server = createMcpServer(userId)
     const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,

@@ -16,12 +16,6 @@ export type ParsedSession = {
     entries: ParsedEntry[]
 }
 
-// The handle passed to `db.transaction(tx => …)`, derived from useDrizzle so it
-// stays correct if the driver changes.
-type SessionTx = Parameters<
-    Parameters<ReturnType<typeof useDrizzle>['transaction']>[0]
->[0]
-
 /**
  * Validates and normalises a create/update payload, dropping incomplete rows
  * (exercises without a valid catalog id, sets without positive reps) and
@@ -62,13 +56,21 @@ export function parseSessionInput(body: SessionInput): ParsedSession {
 /**
  * Inserts the entry/exercise/set tree for an existing session row. The caller
  * owns the transaction so the session and its tree commit (or roll back)
- * together; array index becomes the stored `position`.
+ * together; array index becomes the stored `position`. `userId` guards the
+ * referenced exercises — a payload may only program the user's own catalog.
  */
 export function writeSessionEntries(
-    tx: SessionTx,
+    tx: DbTransaction,
+    userId: number,
     sessionId: number,
     entries: ParsedEntry[],
 ) {
+    assertExercisesOwned(
+        tx,
+        userId,
+        entries.flatMap((entry) => entry.exercises.map((ex) => ex.exerciseId)),
+    )
+
     entries.forEach((entry, entryIndex) => {
         const entryRow = tx
             .insert(tables.sessionEntries)

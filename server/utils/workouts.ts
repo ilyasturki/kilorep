@@ -29,12 +29,6 @@ export type ParsedWorkout = {
     entries: ParsedEntry[]
 }
 
-// The handle passed to `db.transaction(tx => …)`, derived from useDrizzle so it
-// stays correct if the driver changes.
-type WorkoutTx = Parameters<
-    Parameters<ReturnType<typeof useDrizzle>['transaction']>[0]
->[0]
-
 /**
  * Validates and normalises a workout update payload. Mirrors `parseSessionInput`
  * but each set also carries the logged load: `weight` (kilograms, null until
@@ -102,13 +96,21 @@ export function parseWorkoutInput(body: WorkoutInput): ParsedWorkout {
 /**
  * Inserts the entry/exercise/set tree for an existing workout row. The caller
  * owns the transaction so the workout and its tree commit (or roll back)
- * together; array index becomes the stored `position`.
+ * together; array index becomes the stored `position`. `userId` guards the
+ * referenced exercises — a payload may only log the user's own catalog.
  */
 export function writeWorkoutEntries(
-    tx: WorkoutTx,
+    tx: DbTransaction,
+    userId: number,
     workoutId: number,
     entries: ParsedEntry[],
 ) {
+    assertExercisesOwned(
+        tx,
+        userId,
+        entries.flatMap((entry) => entry.exercises.map((ex) => ex.exerciseId)),
+    )
+
     entries.forEach((entry, entryIndex) => {
         const entryRow = tx
             .insert(tables.workoutEntries)
@@ -149,13 +151,19 @@ export function writeWorkoutEntries(
  * Throws 404 when the template is gone. Caller owns the transaction.
  */
 export function copySessionToWorkout(
-    tx: WorkoutTx,
+    tx: DbTransaction,
+    userId: number,
     sessionId: number,
 ): Workout {
     const session = tx
         .select()
         .from(tables.sessions)
-        .where(eq(tables.sessions.id, sessionId))
+        .where(
+            and(
+                eq(tables.sessions.id, sessionId),
+                eq(tables.sessions.userId, userId),
+            ),
+        )
         .get()
     if (!session) {
         throw createError({
@@ -195,7 +203,7 @@ export function copySessionToWorkout(
 
     const workout = tx
         .insert(tables.workouts)
-        .values({ name: session.name, sessionId: session.id })
+        .values({ userId, name: session.name, sessionId: session.id })
         .returning()
         .get()
 

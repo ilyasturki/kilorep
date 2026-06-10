@@ -1,7 +1,15 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 
-import { and, asc, desc, eq, tables, useDrizzle } from '~~/server/utils/drizzle'
+import {
+    and,
+    asc,
+    desc,
+    eq,
+    inArray,
+    tables,
+    useDrizzle,
+} from '~~/server/utils/drizzle'
 import { badRequest } from '~~/server/utils/http'
 import {
     copySessionToWorkout,
@@ -20,7 +28,7 @@ import {
     run,
 } from './helpers'
 
-export function registerWorkoutTools(server: McpServer) {
+export function registerWorkoutTools(server: McpServer, userId: number) {
     server.registerTool(
         'log_workout',
         {
@@ -81,11 +89,13 @@ export function registerWorkoutTools(server: McpServer) {
         (input) =>
             run(() => {
                 const template =
-                    input.session ? resolveSessionTemplate(input.session) : null
+                    input.session ?
+                        resolveSessionTemplate(userId, input.session)
+                    :   null
                 const entries = input.exercises.map((ex) => ({
                     exercises: [
                         {
-                            exerciseId: resolveExercise(ex.exercise).id,
+                            exerciseId: resolveExercise(userId, ex.exercise).id,
                             sets: ex.sets.map((set) => ({
                                 reps: set.reps,
                                 weight: set.weight ?? null,
@@ -106,6 +116,7 @@ export function registerWorkoutTools(server: McpServer) {
                     const row = tx
                         .insert(tables.workouts)
                         .values({
+                            userId,
                             sessionId: template?.id ?? null,
                             name: parsed.name ?? template?.name ?? 'Workout',
                             startedAt,
@@ -113,11 +124,11 @@ export function registerWorkoutTools(server: McpServer) {
                         })
                         .returning()
                         .get()
-                    writeWorkoutEntries(tx, row.id, parsed.entries)
+                    writeWorkoutEntries(tx, userId, row.id, parsed.entries)
                     return row
                 })
 
-                return `Logged:\n${formatWorkout(loadWorkoutTrees([workout.id])[0]!)}`
+                return `Logged:\n${formatWorkout(loadWorkoutTrees(userId, [workout.id])[0]!)}`
             }),
     )
 
@@ -137,11 +148,11 @@ export function registerWorkoutTools(server: McpServer) {
         },
         (input) =>
             run(() => {
-                const template = resolveSessionTemplate(input.session)
+                const template = resolveSessionTemplate(userId, input.session)
                 const workout = useDrizzle().transaction((tx) =>
-                    copySessionToWorkout(tx, template.id),
+                    copySessionToWorkout(tx, userId, template.id),
                 )
-                return `Started:\n${formatWorkout(loadWorkoutTrees([workout.id])[0]!)}\nLog sets with log_set as you go.`
+                return `Started:\n${formatWorkout(loadWorkoutTrees(userId, [workout.id])[0]!)}\nLog sets with log_set as you go.`
             }),
     )
 
@@ -191,8 +202,8 @@ export function registerWorkoutTools(server: McpServer) {
         (input) =>
             run(() => {
                 const db = useDrizzle()
-                const workout = resolveWorkout(input.workout)
-                const exercise = resolveExercise(input.exercise)
+                const workout = resolveWorkout(userId, input.workout)
+                const exercise = resolveExercise(userId, input.exercise)
                 const done = input.done ?? true
                 const weight = input.weight ?? null
 
@@ -322,7 +333,7 @@ export function registerWorkoutTools(server: McpServer) {
                     label = `${exercise.name} set ${index + 1}`
                 }
 
-                const tree = loadWorkoutTrees([workout.id])[0]!
+                const tree = loadWorkoutTrees(userId, [workout.id])[0]!
                 const { done: doneCount, total } = countSets(tree)
                 return `Logged ${label}: ${formatSet({ ...logged, done })} — ${doneCount}/${total} sets done in #${workout.id} ${workout.name}`
             }),
@@ -345,7 +356,7 @@ export function registerWorkoutTools(server: McpServer) {
         },
         (input) =>
             run(() => {
-                const workout = resolveWorkout(input.workout)
+                const workout = resolveWorkout(userId, input.workout)
                 if (workout.completed) {
                     return `Workout #${workout.id} ${workout.name} is already completed`
                 }
@@ -354,7 +365,7 @@ export function registerWorkoutTools(server: McpServer) {
                     .set({ completed: true })
                     .where(eq(tables.workouts.id, workout.id))
                     .run()
-                const tree = loadWorkoutTrees([workout.id])[0]!
+                const tree = loadWorkoutTrees(userId, [workout.id])[0]!
                 const { done, total } = countSets(tree)
                 const pending =
                     done < total ? ` (${total - done} sets left pending)` : ''
@@ -385,13 +396,14 @@ export function registerWorkoutTools(server: McpServer) {
                     const latest = useDrizzle()
                         .select()
                         .from(tables.workouts)
+                        .where(eq(tables.workouts.userId, userId))
                         .orderBy(desc(tables.workouts.startedAt))
                         .limit(1)
                         .get()
                     if (!latest) badRequest('No workouts logged yet')
                     id = latest.id
                 }
-                const tree = loadWorkoutTrees([id])[0]
+                const tree = loadWorkoutTrees(userId, [id])[0]
                 if (!tree) badRequest(`No workout with id ${id}`)
                 return formatWorkout(tree)
             }),
@@ -418,12 +430,15 @@ export function registerWorkoutTools(server: McpServer) {
                 const ids = useDrizzle()
                     .select({ id: tables.workouts.id })
                     .from(tables.workouts)
+                    .where(eq(tables.workouts.userId, userId))
                     .orderBy(desc(tables.workouts.startedAt))
                     .limit(input.limit ?? 10)
                     .all()
                     .map((row) => row.id)
                 if (ids.length === 0) return 'No workouts logged yet.'
-                return loadWorkoutTrees(ids).map(formatWorkout).join('\n\n')
+                return loadWorkoutTrees(userId, ids)
+                    .map(formatWorkout)
+                    .join('\n\n')
             }),
     )
 
@@ -438,7 +453,11 @@ export function registerWorkoutTools(server: McpServer) {
         () =>
             run(() => {
                 const db = useDrizzle()
-                const sessions = db.select().from(tables.sessions).all()
+                const sessions = db
+                    .select()
+                    .from(tables.sessions)
+                    .where(eq(tables.sessions.userId, userId))
+                    .all()
                 if (sessions.length === 0) return 'No session templates yet.'
 
                 const rows = db
@@ -459,6 +478,12 @@ export function registerWorkoutTools(server: McpServer) {
                         eq(
                             tables.sessionExercises.exerciseId,
                             tables.exercises.id,
+                        ),
+                    )
+                    .where(
+                        inArray(
+                            tables.sessionEntries.sessionId,
+                            sessions.map((session) => session.id),
                         ),
                     )
                     .orderBy(
@@ -493,7 +518,12 @@ export function registerWorkoutTools(server: McpServer) {
             run(() => {
                 const deleted = useDrizzle()
                     .delete(tables.workouts)
-                    .where(eq(tables.workouts.id, input.workout))
+                    .where(
+                        and(
+                            eq(tables.workouts.id, input.workout),
+                            eq(tables.workouts.userId, userId),
+                        ),
+                    )
                     .returning()
                     .get()
                 if (!deleted) badRequest(`No workout with id ${input.workout}`)

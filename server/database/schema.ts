@@ -1,5 +1,48 @@
 import { sql } from 'drizzle-orm'
-import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+    integer,
+    real,
+    sqliteTable,
+    text,
+    uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
+
+/**
+ * An account. With auth configured every Google sign-in maps to one row; an
+ * unconfigured (self-hosted) instance runs as a single implicit row with
+ * `provider = 'local'`. All user data hangs off `userId` either way, so the
+ * two modes share one code path.
+ */
+export const users = sqliteTable(
+    'users',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        provider: text('provider').notNull(),
+        // The provider's stable subject id (Google `sub`) — identity is this
+        // pair, never the email, which providers let users change.
+        providerAccountId: text('provider_account_id').notNull(),
+        email: text('email'),
+        name: text('name'),
+        avatarUrl: text('avatar_url'),
+        createdAt: integer('created_at', { mode: 'timestamp' })
+            .notNull()
+            .default(sql`(unixepoch())`),
+        // How many entries of EXERCISE_CATALOG this user has been offered
+        // (see plugins/seed.ts).
+        catalogCursor: integer('catalog_cursor').notNull().default(0),
+        // SHA-256 hex of the user's MCP bearer token; null until generated.
+        apiTokenHash: text('api_token_hash'),
+    },
+    (table) => [
+        uniqueIndex('users_provider_account_unique').on(
+            table.provider,
+            table.providerAccountId,
+        ),
+    ],
+)
+
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
 
 /** How hard an exercise works a given muscle, relative to the others it hits. */
 export const MUSCLE_INTENSITIES = ['high', 'medium', 'low'] as const
@@ -25,18 +68,27 @@ export type Equipment = (typeof EQUIPMENT)[number]
 export const EXERCISE_TYPES = ['compound', 'isolation'] as const
 export type ExerciseType = (typeof EXERCISE_TYPES)[number]
 
-export const exercises = sqliteTable('exercises', {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    name: text('name').notNull().unique(),
-    equipment: text('equipment').$type<Equipment>().notNull(),
-    type: text('type').$type<ExerciseType>().notNull(),
-    // The muscles this exercise works, each tagged with its relative intensity.
-    // Stored as JSON; a bench press and a pec fly both hit the chest, but only
-    // the bench press also loads the triceps and front delts at medium effort.
-    muscles: text('muscles', { mode: 'json' })
-        .$type<MuscleTarget[]>()
-        .notNull(),
-})
+export const exercises = sqliteTable(
+    'exercises',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id')
+            .notNull()
+            .references(() => users.id),
+        name: text('name').notNull(),
+        equipment: text('equipment').$type<Equipment>().notNull(),
+        type: text('type').$type<ExerciseType>().notNull(),
+        // The muscles this exercise works, each tagged with its relative intensity.
+        // Stored as JSON; a bench press and a pec fly both hit the chest, but only
+        // the bench press also loads the triceps and front delts at medium effort.
+        muscles: text('muscles', { mode: 'json' })
+            .$type<MuscleTarget[]>()
+            .notNull(),
+    },
+    (table) => [
+        uniqueIndex('exercises_user_name_unique').on(table.userId, table.name),
+    ],
+)
 
 export type Exercise = typeof exercises.$inferSelect
 export type NewExercise = typeof exercises.$inferInsert
@@ -44,6 +96,9 @@ export type NewExercise = typeof exercises.$inferInsert
 /** A reusable workout session template, e.g. "Push Day". */
 export const sessions = sqliteTable('sessions', {
     id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+        .notNull()
+        .references(() => users.id),
     name: text('name').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' })
         .notNull()
@@ -116,6 +171,9 @@ export type SessionWithEntries = Session & {
  */
 export const workouts = sqliteTable('workouts', {
     id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+        .notNull()
+        .references(() => users.id),
     // The template this workout was started from, kept for reference. Nulled if
     // that template is later deleted — the copied tree and `name` snapshot below
     // keep the logged history intact on their own.
@@ -219,26 +277,27 @@ export type ExerciseDetail = Exercise & {
     best: ExerciseBestSet
 }
 
-// App-level key/value state. Holds `catalogCursor`: how many entries of
-// EXERCISE_CATALOG this database has been offered (see plugins/seed.ts).
-// Moves to per-user state when authentication lands.
-export const meta = sqliteTable('meta', {
-    key: text('key').primaryKey(),
-    value: text('value').notNull(),
-})
-
 /** A single bodyweight weigh-in, in kilograms — one row per calendar day. */
-export const bodyweight = sqliteTable('bodyweight', {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    // The day weighed, as 'YYYY-MM-DD'. Stored as text, not a timestamp, so a
-    // day stays the same day regardless of timezone, and the UNIQUE constraint
-    // pins one weigh-in per date — re-logging a day overwrites its value.
-    date: text('date').notNull().unique(),
-    weight: real('weight').notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-        .notNull()
-        .default(sql`(unixepoch())`),
-})
+export const bodyweight = sqliteTable(
+    'bodyweight',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id')
+            .notNull()
+            .references(() => users.id),
+        // The day weighed, as 'YYYY-MM-DD'. Stored as text, not a timestamp, so a
+        // day stays the same day regardless of timezone, and the UNIQUE constraint
+        // pins one weigh-in per user and date — re-logging a day overwrites it.
+        date: text('date').notNull(),
+        weight: real('weight').notNull(),
+        createdAt: integer('created_at', { mode: 'timestamp' })
+            .notNull()
+            .default(sql`(unixepoch())`),
+    },
+    (table) => [
+        uniqueIndex('bodyweight_user_date_unique').on(table.userId, table.date),
+    ],
+)
 
 export type Bodyweight = typeof bodyweight.$inferSelect
 export type NewBodyweight = typeof bodyweight.$inferInsert

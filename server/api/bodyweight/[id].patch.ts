@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+    const userId = requireUserId(event)
     const id = getIdParam(event, 'weigh-in')
     const body = (await readBody<Record<string, unknown>>(event)) ?? {}
     const values = parseBodyweightInput(body)
@@ -8,7 +9,12 @@ export default defineEventHandler(async (event) => {
         updated = useDrizzle()
             .update(tables.bodyweight)
             .set(values)
-            .where(eq(tables.bodyweight.id, id))
+            .where(
+                and(
+                    eq(tables.bodyweight.id, id),
+                    eq(tables.bodyweight.userId, userId),
+                ),
+            )
             .returning()
             .get()
     } catch (error) {

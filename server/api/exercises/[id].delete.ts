@@ -1,4 +1,5 @@
 export default defineEventHandler((event) => {
+    const userId = requireUserId(event)
     const id = getIdParam(event, 'exercise')
 
     let deleted
@@ -7,7 +8,12 @@ export default defineEventHandler((event) => {
         // refuses the delete while any session still uses the exercise.
         deleted = useDrizzle()
             .delete(tables.exercises)
-            .where(eq(tables.exercises.id, id))
+            .where(
+                and(
+                    eq(tables.exercises.id, id),
+                    eq(tables.exercises.userId, userId),
+                ),
+            )
             .returning()
             .get()
     } catch (error) {

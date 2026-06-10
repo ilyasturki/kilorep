@@ -1,13 +1,16 @@
 import type { WorkoutWithEntries } from '~~/server/database/schema'
 
 export default defineEventHandler((event): WorkoutWithEntries => {
+    const userId = requireUserId(event)
     const id = getIdParam(event, 'workout')
     const db = useDrizzle()
 
     const workout = db
         .select()
         .from(tables.workouts)
-        .where(eq(tables.workouts.id, id))
+        .where(
+            and(eq(tables.workouts.id, id), eq(tables.workouts.userId, userId)),
+        )
         .get()
     if (!workout) {
         throw createError({

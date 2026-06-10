@@ -6,7 +6,7 @@ import {
     EXERCISE_TYPES,
     MUSCLE_INTENSITIES,
 } from '~~/server/database/schema'
-import { tables, useDrizzle } from '~~/server/utils/drizzle'
+import { eq, tables, useDrizzle } from '~~/server/utils/drizzle'
 import {
     asDuplicateNameError,
     getExerciseDetail,
@@ -14,7 +14,7 @@ import {
 } from '~~/server/utils/exercises'
 import { formatDate, formatSet, resolveExercise, run } from './helpers'
 
-export function registerExerciseTools(server: McpServer) {
+export function registerExerciseTools(server: McpServer, userId: number) {
     server.registerTool(
         'list_exercises',
         {
@@ -28,6 +28,7 @@ export function registerExerciseTools(server: McpServer) {
                 const exercises = useDrizzle()
                     .select()
                     .from(tables.exercises)
+                    .where(eq(tables.exercises.userId, userId))
                     .all()
                 if (exercises.length === 0) return 'No exercises yet.'
                 return exercises
@@ -71,7 +72,7 @@ export function registerExerciseTools(server: McpServer) {
                 try {
                     const exercise = useDrizzle()
                         .insert(tables.exercises)
-                        .values(values)
+                        .values({ ...values, userId })
                         .returning()
                         .get()
                     return `Created exercise "${exercise.name}" (${exercise.equipment} ${exercise.type})`
@@ -102,8 +103,8 @@ export function registerExerciseTools(server: McpServer) {
         },
         (input) =>
             run(() => {
-                const exercise = resolveExercise(input.exercise)
-                const detail = getExerciseDetail(exercise.id)
+                const exercise = resolveExercise(userId, input.exercise)
+                const detail = getExerciseDetail(exercise.id, userId)
                 const limit = input.limit ?? 10
 
                 const lines = [

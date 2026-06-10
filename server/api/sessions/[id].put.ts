@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+    const userId = requireUserId(event)
     const id = getIdParam(event, 'session')
 
     const parsed = parseSessionInput(await readBody<SessionInput>(event))
@@ -7,7 +8,12 @@ export default defineEventHandler(async (event) => {
         const updated = tx
             .update(tables.sessions)
             .set({ name: parsed.name })
-            .where(eq(tables.sessions.id, id))
+            .where(
+                and(
+                    eq(tables.sessions.id, id),
+                    eq(tables.sessions.userId, userId),
+                ),
+            )
             .returning()
             .get()
         if (!updated) {
@@ -23,7 +29,7 @@ export default defineEventHandler(async (event) => {
         tx.delete(tables.sessionEntries)
             .where(eq(tables.sessionEntries.sessionId, id))
             .run()
-        writeSessionEntries(tx, id, parsed.entries)
+        writeSessionEntries(tx, userId, id, parsed.entries)
 
         return updated
     })

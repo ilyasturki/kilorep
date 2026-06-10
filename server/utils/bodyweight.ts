@@ -48,15 +48,18 @@ export function parseBodyweightInput(
     return { date, weight: Math.round(weight * 100) / 100 }
 }
 
-// One weigh-in per day: logging a date that already exists overwrites its
-// weight rather than erroring or stacking a second point on the chart.
+// One weigh-in per user and day: logging a date that already exists overwrites
+// its weight rather than erroring or stacking a second point on the chart.
 // Shared by `POST /api/bodyweight` and the MCP weigh-in tool.
-export function upsertBodyweight(values: BodyweightInput): Bodyweight {
+export function upsertBodyweight(
+    userId: number,
+    values: BodyweightInput,
+): Bodyweight {
     return useDrizzle()
         .insert(tables.bodyweight)
-        .values(values)
+        .values({ ...values, userId })
         .onConflictDoUpdate({
-            target: tables.bodyweight.date,
+            target: [tables.bodyweight.userId, tables.bodyweight.date],
             set: { weight: values.weight },
         })
         .returning()

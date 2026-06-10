@@ -76,17 +76,54 @@ export function parseExerciseInput(
 }
 
 /**
+ * Refuses exercise ids that don't belong to the user, with the same 400 the
+ * parsers raise for unknown ids — another user's id and a nonexistent one are
+ * indistinguishable on purpose. Backstops every tree write, since a foreign
+ * key alone only checks existence, not ownership.
+ */
+export function assertExercisesOwned(
+    tx: DbTransaction,
+    userId: number,
+    exerciseIds: number[],
+): void {
+    const unique = [...new Set(exerciseIds)]
+    if (unique.length === 0) return
+    const owned = tx
+        .select({ id: tables.exercises.id })
+        .from(tables.exercises)
+        .where(
+            and(
+                inArray(tables.exercises.id, unique),
+                eq(tables.exercises.userId, userId),
+            ),
+        )
+        .all()
+    if (owned.length !== unique.length) {
+        badRequest('Unknown exercise id')
+    }
+}
+
+/**
  * Loads an exercise enriched with the sessions that program it, its full
  * workout history, and its personal best. Shared by `GET /api/exercises/:id`
- * and the MCP progress tool. Throws 404 when the exercise doesn't exist.
+ * and the MCP progress tool. Throws 404 when the exercise doesn't exist —
+ * including when it belongs to another user, so ids never leak existence.
+ * Ownership is checked at this root only: the joins below can only reach the
+ * user's own sessions and workouts, because the write paths refuse references
+ * to another user's exercises.
  */
-export function getExerciseDetail(id: number): ExerciseDetail {
+export function getExerciseDetail(id: number, userId: number): ExerciseDetail {
     const db = useDrizzle()
 
     const exercise = db
         .select()
         .from(tables.exercises)
-        .where(eq(tables.exercises.id, id))
+        .where(
+            and(
+                eq(tables.exercises.id, id),
+                eq(tables.exercises.userId, userId),
+            ),
+        )
         .get()
     if (!exercise) {
         throw createError({

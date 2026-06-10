@@ -6,6 +6,7 @@ import type {
     WorkoutWithEntries,
 } from '~~/server/database/schema'
 import {
+    and,
     asc,
     desc,
     eq,
@@ -83,8 +84,12 @@ function resolveByName<T extends { name: string }>(
     )
 }
 
-export function resolveExercise(name: string): Exercise {
-    const all = useDrizzle().select().from(tables.exercises).all()
+export function resolveExercise(userId: number, name: string): Exercise {
+    const all = useDrizzle()
+        .select()
+        .from(tables.exercises)
+        .where(eq(tables.exercises.userId, userId))
+        .all()
     return resolveByName(
         all,
         name,
@@ -93,8 +98,12 @@ export function resolveExercise(name: string): Exercise {
     )
 }
 
-export function resolveSessionTemplate(name: string): Session {
-    const all = useDrizzle().select().from(tables.sessions).all()
+export function resolveSessionTemplate(userId: number, name: string): Session {
+    const all = useDrizzle()
+        .select()
+        .from(tables.sessions)
+        .where(eq(tables.sessions.userId, userId))
+        .all()
     return resolveByName(
         all,
         name,
@@ -105,13 +114,18 @@ export function resolveSessionTemplate(name: string): Session {
 
 /** Fetches a workout by id, or — when no id is given — the single workout
  * currently in progress, erroring when that is absent or ambiguous. */
-export function resolveWorkout(id?: number): Workout {
+export function resolveWorkout(userId: number, id?: number): Workout {
     const db = useDrizzle()
     if (id != null) {
         const workout = db
             .select()
             .from(tables.workouts)
-            .where(eq(tables.workouts.id, id))
+            .where(
+                and(
+                    eq(tables.workouts.id, id),
+                    eq(tables.workouts.userId, userId),
+                ),
+            )
             .get()
         if (!workout) badRequest(`No workout with id ${id}`)
         return workout
@@ -120,7 +134,12 @@ export function resolveWorkout(id?: number): Workout {
     const active = db
         .select()
         .from(tables.workouts)
-        .where(eq(tables.workouts.completed, false))
+        .where(
+            and(
+                eq(tables.workouts.completed, false),
+                eq(tables.workouts.userId, userId),
+            ),
+        )
         .orderBy(desc(tables.workouts.startedAt))
         .all()
     if (active.length === 1) return active[0]!
@@ -136,21 +155,32 @@ export function resolveWorkout(id?: number): Workout {
     )
 }
 
-/** Loads full workout trees for the given ids, newest first. */
-export function loadWorkoutTrees(ids: number[]): WorkoutWithEntries[] {
+/** Loads full workout trees for the given ids (the user's own only), newest
+ * first. */
+export function loadWorkoutTrees(
+    userId: number,
+    ids: number[],
+): WorkoutWithEntries[] {
     if (ids.length === 0) return []
     const db = useDrizzle()
 
     const workouts = db
         .select()
         .from(tables.workouts)
-        .where(inArray(tables.workouts.id, ids))
+        .where(
+            and(
+                inArray(tables.workouts.id, ids),
+                eq(tables.workouts.userId, userId),
+            ),
+        )
         .orderBy(desc(tables.workouts.startedAt))
         .all()
+    const ownedIds = workouts.map((workout) => workout.id)
+    if (ownedIds.length === 0) return []
     const entries = db
         .select()
         .from(tables.workoutEntries)
-        .where(inArray(tables.workoutEntries.workoutId, ids))
+        .where(inArray(tables.workoutEntries.workoutId, ownedIds))
         .orderBy(asc(tables.workoutEntries.position))
         .all()
     const entryIds = entries.map((entry) => entry.id)

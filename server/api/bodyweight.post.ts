@@ -1,4 +1,5 @@
 export default defineEventHandler(async (event) => {
+    const userId = requireUserId(event)
     const body = (await readBody<Record<string, unknown>>(event)) ?? {}
-    return upsertBodyweight(parseBodyweightInput(body))
+    return upsertBodyweight(userId, parseBodyweightInput(body))
 })

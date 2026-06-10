@@ -22,9 +22,14 @@ export {
 
 export const tables = schema
 
-const DB_FILE_NAME = process.env.DB_FILE_NAME ?? '.data/workout.db'
+export const DB_FILE_NAME = process.env.DB_FILE_NAME ?? '.data/workout.db'
 
 type DrizzleDB = ReturnType<typeof drizzle<typeof schema>>
+
+/** The handle passed to `db.transaction(tx => …)`, shared by the tree writers. */
+export type DbTransaction = Parameters<
+    Parameters<DrizzleDB['transaction']>[0]
+>[0]
 
 // Reuse the connection across HMR reloads in dev so we don't leak file handles.
 const globalForDb = globalThis as typeof globalThis & {
