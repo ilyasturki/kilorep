@@ -11,7 +11,11 @@ Workout session manager for gym and weight tracker. Simple and minimalist, no fi
 
 # Dev server
 
-A dev server is usually already running on http://localhost:4001. To verify changes, reuse it (HMR has already picked up edits) — `curl localhost:4001` or open it in the browser. Do NOT kill the process on port 4001 or start a competing `nuxt dev`. If you need an isolated instance, start one on a different port (e.g. `nuxt dev --port 4099`).
+A dev server is usually already running on http://localhost:4001. To verify changes, reuse it (HMR has already picked up edits) — `curl localhost:4001` or open it in the browser. Do NOT kill the process on port 4001 or start a competing `nuxt dev`. If you need an isolated instance, start one on a different port with `NUXT_IGNORE_LOCK=1` (e.g. `NUXT_IGNORE_LOCK=1 nuxt dev --port 4099`).
+
+# Auth modes
+
+Multi-user mode turns on iff `NUXT_OAUTH_GOOGLE_CLIENT_ID`/`_CLIENT_SECRET` are set (plus `NUXT_SESSION_PASSWORD`); without them the app runs single-user as an implicit local account — there is no separate flag. Every data query is scoped by a required `userId` argument resolved by `server/middleware/auth.ts`. The isolation backstop is `bun run test:isolation` against an auth-mode instance (see the header of tests/isolation.test.mjs for the exact env).
 
 # Code quality
 
