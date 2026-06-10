@@ -109,10 +109,9 @@ async function signOut() {
                 </button>
             </div>
             <p class="settings-hint">
-                A bearer token lets Claude Code talk to this instance's
-                <span class="mono">/mcp</span> endpoint — log workouts and
-                weigh-ins from the terminal. One token per account; generating a
-                new one invalidates the old.
+                This token lets Claude Code log workouts and weigh-ins via the
+                <span class="mono">/mcp</span> endpoint. Generating a new token
+                replaces the old one.
             </p>
             <template v-if="token">
                 <div class="token-row">
