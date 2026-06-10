@@ -408,6 +408,7 @@ async function changeDate() {
                                     v-model="set.weight"
                                     :min="0"
                                     :step="2.5"
+                                    :step-snapping="false"
                                 />
                                 <UiNumberField
                                     v-model="set.reps"

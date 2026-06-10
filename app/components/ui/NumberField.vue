@@ -10,6 +10,7 @@ defineProps<{
     min?: number
     max?: number
     step?: number
+    stepSnapping?: boolean
 }>()
 
 const model = defineModel<number>()
@@ -21,6 +22,7 @@ const model = defineModel<number>()
         :min="min"
         :max="max"
         :step="step ?? 1"
+        :step-snapping="stepSnapping ?? true"
         class="numfield"
     >
         <NumberFieldDecrement aria-label="Decrease">
