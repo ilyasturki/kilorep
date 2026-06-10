@@ -11,7 +11,7 @@ Workout session manager for gym and weight tracker. Simple and minimalist, no fi
 
 # Dev server
 
-A dev server is usually already running on http://localhost:4001. To verify changes, reuse it (HMR has already picked up edits) — `curl localhost:4001` or open it in the browser. Do NOT kill the process on port 4001 or start a competing `nuxt dev`. If you need an isolated instance, start one on a different port with `NUXT_IGNORE_LOCK=1` (e.g. `NUXT_IGNORE_LOCK=1 nuxt dev --port 4099`).
+A dev server is usually already running on http://localhost:4004. To verify changes, reuse it (HMR has already picked up edits) — `curl localhost:4004` or open it in the browser. Do NOT kill the process on port 4001 or start a competing `nuxt dev`. If you need an isolated instance, start one on a different port with `NUXT_IGNORE_LOCK=1` (e.g. `NUXT_IGNORE_LOCK=1 nuxt dev --port 4099`).
 
 # Auth modes
 
