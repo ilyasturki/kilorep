@@ -10,8 +10,12 @@ import type { NewExercise } from './schema'
  * use specific heads (e.g. `upper chest`, `side delts`) so a flat bench and an
  * incline press, or a bench press and a pec fly, read differently.
  *
- * The seed step inserts any new entries on the next launch and leaves existing
- * rows alone, so edit freely.
+ * This list is APPEND-ONLY. The seeder tracks how far into it each database
+ * has been offered (the `catalogCursor` row in `meta`) and only applies
+ * entries past that point, so defaults a user deleted are never re-inserted.
+ * Add new exercises at the very end — even when that breaks the region
+ * grouping — and never reorder, remove, or rename entries in place; treat a
+ * rename as appending a new entry.
  */
 export const EXERCISE_CATALOG: NewExercise[] = [
     // ── Chest ────────────────────────────────────────────────────────────────

@@ -219,6 +219,14 @@ export type ExerciseDetail = Exercise & {
     best: ExerciseBestSet
 }
 
+// App-level key/value state. Holds `catalogCursor`: how many entries of
+// EXERCISE_CATALOG this database has been offered (see plugins/seed.ts).
+// Moves to per-user state when authentication lands.
+export const meta = sqliteTable('meta', {
+    key: text('key').primaryKey(),
+    value: text('value').notNull(),
+})
+
 /** A single bodyweight weigh-in, in kilograms — one row per calendar day. */
 export const bodyweight = sqliteTable('bodyweight', {
     id: integer('id').primaryKey({ autoIncrement: true }),
