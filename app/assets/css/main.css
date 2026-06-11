@@ -2002,7 +2002,7 @@
         stroke: color-mix(in oklab, var(--accent) 42%, var(--line-2));
     }
 
-    .mm-med {
+    .mm-medium {
         fill: color-mix(in oklab, var(--accent) 62%, var(--surface-2));
         stroke: color-mix(in oklab, var(--accent) 70%, var(--line-2));
     }
