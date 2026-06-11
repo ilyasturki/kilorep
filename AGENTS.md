@@ -15,7 +15,7 @@ A dev server is usually already running on http://localhost:4004. To verify chan
 
 # Auth modes
 
-Multi-user mode turns on iff `NUXT_OAUTH_GOOGLE_CLIENT_ID`/`_CLIENT_SECRET` are set (plus `NUXT_SESSION_PASSWORD`); without them the app runs single-user as an implicit local account — there is no separate flag. Every data query is scoped by a required `userId` argument resolved by `server/middleware/auth.ts`. The isolation backstop is `bun run test:isolation` against an auth-mode instance (see the header of tests/isolation.test.mjs for the exact env).
+Multi-user mode turns on iff `NUXT_OAUTH_GOOGLE_CLIENT_ID`/`_CLIENT_SECRET` are set (plus `NUXT_SESSION_PASSWORD`); without them the app runs single-user as an implicit local account — there is no separate flag. Every data query is scoped by a required `userId` argument resolved by `server/middleware/auth.ts`. The isolation backstop is `bun run test:isolation` against an auth-mode instance (see the header of tests/isolation.test.mjs for the exact env). `bun run dev:solo` starts a single-user instance from `.env.solo` (gitignored — copy .env.example and use a separate DB_FILE_NAME; the script refuses to start without the file).
 
 # Code quality
 
