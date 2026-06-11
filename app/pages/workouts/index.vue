@@ -12,8 +12,6 @@ const [{ data: workouts, status, refresh }, { data: sessions }] =
 
 const toast = useToast()
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-
 // In-progress workouts first, then finished history. Each group already arrives
 // newest-first from the API. Flatten each workout's entry tree into numbered
 // glance rows (01..N across supersets) so the card shows what was trained at a
