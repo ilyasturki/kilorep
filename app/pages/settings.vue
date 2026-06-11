@@ -10,6 +10,7 @@ definePageMeta({
 const { user } = useUserSession()
 const toast = useToast()
 const signOut = useSignOut()
+const { appVersion } = useRuntimeConfig().public
 
 // Mutations below patch `tokens` from their own responses instead of
 // refetching: the list stays correct even when the service worker would
@@ -373,6 +374,8 @@ async function deleteAccount() {
                 exercise and weigh-in. There is no undo.
             </p>
         </div>
+
+        <p class="app-version">Kilorep v{{ appVersion }}</p>
 
         <UiModal
             v-model:open="createOpen"

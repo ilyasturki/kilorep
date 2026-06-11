@@ -516,6 +516,21 @@
         color: #f87171;
     }
 
+    .app-version {
+        font-size: 12px;
+        color: var(--ink-3);
+        text-align: center;
+    }
+
+    .login-version {
+        position: fixed;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        left: 0;
+        right: 0;
+        font-size: 11px;
+        opacity: 0.55;
+    }
+
     /* ===== Settings ====================================== */
     .settings-hint {
         font-size: 13.5px;

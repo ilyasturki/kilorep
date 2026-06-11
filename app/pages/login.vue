@@ -3,6 +3,7 @@ definePageMeta({ bare: true })
 
 const route = useRoute()
 const failed = computed(() => route.query.error != null)
+const { appVersion } = useRuntimeConfig().public
 
 // Belt-and-braces alongside the sign-out wipe: whoever signs in next must
 // not inherit the previous account's cached data.
@@ -39,5 +40,6 @@ useHead({ title: 'Sign in · Kilorep' })
                 Sign-in failed — please try again.
             </p>
         </div>
+        <p class="app-version login-version">v{{ appVersion }}</p>
     </div>
 </template>

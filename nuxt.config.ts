@@ -1,5 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 
+import pkg from './package.json'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
@@ -13,6 +15,9 @@ export default defineNuxtConfig({
     ],
     css: ['./app/assets/css/main.css'],
     runtimeConfig: {
+        public: {
+            appVersion: pkg.version,
+        },
         // Sealed-cookie session lifetime (nuxt-auth-utils): 30 days.
         session: {
             maxAge: 60 * 60 * 24 * 30,
