@@ -1,15 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 
-import {
-    and,
-    asc,
-    desc,
-    eq,
-    inArray,
-    tables,
-    useDrizzle,
-} from '~~/server/utils/drizzle'
+import { and, asc, desc, eq, tables, useDrizzle } from '~~/server/utils/drizzle'
 import { badRequest } from '~~/server/utils/http'
 import {
     copySessionToWorkout,
@@ -445,67 +437,6 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                 return loadWorkoutTrees(userId, ids)
                     .map(formatWorkout)
                     .join('\n\n')
-            }),
-    )
-
-    server.registerTool(
-        'list_session_templates',
-        {
-            title: 'List session templates',
-            description:
-                'The reusable session templates (e.g. "Push Day") workouts can be started from, with their exercises.',
-            annotations: { readOnlyHint: true },
-        },
-        () =>
-            run(() => {
-                const db = useDrizzle()
-                const sessions = db
-                    .select()
-                    .from(tables.sessions)
-                    .where(eq(tables.sessions.userId, userId))
-                    .all()
-                if (sessions.length === 0) return 'No session templates yet.'
-
-                const rows = db
-                    .select({
-                        sessionId: tables.sessionEntries.sessionId,
-                        exerciseName: tables.exercises.name,
-                    })
-                    .from(tables.sessionEntries)
-                    .innerJoin(
-                        tables.sessionExercises,
-                        eq(
-                            tables.sessionExercises.entryId,
-                            tables.sessionEntries.id,
-                        ),
-                    )
-                    .innerJoin(
-                        tables.exercises,
-                        eq(
-                            tables.sessionExercises.exerciseId,
-                            tables.exercises.id,
-                        ),
-                    )
-                    .where(
-                        inArray(
-                            tables.sessionEntries.sessionId,
-                            sessions.map((session) => session.id),
-                        ),
-                    )
-                    .orderBy(
-                        asc(tables.sessionEntries.position),
-                        asc(tables.sessionExercises.position),
-                    )
-                    .all()
-
-                return sessions
-                    .map((session) => {
-                        const names = rows
-                            .filter((row) => row.sessionId === session.id)
-                            .map((row) => row.exerciseName)
-                        return `${session.name}: ${names.join(', ') || 'empty'}`
-                    })
-                    .join('\n')
             }),
     )
 

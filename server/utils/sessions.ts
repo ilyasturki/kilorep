@@ -1,3 +1,8 @@
+import type {
+    SessionExerciseWithSets,
+    SessionWithEntries,
+} from '~~/server/database/schema'
+
 type SetInput = { reps?: number }
 type ExerciseInput = { exerciseId?: number; sets?: SetInput[] }
 type EntryInput = { exercises?: ExerciseInput[] }
@@ -100,4 +105,149 @@ export function writeSessionEntries(
                 .run()
         })
     })
+}
+
+/**
+ * Inserts a session row with its full tree in one transaction. Shared by
+ * POST /api/sessions and the MCP create_session_template tool.
+ */
+export function createSessionTree(userId: number, parsed: ParsedSession) {
+    return useDrizzle().transaction((tx) => {
+        const session = tx
+            .insert(tables.sessions)
+            .values({ name: parsed.name, userId })
+            .returning()
+            .get()
+
+        writeSessionEntries(tx, userId, session.id, parsed.entries)
+        return session
+    })
+}
+
+/**
+ * Renames a session and rewrites its whole tree — replacing rather than
+ * diffing is the simplest correct way to persist arbitrary add/remove/reorder
+ * edits; deleting the entries cascades to their exercises and sets. 404s when
+ * the session isn't the user's. Shared by PUT /api/sessions/:id and the MCP
+ * update_session_template tool.
+ */
+export function replaceSessionTree(
+    userId: number,
+    id: number,
+    parsed: ParsedSession,
+) {
+    return useDrizzle().transaction((tx) => {
+        const updated = tx
+            .update(tables.sessions)
+            .set({ name: parsed.name })
+            .where(
+                and(
+                    eq(tables.sessions.id, id),
+                    eq(tables.sessions.userId, userId),
+                ),
+            )
+            .returning()
+            .get()
+        if (!updated) notFound('Session not found')
+
+        tx.delete(tables.sessionEntries)
+            .where(eq(tables.sessionEntries.sessionId, id))
+            .run()
+        writeSessionEntries(tx, userId, id, parsed.entries)
+
+        return updated
+    })
+}
+
+/**
+ * Loads the user's sessions as full trees (entries → exercises → sets),
+ * newest first; `ids` narrows the read to specific sessions. Pulls the data
+ * in four flat queries and stitches it together in memory: per-user data
+ * stays small, so this beats a join with row fan-out or setting up Drizzle's
+ * relational layer just for one read.
+ */
+export function loadSessionTrees(
+    userId: number,
+    ids?: number[],
+): SessionWithEntries[] {
+    const db = useDrizzle()
+
+    const sessions = db
+        .select()
+        .from(tables.sessions)
+        .where(
+            ids ?
+                and(
+                    eq(tables.sessions.userId, userId),
+                    inArray(tables.sessions.id, ids),
+                )
+            :   eq(tables.sessions.userId, userId),
+        )
+        .orderBy(desc(tables.sessions.createdAt))
+        .all()
+    if (sessions.length === 0) return []
+
+    const sessionIds = sessions.map((session) => session.id)
+    const entries = db
+        .select()
+        .from(tables.sessionEntries)
+        .where(inArray(tables.sessionEntries.sessionId, sessionIds))
+        .orderBy(asc(tables.sessionEntries.position))
+        .all()
+    const entryIds = entries.map((entry) => entry.id)
+    const sessionExercises =
+        entryIds.length > 0 ?
+            db
+                .select({
+                    sessionExercise: tables.sessionExercises,
+                    exercise: tables.exercises,
+                })
+                .from(tables.sessionExercises)
+                .innerJoin(
+                    tables.exercises,
+                    eq(tables.sessionExercises.exerciseId, tables.exercises.id),
+                )
+                .where(inArray(tables.sessionExercises.entryId, entryIds))
+                .orderBy(asc(tables.sessionExercises.position))
+                .all()
+        :   []
+    const exerciseIds = sessionExercises.map((row) => row.sessionExercise.id)
+    const sets =
+        exerciseIds.length > 0 ?
+            db
+                .select()
+                .from(tables.sets)
+                .where(inArray(tables.sets.sessionExerciseId, exerciseIds))
+                .orderBy(asc(tables.sets.position))
+                .all()
+        :   []
+
+    const setsByExercise = groupBy(sets, (set) => set.sessionExerciseId)
+
+    const resolvedExercises: SessionExerciseWithSets[] = []
+    for (const { sessionExercise, exercise } of sessionExercises) {
+        resolvedExercises.push({
+            ...sessionExercise,
+            exercise,
+            sets: setsByExercise.get(sessionExercise.id) ?? [],
+        })
+    }
+    const exercisesByEntry = groupBy(resolvedExercises, (se) => se.entryId)
+
+    const resolvedEntries: SessionWithEntries['entries'] = []
+    for (const entry of entries) {
+        resolvedEntries.push({
+            ...entry,
+            exercises: exercisesByEntry.get(entry.id) ?? [],
+        })
+    }
+    const entriesBySession = groupBy(
+        resolvedEntries,
+        (entry) => entry.sessionId,
+    )
+
+    return sessions.map((session) => ({
+        ...session,
+        entries: entriesBySession.get(session.id) ?? [],
+    }))
 }
