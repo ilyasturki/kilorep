@@ -617,6 +617,77 @@
         flex: 1;
     }
 
+    /* The hint introducing the next config snippet needs to breathe a bit
+       more than the snippet rows themselves. */
+    .cmd-row + .settings-hint {
+        margin-top: 14px;
+    }
+
+    .token-list {
+        list-style: none;
+        margin: 14px 0 0;
+        padding: 0;
+        border: 1px solid var(--line);
+    }
+
+    .token-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        min-width: 0;
+    }
+
+    .token-item + .token-item {
+        border-top: 1px solid var(--line);
+    }
+
+    .token-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .token-label {
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .token-meta {
+        font-size: 11.5px;
+        color: var(--ink-2);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .token-json {
+        white-space: pre;
+    }
+
+    .token-actions {
+        display: flex;
+        gap: 8px;
+        flex: none;
+    }
+
+    .token-item .input {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .input.sm {
+        padding: 7px 10px;
+        font-size: 14px;
+    }
+
+    .btn-danger.sm {
+        padding: 7px 11px;
+        font-size: 13px;
+    }
+
     /* ===== Primitives ==================================== */
     .kicker {
         font-family: 'JetBrains Mono', monospace;

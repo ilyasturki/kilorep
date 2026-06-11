@@ -20,6 +20,9 @@ export default defineEventHandler(async (event) => {
         tx.delete(tables.bodyweight)
             .where(eq(tables.bodyweight.userId, userId))
             .run()
+        tx.delete(tables.apiTokens)
+            .where(eq(tables.apiTokens.userId, userId))
+            .run()
         tx.delete(tables.users).where(eq(tables.users.id, userId)).run()
     })
 

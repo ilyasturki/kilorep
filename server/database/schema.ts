@@ -30,8 +30,6 @@ export const users = sqliteTable(
         // How many entries of EXERCISE_CATALOG this user has been offered
         // (see plugins/seed.ts).
         catalogCursor: integer('catalog_cursor').notNull().default(0),
-        // SHA-256 hex of the user's MCP bearer token; null until generated.
-        apiTokenHash: text('api_token_hash'),
     },
     (table) => [
         uniqueIndex('users_provider_account_unique').on(
@@ -43,6 +41,36 @@ export const users = sqliteTable(
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
+
+/**
+ * MCP bearer tokens, several per user. Only the SHA-256 hash is stored — the
+ * cleartext is shown once at creation. `tokenPrefix` keeps the first few
+ * characters so the UI can match a row to the value pasted into a client's
+ * config; the pre-table token migrated from `users` has only the bare 'kr_'
+ * prefix because its cleartext was already gone.
+ */
+export const apiTokens = sqliteTable(
+    'api_tokens',
+    {
+        id: integer('id').primaryKey({ autoIncrement: true }),
+        userId: integer('user_id')
+            .notNull()
+            .references(() => users.id),
+        label: text('label').notNull(),
+        tokenHash: text('token_hash').notNull(),
+        tokenPrefix: text('token_prefix').notNull(),
+        createdAt: integer('created_at', { mode: 'timestamp' })
+            .notNull()
+            .default(sql`(unixepoch())`),
+        lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+    },
+    (table) => [uniqueIndex('api_tokens_hash_unique').on(table.tokenHash)],
+)
+
+export type ApiToken = typeof apiTokens.$inferSelect
+
+/** What the tokens API exposes — everything but the hash. */
+export type ApiTokenInfo = Omit<ApiToken, 'tokenHash' | 'userId'>
 
 /** How hard an exercise works a given muscle, relative to the others it hits. */
 export const MUSCLE_INTENSITIES = ['high', 'medium', 'low'] as const

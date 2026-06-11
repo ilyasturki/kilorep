@@ -11,18 +11,68 @@ const { user } = useUserSession()
 const toast = useToast()
 const signOut = useSignOut()
 
-const token = ref<string | null>(null)
-const minting = ref(false)
+// Mutations below patch `tokens` from their own responses instead of
+// refetching: the list stays correct even when the service worker would
+// answer a refetch from its pre-mutation cache.
+const { data: tokens, error: tokensError } = await useFetch(
+    '/api/account/tokens',
+)
 
-async function generateToken() {
+function lastUsed(value: string | Date | null): string {
+    if (!value) return 'never used'
+    const date = new Date(value)
+    // floor, not round — 23h59m must stay in the hours branch, not "24h ago".
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60_000)
+    if (minutes < 1) return 'used just now'
+    if (minutes < 60) return `used ${minutes}m ago`
+    if (minutes < 24 * 60) return `used ${Math.floor(minutes / 60)}h ago`
+    return `used ${fmtDate(date)}`
+}
+
+// ── Creation modal ──────────────────────────────────────────────────────────
+// Two phases: name the token, then the one-time reveal. The cleartext lives
+// only in `minted`; closing the modal discards it for good (the server keeps
+// just a hash).
+const createOpen = ref(false)
+const newLabel = ref('')
+const minting = ref(false)
+const minted = ref<string | null>(null)
+
+watch(createOpen, (open) => {
+    if (!open) {
+        minted.value = null
+        newLabel.value = ''
+    }
+})
+
+async function createToken() {
+    if (minting.value) return
     minting.value = true
     try {
-        const res = await $fetch<{ token: string }>('/api/account/token', {
+        const res = await $fetch('/api/account/tokens', {
             method: 'POST',
+            // The date fallback is minted here rather than on the server so
+            // it lands in the user's timezone and locale.
+            body: {
+                label:
+                    newLabel.value.trim() || `Token · ${fmtDate(new Date())}`,
+            },
         })
-        token.value = res.token
-    } catch {
-        toast.add({ title: 'Could not generate a token', color: 'error' })
+        // The modal may have been closed while the POST was in flight; a
+        // token nobody ever saw is revoked, not revealed on the next open.
+        if (!createOpen.value) {
+            $fetch(`/api/account/tokens/${res.record.id}`, {
+                method: 'DELETE',
+            }).catch(() => {})
+            return
+        }
+        minted.value = res.token
+        tokens.value = [...(tokens.value ?? []), res.record]
+    } catch (error) {
+        toast.add({
+            title: errorMessage(error, 'Could not create the token'),
+            color: 'error',
+        })
     } finally {
         minting.value = false
     }
@@ -46,8 +96,94 @@ const origin = useRequestURL().origin
 const mcpCommand = computed(() => {
     // 'local' is the CLI default, so the flag is only worth spelling out otherwise.
     const scopeFlag = scope.value === 'local' ? '' : `--scope ${scope.value} `
-    return `claude mcp add ${scopeFlag}--transport http kilorep ${origin}/mcp --header "Authorization: Bearer ${token.value}"`
+    return `claude mcp add ${scopeFlag}--transport http kilorep ${origin}/mcp --header "Authorization: Bearer ${minted.value}"`
 })
+
+const mcpJson = computed(() =>
+    JSON.stringify(
+        {
+            mcpServers: {
+                kilorep: {
+                    type: 'http',
+                    url: `${origin}/mcp`,
+                    headers: {
+                        Authorization: `Bearer ${minted.value}`,
+                    },
+                },
+            },
+        },
+        null,
+        2,
+    ),
+)
+
+// ── Inline rename ───────────────────────────────────────────────────────────
+const editingId = ref<number | null>(null)
+const editLabel = ref('')
+
+const vSelect = {
+    // A bare select() at mount silently loses to the click that opened the
+    // editor; deferring a frame lets focus settle first.
+    mounted: (el: HTMLInputElement) =>
+        requestAnimationFrame(() => {
+            el.focus()
+            el.select()
+        }),
+}
+
+function startRename(id: number, label: string) {
+    editingId.value = id
+    editLabel.value = label
+}
+
+async function saveRename() {
+    const id = editingId.value
+    if (id == null) return
+    editingId.value = null
+    const label = editLabel.value.trim()
+    // An emptied field reads as a change of heart, not a request for a blank label.
+    if (!label || label === tokens.value?.find((t) => t.id === id)?.label)
+        return
+    try {
+        const record = await $fetch(`/api/account/tokens/${id}`, {
+            method: 'PATCH',
+            body: { label },
+        })
+        if (tokens.value)
+            tokens.value = tokens.value.map((t) => (t.id === id ? record : t))
+    } catch (error) {
+        toast.add({
+            title: errorMessage(error, 'Could not rename the token'),
+            color: 'error',
+        })
+    }
+}
+
+// ── Two-step delete ─────────────────────────────────────────────────────────
+const confirmingId = ref<number | null>(null)
+let confirmTimer: ReturnType<typeof setTimeout> | undefined
+
+function askDelete(id: number) {
+    confirmingId.value = id
+    clearTimeout(confirmTimer)
+    confirmTimer = setTimeout(() => {
+        confirmingId.value = null
+    }, 3000)
+}
+
+async function removeToken(id: number) {
+    clearTimeout(confirmTimer)
+    confirmingId.value = null
+    try {
+        await $fetch(`/api/account/tokens/${id}`, { method: 'DELETE' })
+        if (tokens.value) tokens.value = tokens.value.filter((t) => t.id !== id)
+    } catch (error) {
+        toast.add({
+            title: errorMessage(error, 'Could not delete the token'),
+            color: 'error',
+        })
+    }
+}
 
 const confirmOpen = ref(false)
 const deleting = ref(false)
@@ -57,8 +193,11 @@ async function deleteAccount() {
     try {
         await $fetch('/api/account', { method: 'DELETE' })
         await signOut()
-    } catch {
-        toast.add({ title: 'Could not delete the account', color: 'error' })
+    } catch (error) {
+        toast.add({
+            title: errorMessage(error, 'Could not delete the account'),
+            color: 'error',
+        })
         deleting.value = false
     }
 }
@@ -102,29 +241,165 @@ async function deleteAccount() {
                 <button
                     type="button"
                     class="btn-ghost sm"
-                    :disabled="minting"
-                    @click="generateToken"
+                    @click="createOpen = true"
                 >
                     <Icon
                         name="tabler:key"
                         :size="15"
                     />
-                    {{ token ? 'Regenerate' : 'Generate token' }}
+                    New token
                 </button>
             </div>
             <p class="settings-hint">
-                This token lets Claude Code log workouts and weigh-ins via the
-                <span class="mono">/mcp</span> endpoint. Generating a new token
-                replaces the old one.
+                Tokens let MCP clients like Claude Code log workouts and
+                weigh-ins via the <span class="mono">/mcp</span> endpoint. Each
+                token is shown in full exactly once, at creation.
             </p>
-            <template v-if="token">
+            <ul
+                v-if="tokens?.length"
+                class="token-list"
+            >
+                <li
+                    v-for="t in tokens"
+                    :key="t.id"
+                    class="token-item"
+                >
+                    <template v-if="editingId === t.id">
+                        <input
+                            v-select
+                            v-model="editLabel"
+                            class="input sm"
+                            maxlength="60"
+                            @keydown.enter="saveRename"
+                            @keydown.esc="editingId = null"
+                        />
+                        <div class="token-actions">
+                            <button
+                                type="button"
+                                class="icon-btn sm"
+                                aria-label="Save name"
+                                @click="saveRename"
+                            >
+                                <Icon
+                                    name="tabler:check"
+                                    :size="15"
+                                />
+                            </button>
+                            <button
+                                type="button"
+                                class="icon-btn sm"
+                                aria-label="Cancel rename"
+                                @click="editingId = null"
+                            >
+                                <Icon
+                                    name="tabler:x"
+                                    :size="15"
+                                />
+                            </button>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="token-info">
+                            <span class="token-label">{{ t.label }}</span>
+                            <span class="token-meta mono">
+                                {{ t.tokenPrefix }}… ·
+                                {{ fmtDate(t.createdAt) }} ·
+                                {{ lastUsed(t.lastUsedAt) }}
+                            </span>
+                        </div>
+                        <div class="token-actions">
+                            <button
+                                type="button"
+                                class="icon-btn sm"
+                                aria-label="Rename token"
+                                @click="startRename(t.id, t.label)"
+                            >
+                                <Icon
+                                    name="tabler:pencil"
+                                    :size="15"
+                                />
+                            </button>
+                            <button
+                                v-if="confirmingId === t.id"
+                                type="button"
+                                class="btn-danger sm"
+                                @click="removeToken(t.id)"
+                            >
+                                Confirm?
+                            </button>
+                            <button
+                                v-else
+                                type="button"
+                                class="icon-btn sm icon-btn--danger"
+                                aria-label="Delete token"
+                                @click="askDelete(t.id)"
+                            >
+                                <Icon
+                                    name="tabler:trash"
+                                    :size="15"
+                                />
+                            </button>
+                        </div>
+                    </template>
+                </li>
+            </ul>
+            <p
+                v-else-if="tokensError"
+                class="settings-hint mt-3"
+            >
+                Couldn't load your tokens — reload the page to retry.
+            </p>
+            <p
+                v-else
+                class="settings-hint mt-3"
+            >
+                No tokens yet — create one to connect a client.
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-head mb-4">
+                <span class="kicker">Danger zone</span>
+                <button
+                    type="button"
+                    class="btn-danger"
+                    @click="confirmOpen = true"
+                >
+                    Delete account
+                </button>
+            </div>
+            <p class="settings-hint">
+                Permanently deletes your account with every workout, session,
+                exercise and weigh-in. There is no undo.
+            </p>
+        </div>
+
+        <UiModal
+            v-model:open="createOpen"
+            :title="minted ? 'Token created' : 'New MCP token'"
+            :description="
+                minted ?
+                    'Copy it now — it won’t be shown again.'
+                :   'An optional name to tell your tokens apart.'
+            "
+        >
+            <template v-if="!minted">
+                <input
+                    v-model="newLabel"
+                    class="input"
+                    placeholder="e.g. laptop, phone…"
+                    maxlength="60"
+                    @keydown.enter="createToken"
+                />
+            </template>
+            <template v-else>
                 <div class="token-row">
-                    <code class="token mono">{{ token }}</code>
+                    <code class="token mono">{{ minted }}</code>
                     <button
                         type="button"
                         class="icon-btn copy-btn"
                         aria-label="Copy token"
-                        @click="copy(token, 'Token')"
+                        @click="copy(minted, 'Token')"
                     >
                         <Icon
                             name="tabler:copy"
@@ -132,10 +407,7 @@ async function deleteAccount() {
                         />
                     </button>
                 </div>
-                <p class="settings-hint">
-                    Copy it now — it won't be shown again. Then register the
-                    server:
-                </p>
+                <p class="settings-hint">Claude Code — pick a scope and run:</p>
                 <div class="scope-row">
                     <span class="scope-label">Scope</span>
                     <UiSelect
@@ -157,25 +429,52 @@ async function deleteAccount() {
                         />
                     </button>
                 </div>
+                <p class="settings-hint">
+                    Any other MCP client — drop this into its config:
+                </p>
+                <div class="cmd-row">
+                    <code class="token-cmd token-json mono">{{ mcpJson }}</code>
+                    <button
+                        type="button"
+                        class="icon-btn copy-btn"
+                        aria-label="Copy JSON config"
+                        @click="copy(mcpJson, 'Config')"
+                    >
+                        <Icon
+                            name="tabler:copy"
+                            :size="15"
+                        />
+                    </button>
+                </div>
             </template>
-        </div>
-
-        <div class="card">
-            <div class="card-head mb-4">
-                <span class="kicker">Danger zone</span>
+            <template #footer>
+                <template v-if="!minted">
+                    <button
+                        type="button"
+                        class="btn-ghost"
+                        @click="createOpen = false"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        class="btn-primary"
+                        :disabled="minting"
+                        @click="createToken"
+                    >
+                        Create
+                    </button>
+                </template>
                 <button
+                    v-else
                     type="button"
-                    class="btn-danger"
-                    @click="confirmOpen = true"
+                    class="btn-primary"
+                    @click="createOpen = false"
                 >
-                    Delete account
+                    Done
                 </button>
-            </div>
-            <p class="settings-hint">
-                Permanently deletes your account with every workout, session,
-                exercise and weigh-in. There is no undo.
-            </p>
-        </div>
+            </template>
+        </UiModal>
 
         <UiModal
             v-model:open="confirmOpen"

@@ -1,5 +1,3 @@
-import { createHash, randomBytes } from 'node:crypto'
-
 import type { User } from '../database/schema'
 import { EXERCISE_CATALOG } from '../database/exercise-catalog'
 
@@ -82,27 +80,6 @@ export function findOrCreateGoogleUser(profile: GoogleProfile): User {
     return user
 }
 
-// SHA-256 is enough at rest: tokens are 32 random bytes, far beyond
-// brute-force range, so a slow hash would buy nothing.
-function hashApiToken(token: string): string {
-    return createHash('sha256').update(token).digest('hex')
-}
-
-/**
- * Mints the user's MCP bearer token, storing only its hash. The cleartext is
- * returned exactly once; minting again invalidates the previous token, which
- * is also the only revocation mechanism.
- */
-export function rotateApiToken(userId: number): string {
-    const token = `kr_${randomBytes(32).toString('base64url')}`
-    useDrizzle()
-        .update(tables.users)
-        .set({ apiTokenHash: hashApiToken(token) })
-        .where(eq(tables.users.id, userId))
-        .run()
-    return token
-}
-
 export function userExists(id: number): boolean {
     return (
         useDrizzle()
@@ -111,15 +88,6 @@ export function userExists(id: number): boolean {
             .where(eq(tables.users.id, id))
             .get() !== undefined
     )
-}
-
-export function findUserIdByApiToken(token: string): number | undefined {
-    const row = useDrizzle()
-        .select({ id: tables.users.id })
-        .from(tables.users)
-        .where(eq(tables.users.apiTokenHash, hashApiToken(token)))
-        .get()
-    return row?.id
 }
 
 /**

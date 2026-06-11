@@ -185,12 +185,52 @@ for (const [method, path, body, expected] of attempts) {
     )
 }
 
+// ── Tokens are scoped per user ──────────────────────────────────────────────
+console.log('\nToken management scoping')
+const mintRespA = await api(cookieA, '/api/account/tokens', {
+    method: 'POST',
+    body: { label: 'iso-a' },
+})
+const mintRespB = await api(cookieB, '/api/account/tokens', {
+    method: 'POST',
+    body: { label: 'iso-b' },
+})
+check('both users can mint tokens', () => {
+    assert.equal(mintRespA.status, 200)
+    assert.equal(mintRespB.status, 200)
+})
+// Optional-chained below: a failed mint must degrade into FAILed checks, not
+// crash the run before cleanup and the summary.
+const mintA = mintRespA.body ?? {}
+const mintB = mintRespB.body ?? {}
+const tokenA = mintA.token
+const tokenB = mintB.token
+
+const tokenListB = await api(cookieB, '/api/account/tokens')
+check("B's token list holds only B's token", () => {
+    assert.equal(tokenListB.status, 200)
+    assert.deepEqual(
+        tokenListB.body.map((t) => t.id),
+        [mintB.record?.id],
+    )
+})
+
+const tokenDelete = await api(
+    cookieB,
+    `/api/account/tokens/${mintA.record?.id}`,
+    { method: 'DELETE' },
+)
+check("B cannot delete A's token", () => assert.equal(tokenDelete.status, 404))
+
+const tokenRename = await api(
+    cookieB,
+    `/api/account/tokens/${mintA.record?.id}`,
+    { method: 'PATCH', body: { label: 'hijacked' } },
+)
+check("B cannot rename A's token", () => assert.equal(tokenRename.status, 404))
+
 // ── MCP is scoped per token ─────────────────────────────────────────────────
 console.log('\nMCP bearer scoping')
-const tokenA = (await api(cookieA, '/api/account/token', { method: 'POST' }))
-    .body.token
-const tokenB = (await api(cookieB, '/api/account/token', { method: 'POST' }))
-    .body.token
 
 const listA = await mcp(tokenA, 'list_workouts')
 check("A's token sees A's workout", () => {
@@ -236,8 +276,12 @@ const remaining = dbCheck
         'SELECT COUNT(*) AS n FROM users WHERE provider_account_id IN (?, ?)',
     )
     .get(`iso-a-${suffix}`, `iso-b-${suffix}`)
+const remainingTokens = dbCheck
+    .prepare('SELECT COUNT(*) AS n FROM api_tokens WHERE user_id IN (?, ?)')
+    .get(userA.id, userB.id)
 dbCheck.close()
 check('accounts fully removed', () => assert.equal(remaining.n, 0))
+check('tokens removed with accounts', () => assert.equal(remainingTokens.n, 0))
 
 console.log(
     failures === 0 ?
