@@ -5,7 +5,7 @@
     "scripts": {
         "build": "nuxt build",
         "dev": "nuxt dev",
-        "dev:solo": "sh -c 'test -f .env.solo || { echo \"Missing .env.solo — copy .env.example and point DB_FILE_NAME at a scratch db\" >&2; exit 1; }; exec nuxt dev --dotenv .env.solo'",
+        "dev:solo": "nuxt dev --dotenv .env.solo",
         "start": "node .output/server/index.mjs",
         "generate": "nuxt generate",
         "preview": "nuxt preview",
