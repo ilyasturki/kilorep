@@ -1335,6 +1335,75 @@
         flex: none;
     }
 
+    /* ===== reka-ui Combobox =============================
+       Popup list reuses .select-viewport/.select-item. */
+    .combobox-anchor {
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--surface);
+        border: 1px solid var(--line-2);
+        padding: 11px 13px;
+        transition: border-color 0.12s;
+    }
+
+    .combobox-anchor:hover,
+    .combobox-anchor:focus-within {
+        border-color: var(--accent);
+    }
+
+    .combobox-input {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--ink);
+        font-family: inherit;
+        font-size: 15px;
+        text-transform: capitalize;
+    }
+
+    .combobox-input::placeholder {
+        color: var(--ink-3);
+        text-transform: none;
+    }
+
+    .combobox-trigger {
+        display: flex;
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--ink-3);
+        cursor: pointer;
+    }
+
+    .combobox-content {
+        background: var(--bg);
+        border: 1px solid var(--line-2);
+        min-width: var(--reka-combobox-trigger-width);
+        /* Cap to the viewport: rich rows (silhouette + alias + badge) can be
+           wider than the trigger and would otherwise clip off-screen on mobile. */
+        max-width: var(--reka-combobox-content-available-width);
+        max-height: var(--reka-combobox-content-available-height);
+        box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+        z-index: 60;
+        overflow: hidden auto;
+    }
+
+    .combobox-empty {
+        padding: 9px 11px;
+        font-size: 14px;
+        color: var(--ink-3);
+    }
+
+    /* Alias the search matched on, shown after the canonical label. */
+    .combobox-alias {
+        color: var(--ink-3);
+        font-size: 13px;
+    }
+
     /* ===== reka-ui NumberField ========================== */
     .numfield {
         display: inline-flex;
@@ -2017,6 +2086,13 @@
     .mm-high {
         fill: var(--accent);
         stroke: var(--accent);
+    }
+
+    /* Single-view thumbnail used by the exercise picker rows. */
+    .mm-mini {
+        height: 30px;
+        width: auto;
+        flex: none;
     }
 
     .mm-legend {

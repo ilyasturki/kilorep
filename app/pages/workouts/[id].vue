@@ -124,9 +124,6 @@ function confirmRemove() {
     removeTarget.value = undefined
 }
 
-const exerciseItems = computed(() =>
-    (exercises.value ?? []).map((e) => ({ label: e.name, value: e.id })),
-)
 const addOpen = ref(false)
 const addExerciseId = ref<number>()
 
@@ -531,9 +528,9 @@ async function changeDate() {
             title="Add exercise"
             description="Add an extra exercise to this workout."
         >
-            <UiSelect
+            <ExerciseCombobox
                 v-model="addExerciseId"
-                :items="exerciseItems"
+                :exercises="exercises ?? []"
                 placeholder="Pick an exercise"
             />
             <template #footer>

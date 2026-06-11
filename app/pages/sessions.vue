@@ -7,10 +7,6 @@ const [{ data: sessions, status, refresh }, { data: exercises }] =
         useFetch<Exercise[]>('/api/exercises'),
     ])
 
-const exerciseItems = computed(() =>
-    (exercises.value ?? []).map((e) => ({ label: e.name, value: e.id })),
-)
-
 type SetDraft = { reps: number }
 type ExerciseDraft = { exerciseId: number | undefined; sets: SetDraft[] }
 type EntryDraft = { exercises: ExerciseDraft[] }
@@ -253,9 +249,9 @@ function planBlocks(session: SessionWithEntries) {
                             >
                                 <div class="flex items-center gap-2">
                                     <div class="min-w-0 flex-1">
-                                        <UiSelect
+                                        <ExerciseCombobox
                                             v-model="exercise.exerciseId"
-                                            :items="exerciseItems"
+                                            :exercises="exercises ?? []"
                                             placeholder="Pick an exercise"
                                         />
                                     </div>
