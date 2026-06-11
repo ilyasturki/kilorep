@@ -2,7 +2,8 @@
 import type {
     Exercise,
     Workout,
-    WorkoutWithEntries,
+    WorkoutDetail,
+    WorkoutTemplateStatus,
 } from '~~/server/database/schema'
 
 const route = useRoute()
@@ -10,7 +11,7 @@ const id = Number(route.params.id)
 const toast = useToast()
 
 const [{ data: workout }, { data: exercises }] = await Promise.all([
-    useFetch<WorkoutWithEntries>(`/api/workouts/${id}`),
+    useFetch<WorkoutDetail>(`/api/workouts/${id}`),
     useFetch<Exercise[]>('/api/exercises'),
 ])
 
@@ -35,6 +36,18 @@ const draft = ref<EntryDraft[]>(
 // Edit when the workout is unfinished; review (read-only) once completed, until
 // the lifter reopens it.
 const editing = ref(!workout.value?.completed)
+
+// The template link drives the sync-back strip. PUT responses refresh it, so
+// the offer tracks the last autosaved tree (~1s behind the draft), never a
+// stale page load.
+const template = ref<WorkoutTemplateStatus>(workout.value?.template ?? null)
+
+// Offer syncing when the structure drifted from the template; for an orphaned
+// workout (template deleted) the structure may be worth keeping, so always.
+const syncOffer = computed(() => {
+    if (!draft.value.some((entry) => entry.exercises.length > 0)) return false
+    return template.value ? template.value.diverged : true
+})
 
 // Drive the global topbar with the session name + status instead of "Workouts".
 // usePageHeader owns the client-only watch + reset.
@@ -165,16 +178,20 @@ const saving = ref(false)
 // Persist the whole workout and sync the returned row back, so the date stat
 // reflects any day shift the server applied.
 async function persist(completed: boolean, opts?: { keepalive?: boolean }) {
-    const updated = await $fetch<Workout>(`/api/workouts/${id}`, {
-        method: 'PUT',
-        body: buildBody(completed),
-        keepalive: opts?.keepalive,
-    })
+    const updated = await $fetch<Workout & { template: WorkoutTemplateStatus }>(
+        `/api/workouts/${id}`,
+        {
+            method: 'PUT',
+            body: buildBody(completed),
+            keepalive: opts?.keepalive,
+        },
+    )
     if (workout.value) {
         workout.value.startedAt = updated.startedAt
         workout.value.completed = updated.completed
         dateValue.value = toDateInput(updated.startedAt)
     }
+    template.value = updated.template
     return updated
 }
 
@@ -262,6 +279,61 @@ async function reopen() {
     }
 }
 
+const updateOpen = ref(false)
+const createOpen = ref(false)
+const createName = ref('')
+
+function openCreate() {
+    createName.value =
+        template.value ?
+            `${template.value.name} 2`
+        :   (workout.value?.name ?? '')
+    createOpen.value = true
+}
+
+// Save the workout's structure to a template: 'update' rewrites the source,
+// 'create' makes a new one and re-points this workout at it. A pending
+// autosave is flushed first so the server syncs the tree the lifter sees.
+async function syncToSession(mode: 'update' | 'create') {
+    saving.value = true
+    try {
+        if (saveTimer) {
+            cancelSave()
+            await enqueue(() => persist(!editing.value))
+        }
+        const status = await enqueue(() =>
+            $fetch<WorkoutTemplateStatus>(`/api/workouts/${id}/to-session`, {
+                method: 'POST',
+                body:
+                    mode === 'create' ?
+                        { mode, name: createName.value }
+                    :   { mode },
+            }),
+        )
+        template.value = status
+        // Creating re-names the workout after its new template server-side;
+        // mirror it so the topbar follows without a refetch. Replace the
+        // object — useFetch data is a shallowRef, so a nested mutation
+        // wouldn't reach the header watcher.
+        if (mode === 'create' && status && workout.value) {
+            workout.value = { ...workout.value, name: status.name }
+        }
+        updateOpen.value = false
+        createOpen.value = false
+        toast.add({
+            title: mode === 'update' ? 'Session updated' : 'Session created',
+            color: 'success',
+        })
+    } catch (error: unknown) {
+        toast.add({
+            title: errorMessage(error, 'Could not save the session'),
+            color: 'error',
+        })
+    } finally {
+        saving.value = false
+    }
+}
+
 // The date saves on its own — it's metadata, editable in both modes without the
 // review view needing a save button. Keep the current completed state.
 async function changeDate() {
@@ -316,6 +388,39 @@ async function changeDate() {
                 </div>
             </div>
             <TopMuscles :muscles="topTargets" />
+            <div
+                v-if="syncOffer"
+                class="wk-sync"
+            >
+                <Icon
+                    name="tabler:git-fork"
+                    :size="14"
+                />
+                <span class="wk-sync-text">
+                    {{
+                        template ?
+                            `Differs from ${template.name}`
+                        :   'Not saved as a session'
+                    }}
+                </span>
+                <button
+                    v-if="template"
+                    type="button"
+                    class="btn-link"
+                    :disabled="saving"
+                    @click="updateOpen = true"
+                >
+                    Update
+                </button>
+                <button
+                    type="button"
+                    class="btn-link"
+                    :disabled="saving"
+                    @click="openCreate"
+                >
+                    {{ template ? 'Save as new' : 'Save as session' }}
+                </button>
+            </div>
         </div>
 
         <div class="wk-actions">
@@ -581,6 +686,74 @@ async function changeDate() {
                         :size="16"
                     />
                     Remove
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Update template -->
+        <UiModal
+            v-model:open="updateOpen"
+            title="Update session"
+            :description="`Make ${template?.name} match this workout? Sets it already prescribes keep their reps; only the structure changes.`"
+        >
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="updateOpen = false"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="saving"
+                    @click="syncToSession('update')"
+                >
+                    <Icon
+                        name="tabler:check"
+                        :size="16"
+                    />
+                    Update
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Save as new session -->
+        <UiModal
+            v-model:open="createOpen"
+            title="Save as session"
+            :description="
+                template ?
+                    `Create a new session from this workout — ${template.name} stays unchanged.`
+                :   'Create a new session from this workout.'
+            "
+        >
+            <input
+                v-model="createName"
+                class="input"
+                placeholder="Session name"
+                aria-label="Session name"
+            />
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="createOpen = false"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="saving || !createName.trim()"
+                    @click="syncToSession('create')"
+                >
+                    <Icon
+                        name="tabler:plus"
+                        :size="16"
+                    />
+                    Create
                 </button>
             </template>
         </UiModal>

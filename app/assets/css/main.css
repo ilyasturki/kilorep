@@ -1691,6 +1691,24 @@
         flex: 1;
     }
 
+    /* Quiet sync-back strip — offers saving structural edits to the template
+       without interrupting logging. Dashed border keeps it visually softer
+       than the cards around it. */
+    .wk-sync {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border: 1px dashed var(--line-2);
+        color: var(--ink-3);
+        font-size: 13px;
+    }
+
+    .wk-sync-text {
+        margin-right: auto;
+        color: var(--ink-2);
+    }
+
     /* ===== reka-ui DatePicker =========================== */
     /* Editable workout date — segmented field + popover calendar */
     .datepicker-field {

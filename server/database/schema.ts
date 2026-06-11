@@ -281,6 +281,23 @@ export type WorkoutWithEntries = Workout & {
     entries: WorkoutEntryWithExercises[]
 }
 
+/**
+ * A workout's link to its source template: null when no template survives
+ * (deleted since), otherwise the template's identity plus whether the
+ * workout's structure has drifted from it. Recomputed on every workout
+ * read/write so the sync-back affordance tracks the saved tree.
+ */
+export type WorkoutTemplateStatus = {
+    id: number
+    name: string
+    diverged: boolean
+} | null
+
+/** The payload of `GET /api/workouts/:id` — the tree plus template status. */
+export type WorkoutDetail = WorkoutWithEntries & {
+    template: WorkoutTemplateStatus
+}
+
 /** One logged set of an exercise, surfaced in its history view. */
 export type ExerciseHistorySet = Pick<LoggedSet, 'reps' | 'weight' | 'done'>
 

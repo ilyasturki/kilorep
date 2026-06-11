@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
     const id = getIdParam(event, 'workout')
     const parsed = parseWorkoutInput(await readBody<WorkoutInput>(event))
 
-    return useDrizzle().transaction((tx) => {
+    const updated = useDrizzle().transaction((tx) => {
         const existing = tx
             .select()
             .from(tables.workouts)
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
             notFound('Workout not found')
         }
 
-        const updated = tx
+        const row = tx
             .update(tables.workouts)
             .set({
                 ...(parsed.name ? { name: parsed.name } : {}),
@@ -37,6 +37,17 @@ export default defineEventHandler(async (event) => {
             .run()
         writeWorkoutEntries(tx, userId, id, parsed.entries)
 
-        return updated
+        return row
     })
+
+    return {
+        ...updated,
+        // Recomputed on every save so the client's sync-back strip tracks the
+        // just-persisted tree without a follow-up read.
+        template: workoutTemplateStatus(
+            userId,
+            updated.sessionId,
+            parsed.entries,
+        ),
+    }
 })

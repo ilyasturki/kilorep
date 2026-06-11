@@ -109,10 +109,16 @@ export function writeSessionEntries(
 
 /**
  * Inserts a session row with its full tree in one transaction. Shared by
- * POST /api/sessions and the MCP create_session_template tool.
+ * POST /api/sessions, the MCP create_session_template tool, and the
+ * workout-to-template handler — the latter passes its own `tx` so the
+ * session and the workout re-point commit together.
  */
-export function createSessionTree(userId: number, parsed: ParsedSession) {
-    return useDrizzle().transaction((tx) => {
+export function createSessionTree(
+    userId: number,
+    parsed: ParsedSession,
+    tx?: DbTransaction,
+) {
+    const create = (tx: DbTransaction) => {
         const session = tx
             .insert(tables.sessions)
             .values({ name: parsed.name, userId })
@@ -121,7 +127,8 @@ export function createSessionTree(userId: number, parsed: ParsedSession) {
 
         writeSessionEntries(tx, userId, session.id, parsed.entries)
         return session
-    })
+    }
+    return tx ? create(tx) : useDrizzle().transaction(create)
 }
 
 /**

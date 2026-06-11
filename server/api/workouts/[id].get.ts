@@ -1,6 +1,6 @@
-import type { WorkoutWithEntries } from '~~/server/database/schema'
+import type { WorkoutDetail } from '~~/server/database/schema'
 
-export default defineEventHandler((event): WorkoutWithEntries => {
+export default defineEventHandler((event): WorkoutDetail => {
     const userId = requireUserId(event)
     const id = getIdParam(event, 'workout')
 
@@ -8,5 +8,12 @@ export default defineEventHandler((event): WorkoutWithEntries => {
     if (!workout) {
         notFound('Workout not found')
     }
-    return workout
+    return {
+        ...workout,
+        template: workoutTemplateStatus(
+            userId,
+            workout.sessionId,
+            workout.entries,
+        ),
+    }
 })
