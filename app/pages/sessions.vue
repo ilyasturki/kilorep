@@ -137,6 +137,17 @@ async function confirmDelete() {
 const exerciseName = (id: number) =>
     exercises.value?.find((e) => e.id === id)?.name ?? `#${id}`
 
+const exerciseMuscles = computed(() => musclesByExercise(exercises.value ?? []))
+const sessionMuscles = computed(
+    () =>
+        new Map(
+            (sessions.value ?? []).map((s) => [
+                s.id,
+                topMuscles(s.entries, exerciseMuscles.value),
+            ]),
+        ),
+)
+
 // "3 × 8" when every set shares a rep target, otherwise each set's reps.
 const setSummary = (sets: { reps: number }[]) => {
     if (sets.length === 0) return ''
@@ -427,6 +438,11 @@ function planBlocks(session: SessionWithEntries) {
                         </button>
                     </div>
                 </div>
+
+                <TopMuscles
+                    :muscles="sessionMuscles.get(session.id) ?? []"
+                    class="mt-3"
+                />
 
                 <div class="plan-list">
                     <div

@@ -68,6 +68,11 @@ const blocks = computed(() => {
 
 const totals = computed(() => workoutStats(draft.value))
 
+const exerciseMuscles = computed(() => musclesByExercise(exercises.value ?? []))
+const topTargets = computed(() =>
+    topMuscles(draft.value, exerciseMuscles.value),
+)
+
 const fmtWeight = (w: number | undefined | null) =>
     w == null ? '—' : `${w} kg`
 const exVolume = (ex: ExerciseDraft) => setVolume(ex.sets)
@@ -295,22 +300,25 @@ async function changeDate() {
         </div>
     </div>
     <div v-else>
-        <div class="wk-stats mb-8">
-            <UiDatePicker
-                v-model="dateValue"
-                :max="today"
-                :disabled="saving"
-                aria-label="Workout date"
-                @update:model-value="changeDate"
-            />
-            <div class="wk-stat">
-                <span class="stat-num mono">{{ totals.volume }}</span>
-                <span class="stat-lab">VOLUME · KG</span>
+        <div class="mb-8 space-y-4">
+            <div class="wk-stats">
+                <UiDatePicker
+                    v-model="dateValue"
+                    :max="today"
+                    :disabled="saving"
+                    aria-label="Workout date"
+                    @update:model-value="changeDate"
+                />
+                <div class="wk-stat">
+                    <span class="stat-num mono">{{ totals.volume }}</span>
+                    <span class="stat-lab">VOLUME · KG</span>
+                </div>
+                <div class="wk-stat">
+                    <span class="stat-num mono">{{ totals.sets }}</span>
+                    <span class="stat-lab">SETS</span>
+                </div>
             </div>
-            <div class="wk-stat">
-                <span class="stat-num mono">{{ totals.sets }}</span>
-                <span class="stat-lab">SETS</span>
-            </div>
+            <TopMuscles :muscles="topTargets" />
         </div>
 
         <div class="wk-actions">

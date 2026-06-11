@@ -18,6 +18,17 @@ const toast = useToast()
 // glance instead of hiding it behind "Review".
 const ordered = computed(() => {
     const all = workouts.value ?? []
+    // The entry tree already embeds each exercise row, muscles included — no
+    // need for the catalog fetch the other pages use.
+    const muscleById = new Map(
+        all.flatMap((w) =>
+            w.entries.flatMap((e) =>
+                e.exercises.map(
+                    (ex) => [ex.exerciseId, ex.exercise.muscles] as const,
+                ),
+            ),
+        ),
+    )
     return [
         ...all.filter((w) => !w.completed),
         ...all.filter((w) => w.completed),
@@ -39,7 +50,12 @@ const ordered = computed(() => {
                 }
             }),
         }))
-        return { ...w, stats: workoutStats(w.entries), blocks }
+        return {
+            ...w,
+            stats: workoutStats(w.entries),
+            blocks,
+            muscles: topMuscles(w.entries, muscleById),
+        }
     })
 })
 
@@ -184,6 +200,11 @@ async function confirmDelete() {
                         </button>
                     </div>
                 </div>
+
+                <TopMuscles
+                    :muscles="w.muscles"
+                    class="mt-3"
+                />
 
                 <p class="wk-meta">{{ metaLine(w) }}</p>
 
