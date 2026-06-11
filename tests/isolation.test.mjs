@@ -36,7 +36,7 @@ async function api(cookie, path, { method = 'GET', body } = {}) {
             cookie,
             ...(body ? { 'content-type': 'application/json' } : {}),
         },
-        body: body ? JSON.stringify(body) : undefined,
+        ...(body ? { body: JSON.stringify(body) } : {}),
     })
     let json = null
     try {
@@ -158,10 +158,34 @@ const validWorkout = {
         { exercises: [{ exerciseId: exA.body.id, sets: [{ reps: 1 }] }] },
     ],
 }
+// B's own exercise, the source for cross-user merge probes below.
+const exB = await api(cookieB, '/api/exercises', {
+    method: 'POST',
+    body: {
+        name: `Iso Curl ${suffix}`,
+        equipment: 'dumbbell',
+        type: 'isolation',
+        muscles: [{ muscle: 'biceps', intensity: 'high' }],
+    },
+})
+check('B creates an exercise', () => assert.equal(exB.status, 200))
 const attempts = [
     ['GET', `/api/exercises/${exA.body.id}`, undefined, 404],
     ['PATCH', `/api/exercises/${exA.body.id}`, exA.body, 404],
     ['DELETE', `/api/exercises/${exA.body.id}`, undefined, 404],
+    [
+        'POST',
+        `/api/exercises/${exA.body.id}/merge`,
+        { targetId: exB.body.id },
+        404,
+    ],
+    // merging B's own exercise into A's must read as "unknown id"
+    [
+        'POST',
+        `/api/exercises/${exB.body.id}/merge`,
+        { targetId: exA.body.id },
+        400,
+    ],
     ['PUT', `/api/sessions/${sesA.body.id}`, validSession, 404],
     ['DELETE', `/api/sessions/${sesA.body.id}`, undefined, 404],
     ['GET', `/api/workouts/${wkA.body.id}`, undefined, 404],

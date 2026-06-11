@@ -1,3 +1,19 @@
+// The handler is synchronous, so the usage counted here is the usage that made
+// the delete fail — at least one count is always nonzero.
+function usageMessage({
+    sessions,
+    workouts,
+}: {
+    sessions: number
+    workouts: number
+}): string {
+    const parts = [
+        ...(sessions > 0 ? [plural(sessions, 'template')] : []),
+        ...(workouts > 0 ? [plural(workouts, 'workout')] : []),
+    ]
+    return `This exercise is used in ${parts.join(' and ')} and can't be deleted`
+}
+
 export default defineEventHandler((event) => {
     const userId = requireUserId(event)
     const id = getIdParam(event, 'exercise')
@@ -18,7 +34,10 @@ export default defineEventHandler((event) => {
             .get()
     } catch (error) {
         if (error instanceof Error && error.message.includes('FOREIGN KEY')) {
-            conflict("This exercise is used in a session and can't be deleted")
+            // The structured payload lets the client tell "in use" apart from
+            // other conflicts and hand over to the merge flow.
+            const usage = countExerciseUsage(id)
+            conflict(usageMessage(usage), { usage })
         }
         throw error
     }

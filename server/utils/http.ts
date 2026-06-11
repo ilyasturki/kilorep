@@ -22,6 +22,16 @@ export function notFound(message: string): never {
     throw createError({ statusCode: 404, statusMessage: 'Not Found', message })
 }
 
-export function conflict(message: string): never {
-    throw createError({ statusCode: 409, statusMessage: 'Conflict', message })
+// `data` rides along in the error body for clients that branch on the cause
+// (e.g. the exercise delete 409 carries its usage counts for the merge flow).
+export function conflict(
+    message: string,
+    data?: Record<string, unknown>,
+): never {
+    throw createError({
+        statusCode: 409,
+        statusMessage: 'Conflict',
+        message,
+        data,
+    })
 }

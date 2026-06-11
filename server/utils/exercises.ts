@@ -86,6 +86,40 @@ export function createExercise(
 }
 
 /**
+ * Counts the distinct session templates and workouts still referencing the
+ * exercise, so the delete-conflict message can say where it's used.
+ */
+export function countExerciseUsage(id: number): {
+    sessions: number
+    workouts: number
+} {
+    const db = useDrizzle()
+    const sessions = db
+        .select({
+            n: sql<number>`count(distinct ${tables.sessionEntries.sessionId})`,
+        })
+        .from(tables.sessionExercises)
+        .innerJoin(
+            tables.sessionEntries,
+            eq(tables.sessionExercises.entryId, tables.sessionEntries.id),
+        )
+        .where(eq(tables.sessionExercises.exerciseId, id))
+        .get()
+    const workouts = db
+        .select({
+            n: sql<number>`count(distinct ${tables.workoutEntries.workoutId})`,
+        })
+        .from(tables.workoutExercises)
+        .innerJoin(
+            tables.workoutEntries,
+            eq(tables.workoutExercises.entryId, tables.workoutEntries.id),
+        )
+        .where(eq(tables.workoutExercises.exerciseId, id))
+        .get()
+    return { sessions: sessions?.n ?? 0, workouts: workouts?.n ?? 0 }
+}
+
+/**
  * Refuses exercise ids that don't belong to the user, with the same 400 the
  * parsers raise for unknown ids — another user's id and a nonexistent one are
  * indistinguishable on purpose. Backstops every tree write, since a foreign

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { FetchError } from 'ofetch'
+
 import type {
     Equipment,
     Exercise,
@@ -126,6 +128,11 @@ async function submit() {
 const exerciseToDelete = ref<Exercise | null>(null)
 const deleting = ref(false)
 
+// The delete route marks its in-use 409 with a structured `usage` payload, so
+// other conflicts (if the route ever grows one) won't open the merge flow.
+const isInUse = (error: unknown) =>
+    error instanceof FetchError && error.data?.data?.usage != null
+
 async function deleteExercise() {
     const exercise = exerciseToDelete.value
     if (!exercise) return
@@ -136,6 +143,13 @@ async function deleteExercise() {
         exerciseToDelete.value = null
         toast.add({ title: 'Exercise deleted', color: 'success' })
     } catch (error) {
+        // In-use exercises can't be deleted — hand over to the merge flow,
+        // carrying the server's explanation of where it's used.
+        if (isInUse(error)) {
+            openMerge(exercise, errorMessage(error, 'This exercise is in use.'))
+            exerciseToDelete.value = null
+            return
+        }
         toast.add({
             title: 'Could not delete exercise',
             description: errorMessage(error, 'Please try again.'),
@@ -143,6 +157,55 @@ async function deleteExercise() {
         })
     } finally {
         deleting.value = false
+    }
+}
+
+const exerciseToMerge = ref<Exercise | null>(null)
+const mergeBlockedNote = ref<string | null>(null)
+const mergeTargetId = ref<number>()
+const merging = ref(false)
+
+const mergeCandidates = computed(() =>
+    (exercises.value ?? []).filter((e) => e.id !== exerciseToMerge.value?.id),
+)
+
+const mergeDescription = computed(() => {
+    const name = exerciseToMerge.value?.name
+    const base = `Its template and workout history will move to the exercise you pick, then ${name} is deleted. This can't be undone.`
+    return mergeBlockedNote.value ? `${mergeBlockedNote.value}. ${base}` : base
+})
+
+function openMerge(exercise: Exercise, blockedNote: string | null = null) {
+    exerciseToMerge.value = exercise
+    mergeBlockedNote.value = blockedNote
+    mergeTargetId.value = undefined
+}
+
+async function mergeExercise() {
+    const source = exerciseToMerge.value
+    const targetId = mergeTargetId.value
+    if (!source || targetId === undefined) return
+    const target = exercises.value?.find((e) => e.id === targetId)
+    merging.value = true
+    try {
+        await $fetch(`/api/exercises/${source.id}/merge`, {
+            method: 'POST',
+            body: { targetId },
+        })
+        await refresh()
+        exerciseToMerge.value = null
+        toast.add({
+            title: `Merged ${source.name} into ${target?.name}`,
+            color: 'success',
+        })
+    } catch (error) {
+        toast.add({
+            title: 'Could not merge exercise',
+            description: errorMessage(error, 'Please try again.'),
+            color: 'error',
+        })
+    } finally {
+        merging.value = false
     }
 }
 </script>
@@ -225,6 +288,17 @@ async function deleteExercise() {
                     >
                         <Icon
                             name="tabler:pencil"
+                            :size="16"
+                        />
+                    </button>
+                    <button
+                        type="button"
+                        class="icon-btn sm"
+                        :aria-label="`Merge ${exercise.name} into another exercise`"
+                        @click="openMerge(exercise)"
+                    >
+                        <Icon
+                            name="tabler:arrow-merge"
                             :size="16"
                         />
                     </button>
@@ -394,6 +468,45 @@ async function deleteExercise() {
                         :size="15"
                     />
                     {{ deleting ? 'Deleting…' : 'Delete' }}
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Merge exercise -->
+        <UiModal
+            :open="exerciseToMerge !== null"
+            :title="`Merge ${exerciseToMerge?.name}`"
+            :description="mergeDescription"
+            @update:open="(open) => !open && (exerciseToMerge = null)"
+        >
+            <div class="field">
+                <label class="field-label">Merge into</label>
+                <ExerciseCombobox
+                    v-model="mergeTargetId"
+                    :exercises="mergeCandidates"
+                    placeholder="Pick an exercise"
+                />
+            </div>
+
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="exerciseToMerge = null"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-danger"
+                    :disabled="mergeTargetId === undefined || merging"
+                    @click="mergeExercise"
+                >
+                    <Icon
+                        name="tabler:arrow-merge"
+                        :size="15"
+                    />
+                    {{ merging ? 'Merging…' : 'Merge' }}
                 </button>
             </template>
         </UiModal>
