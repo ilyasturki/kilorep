@@ -112,6 +112,12 @@ export const exercises = sqliteTable(
         muscles: text('muscles', { mode: 'json' })
             .$type<MuscleTarget[]>()
             .notNull(),
+        // Alternative names the exercise is commonly known by ("Military Press"
+        // for Overhead Press); the exercise picker searches these besides `name`.
+        aliases: text('aliases', { mode: 'json' })
+            .$type<string[]>()
+            .notNull()
+            .default([]),
     },
     (table) => [
         uniqueIndex('exercises_user_name_unique').on(table.userId, table.name),

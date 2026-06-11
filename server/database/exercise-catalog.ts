@@ -16,11 +16,17 @@ import type { NewExercise } from './schema'
  * Add new exercises at the very end — even when that breaks the region
  * grouping — and never reorder, remove, or rename entries in place; treat a
  * rename as appending a new entry.
+ *
+ * `aliases` lists other names a movement is commonly known by; the exercise
+ * picker searches them alongside `name`. Append-only applies here too:
+ * editing aliases on an already-shipped entry only reaches NEW users' copies,
+ * so pair such an edit with a name-matching backfill migration (see 0010).
  */
 export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     // ── Chest ────────────────────────────────────────────────────────────────
     {
         name: 'Barbell Bench Press',
+        aliases: ['Flat Bench Press'],
         equipment: 'barbell',
         type: 'compound',
         muscles: [
@@ -81,6 +87,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Pec Deck Fly',
+        aliases: ['Butterfly', 'Machine Fly'],
         equipment: 'machine',
         type: 'isolation',
         muscles: [
@@ -90,6 +97,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Cable Fly',
+        aliases: ['Cable Crossover'],
         equipment: 'cable',
         type: 'isolation',
         muscles: [
@@ -117,6 +125,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Push-Up',
+        aliases: ['Press-Up'],
         equipment: 'bodyweight',
         type: 'compound',
         muscles: [
@@ -139,6 +148,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     // ── Shoulders ────────────────────────────────────────────────────────────
     {
         name: 'Overhead Press',
+        aliases: ['Military Press', 'Barbell Shoulder Press'],
         equipment: 'barbell',
         type: 'compound',
         muscles: [
@@ -179,6 +189,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Dumbbell Lateral Raise',
+        aliases: ['Side Raise'],
         equipment: 'dumbbell',
         type: 'isolation',
         muscles: [{ muscle: 'side delts', intensity: 'high' }],
@@ -197,6 +208,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Reverse Pec Deck',
+        aliases: ['Machine Reverse Fly'],
         equipment: 'machine',
         type: 'isolation',
         muscles: [
@@ -206,6 +218,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Dumbbell Rear Delt Fly',
+        aliases: ['Reverse Fly', 'Bent-Over Lateral Raise'],
         equipment: 'dumbbell',
         type: 'isolation',
         muscles: [
@@ -238,6 +251,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     // ── Back ─────────────────────────────────────────────────────────────────
     {
         name: 'Deadlift',
+        aliases: ['Conventional Deadlift'],
         equipment: 'barbell',
         type: 'compound',
         muscles: [
@@ -289,6 +303,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Barbell Row',
+        aliases: ['Bent-Over Row'],
         equipment: 'barbell',
         type: 'compound',
         muscles: [
@@ -301,6 +316,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Dumbbell Row',
+        aliases: ['One-Arm Dumbbell Row'],
         equipment: 'dumbbell',
         type: 'compound',
         muscles: [
@@ -342,6 +358,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Straight-Arm Pulldown',
+        aliases: ['Cable Pullover', 'Lat Prayer'],
         equipment: 'cable',
         type: 'isolation',
         muscles: [{ muscle: 'lats', intensity: 'high' }],
@@ -368,6 +385,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Hammer Curl',
+        aliases: ['Neutral-Grip Curl'],
         equipment: 'dumbbell',
         type: 'isolation',
         muscles: [
@@ -384,6 +402,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Preacher Curl',
+        aliases: ['Scott Curl'],
         equipment: 'machine',
         type: 'isolation',
         muscles: [{ muscle: 'biceps', intensity: 'high' }],
@@ -421,6 +440,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Cable Triceps Pushdown',
+        aliases: ['Triceps Pressdown', 'Rope Pushdown'],
         equipment: 'cable',
         type: 'isolation',
         muscles: [{ muscle: 'triceps', intensity: 'high' }],
@@ -439,6 +459,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Skull Crusher',
+        aliases: ['Lying Triceps Extension', 'French Press'],
         equipment: 'barbell',
         type: 'isolation',
         muscles: [{ muscle: 'triceps', intensity: 'high' }],
@@ -447,6 +468,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     // ── Quads ────────────────────────────────────────────────────────────────
     {
         name: 'Back Squat',
+        aliases: ['Barbell Squat'],
         equipment: 'barbell',
         type: 'compound',
         muscles: [
@@ -487,6 +509,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Bulgarian Split Squat',
+        aliases: ['Rear-Foot-Elevated Split Squat'],
         equipment: 'dumbbell',
         type: 'compound',
         muscles: [
@@ -525,12 +548,14 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Seated Leg Curl',
+        aliases: ['Seated Hamstring Curl'],
         equipment: 'machine',
         type: 'isolation',
         muscles: [{ muscle: 'hamstrings', intensity: 'high' }],
     },
     {
         name: 'Lying Leg Curl',
+        aliases: ['Lying Hamstring Curl'],
         equipment: 'machine',
         type: 'isolation',
         muscles: [{ muscle: 'hamstrings', intensity: 'high' }],
@@ -546,6 +571,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Hip Abduction',
+        aliases: ['Abductor Machine'],
         equipment: 'machine',
         type: 'isolation',
         muscles: [{ muscle: 'glutes', intensity: 'high' }],
@@ -577,6 +603,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     },
     {
         name: 'Cable Crunch',
+        aliases: ['Rope Crunch'],
         equipment: 'cable',
         type: 'isolation',
         muscles: [{ muscle: 'abs', intensity: 'high' }],

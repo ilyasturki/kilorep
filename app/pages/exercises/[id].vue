@@ -46,6 +46,12 @@ const videoUrl = computed(
         <div class="xtags">
             <span class="tag">{{ detail.equipment }}</span>
         </div>
+        <p
+            v-if="detail.aliases.length"
+            class="x-aka"
+        >
+            Also known as {{ detail.aliases.join(', ') }}
+        </p>
 
         <!-- How to -->
         <section class="detail-section">

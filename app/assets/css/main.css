@@ -1007,6 +1007,13 @@
         gap: 7px;
     }
 
+    /* Alternative names line on the exercise detail page. */
+    .x-aka {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--ink-3);
+    }
+
     .xmuscles {
         display: flex;
         flex-wrap: wrap;
