@@ -19,7 +19,7 @@ function text(message: string): ToolResult {
 }
 
 // Tool bodies throw H3 errors from the shared parsers; surface their
-// statusMessage (the human-readable part) as an MCP tool error instead of
+// message (the human-readable part) as an MCP tool error instead of
 // letting the SDK stringify the whole error object.
 export async function run(
     fn: () => string | Promise<string>,
@@ -28,16 +28,9 @@ export async function run(
         return text(await fn())
     } catch (error) {
         const message =
-            (
-                error
-                && typeof error === 'object'
-                && 'statusMessage' in error
-                && typeof error.statusMessage === 'string'
-                && error.statusMessage
-            ) ?
-                error.statusMessage
-            : error instanceof Error ? error.message
-            : String(error)
+            error instanceof Error && error.message ?
+                error.message
+            :   String(error)
         return { content: [{ type: 'text', text: message }], isError: true }
     }
 }

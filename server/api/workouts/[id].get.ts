@@ -6,10 +6,7 @@ export default defineEventHandler((event): WorkoutWithEntries => {
 
     const workout = loadWorkoutTrees(userId, [id])[0]
     if (!workout) {
-        throw createError({
-            statusCode: 404,
-            statusMessage: 'Workout not found',
-        })
+        notFound('Workout not found')
     }
     return workout
 })

@@ -11,10 +11,7 @@ export default defineEventHandler((event) => {
         .returning()
         .get()
     if (!deleted) {
-        throw createError({
-            statusCode: 404,
-            statusMessage: 'Session not found',
-        })
+        notFound('Session not found')
     }
     return deleted
 })

@@ -22,10 +22,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!updated) {
-        throw createError({
-            statusCode: 404,
-            statusMessage: 'Exercise not found',
-        })
+        notFound('Exercise not found')
     }
     return updated
 })

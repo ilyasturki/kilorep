@@ -4,10 +4,7 @@ export default defineEventHandler((event) => {
 
     const deleted = deleteWorkout(userId, id)
     if (!deleted) {
-        throw createError({
-            statusCode: 404,
-            statusMessage: 'Workout not found',
-        })
+        notFound('Workout not found')
     }
     return deleted
 })

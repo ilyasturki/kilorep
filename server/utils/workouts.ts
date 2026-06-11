@@ -166,10 +166,7 @@ export function copySessionToWorkout(
         )
         .get()
     if (!session) {
-        throw createError({
-            statusCode: 404,
-            statusMessage: 'Session not found',
-        })
+        notFound('Session not found')
     }
 
     const entries = tx

@@ -36,21 +36,15 @@ export function parseExerciseInput(
 ): ExerciseInput {
     const name = typeof body.name === 'string' ? body.name.trim() : ''
     if (!name) {
-        throw createError({
-            statusCode: 400,
-            statusMessage: 'Name is required',
-        })
+        badRequest('Name is required')
     }
 
     const { equipment, type } = body
     if (!isOneOf(EQUIPMENT, equipment)) {
-        throw createError({
-            statusCode: 400,
-            statusMessage: 'Invalid equipment',
-        })
+        badRequest('Invalid equipment')
     }
     if (!isOneOf(EXERCISE_TYPES, type)) {
-        throw createError({ statusCode: 400, statusMessage: 'Invalid type' })
+        badRequest('Invalid type')
     }
 
     const muscles: MuscleTarget[] = []
@@ -59,18 +53,12 @@ export function parseExerciseInput(
             typeof target?.muscle === 'string' ? target.muscle.trim() : ''
         if (!muscle) continue
         if (!isOneOf(MUSCLE_INTENSITIES, target.intensity)) {
-            throw createError({
-                statusCode: 400,
-                statusMessage: 'Invalid muscle intensity',
-            })
+            badRequest('Invalid muscle intensity')
         }
         muscles.push({ muscle, intensity: target.intensity })
     }
     if (muscles.length === 0) {
-        throw createError({
-            statusCode: 400,
-            statusMessage: 'At least one muscle is required',
-        })
+        badRequest('At least one muscle is required')
     }
 
     return { name, equipment, type, muscles }
@@ -148,10 +136,7 @@ export function getExerciseDetail(id: number, userId: number): ExerciseDetail {
         )
         .get()
     if (!exercise) {
-        throw createError({
-            statusCode: 404,
-            statusMessage: 'Exercise not found',
-        })
+        notFound('Exercise not found')
     }
 
     // Session templates that program this exercise. A template can hold the
@@ -265,10 +250,7 @@ export function getExerciseDetail(id: number, userId: number): ExerciseDetail {
 // Maps SQLite's UNIQUE-violation error to a friendly 409 on the name column.
 export function asDuplicateNameError(error: unknown): never {
     if (error instanceof Error && error.message.includes('UNIQUE')) {
-        throw createError({
-            statusCode: 409,
-            statusMessage: 'An exercise with that name already exists',
-        })
+        conflict('An exercise with that name already exists')
     }
     throw error
 }

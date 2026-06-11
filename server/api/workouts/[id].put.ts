@@ -15,10 +15,7 @@ export default defineEventHandler(async (event) => {
             )
             .get()
         if (!existing) {
-            throw createError({
-                statusCode: 404,
-                statusMessage: 'Workout not found',
-            })
+            notFound('Workout not found')
         }
 
         const updated = tx

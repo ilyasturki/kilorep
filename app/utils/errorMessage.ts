@@ -1,11 +1,11 @@
-// Pull the server's statusMessage off a failed $fetch, falling back when the
+// Pull the server's error message off a failed $fetch, falling back when the
 // error isn't a structured H3 response.
 export function errorMessage(error: unknown, fallback: string): string {
     if (error && typeof error === 'object' && 'data' in error) {
         const data = error.data
-        if (data && typeof data === 'object' && 'statusMessage' in data) {
-            if (typeof data.statusMessage === 'string')
-                return data.statusMessage
+        if (data && typeof data === 'object' && 'message' in data) {
+            if (typeof data.message === 'string' && data.message)
+                return data.message
         }
     }
     // No structured server response while offline means the write never

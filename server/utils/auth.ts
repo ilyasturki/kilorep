@@ -22,7 +22,7 @@ export function authEnabled(): boolean {
  */
 export function requireAuthMode(): void {
     if (!authEnabled()) {
-        throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+        notFound('Not Found')
     }
 }
 
@@ -34,7 +34,7 @@ export function requireAuthMode(): void {
 export function requireUserId(event: H3Event): number {
     const { userId } = event.context
     if (userId == null) {
-        throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+        unauthorized('Unauthorized')
     }
     return userId
 }

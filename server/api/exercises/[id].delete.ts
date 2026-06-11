@@ -18,20 +18,13 @@ export default defineEventHandler((event) => {
             .get()
     } catch (error) {
         if (error instanceof Error && error.message.includes('FOREIGN KEY')) {
-            throw createError({
-                statusCode: 409,
-                statusMessage:
-                    "This exercise is used in a session and can't be deleted",
-            })
+            conflict("This exercise is used in a session and can't be deleted")
         }
         throw error
     }
 
     if (!deleted) {
-        throw createError({
-            statusCode: 404,
-            statusMessage: 'Exercise not found',
-        })
+        notFound('Exercise not found')
     }
     return deleted
 })

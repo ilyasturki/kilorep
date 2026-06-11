@@ -14,10 +14,7 @@ export default defineEventHandler((event) => {
         .get()
 
     if (!deleted) {
-        throw createError({
-            statusCode: 404,
-            statusMessage: 'Weigh-in not found',
-        })
+        notFound('Weigh-in not found')
     }
     return deleted
 })

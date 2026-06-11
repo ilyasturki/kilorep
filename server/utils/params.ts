@@ -4,10 +4,7 @@ import type { H3Event } from 'h3'
 export function getIdParam(event: H3Event, resource: string): number {
     const id = Number(getRouterParam(event, 'id'))
     if (!Number.isInteger(id) || id <= 0) {
-        throw createError({
-            statusCode: 400,
-            statusMessage: `Invalid ${resource} id`,
-        })
+        badRequest(`Invalid ${resource} id`)
     }
     return id
 }
