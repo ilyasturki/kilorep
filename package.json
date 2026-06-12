@@ -16,6 +16,7 @@
         "lint": "oxlint",
         "lint:fix": "oxlint --fix",
         "test:isolation": "node tests/isolation.test.mjs",
+        "test:unit": "bun test tests/workoutStats.test.ts",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:push": "drizzle-kit push",
