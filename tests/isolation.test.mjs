@@ -1,20 +1,29 @@
 /**
  * Two-user isolation test — the backstop behind "complete API separation".
  * Writes data as user A, then asserts every endpoint (REST + MCP) denies or
- * blanks it for user B, and that A's data survives untouched.
+ * blanks it for user B — over the sealed session cookie AND the bearer-token
+ * path the native app uses — and that A's data survives untouched.
  *
  * Targets a RUNNING auth-mode instance (fake Google creds are fine):
  *   NUXT_OAUTH_GOOGLE_CLIENT_ID=x NUXT_OAUTH_GOOGLE_CLIENT_SECRET=y \
  *   NUXT_SESSION_PASSWORD=<password> DB_FILE_NAME=.data/test-auth.db \
- *   bunx nuxt dev --port 4099
+ *   NUXT_GOOGLE_JWKS_URL=http://localhost:4098/jwks \
+ *   NUXT_IGNORE_LOCK=1 bunx nuxt dev --port 4099
  * then: node tests/isolation.test.mjs
+ *
+ * The suite serves its own JWKS on :4098 and signs its own Google-shaped ID
+ * tokens, so device sign-in exercises the real verification path end to end.
+ * The single-user checks boot a second, credential-less instance on :4097
+ * (or use SOLO_BASE_URL instead when set).
  *
  * Users are created directly in the database (signup needs real Google);
  * sessions are forged with the known test password, exactly like the server
  * seals them.
  */
 import { strict as assert } from 'node:assert'
-import { randomBytes } from 'node:crypto'
+import { spawn } from 'node:child_process'
+import { generateKeyPairSync, randomBytes, sign } from 'node:crypto'
+import { createServer } from 'node:http'
 import Database from 'better-sqlite3'
 
 import { mintSession } from './mint-session.mjs'
@@ -24,16 +33,113 @@ const DB_FILE = process.env.DB_FILE_NAME ?? '.data/test-auth.db'
 const PASSWORD =
     process.env.NUXT_SESSION_PASSWORD
     ?? 'test-password-at-least-32-characters-long'
+// Must match the instance's NUXT_OAUTH_GOOGLE_CLIENT_ID: it is the audience
+// device sign-in validates ID tokens against.
+const CLIENT_ID = process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID ?? 'x'
+const JWKS_PORT = Number(process.env.JWKS_PORT ?? 4098)
+const SOLO_PORT = Number(process.env.SOLO_PORT ?? 4097)
+const SOLO_BASE = process.env.SOLO_BASE_URL ?? `http://localhost:${SOLO_PORT}`
 
-async function mintCookie(user) {
-    return `nuxt-session=${await mintSession(user, PASSWORD, 60 * 60 * 1000)}`
+// ── Google-shaped ID tokens, signed with our own throwaway key ─────────────
+const KEY_ID = 'iso-test-key'
+const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+})
+const JWKS = {
+    keys: [
+        {
+            ...publicKey.export({ format: 'jwk' }),
+            kid: KEY_ID,
+            alg: 'RS256',
+            use: 'sig',
+        },
+    ],
 }
 
-async function api(cookie, path, { method = 'GET', body } = {}) {
-    const res = await fetch(`${BASE}${path}`, {
+const b64json = (value) =>
+    Buffer.from(JSON.stringify(value)).toString('base64url')
+
+function signIdToken(claims) {
+    const now = Math.floor(Date.now() / 1000)
+    const header = b64json({ alg: 'RS256', typ: 'JWT', kid: KEY_ID })
+    const payload = b64json({
+        iss: 'https://accounts.google.com',
+        aud: CLIENT_ID,
+        iat: now,
+        exp: now + 3600,
+        ...claims,
+    })
+    const signature = sign(
+        'sha256',
+        Buffer.from(`${header}.${payload}`),
+        privateKey,
+    ).toString('base64url')
+    return `${header}.${payload}.${signature}`
+}
+
+const jwksServer = createServer((_req, res) => {
+    res.setHeader('content-type', 'application/json')
+    res.end(JSON.stringify(JWKS))
+})
+await new Promise((resolve, reject) => {
+    jwksServer.listen(JWKS_PORT, resolve)
+    jwksServer.on('error', reject)
+})
+
+// ── Single-user instance, booted now so it's ready when we get to it ───────
+let soloChild = null
+if (!process.env.SOLO_BASE_URL) {
+    soloChild = spawn('bunx', ['nuxt', 'dev', '--port', String(SOLO_PORT)], {
+        env: {
+            ...process.env,
+            // Explicitly blanked: nuxt dev reads .env, and any OAuth creds
+            // reaching the child would boot it multi-user.
+            NUXT_OAUTH_GOOGLE_CLIENT_ID: '',
+            NUXT_OAUTH_GOOGLE_CLIENT_SECRET: '',
+            DB_FILE_NAME: '.data/test-solo.db',
+            NUXT_IGNORE_LOCK: '1',
+        },
+        stdio: 'ignore',
+        detached: true,
+    })
+    process.on('exit', () => {
+        // Negative pid: the detached child leads its own process group, and
+        // nuxt dev workers must die with it or they keep the port.
+        try {
+            process.kill(-soloChild.pid, 'SIGTERM')
+        } catch {
+            // already gone
+        }
+    })
+}
+
+async function waitForMode(base, timeoutMs = 120_000) {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+        try {
+            const res = await fetch(`${base}/api/auth/mode`)
+            if (res.ok) return await res.json()
+        } catch {
+            // not up yet
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500))
+    }
+    return null
+}
+
+async function mintCookie(user) {
+    return {
+        cookie: `nuxt-session=${await mintSession(user, PASSWORD, 60 * 60 * 1000)}`,
+    }
+}
+
+const asBearer = (token) => ({ authorization: `Bearer ${token}` })
+
+async function api(auth, path, { method = 'GET', body, base = BASE } = {}) {
+    const res = await fetch(`${base}${path}`, {
         method,
         headers: {
-            cookie,
+            ...auth,
             ...(body ? { 'content-type': 'application/json' } : {}),
         },
         ...(body ? { body: JSON.stringify(body) } : {}),
@@ -94,6 +200,79 @@ function check(label, fn) {
     }
 }
 
+// ── Device sign-in: Google ID token → long-lived device token ──────────────
+console.log('\nDevice sign-in (native app)')
+async function deviceSignIn(claims, deviceName) {
+    return api({}, '/api/auth/device', {
+        method: 'POST',
+        body: { idToken: signIdToken(claims), deviceName },
+    })
+}
+
+const deviceA = await deviceSignIn(
+    { sub: `iso-a-${suffix}`, email: 'a@iso.test', name: 'Iso A' },
+    'Iso Pixel A',
+)
+check('A signs in and gets a device token', () => {
+    assert.equal(deviceA.status, 200)
+    assert.match(deviceA.body.token, /^kr_/)
+    assert.equal(deviceA.body.record.label, 'Iso Pixel A')
+})
+
+const deviceB = await deviceSignIn(
+    { sub: `iso-b-${suffix}`, email: 'b@iso.test', name: 'Iso B' },
+    'Iso Pixel B',
+)
+check('B signs in and gets a device token', () =>
+    assert.equal(deviceB.status, 200),
+)
+
+// Optional-chained below: a failed sign-in must degrade into FAILed checks,
+// not crash the run before cleanup and the summary.
+const deviceTokenA = deviceA.body?.token
+const deviceTokenB = deviceB.body?.token
+const bearerA = asBearer(deviceTokenA)
+const bearerB = asBearer(deviceTokenB)
+
+const dbDup = new Database(DB_FILE, { readonly: true })
+const googleUsers = dbDup
+    .prepare(
+        'SELECT COUNT(*) AS n FROM users WHERE provider_account_id IN (?, ?)',
+    )
+    .get(`iso-a-${suffix}`, `iso-b-${suffix}`)
+dbDup.close()
+check('sign-in resolved the existing accounts, no duplicates', () =>
+    assert.equal(googleUsers.n, 2),
+)
+
+const wrongAudience = await api({}, '/api/auth/device', {
+    method: 'POST',
+    body: {
+        idToken: signIdToken({ sub: `iso-a-${suffix}`, aud: 'someone-else' }),
+    },
+})
+check('wrong audience → 401', () => assert.equal(wrongAudience.status, 401))
+
+const expired = await api({}, '/api/auth/device', {
+    method: 'POST',
+    body: {
+        idToken: signIdToken({
+            sub: `iso-a-${suffix}`,
+            exp: Math.floor(Date.now() / 1000) - 60,
+        }),
+    },
+})
+check('expired token → 401', () => assert.equal(expired.status, 401))
+
+const garbage = await api({}, '/api/auth/device', {
+    method: 'POST',
+    body: { idToken: 'not-a-jwt' },
+})
+check('malformed token → 401', () => assert.equal(garbage.status, 401))
+
+const missing = await api({}, '/api/auth/device', { method: 'POST', body: {} })
+check('missing idToken → 400', () => assert.equal(missing.status, 400))
+
 // ── A creates one of everything ─────────────────────────────────────────────
 console.log('\nA creates data')
 const exA = await api(cookieA, '/api/exercises', {
@@ -130,22 +309,44 @@ const bwA = await api(cookieA, '/api/bodyweight', {
 })
 check('log weigh-in', () => assert.equal(bwA.status, 200))
 
-// ── B sees none of it ───────────────────────────────────────────────────────
+// ── The bearer path reaches /api/* ──────────────────────────────────────────
+console.log('\nDevice tokens on /api')
+const bearerRead = await api(bearerA, '/api/workouts')
+check("A's device token reads A's workouts", () => {
+    assert.equal(bearerRead.status, 200)
+    assert.equal(bearerRead.body.length, 1)
+    assert.equal(bearerRead.body[0].id, wkA.body.id)
+})
+
+const unknownBearer = await api(asBearer('kr_no-such-token'), '/api/workouts')
+check('unknown bearer token → 401', () =>
+    assert.equal(unknownBearer.status, 401),
+)
+
+const anonymous = await api({}, '/api/workouts')
+check('no credentials at all → 401', () => assert.equal(anonymous.status, 401))
+
+// ── B sees none of it, over both auth paths ─────────────────────────────────
 console.log('\nB reads are blank')
-for (const path of [
-    '/api/exercises',
-    '/api/sessions',
-    '/api/workouts',
-    '/api/bodyweight',
-]) {
-    const res = await api(cookieB, path)
-    check(`GET ${path} is empty`, () => {
-        assert.equal(res.status, 200)
-        assert.deepEqual(res.body, [])
-    })
+for (const [flavor, auth] of Object.entries({
+    cookie: cookieB,
+    'device token': bearerB,
+})) {
+    for (const path of [
+        '/api/exercises',
+        '/api/sessions',
+        '/api/workouts',
+        '/api/bodyweight',
+    ]) {
+        const res = await api(auth, path)
+        check(`GET ${path} is empty [${flavor}]`, () => {
+            assert.equal(res.status, 200)
+            assert.deepEqual(res.body, [])
+        })
+    }
 }
 
-// ── B cannot touch A's resources ────────────────────────────────────────────
+// ── B cannot touch A's resources, over both auth paths ──────────────────────
 console.log("\nB's cross-user requests 404")
 const validSession = {
     name: 'x',
@@ -202,11 +403,16 @@ const attempts = [
     ],
     ['DELETE', `/api/bodyweight/${bwA.body.id}`, undefined, 404],
 ]
-for (const [method, path, body, expected] of attempts) {
-    const res = await api(cookieB, path, { method, body })
-    check(`${method} ${path} → ${expected}`, () =>
-        assert.equal(res.status, expected),
-    )
+for (const [flavor, auth] of Object.entries({
+    cookie: cookieB,
+    'device token': bearerB,
+})) {
+    for (const [method, path, body, expected] of attempts) {
+        const res = await api(auth, path, { method, body })
+        check(`${method} ${path} → ${expected} [${flavor}]`, () =>
+            assert.equal(res.status, expected),
+        )
+    }
 }
 
 // ── Tokens are scoped per user ──────────────────────────────────────────────
@@ -231,11 +437,11 @@ const tokenA = mintA.token
 const tokenB = mintB.token
 
 const tokenListB = await api(cookieB, '/api/account/tokens')
-check("B's token list holds only B's token", () => {
+check("B's token list holds B's device and MCP tokens only", () => {
     assert.equal(tokenListB.status, 200)
     assert.deepEqual(
         tokenListB.body.map((t) => t.id),
-        [mintB.record?.id],
+        [deviceB.body?.record?.id, mintB.record?.id],
     )
 })
 
@@ -276,6 +482,38 @@ check("B's token cannot delete A's workout", () => {
     assert.match(deleteAttempt.text, /No workout with id/)
 })
 
+const deviceOnMcp = await mcp(deviceTokenA, 'list_workouts')
+check("A's device token works on /mcp too", () => {
+    assert.equal(deviceOnMcp.status, 200)
+    assert.match(deviceOnMcp.text, new RegExp(`Iso Day ${suffix}`))
+})
+
+// ── Revocation cuts a device off immediately ────────────────────────────────
+console.log('\nDevice token revocation')
+const revoke = await api(
+    cookieA,
+    `/api/account/tokens/${deviceA.body?.record?.id}`,
+    { method: 'DELETE' },
+)
+check('A revokes the device token from web settings', () =>
+    assert.equal(revoke.status, 200),
+)
+
+const revokedApi = await api(bearerA, '/api/workouts')
+check('revoked token is rejected on /api', () =>
+    assert.equal(revokedApi.status, 401),
+)
+
+const revokedMcp = await mcp(deviceTokenA, 'list_workouts')
+check('revoked token is rejected on /mcp', () =>
+    assert.equal(revokedMcp.status, 401),
+)
+
+const otherTokenStillWorks = await mcp(tokenA, 'list_workouts')
+check("A's other token survives the revocation", () =>
+    assert.equal(otherTokenStillWorks.status, 200),
+)
+
 // ── A's data is intact ──────────────────────────────────────────────────────
 console.log("\nA's data intact")
 const finalA = await api(cookieA, '/api/workouts')
@@ -285,12 +523,33 @@ check('A still has the workout', () => {
     assert.equal(finalA.body[0].id, wkA.body.id)
 })
 
+// ── Single-user mode: no sign-in to disable, /api open as the local user ───
+console.log('\nSingle-user instance')
+const soloMode = await waitForMode(SOLO_BASE)
+check('solo instance is up and reports auth off', () => {
+    assert.ok(soloMode, `no /api/auth/mode response from ${SOLO_BASE}`)
+    assert.equal(soloMode.authEnabled, false)
+})
+if (soloMode) {
+    const soloRead = await api({}, '/api/workouts', { base: SOLO_BASE })
+    check('solo /api needs no credentials', () =>
+        assert.equal(soloRead.status, 200),
+    )
+    const soloSignIn = await api({}, '/api/auth/device', {
+        method: 'POST',
+        body: { idToken: signIdToken({ sub: 'solo-probe' }) },
+        base: SOLO_BASE,
+    })
+    check('device sign-in 404s in single-user mode', () =>
+        assert.equal(soloSignIn.status, 404),
+    )
+} else {
+    console.error('      skipping solo checks (instance unreachable)')
+}
+
 // ── Cleanup via account deletion (also exercises that path) ────────────────
 console.log('\nCleanup')
-for (const [label, cookie] of [
-    ['A', cookieA],
-    ['B', cookieB],
-]) {
+for (const [label, cookie] of Object.entries({ A: cookieA, B: cookieB })) {
     const res = await api(cookie, '/api/account', { method: 'DELETE' })
     check(`delete account ${label}`, () => assert.equal(res.status, 200))
 }

@@ -15,6 +15,7 @@
         "chartjs-adapter-date-fns": "^3.0.0",
         "date-fns": "^4.4.0",
         "drizzle-orm": "^0.45.2",
+        "jose": "^6.2.3",
         "nuxt": "^4.4.7",
         "nuxt-auth-utils": "^0.5.29",
         "reka-ui": "^2.9.9",

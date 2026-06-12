@@ -41,8 +41,9 @@ export function listApiTokens(userId: number): ApiTokenInfo[] {
 }
 
 /**
- * Mints an MCP bearer token, storing only its hash. The cleartext is returned
- * exactly once — afterwards the row is identified by label and prefix alone.
+ * Mints a bearer token (MCP client or native-app device), storing only its
+ * hash. The cleartext is returned exactly once — afterwards the row is
+ * identified by label and prefix alone.
  */
 export function createApiToken(
     userId: number,

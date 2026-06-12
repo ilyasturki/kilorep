@@ -22,6 +22,10 @@ export default defineNuxtConfig({
         session: {
             maxAge: 60 * 60 * 24 * 30,
         },
+        // Where Google's ID-token signing keys are fetched from. Overridable
+        // (NUXT_GOOGLE_JWKS_URL) so the isolation suite can serve its own
+        // JWKS and sign its own Google-shaped tokens.
+        googleJwksUrl: 'https://www.googleapis.com/oauth2/v3/certs',
     },
     // Bundle the locally-installed @iconify-json/tabler set so icons resolve
     // offline with no Iconify API calls.
