@@ -162,7 +162,7 @@ const videoUrl = computed(
                             :class="{ 'set-chip--off': !s.done }"
                         >
                             {{ s.weight == null ? '—' : s.weight
-                            }}<span class="x">×</span>{{ s.reps }}
+                            }}<span class="x">×</span>{{ s.reps ?? '?' }}
                         </span>
                     </div>
                 </div>

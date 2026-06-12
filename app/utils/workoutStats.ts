@@ -1,10 +1,11 @@
-// Volume is load × reps summed over sets, with un-entered weights counted as 0.
+// Volume is load × reps summed over sets, with un-entered weights and reps
+// counted as 0 — a cleared NumberField leaves undefined in the draft.
 // Shared by the workout list and detail pages so the definition stays single.
-type StatSet = { reps: number; weight?: number | null }
+type StatSet = { reps?: number | null; weight?: number | null }
 type StatEntry = { exercises: { sets: StatSet[] }[] }
 
 const rawVolume = (sets: StatSet[]) =>
-    sets.reduce((v, s) => v + (s.weight ?? 0) * s.reps, 0)
+    sets.reduce((v, s) => v + (s.weight ?? 0) * (s.reps ?? 0), 0)
 
 export const setVolume = (sets: StatSet[]) => Math.round(rawVolume(sets))
 

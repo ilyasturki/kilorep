@@ -322,6 +322,11 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                     } else {
                         const target = rows[index]!.set
                         const reps = input.reps ?? target.reps
+                        if (reps == null) {
+                            badRequest(
+                                `Set ${index + 1} of ${exercise.name} has no rep target — pass "reps"`,
+                            )
+                        }
                         db.update(tables.workoutSets)
                             .set({ weight, reps, done })
                             .where(eq(tables.workoutSets.id, target.id))

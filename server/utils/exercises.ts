@@ -261,7 +261,7 @@ export function getExerciseDetail(id: number, userId: number): ExerciseDetail {
     let best: ExerciseDetail['best'] = null
     for (const workout of history) {
         for (const set of workout.sets) {
-            if (set.weight == null) continue
+            if (set.weight == null || set.reps == null) continue
             if (
                 !best
                 || set.weight > best.weight

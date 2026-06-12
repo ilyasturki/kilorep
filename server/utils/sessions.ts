@@ -3,7 +3,7 @@ import type {
     SessionWithEntries,
 } from '~~/server/database/schema'
 
-type SetInput = { reps?: number }
+type SetInput = { reps?: number | null }
 type ExerciseInput = { exerciseId?: number; sets?: SetInput[] }
 type EntryInput = { exercises?: ExerciseInput[] }
 export type SessionInput = {
@@ -13,7 +13,7 @@ export type SessionInput = {
 
 type ParsedExercise = {
     exerciseId: number
-    sets: { reps: number }[]
+    sets: { reps: number | null }[]
 }
 type ParsedEntry = { exercises: ParsedExercise[] }
 export type ParsedSession = {
@@ -22,10 +22,21 @@ export type ParsedSession = {
 }
 
 /**
+ * A usable rep target is a positive finite number; anything else (cleared
+ * field, zero, junk) normalises to null — an open target. Shared by the
+ * session and workout payload parsers so both draw the same line.
+ */
+export function parseRepsTarget(value: unknown): number | null {
+    const reps = Number(value)
+    return Number.isFinite(reps) && reps > 0 ? reps : null
+}
+
+/**
  * Validates and normalises a create/update payload, dropping incomplete rows
- * (exercises without a valid catalog id, sets without positive reps) and
- * throwing a 400 when nothing usable remains. Shared by POST and PUT so both
- * enforce the same shape.
+ * (exercises without a valid catalog id) and throwing a 400 when nothing
+ * usable remains. A set without positive reps keeps its slot with a null
+ * target — the rep count is then decided at workout time. Shared by POST and
+ * PUT so both enforce the same shape.
  */
 export function parseSessionInput(body: SessionInput): ParsedSession {
     const name = body?.name?.trim()
@@ -36,11 +47,9 @@ export function parseSessionInput(body: SessionInput): ParsedSession {
             exercises: (entry?.exercises ?? [])
                 .map((ex) => ({
                     exerciseId: Number(ex?.exerciseId),
-                    sets: (ex?.sets ?? [])
-                        .map((set) => ({ reps: Number(set?.reps) }))
-                        .filter(
-                            (set) => Number.isFinite(set.reps) && set.reps > 0,
-                        ),
+                    sets: (ex?.sets ?? []).map((set) => ({
+                        reps: parseRepsTarget(set?.reps),
+                    })),
                 }))
                 .filter(
                     (ex) =>

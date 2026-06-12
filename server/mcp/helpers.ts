@@ -150,7 +150,7 @@ export function formatSet(
     set: Pick<LoggedSet, 'weight' | 'reps' | 'done'>,
 ): string {
     const load = set.weight == null ? '?' : `${set.weight}kg`
-    return `${load}×${set.reps}${set.done ? '' : ' (pending)'}`
+    return `${load}×${set.reps ?? '?'}${set.done ? '' : ' (pending)'}`
 }
 
 export function countSets(workout: WorkoutWithEntries): {

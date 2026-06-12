@@ -5,7 +5,7 @@ import type { ParsedSession } from '~~/server/utils/sessions'
 // exercises in each entry, and per-exercise set counts. Session and workout
 // trees (and a parsed PUT payload) all satisfy this shape.
 type StructureEntry = {
-    exercises: { exerciseId: number; sets: { reps: number }[] }[]
+    exercises: { exerciseId: number; sets: { reps: number | null }[] }[]
 }
 
 /**
@@ -61,15 +61,15 @@ export function workoutTemplateStatus(
  * Maps a workout's tree to template entries, syncing structure while keeping
  * the template's prescriptions: each workout exercise claims the template's
  * next unclaimed occurrence of the same exercise and keeps its prescribed
- * reps position by position. Only genuinely new sets and exercises take their
- * reps from what was logged — a failed set never silently becomes the new
- * prescription.
+ * reps position by position — a deliberately open target (null reps) stays
+ * open. Only genuinely new sets and exercises take their reps from what was
+ * logged — a failed set never silently becomes the new prescription.
  */
 export function workoutToSessionEntries(
     workoutEntries: StructureEntry[],
     templateEntries: StructureEntry[] = [],
 ): ParsedSession['entries'] {
-    const unclaimed = new Map<number, { reps: number }[][]>()
+    const unclaimed = new Map<number, { reps: number | null }[][]>()
     for (const entry of templateEntries) {
         for (const ex of entry.exercises) {
             const queue = unclaimed.get(ex.exerciseId) ?? []
@@ -84,7 +84,8 @@ export function workoutToSessionEntries(
             return {
                 exerciseId: ex.exerciseId,
                 sets: ex.sets.map((set, i) => ({
-                    reps: prescribed[i]?.reps ?? set.reps,
+                    reps:
+                        i < prescribed.length ? prescribed[i]!.reps : set.reps,
                 })),
             }
         }),

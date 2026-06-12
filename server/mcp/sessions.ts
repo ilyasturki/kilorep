@@ -20,9 +20,11 @@ const entriesSchema = z
                         .string()
                         .describe('Exercise name (fuzzy-matched)'),
                     reps: z
-                        .array(z.number().int().positive())
+                        .array(z.number().int().positive().nullable())
                         .min(1)
-                        .describe('Prescribed reps per set, e.g. [8, 8, 8]'),
+                        .describe(
+                            'Prescribed reps per set, e.g. [8, 8, 8]; null leaves a set without a target, e.g. [null, null, null]',
+                        ),
                 }),
             )
             .min(1),
@@ -59,7 +61,7 @@ function formatSession(session: SessionWithEntries): string {
         const superset = entry.exercises.length > 1
         if (superset) lines.push(`${index + 1}. superset:`)
         for (const ex of entry.exercises) {
-            const reps = ex.sets.map((set) => set.reps).join(', ')
+            const reps = ex.sets.map((set) => set.reps ?? '?').join(', ')
             lines.push(
                 `${superset ? '   - ' : `${index + 1}. `}${ex.exercise.name}: ${reps || 'no sets'}`,
             )

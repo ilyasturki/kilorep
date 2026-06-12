@@ -15,7 +15,13 @@ const [{ data: workout }, { data: exercises }] = await Promise.all([
     useFetch<Exercise[]>('/api/exercises'),
 ])
 
-type SetDraft = { reps: number; weight: number | undefined; done: boolean }
+// reps/weight are undefined while their NumberField is cleared mid-edit, and
+// reps also when seeded from an open-target template set with no history yet.
+type SetDraft = {
+    reps: number | undefined
+    weight: number | undefined
+    done: boolean
+}
 type ExerciseDraft = { exerciseId: number; name: string; sets: SetDraft[] }
 type EntryDraft = { exercises: ExerciseDraft[] }
 
@@ -25,7 +31,7 @@ const draft = ref<EntryDraft[]>(
             exerciseId: ex.exerciseId,
             name: ex.exercise.name,
             sets: ex.sets.map((s) => ({
-                reps: s.reps,
+                reps: s.reps ?? undefined,
                 weight: s.weight ?? undefined,
                 done: s.done,
             })),
@@ -103,13 +109,13 @@ function composedStartedAt() {
     return startedAt.toISOString()
 }
 
+const newSet = (): SetDraft => ({ reps: 8, weight: undefined, done: true })
+
 function addSet(ex: ExerciseDraft) {
+    // Copy the last set verbatim — even blank fields — so the new row mirrors
+    // whatever the lifter is mid-typing instead of snapping reps back to 8.
     const last = ex.sets.at(-1)
-    ex.sets.push({
-        reps: last?.reps ?? 8,
-        weight: last?.weight,
-        done: true,
-    })
+    ex.sets.push(last ? { ...last, done: true } : newSet())
 }
 function removeSet(ex: ExerciseDraft, index: number) {
     ex.sets.splice(index, 1)
@@ -610,7 +616,7 @@ async function changeDate() {
                             <span class="logline-load">
                                 {{ fmtWeight(set.weight) }}
                                 <span class="x">×</span>
-                                {{ set.reps }}
+                                {{ set.reps ?? '?' }}
                             </span>
                             <span
                                 class="logline-check"

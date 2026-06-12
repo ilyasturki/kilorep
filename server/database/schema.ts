@@ -167,12 +167,13 @@ export const sessionExercises = sqliteTable('session_exercises', {
 
 // A single prescribed set of a session exercise — target reps only. A template
 // fixes the rep target; the load lifted is decided at workout time, not here.
+// A null target means the set is planned but its reps are left open too.
 export const sets = sqliteTable('sets', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     sessionExerciseId: integer('session_exercise_id')
         .notNull()
         .references(() => sessionExercises.id, { onDelete: 'cascade' }),
-    reps: integer('reps').notNull(),
+    reps: integer('reps'),
     position: integer('position').notNull().default(0),
 })
 
@@ -247,13 +248,15 @@ export const workoutExercises = sqliteTable('workout_exercises', {
 
 // A logged set: the reps actually performed and the load lifted, in kilograms.
 // `weight` stays null until entered; `done` flips as the lifter ticks the set
-// off during the workout.
+// off during the workout. `reps` is null while not entered — cleared mid-edit
+// or seeded from an open-target template set with no history. Readers render
+// it as "?" and count it as 0 in volume.
 export const workoutSets = sqliteTable('workout_sets', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     workoutExerciseId: integer('workout_exercise_id')
         .notNull()
         .references(() => workoutExercises.id, { onDelete: 'cascade' }),
-    reps: integer('reps').notNull(),
+    reps: integer('reps'),
     weight: real('weight'),
     done: integer('done', { mode: 'boolean' }).notNull().default(false),
     position: integer('position').notNull().default(0),

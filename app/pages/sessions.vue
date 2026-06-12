@@ -7,12 +7,14 @@ const [{ data: sessions, status, refresh }, { data: exercises }] =
         useFetch<Exercise[]>('/api/exercises'),
     ])
 
-type SetDraft = { reps: number }
+// reps stays undefined for a set without a target — the count is then
+// decided at workout time.
+type SetDraft = { reps: number | undefined }
 type ExerciseDraft = { exerciseId: number | undefined; sets: SetDraft[] }
 type EntryDraft = { exercises: ExerciseDraft[] }
 type SessionDraft = { name: string; entries: EntryDraft[] }
 
-const newSet = (): SetDraft => ({ reps: 10 })
+const newSet = (): SetDraft => ({ reps: undefined })
 const newExercise = (): ExerciseDraft => ({
     exerciseId: undefined,
     sets: [newSet()],
@@ -44,7 +46,7 @@ function editSession(session: SessionWithEntries) {
         entries: session.entries.map((entry) => ({
             exercises: entry.exercises.map((se) => ({
                 exerciseId: se.exerciseId,
-                sets: se.sets.map((s) => ({ reps: s.reps })),
+                sets: se.sets.map((s) => ({ reps: s.reps ?? undefined })),
             })),
         })),
     }
@@ -72,8 +74,7 @@ function removeExerciseFromEntry(entry: EntryDraft, index: number) {
     entry.exercises.splice(index, 1)
 }
 function addSet(exercise: ExerciseDraft) {
-    const last = exercise.sets.at(-1)
-    exercise.sets.push(last ? { ...last } : newSet())
+    exercise.sets.push(newSet())
 }
 function removeSet(exercise: ExerciseDraft, index: number) {
     exercise.sets.splice(index, 1)
@@ -144,13 +145,18 @@ const sessionMuscles = computed(
         ),
 )
 
-// "3 × 8" when every set shares a rep target, otherwise each set's reps.
-const setSummary = (sets: { reps: number }[]) => {
+// "3 × 8" when every set shares a rep target, "3 sets" when no set has one,
+// otherwise each set's reps with "?" for open targets.
+const setSummary = (sets: { reps: number | null }[]) => {
     if (sets.length === 0) return ''
     const reps = sets.map((s) => s.reps)
-    return reps.every((r) => r === reps[0]) ?
-            `${sets.length} × ${reps[0]}`
-        :   reps.join(', ')
+    if (reps.every((r) => r == null)) {
+        return plural(sets.length, 'set')
+    }
+    if (reps.every((r) => r === reps[0])) {
+        return `${sets.length} × ${reps[0]}`
+    }
+    return reps.map((r) => r ?? '?').join(', ')
 }
 
 // Flatten a session into display blocks, numbering exercises 01..N across the

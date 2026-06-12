@@ -9,7 +9,11 @@ import type {
     WorkoutWithEntries,
 } from '~~/server/database/schema'
 
-type LoggedSetInput = { reps?: number; weight?: number | null; done?: boolean }
+type LoggedSetInput = {
+    reps?: number | null
+    weight?: number | null
+    done?: boolean
+}
 type WorkoutExerciseInput = { exerciseId?: number; sets?: LoggedSetInput[] }
 type WorkoutEntryInput = { exercises?: WorkoutExerciseInput[] }
 export type WorkoutInput = {
@@ -19,7 +23,11 @@ export type WorkoutInput = {
     entries?: WorkoutEntryInput[]
 }
 
-type ParsedLoggedSet = { reps: number; weight: number | null; done: boolean }
+type ParsedLoggedSet = {
+    reps: number | null
+    weight: number | null
+    done: boolean
+}
 type ParsedExercise = { exerciseId: number; sets: ParsedLoggedSet[] }
 type ParsedEntry = { exercises: ParsedExercise[] }
 export type ParsedWorkout = {
@@ -32,8 +40,10 @@ export type ParsedWorkout = {
 /**
  * Validates and normalises a workout update payload. Mirrors `parseSessionInput`
  * but each set also carries the logged load: `weight` (kilograms, null until
- * entered) and `done`. Incomplete rows are dropped; a 400 is thrown when nothing
- * usable remains. `name` is only returned when explicitly provided and non-empty,
+ * entered) and `done`. A set keeps its slot with null reps while its field is
+ * cleared, so an autosave mid-edit can't silently drop the row. Exercises
+ * without a valid catalog id are dropped; a 400 is thrown when nothing usable
+ * remains. `name` is only returned when explicitly provided and non-empty,
  * so callers can leave the snapshot untouched.
  */
 export function parseWorkoutInput(body: WorkoutInput): ParsedWorkout {
@@ -44,25 +54,21 @@ export function parseWorkoutInput(body: WorkoutInput): ParsedWorkout {
             exercises: (entry?.exercises ?? [])
                 .map((ex) => ({
                     exerciseId: Number(ex?.exerciseId),
-                    sets: (ex?.sets ?? [])
-                        .map((set) => {
-                            const weight = Number(set?.weight)
-                            return {
-                                reps: Number(set?.reps),
-                                weight:
-                                    (
-                                        set?.weight == null
-                                        || !Number.isFinite(weight)
-                                        || weight < 0
-                                    ) ?
-                                        null
-                                    :   weight,
-                                done: Boolean(set?.done),
-                            }
-                        })
-                        .filter(
-                            (set) => Number.isFinite(set.reps) && set.reps > 0,
-                        ),
+                    sets: (ex?.sets ?? []).map((set) => {
+                        const weight = Number(set?.weight)
+                        return {
+                            reps: parseRepsTarget(set?.reps),
+                            weight:
+                                (
+                                    set?.weight == null
+                                    || !Number.isFinite(weight)
+                                    || weight < 0
+                                ) ?
+                                    null
+                                :   weight,
+                            done: Boolean(set?.done),
+                        }
+                    }),
                 }))
                 .filter(
                     (ex) =>
@@ -145,10 +151,84 @@ export function writeWorkoutEntries(
 }
 
 /**
+ * The reps of each exercise's most recent workout that logged any, in set
+ * order — the seed for open-target sets when a template is copied. Ranking
+ * by workout recency per exercise inside SQLite keeps the result at one
+ * workout's sets per exercise instead of shipping the full history out.
+ */
+function lastLoggedReps(
+    tx: DbTransaction,
+    userId: number,
+    exerciseIds: number[],
+): Map<number, number[]> {
+    const result = new Map<number, number[]>()
+    if (exerciseIds.length === 0) return result
+
+    const ranked = tx
+        .select({
+            exerciseId: tables.workoutExercises.exerciseId,
+            reps: tables.workoutSets.reps,
+            entryPosition: tables.workoutEntries.position,
+            exercisePosition: tables.workoutExercises.position,
+            setPosition: tables.workoutSets.position,
+            // Sets of the same workout tie, so an exercise's whole newest
+            // qualifying workout ranks 1.
+            recency:
+                sql<number>`dense_rank() over (partition by ${tables.workoutExercises.exerciseId} order by ${tables.workouts.startedAt} desc, ${tables.workouts.id} desc)`.as(
+                    'recency',
+                ),
+        })
+        .from(tables.workoutSets)
+        .innerJoin(
+            tables.workoutExercises,
+            eq(
+                tables.workoutSets.workoutExerciseId,
+                tables.workoutExercises.id,
+            ),
+        )
+        .innerJoin(
+            tables.workoutEntries,
+            eq(tables.workoutExercises.entryId, tables.workoutEntries.id),
+        )
+        .innerJoin(
+            tables.workouts,
+            eq(tables.workoutEntries.workoutId, tables.workouts.id),
+        )
+        .where(
+            and(
+                eq(tables.workouts.userId, userId),
+                inArray(tables.workoutExercises.exerciseId, exerciseIds),
+                isNotNull(tables.workoutSets.reps),
+            ),
+        )
+        .as('ranked')
+
+    const rows = tx
+        .select({ exerciseId: ranked.exerciseId, reps: ranked.reps })
+        .from(ranked)
+        .where(eq(ranked.recency, 1))
+        .orderBy(
+            asc(ranked.entryPosition),
+            asc(ranked.exercisePosition),
+            asc(ranked.setPosition),
+        )
+        .all()
+
+    for (const row of rows) {
+        const reps = result.get(row.exerciseId) ?? []
+        reps.push(row.reps!)
+        result.set(row.exerciseId, reps)
+    }
+    return result
+}
+
+/**
  * Creates a workout by copying a template's tree. The template's rep targets
  * seed each set's reps; the load is left blank (`weight` null) for the lifter to
- * fill in. The copy means later edits to the template never touch this history.
- * Throws 404 when the template is gone. Caller owns the transaction.
+ * fill in. An open target (null reps) seeds from the lifter's last logged reps
+ * for that exercise instead, staying blank when there is no history. The copy
+ * means later edits to the template never touch this history. Throws 404 when
+ * the template is gone. Caller owns the transaction.
  */
 export function copySessionToWorkout(
     tx: DbTransaction,
@@ -198,6 +278,19 @@ export function copySessionToWorkout(
     const setsByExercise = groupBy(templateSets, (s) => s.sessionExerciseId)
     const exercisesByEntry = groupBy(sessionExercises, (e) => e.entryId)
 
+    const openExerciseIds = [
+        ...new Set(
+            sessionExercises
+                .filter((ex) =>
+                    (setsByExercise.get(ex.id) ?? []).some(
+                        (set) => set.reps == null,
+                    ),
+                )
+                .map((ex) => ex.exerciseId),
+        ),
+    ]
+    const lastRepsByExercise = lastLoggedReps(tx, userId, openExerciseIds)
+
     const workout = tx
         .insert(tables.workouts)
         .values({ userId, name: session.name, sessionId: session.id })
@@ -225,11 +318,17 @@ export function copySessionToWorkout(
 
             const sets = setsByExercise.get(ex.id) ?? []
             if (sets.length > 0) {
+                // The last set's reps cover positions beyond the history.
+                const lastReps = lastRepsByExercise.get(ex.exerciseId)
                 tx.insert(tables.workoutSets)
                     .values(
                         sets.map((set, setIndex) => ({
                             workoutExerciseId: exerciseRow.id,
-                            reps: set.reps,
+                            reps:
+                                set.reps
+                                ?? lastReps?.[setIndex]
+                                ?? lastReps?.at(-1)
+                                ?? null,
                             weight: null,
                             done: false,
                             position: setIndex,
