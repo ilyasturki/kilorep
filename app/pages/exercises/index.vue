@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { FetchError } from 'ofetch'
+import { useFilter } from 'reka-ui'
 
 import type {
     Equipment,
@@ -18,6 +19,22 @@ const {
     status,
     refresh,
 } = await useFetch<Exercise[]>('/api/exercises')
+
+// Same keywords as the exercise combobox (exerciseSearchKeywords), so
+// searching behaves identically everywhere: case- and accent-insensitive,
+// alias and muscle hits included.
+const search = ref('')
+const { contains } = useFilter({ sensitivity: 'base' })
+const filteredExercises = computed(() => {
+    const term = search.value.trim()
+    const all = exercises.value ?? []
+    if (!term) return all
+    return all.filter(
+        (e) =>
+            contains(e.name, term)
+            || exerciseSearchKeywords(e).some((k) => contains(k, term)),
+    )
+})
 
 // The muscle vocabulary the form offers and the table knows how to render.
 const muscleOptions = [
@@ -212,7 +229,21 @@ async function mergeExercise() {
 
 <template>
     <div>
-        <div class="mb-5 flex items-end justify-end gap-4">
+        <div class="mb-5 flex items-center justify-between gap-4">
+            <div class="search-box">
+                <Icon
+                    name="tabler:search"
+                    :size="16"
+                    class="search-icon"
+                />
+                <input
+                    v-model="search"
+                    type="search"
+                    class="input"
+                    placeholder="Search exercises…"
+                    spellcheck="false"
+                />
+            </div>
             <button
                 type="button"
                 class="btn-primary"
@@ -247,9 +278,15 @@ async function mergeExercise() {
             >
                 No exercises yet. Add your first movement.
             </div>
+            <div
+                v-else-if="!filteredExercises.length"
+                class="xempty"
+            >
+                No exercises match your search.
+            </div>
 
             <div
-                v-for="exercise in exercises"
+                v-for="exercise in filteredExercises"
                 :key="exercise.id"
                 class="xrow"
             >

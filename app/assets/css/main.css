@@ -1243,6 +1243,27 @@
         border-color: var(--accent);
     }
 
+    /* Toolbar search: an input with a leading icon, capped so it shares the
+       row with action buttons instead of stretching across it. */
+    .search-box {
+        position: relative;
+        flex: 1;
+        max-width: 280px;
+    }
+
+    .search-box .input {
+        padding-left: 38px;
+    }
+
+    .search-box .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--ink-3);
+        pointer-events: none;
+    }
+
     /* Segmented toggle for a handful of fixed choices — reads as a choice,
        not a text field, and stays compact instead of stretching like an input. */
     .toggle {

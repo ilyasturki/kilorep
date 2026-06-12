@@ -10,13 +10,11 @@ const model = defineModel<number>()
 
 const byId = computed(() => new Map(props.exercises.map((e) => [e.id, e])))
 
-// Muscle names join the search keywords so typing "chest" surfaces every
-// exercise that works it, not only those named after it.
 const items = computed(() =>
     props.exercises.map((e) => ({
         label: e.name,
         value: e.id,
-        keywords: [...e.aliases, ...e.muscles.map((t) => t.muscle)],
+        keywords: exerciseSearchKeywords(e),
     })),
 )
 
