@@ -127,14 +127,49 @@ function removeExercise(entryIndex: number, exIndex: number) {
     if (entry.exercises.length === 0) draft.value.splice(entryIndex, 1)
 }
 
+const exerciseById = (exId: number | undefined) =>
+    exercises.value?.find((e) => e.id === exId)
+
+// Swap which exercise an entry tracks (machine taken, equipment missing)
+// while keeping its logged sets. The combobox starts on the current exercise,
+// so Swap only enables once a different one is picked.
+const swapTarget = ref<{ entryIndex: number; exIndex: number }>()
+const swapSource = computed(() => {
+    const target = swapTarget.value
+    return target ?
+            draft.value[target.entryIndex]?.exercises[target.exIndex]
+        :   undefined
+})
+const swapExerciseId = ref<number>()
+function promptSwap(entryIndex: number, exIndex: number) {
+    const ex = draft.value[entryIndex]?.exercises[exIndex]
+    if (!ex) return
+    swapTarget.value = { entryIndex, exIndex }
+    swapExerciseId.value = ex.exerciseId
+}
+function confirmSwap() {
+    const ex = swapSource.value
+    const picked = exerciseById(swapExerciseId.value)
+    if (!ex || !picked) return
+    ex.exerciseId = picked.id
+    ex.name = picked.name
+    swapTarget.value = undefined
+}
+
 // Confirm before dropping an exercise — a stray tap on the X would otherwise
-// wipe all its logged sets with no undo.
+// wipe all its logged sets with no undo. Reps and done are prefilled defaults,
+// so a typed weight is the only sign of real data: without one, skip the dialog.
 const removeTarget = ref<{
     entryIndex: number
     exIndex: number
     name: string
 }>()
 function promptRemove(entryIndex: number, exIndex: number, name: string) {
+    const ex = draft.value[entryIndex]?.exercises[exIndex]
+    if (ex && !ex.sets.some((s) => s.weight != null)) {
+        removeExercise(entryIndex, exIndex)
+        return
+    }
     removeTarget.value = { entryIndex, exIndex, name }
 }
 function confirmRemove() {
@@ -146,20 +181,70 @@ function confirmRemove() {
 const addOpen = ref(false)
 const addExerciseId = ref<number>()
 
+function newExerciseDraft(picked: Exercise): ExerciseDraft {
+    return {
+        exerciseId: picked.id,
+        name: picked.name,
+        sets: [newSet()],
+    }
+}
+
 function confirmAdd() {
-    const picked = exercises.value?.find((e) => e.id === addExerciseId.value)
+    const picked = exerciseById(addExerciseId.value)
     if (!picked) return
-    draft.value.push({
-        exercises: [
-            {
-                exerciseId: picked.id,
-                name: picked.name,
-                sets: [{ reps: 8, weight: undefined, done: true }],
-            },
-        ],
-    })
+    draft.value.push({ exercises: [newExerciseDraft(picked)] })
     addExerciseId.value = undefined
     addOpen.value = false
+}
+
+// Blank picker rows are dropped on confirm, so an unused extra slot never
+// blocks adding the superset.
+const supersetOpen = ref(false)
+const supersetIds = ref<(number | undefined)[]>([])
+const supersetPicked = computed(() =>
+    supersetIds.value
+        .map((exId) => exerciseById(exId))
+        .filter((e) => e != null),
+)
+function openAddSuperset() {
+    supersetIds.value = [undefined, undefined]
+    supersetOpen.value = true
+}
+function confirmAddSuperset() {
+    if (supersetPicked.value.length < 2) return
+    draft.value.push({ exercises: supersetPicked.value.map(newExerciseDraft) })
+    supersetOpen.value = false
+}
+
+// Grow a block into (or as) a superset by picking one more exercise for it.
+// Only the entry index is state; the modal copy derives from the entry itself.
+const addToTarget = ref<number>()
+const addToEntry = computed(() =>
+    addToTarget.value == null ? undefined : draft.value[addToTarget.value],
+)
+const addToExerciseId = ref<number>()
+function promptAddTo(entryIndex: number) {
+    if (!draft.value[entryIndex]?.exercises.length) return
+    addToTarget.value = entryIndex
+    addToExerciseId.value = undefined
+}
+function confirmAddTo() {
+    const entry = addToEntry.value
+    const picked = exerciseById(addToExerciseId.value)
+    if (!entry || !picked) return
+    entry.exercises.push(newExerciseDraft(picked))
+    addToTarget.value = undefined
+}
+
+// Ungrouping reuses the draft exercise objects, so logged sets survive.
+function ungroupEntry(entryIndex: number) {
+    const entry = draft.value[entryIndex]
+    if (!entry || entry.exercises.length < 2) return
+    draft.value.splice(
+        entryIndex,
+        1,
+        ...entry.exercises.map((ex) => ({ exercises: [ex] })),
+    )
 }
 
 function buildBody(completed: boolean) {
@@ -469,9 +554,31 @@ async function changeDate() {
                 >
                     <div
                         v-if="block.isSuperset"
-                        class="mb-3"
+                        class="mb-3 flex items-center justify-between"
                     >
                         <span class="tag tag--accent">Superset</span>
+                        <div class="flex items-center gap-1">
+                            <button
+                                type="button"
+                                class="icon-btn sm"
+                                aria-label="Ungroup superset"
+                                @click="ungroupEntry(block.entryIndex)"
+                            >
+                                <Icon
+                                    name="tabler:unlink"
+                                    :size="15"
+                                />
+                            </button>
+                            <MoveButtons
+                                label="superset"
+                                :can-up="block.entryIndex > 0"
+                                :can-down="block.entryIndex < draft.length - 1"
+                                @move="
+                                    (dir) =>
+                                        moveItem(draft, block.entryIndex, dir)
+                                "
+                            />
+                        </div>
                     </div>
 
                     <div class="space-y-5">
@@ -489,23 +596,57 @@ async function changeDate() {
                                     </span>
                                     {{ item.ex.name }}
                                 </NuxtLink>
-                                <button
-                                    type="button"
-                                    class="icon-btn sm icon-btn--danger"
-                                    aria-label="Remove exercise"
-                                    @click="
-                                        promptRemove(
-                                            block.entryIndex,
-                                            item.exIndex,
-                                            item.ex.name,
-                                        )
-                                    "
-                                >
-                                    <Icon
-                                        name="tabler:x"
-                                        :size="15"
+                                <div class="flex items-center gap-1">
+                                    <MoveButtons
+                                        v-if="!block.isSuperset"
+                                        label="exercise"
+                                        :can-up="block.entryIndex > 0"
+                                        :can-down="
+                                            block.entryIndex < draft.length - 1
+                                        "
+                                        @move="
+                                            (dir) =>
+                                                moveItem(
+                                                    draft,
+                                                    block.entryIndex,
+                                                    dir,
+                                                )
+                                        "
                                     />
-                                </button>
+                                    <button
+                                        type="button"
+                                        class="icon-btn sm"
+                                        aria-label="Swap exercise"
+                                        @click="
+                                            promptSwap(
+                                                block.entryIndex,
+                                                item.exIndex,
+                                            )
+                                        "
+                                    >
+                                        <Icon
+                                            name="tabler:switch-horizontal"
+                                            :size="15"
+                                        />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="icon-btn sm icon-btn--danger"
+                                        aria-label="Remove exercise"
+                                        @click="
+                                            promptRemove(
+                                                block.entryIndex,
+                                                item.exIndex,
+                                                item.ex.name,
+                                            )
+                                        "
+                                    >
+                                        <Icon
+                                            name="tabler:x"
+                                            :size="15"
+                                        />
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="logset logset-head">
@@ -557,20 +698,49 @@ async function changeDate() {
                             </button>
                         </div>
                     </div>
+
+                    <button
+                        type="button"
+                        class="btn-link mt-3"
+                        @click="promptAddTo(block.entryIndex)"
+                    >
+                        <Icon
+                            name="tabler:link"
+                            :size="14"
+                        />
+                        {{
+                            block.isSuperset ?
+                                'Add exercise to superset'
+                            :   'Superset with another exercise'
+                        }}
+                    </button>
                 </div>
             </div>
 
-            <button
-                type="button"
-                class="btn-ghost sm mt-3"
-                @click="addOpen = true"
-            >
-                <Icon
-                    name="tabler:plus"
-                    :size="15"
-                />
-                Add exercise
-            </button>
+            <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    class="btn-ghost sm"
+                    @click="addOpen = true"
+                >
+                    <Icon
+                        name="tabler:plus"
+                        :size="15"
+                    />
+                    Add exercise
+                </button>
+                <button
+                    type="button"
+                    class="btn-ghost sm"
+                    @click="openAddSuperset"
+                >
+                    <Icon
+                        name="tabler:stack-2"
+                        :size="15"
+                    />
+                    Add superset
+                </button>
+            </div>
         </template>
 
         <!-- Review -->
@@ -663,6 +833,132 @@ async function changeDate() {
                         :size="16"
                     />
                     Add
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Add superset -->
+        <UiModal
+            v-model:open="supersetOpen"
+            title="Add superset"
+            description="Pick two or more exercises to rotate through back to back."
+        >
+            <div class="space-y-2">
+                <ExerciseCombobox
+                    v-for="(_, i) in supersetIds"
+                    :key="i"
+                    v-model="supersetIds[i]"
+                    :exercises="exercises ?? []"
+                    placeholder="Pick an exercise"
+                />
+                <button
+                    type="button"
+                    class="btn-link"
+                    @click="supersetIds.push(undefined)"
+                >
+                    <Icon
+                        name="tabler:plus"
+                        :size="14"
+                    />
+                    Add another exercise
+                </button>
+            </div>
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="supersetOpen = false"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="supersetPicked.length < 2"
+                    @click="confirmAddSuperset"
+                >
+                    <Icon
+                        name="tabler:plus"
+                        :size="16"
+                    />
+                    Add
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Add exercise to a block, making or growing a superset -->
+        <UiModal
+            :open="addToTarget != null"
+            title="Add to superset"
+            :description="
+                (addToEntry?.exercises.length ?? 0) > 1 ?
+                    'Add another exercise to this superset.'
+                :   `Pair another exercise with ${addToEntry?.exercises[0]?.name ?? 'this one'} to make a superset.`
+            "
+            @update:open="(open) => !open && (addToTarget = undefined)"
+        >
+            <ExerciseCombobox
+                v-model="addToExerciseId"
+                :exercises="exercises ?? []"
+                placeholder="Pick an exercise"
+            />
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="addToTarget = undefined"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="!addToExerciseId"
+                    @click="confirmAddTo"
+                >
+                    <Icon
+                        name="tabler:plus"
+                        :size="16"
+                    />
+                    Add
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Swap exercise -->
+        <UiModal
+            :open="swapTarget != null"
+            title="Swap exercise"
+            :description="`Replace ${swapSource?.name ?? 'this exercise'} with another one. Its logged sets are kept.`"
+            @update:open="(open) => !open && (swapTarget = undefined)"
+        >
+            <ExerciseCombobox
+                v-model="swapExerciseId"
+                :exercises="exercises ?? []"
+                placeholder="Pick an exercise"
+            />
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="swapTarget = undefined"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="
+                        !swapExerciseId
+                        || swapExerciseId === swapSource?.exerciseId
+                    "
+                    @click="confirmSwap"
+                >
+                    <Icon
+                        name="tabler:switch-horizontal"
+                        :size="16"
+                    />
+                    Swap
                 </button>
             </template>
         </UiModal>
