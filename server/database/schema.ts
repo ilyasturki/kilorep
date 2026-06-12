@@ -134,6 +134,9 @@ export const sessions = sqliteTable('sessions', {
         .notNull()
         .references(() => users.id),
     name: text('name').notNull(),
+    // Manual list order, ascending. New sessions take min(position) - 1 so
+    // they land on top without rewriting sibling rows.
+    position: integer('position').notNull().default(0),
     createdAt: integer('created_at', { mode: 'timestamp' })
         .notNull()
         .default(sql`(unixepoch())`),

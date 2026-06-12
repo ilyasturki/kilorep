@@ -873,6 +873,14 @@
         border-color: var(--line-2);
     }
 
+    /* After :hover so a disabled button (e.g. a move arrow at the list edge)
+       doesn't light up under the cursor. */
+    .icon-btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+        border-color: var(--line);
+    }
+
     .icon-btn--danger:hover {
         border-color: #e5484d;
         color: #e5484d;
@@ -1091,6 +1099,25 @@
         font-weight: 800;
         letter-spacing: -0.02em;
         text-transform: capitalize;
+    }
+
+    /* The title doubles as the edit affordance — same quiet hover tint as
+       .plan-ex--link so the card head stays free of button chrome. */
+    .session-name-btn {
+        display: inline-block;
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .session-name-btn:hover {
+        color: var(--accent-text);
     }
 
     .plan-list {

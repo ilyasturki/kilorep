@@ -107,6 +107,28 @@ async function save() {
     }
 }
 
+const reordering = ref(false)
+
+async function moveSession(index: number, dir: -1 | 1) {
+    const list = sessions.value
+    if (!list || !moveItem(list, index, dir)) return
+    reordering.value = true
+    try {
+        await $fetch('/api/sessions/reorder', {
+            method: 'PATCH',
+            body: { ids: list.map((s) => s.id) },
+        })
+    } catch (error: unknown) {
+        await refresh()
+        toast.add({
+            title: errorMessage(error, 'Could not reorder the sessions'),
+            color: 'error',
+        })
+    } finally {
+        reordering.value = false
+    }
+}
+
 const deleteTarget = ref<SessionWithEntries | null>(null)
 const deleting = ref(false)
 
@@ -234,17 +256,34 @@ function planBlocks(session: SessionWithEntries) {
                                     :   'Exercise'
                                 }}
                             </span>
-                            <button
-                                type="button"
-                                class="icon-btn sm icon-btn--danger"
-                                aria-label="Remove block"
-                                @click="removeEntry(entryIndex)"
-                            >
-                                <Icon
-                                    name="tabler:trash"
-                                    :size="15"
+                            <div class="flex items-center gap-1">
+                                <MoveButtons
+                                    label="block"
+                                    :can-up="entryIndex > 0"
+                                    :can-down="
+                                        entryIndex < draft.entries.length - 1
+                                    "
+                                    @move="
+                                        (dir) =>
+                                            moveItem(
+                                                draft.entries,
+                                                entryIndex,
+                                                dir,
+                                            )
+                                    "
                                 />
-                            </button>
+                                <button
+                                    type="button"
+                                    class="icon-btn sm icon-btn--danger"
+                                    aria-label="Remove block"
+                                    @click="removeEntry(entryIndex)"
+                                >
+                                    <Icon
+                                        name="tabler:trash"
+                                        :size="15"
+                                    />
+                                </button>
+                            </div>
                         </div>
 
                         <div class="space-y-4">
@@ -409,13 +448,40 @@ function planBlocks(session: SessionWithEntries) {
             class="space-y-4"
         >
             <div
-                v-for="session in sessions"
+                v-for="(session, sessionIndex) in sessions"
                 :key="session.id"
                 class="card"
             >
                 <div class="card-head">
-                    <h3 class="session-name">{{ session.name }}</h3>
+                    <div class="flex min-w-0 items-center gap-2.5">
+                        <h3 class="session-name min-w-0">
+                            <button
+                                type="button"
+                                class="session-name-btn max-w-full truncate"
+                                @click="editSession(session)"
+                            >
+                                {{ session.name }}
+                            </button>
+                        </h3>
+                        <span class="tag">
+                            {{
+                                plural(
+                                    workoutStats(session.entries).sets,
+                                    'set',
+                                )
+                            }}
+                        </span>
+                    </div>
                     <div class="flex items-center gap-1">
+                        <MoveButtons
+                            label="session"
+                            :can-up="sessionIndex > 0 && !reordering"
+                            :can-down="
+                                sessionIndex < (sessions?.length ?? 0) - 1
+                                && !reordering
+                            "
+                            @move="(dir) => moveSession(sessionIndex, dir)"
+                        />
                         <button
                             type="button"
                             class="icon-btn sm"

@@ -85,6 +85,13 @@
       "when": 1781219476665,
       "tag": "0011_whole_centennial",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1781220194423,
+      "tag": "0012_curious_mad_thinker",
+      "breakpoints": true
     }
   ]
 }

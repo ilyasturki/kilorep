@@ -128,9 +128,21 @@ export function createSessionTree(
     tx?: DbTransaction,
 ) {
     const create = (tx: DbTransaction) => {
+        const minPosition = tx
+            .select({
+                value: sql<number | null>`min(${tables.sessions.position})`,
+            })
+            .from(tables.sessions)
+            .where(eq(tables.sessions.userId, userId))
+            .get()?.value
+
         const session = tx
             .insert(tables.sessions)
-            .values({ name: parsed.name, userId })
+            .values({
+                name: parsed.name,
+                userId,
+                position: (minPosition ?? 1) - 1,
+            })
             .returning()
             .get()
 
@@ -176,11 +188,41 @@ export function replaceSessionTree(
 }
 
 /**
+ * Persists a manual ordering of the user's sessions. `ids` must be a
+ * permutation of the user's session ids — requiring the full list keeps the
+ * stored order total and rejects a stale client that is missing a session.
+ */
+export function reorderSessions(userId: number, ids: number[]) {
+    return useDrizzle().transaction((tx) => {
+        const owned = tx
+            .select({ id: tables.sessions.id })
+            .from(tables.sessions)
+            .where(eq(tables.sessions.userId, userId))
+            .all()
+            .map((row) => row.id)
+        const unique = new Set(ids)
+        if (
+            unique.size !== ids.length
+            || owned.length !== ids.length
+            || !owned.every((id) => unique.has(id))
+        ) {
+            badRequest('"ids" must list every session id exactly once')
+        }
+        ids.forEach((id, index) => {
+            tx.update(tables.sessions)
+                .set({ position: index })
+                .where(eq(tables.sessions.id, id))
+                .run()
+        })
+    })
+}
+
+/**
  * Loads the user's sessions as full trees (entries → exercises → sets),
- * newest first; `ids` narrows the read to specific sessions. Pulls the data
- * in four flat queries and stitches it together in memory: per-user data
- * stays small, so this beats a join with row fan-out or setting up Drizzle's
- * relational layer just for one read.
+ * in manual `position` order; `ids` narrows the read to specific sessions.
+ * Pulls the data in four flat queries and stitches it together in memory:
+ * per-user data stays small, so this beats a join with row fan-out or
+ * setting up Drizzle's relational layer just for one read.
  */
 export function loadSessionTrees(
     userId: number,
@@ -199,7 +241,7 @@ export function loadSessionTrees(
                 )
             :   eq(tables.sessions.userId, userId),
         )
-        .orderBy(desc(tables.sessions.createdAt))
+        .orderBy(asc(tables.sessions.position), desc(tables.sessions.createdAt))
         .all()
     if (sessions.length === 0) return []
 
