@@ -10,8 +10,9 @@ import {
     ComboboxRoot,
     ComboboxTrigger,
     ComboboxViewport,
-    useFilter,
 } from 'reka-ui'
+
+import type { FuzzyMatch } from '~/utils/fuzzy'
 
 type Option = {
     label: string
@@ -22,27 +23,32 @@ type Option = {
     keywords?: string[]
 }
 
+type Matched = Option & FuzzyMatch
+
 const props = defineProps<{
     items: readonly Option[]
     placeholder?: string
 }>()
 
 defineSlots<{
-    item?: (props: { option: Option & { matchedAlias?: string } }) => unknown
+    item?: (props: { option: Matched }) => unknown
 }>()
 
 const model = defineModel<T>()
 const searchTerm = ref('')
 
-// Filter on labels ourselves: the built-in filter only matches against the
-// item values, which here are opaque ids.
-const { contains } = useFilter({ sensitivity: 'base' })
-const filtered = computed<(Option & { matchedAlias?: string })[]>(() =>
-    props.items.flatMap((o) => {
-        if (contains(o.label, searchTerm.value)) return [o]
-        const alias = o.keywords?.find((k) => contains(k, searchTerm.value))
-        return alias ? [{ ...o, matchedAlias: alias }] : []
-    }),
+// Fuzzy-match labels and keywords ourselves (reka-ui's filter only matches the
+// opaque item values) and rank by score so the best hit lands on top — Enter
+// then selects it. An empty query scores every item 0, so the stable sort keeps
+// the original order.
+const tokens = computed(() => fuzzyTokens(searchTerm.value))
+const filtered = computed<Matched[]>(() =>
+    props.items
+        .flatMap((o) => {
+            const match = fuzzyMatch(o.label, o.keywords ?? [], tokens.value)
+            return match ? [{ ...o, ...match }] : []
+        })
+        .sort((a, b) => b.score - a.score),
 )
 
 const displayValue = (value: T) =>
@@ -98,14 +104,12 @@ function selectAll(event: FocusEvent) {
                             name="item"
                             :option="option"
                         >
-                            <span>
-                                {{ option.label }}
-                                <span
-                                    v-if="option.matchedAlias"
-                                    class="combobox-alias"
-                                    >({{ option.matchedAlias }})</span
-                                >
-                            </span>
+                            <UiMatchedLabel
+                                :label="option.label"
+                                :label-positions="option.labelPositions"
+                                :keyword="option.matchedKeyword"
+                                :keyword-positions="option.keywordPositions"
+                            />
                         </slot>
                         <ComboboxItemIndicator>
                             <Icon

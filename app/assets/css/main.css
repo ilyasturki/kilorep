@@ -1461,10 +1461,19 @@
         color: var(--ink-3);
     }
 
-    /* Alias the search matched on, shown after the canonical label. */
-    .combobox-alias {
+    /* Alternate keyword (e.g. an exercise alias) the search matched on, shown
+       in parentheses after the canonical label. */
+    .search-alias {
         color: var(--ink-3);
         font-size: 13px;
+    }
+
+    /* Characters a fuzzy search matched. Distinct from reka-ui's
+       [data-highlighted] keyboard-cursor state on combobox rows. */
+    .fuzzy-hit {
+        background: var(--accent-tint);
+        color: var(--accent-text);
+        border-radius: 2px;
     }
 
     /* ===== reka-ui NumberField ========================== */

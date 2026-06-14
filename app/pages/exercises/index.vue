@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { FetchError } from 'ofetch'
-import { useFilter } from 'reka-ui'
 
 import type {
     Equipment,
@@ -20,20 +19,22 @@ const {
     refresh,
 } = await useFetch<Exercise[]>('/api/exercises')
 
-// Same keywords as the exercise combobox (exerciseSearchKeywords), so
-// searching behaves identically everywhere: case- and accent-insensitive,
-// alias and muscle hits included.
+// Fuzzy-rank by the same matcher the combobox uses (name + aliases), so
+// searching behaves identically everywhere. Best matches sort to the top; an
+// empty query keeps the catalog order.
 const search = ref('')
-const { contains } = useFilter({ sensitivity: 'base' })
+const tokens = computed(() => fuzzyTokens(search.value))
 const filteredExercises = computed(() => {
-    const term = search.value.trim()
-    const all = exercises.value ?? []
-    if (!term) return all
-    return all.filter(
-        (e) =>
-            contains(e.name, term)
-            || exerciseSearchKeywords(e).some((k) => contains(k, term)),
-    )
+    const hits = (exercises.value ?? []).flatMap((exercise) => {
+        const match = fuzzyMatch(
+            exercise.name,
+            exerciseSearchKeywords(exercise),
+            tokens.value,
+        )
+        return match ? [{ exercise, match }] : []
+    })
+    hits.sort((a, b) => b.match.score - a.match.score)
+    return hits
 })
 
 // The muscle vocabulary the form offers and the table knows how to render.
@@ -286,7 +287,7 @@ async function mergeExercise() {
             </div>
 
             <div
-                v-for="exercise in filteredExercises"
+                v-for="{ exercise, match } in filteredExercises"
                 :key="exercise.id"
                 class="xrow"
             >
@@ -294,7 +295,12 @@ async function mergeExercise() {
                     :to="`/exercises/${exercise.id}`"
                     class="xname xname--link"
                 >
-                    {{ exercise.name }}
+                    <UiMatchedLabel
+                        :label="exercise.name"
+                        :label-positions="match.labelPositions"
+                        :keyword="match.matchedKeyword"
+                        :keyword-positions="match.keywordPositions"
+                    />
                 </NuxtLink>
                 <div class="xtags">
                     <span class="tag">{{ exercise.equipment }}</span>

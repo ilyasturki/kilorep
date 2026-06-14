@@ -1,9 +1,8 @@
 import type { Exercise } from '~~/server/database/schema'
 
-// Aliases and muscle names join the exercise name as search terms, so typing
-// "chest" surfaces every exercise that works it, not only those named after
-// it. Shared by the combobox and the catalog page so searching behaves
-// identically everywhere.
-export const exerciseSearchKeywords = (
-    exercise: Pick<Exercise, 'aliases' | 'muscles'>,
-) => [...exercise.aliases, ...exercise.muscles.map((m) => m.muscle)]
+// Aliases join the exercise name as fuzzy-search terms, so an alternate name
+// ("pec deck") still finds the canonical one ("Butterfly Machine"). Shared by
+// the combobox and the catalog page so searching behaves identically. Muscles
+// are intentionally not searchable — they're shown as badges, not typed.
+export const exerciseSearchKeywords = (exercise: Pick<Exercise, 'aliases'>) =>
+    exercise.aliases

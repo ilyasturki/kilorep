@@ -32,13 +32,6 @@ const topById = computed(
         ),
 )
 const topOf = (id: number) => topById.value.get(id)
-
-// The matched keyword may be the badge's own muscle — the badge already
-// explains the hit, so only surface real aliases and secondary muscles.
-function aliasNote(option: { value: number; matchedAlias?: string }) {
-    if (option.matchedAlias === topOf(option.value)?.muscle) return undefined
-    return option.matchedAlias
-}
 </script>
 
 <template>
@@ -56,12 +49,12 @@ function aliasNote(option: { value: number; matchedAlias?: string }) {
             <template #item="{ option }">
                 <MuscleMini :muscles="musclesOf(option.value)" />
                 <span class="min-w-0 flex-1 truncate">
-                    {{ option.label }}
-                    <span
-                        v-if="aliasNote(option)"
-                        class="combobox-alias"
-                        >({{ aliasNote(option) }})</span
-                    >
+                    <UiMatchedLabel
+                        :label="option.label"
+                        :label-positions="option.labelPositions"
+                        :keyword="option.matchedKeyword"
+                        :keyword-positions="option.keywordPositions"
+                    />
                 </span>
                 <span
                     v-if="topOf(option.value)"
