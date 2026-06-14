@@ -1,0 +1,26 @@
+# Kilorep Android — task runner (https://github.com/casey/just)
+# Recipes run from this directory, so bare ./gradlew works.
+
+pkg  := "dev.kilorep.app"   # applicationId (app/build.gradle.kts)
+port := "4004"              # laptop dev server (see ../CLAUDE.md)
+
+# List available recipes
+default:
+    @just --list
+
+# Build, install, tunnel localhost, launch — "test on my phone"
+run: install
+    adb reverse tcp:{{port}} tcp:{{port}}
+    adb shell monkey -p {{pkg}} -c android.intent.category.LAUNCHER 1
+
+# Build + install the debug APK onto the connected phone
+install:
+    ./gradlew :app:installDebug
+
+# Tail logcat for just this app (app must be running)
+logs:
+    adb logcat --pid=$(adb shell pidof -s {{pkg}})
+
+# JVM unit tests (sync engine + draft store + ViewModels)
+test:
+    ./gradlew :app:testDebugUnitTest
