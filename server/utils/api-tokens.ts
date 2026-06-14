@@ -99,6 +99,26 @@ export function renameApiToken(
         .get()
 }
 
+/**
+ * Revokes every token of a user carrying this label. Device sign-in rotates
+ * with it: a reinstall or re-onboard re-mints under the same device name, and
+ * without rotation those rows stack up to the token limit and brick sign-in.
+ * Two distinct devices sharing a model-default name is an accepted edge.
+ */
+export function deleteApiTokensByLabel(userId: number, label: unknown): void {
+    const clean = normalizeLabel(label)
+    if (!clean) return
+    useDrizzle()
+        .delete(tables.apiTokens)
+        .where(
+            and(
+                eq(tables.apiTokens.userId, userId),
+                eq(tables.apiTokens.label, clean),
+            ),
+        )
+        .run()
+}
+
 /** Revokes a token; any client still holding it gets a 401 on its next call. */
 export function deleteApiToken(userId: number, id: number): boolean {
     const result = useDrizzle()
@@ -115,15 +135,27 @@ export function deleteApiToken(userId: number, id: number): boolean {
 
 export function findUserIdByApiToken(token: string): number | undefined {
     const row = useDrizzle()
-        .select({ id: tables.apiTokens.id, userId: tables.apiTokens.userId })
+        .select({
+            id: tables.apiTokens.id,
+            userId: tables.apiTokens.userId,
+            lastUsedAt: tables.apiTokens.lastUsedAt,
+        })
         .from(tables.apiTokens)
         .where(eq(tables.apiTokens.tokenHash, hashApiToken(token)))
         .get()
     if (!row) return undefined
-    useDrizzle()
-        .update(tables.apiTokens)
-        .set({ lastUsedAt: new Date() })
-        .where(eq(tables.apiTokens.id, row.id))
-        .run()
+    // lastUsedAt is informational ("when was this device last seen"), and the
+    // native app authenticates every call with it — refresh at most once a
+    // minute so reads don't each cost a SQLite write.
+    if (
+        row.lastUsedAt == null
+        || Date.now() - row.lastUsedAt.getTime() > 60_000
+    ) {
+        useDrizzle()
+            .update(tables.apiTokens)
+            .set({ lastUsedAt: new Date() })
+            .where(eq(tables.apiTokens.id, row.id))
+            .run()
+    }
     return row.userId
 }

@@ -14,6 +14,58 @@ function usageMessage({
     return `This exercise is used in ${parts.join(' and ')} and can't be deleted`
 }
 
+defineRouteMeta({
+    openAPI: {
+        operationId: 'deleteExercise',
+        tags: ['exercises'],
+        summary: 'Delete an unused catalog exercise',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                description: 'The exercise id',
+                schema: {
+                    type: 'integer',
+                },
+            },
+        ],
+        responses: {
+            '200': {
+                description: 'The deleted exercise.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/Exercise',
+                        },
+                    },
+                },
+            },
+            '404': {
+                description: 'Exercise not found.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+            '409': {
+                description:
+                    'Still referenced by templates or workouts; data.usage carries ExerciseUsage counts for the merge flow.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
 export default defineEventHandler((event) => {
     const userId = requireUserId(event)
     const id = getIdParam(event, 'exercise')

@@ -1,0 +1,279 @@
+package dev.kilorep.app.ui.screens
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.kilorep.api.models.Exercise
+import dev.kilorep.app.ui.components.ExercisePicker
+import dev.kilorep.app.ui.components.GhostButton
+import dev.kilorep.app.ui.components.Kicker
+import dev.kilorep.app.ui.components.LiftCard
+import dev.kilorep.app.ui.components.LiftIconButton
+import dev.kilorep.app.ui.components.LiftScreen
+import dev.kilorep.app.ui.components.LiftTextField
+import dev.kilorep.app.ui.components.PrimaryButton
+import dev.kilorep.app.ui.components.StepperField
+import dev.kilorep.app.ui.components.Tag
+import dev.kilorep.app.ui.theme.Lift
+import dev.kilorep.app.ui.theme.LiftIcons
+import dev.kilorep.app.ui.theme.LiftType
+import dev.kilorep.app.ui.theme.Text
+
+/**
+ * Build or rework a session template: ordered entries, supersets (several
+ * exercises in one entry, rotated), prescribed sets with open targets.
+ */
+@Composable
+fun SessionEditorScreen(
+    viewModel: SessionEditorViewModel,
+    exercises: List<Exercise>,
+    onBack: () -> Unit,
+) {
+    val name by viewModel.name.collectAsStateWithLifecycle()
+    val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val busy by viewModel.busy.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
+    val saved by viewModel.saved.collectAsStateWithLifecycle()
+    val colors = Lift.colors
+
+    // null = closed, -1 = new entry, otherwise add-into-entry (superset)
+    var pickerFor by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(saved) {
+        if (saved) onBack()
+    }
+
+    LiftScreen(title = if (name.isEmpty()) "New session" else name, onBack = onBack) {
+        Column(Modifier.fillMaxSize()) {
+            LazyColumn(
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item {
+                    LiftTextField(
+                        value = name,
+                        onValueChange = viewModel::setName,
+                        placeholder = "Session name (e.g. Push Day)",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                itemsIndexed(entries) { entryIndex, entry ->
+                    LiftCard(padding = 12.dp) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Kicker(
+                                if (entry.exercises.size > 1) "Superset" else "Exercise",
+                                accent = entry.exercises.size > 1,
+                                modifier = Modifier.weight(1f),
+                            )
+                            LiftIconButton(
+                                LiftIcons.ArrowUp,
+                                onClick = { viewModel.moveEntry(entryIndex, -1) },
+                                enabled = entryIndex > 0,
+                                size = 36.dp,
+                                iconSize = 15.dp,
+                            )
+                            LiftIconButton(
+                                LiftIcons.ArrowDown,
+                                onClick = { viewModel.moveEntry(entryIndex, 1) },
+                                enabled = entryIndex < entries.lastIndex,
+                                size = 36.dp,
+                                iconSize = 15.dp,
+                            )
+                        }
+
+                        entry.exercises.forEachIndexed { exerciseIndex, exercise ->
+                            EditorExerciseBlock(
+                                entryIndex = entryIndex,
+                                exerciseIndex = exerciseIndex,
+                                exercise = exercise,
+                                inSuperset = entry.exercises.size > 1,
+                                lastInEntry = exerciseIndex == entry.exercises.lastIndex,
+                                viewModel = viewModel,
+                            )
+                        }
+
+                        GhostButton(
+                            if (entry.exercises.size > 1) "Add to superset" else "Make superset",
+                            onClick = { pickerFor = entryIndex },
+                            icon = LiftIcons.Plus,
+                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                            height = 38.dp,
+                        )
+                    }
+                }
+
+                item {
+                    GhostButton(
+                        "Add exercise",
+                        onClick = { pickerFor = -1 },
+                        icon = LiftIcons.Plus,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                if (error != null) {
+                    item {
+                        Text(error ?: "", style = LiftType.secondary, color = colors.danger)
+                    }
+                }
+            }
+
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .navigationBarsPadding()
+                    .imePadding(),
+            ) {
+                PrimaryButton(
+                    "Save session",
+                    onClick = viewModel::save,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 52.dp,
+                    enabled = viewModel.canSave && !busy,
+                )
+            }
+        }
+    }
+
+    pickerFor?.let { target ->
+        ExercisePicker(
+            exercises = exercises,
+            title = if (target == -1) "Add exercise" else "Add to superset",
+            onPick = {
+                if (target == -1) {
+                    viewModel.addEntry(it.id, it.name)
+                } else {
+                    viewModel.addToEntry(target, it.id, it.name)
+                }
+                pickerFor = null
+            },
+            onDismiss = { pickerFor = null },
+        )
+    }
+}
+
+@Composable
+private fun EditorExerciseBlock(
+    entryIndex: Int,
+    exerciseIndex: Int,
+    exercise: EditExercise,
+    inSuperset: Boolean,
+    lastInEntry: Boolean,
+    viewModel: SessionEditorViewModel,
+) {
+    val colors = Lift.colors
+    Column(Modifier.padding(top = 10.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (inSuperset) Tag(('A' + exerciseIndex).toString(), accent = true)
+            Text(exercise.name, style = LiftType.rowTitle, modifier = Modifier.weight(1f))
+            if (inSuperset) {
+                LiftIconButton(
+                    LiftIcons.ArrowUp,
+                    onClick = { viewModel.moveExercise(entryIndex, exerciseIndex, -1) },
+                    enabled = exerciseIndex > 0,
+                    size = 32.dp,
+                    iconSize = 14.dp,
+                )
+                LiftIconButton(
+                    LiftIcons.ArrowDown,
+                    onClick = { viewModel.moveExercise(entryIndex, exerciseIndex, 1) },
+                    enabled = !lastInEntry,
+                    size = 32.dp,
+                    iconSize = 14.dp,
+                )
+            }
+            LiftIconButton(
+                LiftIcons.Trash,
+                onClick = { viewModel.removeExercise(entryIndex, exerciseIndex) },
+                size = 32.dp,
+                iconSize = 14.dp,
+                danger = true,
+            )
+        }
+
+        exercise.sets.forEachIndexed { setIndex, reps ->
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "SET ${setIndex + 1}",
+                    style = LiftType.tag,
+                    color = colors.ink3,
+                    modifier = Modifier.weight(0.5f),
+                )
+                StepperField(
+                    value = reps?.toString() ?: "",
+                    onValueChange = {
+                        viewModel.setReps(entryIndex, exerciseIndex, setIndex, it.toIntOrNull())
+                    },
+                    onStep = { delta ->
+                        val next = ((reps ?: 0) + delta).coerceAtLeast(0)
+                        viewModel.setReps(
+                            entryIndex,
+                            exerciseIndex,
+                            setIndex,
+                            next.takeIf { it > 0 },
+                        )
+                    },
+                    suffix = "REPS",
+                    modifier = Modifier.weight(1.6f),
+                )
+                Text(
+                    "REMOVE",
+                    style = LiftType.tag,
+                    color = colors.ink3,
+                    modifier = Modifier
+                        .clickable {
+                            viewModel.removeSet(entryIndex, exerciseIndex, setIndex)
+                        }
+                        .padding(4.dp),
+                )
+            }
+        }
+        Text(
+            "An empty target stays open — reps get decided at the rack.",
+            style = LiftType.secondary,
+            color = colors.ink3,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        GhostButton(
+            "Add set",
+            onClick = { viewModel.addSet(entryIndex, exerciseIndex) },
+            icon = LiftIcons.Plus,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            height = 36.dp,
+        )
+    }
+}

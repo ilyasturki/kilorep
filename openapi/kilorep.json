@@ -1,0 +1,2224 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Kilorep API",
+        "version": "0.0.5",
+        "description": "Workout session manager and weight tracker. Sessions prescribe the plan; workouts record what actually happened in the gym."
+    },
+    "paths": {
+        "/api/account": {
+            "delete": {
+                "tags": ["account"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Account deleted, session cleared.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Ok"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Single-user instance: account deletion does not exist.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "deleteAccount",
+                "summary": "Delete the account with everything it owns"
+            }
+        },
+        "/api/account/tokens": {
+            "get": {
+                "tags": ["account"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Every token the account holds.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ApiTokenInfo"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Single-user instance: tokens do not exist.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "listTokens",
+                "summary": "List API/device tokens (metadata only)"
+            },
+            "post": {
+                "tags": ["account"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The minted token; the cleartext never leaves the server again.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TokenGrant"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Token limit reached.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Single-user instance: tokens do not exist.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "createToken",
+                "summary": "Mint a bearer token",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TokenCreateInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/account/tokens/{id}": {
+            "delete": {
+                "tags": ["account"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The token id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token revoked.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Ok"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No such token (or single-user instance).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "revokeToken",
+                "summary": "Revoke a token; the holder gets a 401 on its next call"
+            },
+            "patch": {
+                "tags": ["account"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The token id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The renamed token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiTokenInfo"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Empty label.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No such token (or single-user instance).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "renameToken",
+                "summary": "Rename a token",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TokenRenameInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/device": {
+            "post": {
+                "tags": ["auth"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The device token, revocable from web settings like any API token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TokenGrant"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing idToken or token limit reached.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "ID token verification failed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Single-user instance: device sign-in does not exist.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "deviceSignIn",
+                "summary": "Exchange a Google ID token for a long-lived device token",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeviceSignInInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/mode": {
+            "get": {
+                "tags": ["auth"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The auth mode. `false` means single-user: no credential is needed and sign-in endpoints do not exist.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthMode"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "getAuthMode",
+                "summary": "Probe whether this instance runs with auth configured"
+            }
+        },
+        "/api/bodyweight": {
+            "get": {
+                "tags": ["bodyweight"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Every weigh-in.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Bodyweight"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "listBodyweight",
+                "summary": "List all weigh-ins, oldest first"
+            },
+            "post": {
+                "tags": ["bodyweight"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The created or overwritten weigh-in.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Bodyweight"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid date (or in the future), or weight out of range.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "logBodyweight",
+                "summary": "Log the weigh-in for a day (re-logging overwrites it)",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BodyweightInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/bodyweight/{id}": {
+            "delete": {
+                "tags": ["bodyweight"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The weigh-in id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The deleted weigh-in.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Bodyweight"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Weigh-in not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "deleteBodyweight",
+                "summary": "Delete a weigh-in"
+            },
+            "patch": {
+                "tags": ["bodyweight"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The weigh-in id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The updated weigh-in.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Bodyweight"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid date or weight.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Weigh-in not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "That date already has a weigh-in.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "updateBodyweight",
+                "summary": "Edit a weigh-in",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BodyweightInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/exercises": {
+            "get": {
+                "tags": ["exercises"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Every catalog exercise.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Exercise"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "listExercises",
+                "summary": "List the user's exercise catalog"
+            },
+            "post": {
+                "tags": ["exercises"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The created exercise.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Exercise"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed name, equipment, type or muscles.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "An exercise with that name already exists.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "createExercise",
+                "summary": "Create a catalog exercise",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ExerciseInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/exercises/{id}": {
+            "delete": {
+                "tags": ["exercises"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The exercise id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The deleted exercise.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Exercise"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Still referenced by templates or workouts; data.usage carries ExerciseUsage counts for the merge flow.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "deleteExercise",
+                "summary": "Delete an unused catalog exercise"
+            },
+            "get": {
+                "tags": ["exercises"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The exercise id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The enriched exercise.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExerciseDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "getExercise",
+                "summary": "Read an exercise with its sessions, history and best set"
+            },
+            "patch": {
+                "tags": ["exercises"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The exercise id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The updated exercise.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Exercise"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed name, equipment, type or muscles.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "An exercise with that name already exists.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "updateExercise",
+                "summary": "Update a catalog exercise",
+                "description": "Aliases are not editable here; they accrue via merges.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ExerciseInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/exercises/{id}/merge": {
+            "post": {
+                "tags": ["exercises"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The source exercise id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The surviving exercise with gained aliases.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Exercise"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid target id, or merging an exercise into itself.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "mergeExercise",
+                "summary": "Merge this exercise into another, re-pointing every reference",
+                "description": "The source's names live on as the target's aliases, so search still finds the survivor.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MergeInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/sessions": {
+            "get": {
+                "tags": ["sessions"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Every session with its entries, exercises and prescribed sets.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SessionWithEntries"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "listSessions",
+                "summary": "List all session templates as full trees, in manual order"
+            },
+            "post": {
+                "tags": ["sessions"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The created session row, positioned on top of the list.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Session"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing name or no usable exercise/set.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "createSession",
+                "summary": "Create a session template with its full tree",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SessionInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/sessions/{id}": {
+            "delete": {
+                "tags": ["sessions"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The session id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The deleted session row.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Session"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "deleteSession",
+                "summary": "Delete a session template",
+                "description": "Workouts started from it keep their copied trees; their sessionId is nulled."
+            },
+            "put": {
+                "tags": ["sessions"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The session id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The updated session row.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Session"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing name or no usable exercise/set.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "replaceSession",
+                "summary": "Rename a session and replace its whole tree",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SessionInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/sessions/reorder": {
+            "patch": {
+                "tags": ["sessions"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Order persisted.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Ok"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ids is not a permutation of every session id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "reorderSessions",
+                "summary": "Persist a manual ordering of all sessions",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReorderInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/workouts": {
+            "get": {
+                "tags": ["workouts"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Every workout with its entries, exercises and logged sets.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/WorkoutWithEntries"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "listWorkouts",
+                "summary": "List all workouts as full trees, newest first"
+            },
+            "post": {
+                "tags": ["workouts"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The created workout row. Fetch its tree with getWorkout.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Workout"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid sessionId.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "startWorkout",
+                "summary": "Start a workout by copying a session template tree",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StartWorkoutInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/workouts/{id}": {
+            "delete": {
+                "tags": ["workouts"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The workout id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The deleted workout row.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Workout"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Workout not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "deleteWorkout",
+                "summary": "Delete a workout and its logged tree"
+            },
+            "get": {
+                "tags": ["workouts"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The workout id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The workout tree plus template link.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkoutDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Workout not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "getWorkout",
+                "summary": "Read one workout tree with its template status"
+            },
+            "put": {
+                "tags": ["workouts"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The workout id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The updated row with template status recomputed against the just-persisted tree.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkoutSaveResult"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "No usable exercise/set, or an unknown exercise id.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Workout not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "saveWorkout",
+                "summary": "Replace a workout: row fields plus the whole logged tree",
+                "description": "The tree is replaced, not diffed — the simplest correct way to persist arbitrary add/remove/reorder edits. Sync replays whole workouts through here (last writer wins).",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WorkoutInput"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/workouts/{id}/to-session": {
+            "post": {
+                "tags": ["workouts"],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The workout id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The template now backing the workout; diverged is always false.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TemplateStatus"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid mode, missing name, or no exercises to save.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Workout (or, for update mode, its template) not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "workoutToSession",
+                "summary": "Save a diverged workout's structure back to a session template",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ToSessionInput"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "AuthMode": {
+                "type": "object",
+                "required": ["authEnabled", "googleClientId"],
+                "properties": {
+                    "authEnabled": {
+                        "type": "boolean"
+                    },
+                    "googleClientId": {
+                        "type": ["string", "null"],
+                        "description": "The Google OAuth client id native sign-in must use as ID-token audience; null on single-user instances."
+                    }
+                }
+            },
+            "DeviceSignInInput": {
+                "type": "object",
+                "required": ["idToken"],
+                "properties": {
+                    "idToken": {
+                        "type": "string",
+                        "description": "A Google ID token obtained on-device (Credential Manager), audience = this instance's Google client id."
+                    },
+                    "deviceName": {
+                        "type": "string",
+                        "description": "Label for the minted device token, shown in web settings."
+                    }
+                }
+            },
+            "TokenGrant": {
+                "type": "object",
+                "required": ["token", "record"],
+                "properties": {
+                    "token": {
+                        "type": "string",
+                        "description": "The bearer token cleartext (kr_…). Returned exactly once; only its hash is stored."
+                    },
+                    "record": {
+                        "$ref": "#/components/schemas/ApiTokenInfo"
+                    }
+                }
+            },
+            "ApiTokenInfo": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "label",
+                    "tokenPrefix",
+                    "createdAt",
+                    "lastUsedAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "tokenPrefix": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "lastUsedAt": {
+                        "type": ["string", "null"],
+                        "format": "date-time"
+                    }
+                }
+            },
+            "TokenCreateInput": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string",
+                        "maxLength": 60
+                    }
+                }
+            },
+            "TokenRenameInput": {
+                "type": "object",
+                "required": ["label"],
+                "properties": {
+                    "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 60
+                    }
+                }
+            },
+            "MuscleTarget": {
+                "type": "object",
+                "required": ["muscle", "intensity"],
+                "properties": {
+                    "muscle": {
+                        "type": "string"
+                    },
+                    "intensity": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"]
+                    }
+                }
+            },
+            "Exercise": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "userId",
+                    "name",
+                    "equipment",
+                    "type",
+                    "muscles",
+                    "aliases"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "equipment": {
+                        "type": "string",
+                        "enum": [
+                            "barbell",
+                            "dumbbell",
+                            "machine",
+                            "cable",
+                            "bodyweight"
+                        ]
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["compound", "isolation"]
+                    },
+                    "muscles": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MuscleTarget"
+                        }
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Alternative names the picker searches besides `name`. Gained via merges and the seeded catalog; not editable through the input payload."
+                    }
+                }
+            },
+            "ExerciseInput": {
+                "type": "object",
+                "required": ["name", "equipment", "type", "muscles"],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "equipment": {
+                        "type": "string",
+                        "enum": [
+                            "barbell",
+                            "dumbbell",
+                            "machine",
+                            "cable",
+                            "bodyweight"
+                        ]
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["compound", "isolation"]
+                    },
+                    "muscles": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/components/schemas/MuscleTarget"
+                        }
+                    }
+                }
+            },
+            "ExerciseHistorySet": {
+                "type": "object",
+                "required": ["reps", "weight", "done"],
+                "properties": {
+                    "reps": {
+                        "type": ["integer", "null"]
+                    },
+                    "weight": {
+                        "type": ["number", "null"]
+                    },
+                    "done": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ExerciseHistoryWorkout": {
+                "type": "object",
+                "required": ["workoutId", "name", "startedAt", "sets"],
+                "properties": {
+                    "workoutId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "sets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ExerciseHistorySet"
+                        }
+                    }
+                }
+            },
+            "ExerciseBestSet": {
+                "type": "object",
+                "description": "The heaviest set ever logged for an exercise, tie-broken by reps at that load.",
+                "required": [
+                    "weight",
+                    "reps",
+                    "workoutId",
+                    "name",
+                    "startedAt"
+                ],
+                "properties": {
+                    "weight": {
+                        "type": "number"
+                    },
+                    "reps": {
+                        "type": "integer"
+                    },
+                    "workoutId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "SessionRef": {
+                "type": "object",
+                "required": ["id", "name"],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ExerciseDetail": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "userId",
+                    "name",
+                    "equipment",
+                    "type",
+                    "muscles",
+                    "aliases",
+                    "sessions",
+                    "history",
+                    "best"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "equipment": {
+                        "type": "string",
+                        "enum": [
+                            "barbell",
+                            "dumbbell",
+                            "machine",
+                            "cable",
+                            "bodyweight"
+                        ]
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["compound", "isolation"]
+                    },
+                    "muscles": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MuscleTarget"
+                        }
+                    },
+                    "aliases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "sessions": {
+                        "type": "array",
+                        "description": "Session templates that program this exercise.",
+                        "items": {
+                            "$ref": "#/components/schemas/SessionRef"
+                        }
+                    },
+                    "history": {
+                        "type": "array",
+                        "description": "Workouts that logged this exercise, newest first.",
+                        "items": {
+                            "$ref": "#/components/schemas/ExerciseHistoryWorkout"
+                        }
+                    },
+                    "best": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/ExerciseBestSet"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Null when the exercise was never performed with a logged load."
+                    }
+                }
+            },
+            "ExerciseUsage": {
+                "type": "object",
+                "description": "Where an exercise is still referenced — carried by the delete 409 so clients can hand over to the merge flow.",
+                "required": ["sessions", "workouts"],
+                "properties": {
+                    "sessions": {
+                        "type": "integer"
+                    },
+                    "workouts": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "MergeInput": {
+                "type": "object",
+                "required": ["targetId"],
+                "properties": {
+                    "targetId": {
+                        "type": "integer",
+                        "description": "The surviving exercise. The source's references re-point to it and its names live on as aliases."
+                    }
+                }
+            },
+            "Session": {
+                "type": "object",
+                "required": ["id", "userId", "name", "position", "createdAt"],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "description": "Manual list order, ascending."
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "PrescribedSet": {
+                "type": "object",
+                "required": ["id", "sessionExerciseId", "reps", "position"],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "sessionExerciseId": {
+                        "type": "integer"
+                    },
+                    "reps": {
+                        "type": ["integer", "null"],
+                        "description": "The rep target. Null is an open target: reps are decided at workout time."
+                    },
+                    "position": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "SessionExercise": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "entryId",
+                    "exerciseId",
+                    "position",
+                    "exercise",
+                    "sets"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "entryId": {
+                        "type": "integer"
+                    },
+                    "exerciseId": {
+                        "type": "integer"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "description": "Rotation order inside a superset entry."
+                    },
+                    "exercise": {
+                        "$ref": "#/components/schemas/Exercise"
+                    },
+                    "sets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PrescribedSet"
+                        }
+                    }
+                }
+            },
+            "SessionEntry": {
+                "type": "object",
+                "description": "The top-level ordered unit of a session. One exercise = plain exercise; several = superset rotated through back-to-back.",
+                "required": ["id", "sessionId", "position", "exercises"],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "sessionId": {
+                        "type": "integer"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "exercises": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SessionExercise"
+                        }
+                    }
+                }
+            },
+            "SessionWithEntries": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "userId",
+                    "name",
+                    "position",
+                    "createdAt",
+                    "entries"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "entries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SessionEntry"
+                        }
+                    }
+                }
+            },
+            "PrescribedSetInput": {
+                "type": "object",
+                "properties": {
+                    "reps": {
+                        "type": ["integer", "null"],
+                        "description": "Anything non-positive normalises to null — an open target."
+                    }
+                }
+            },
+            "SessionExerciseInput": {
+                "type": "object",
+                "required": ["exerciseId", "sets"],
+                "properties": {
+                    "exerciseId": {
+                        "type": "integer"
+                    },
+                    "sets": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/components/schemas/PrescribedSetInput"
+                        }
+                    }
+                }
+            },
+            "SessionEntryInput": {
+                "type": "object",
+                "required": ["exercises"],
+                "properties": {
+                    "exercises": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/components/schemas/SessionExerciseInput"
+                        }
+                    }
+                }
+            },
+            "SessionInput": {
+                "type": "object",
+                "required": ["name", "entries"],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "entries": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/components/schemas/SessionEntryInput"
+                        }
+                    }
+                }
+            },
+            "ReorderInput": {
+                "type": "object",
+                "required": ["ids"],
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "integer"
+                        },
+                        "description": "Every session id exactly once, in the new order."
+                    }
+                }
+            },
+            "Workout": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "userId",
+                    "sessionId",
+                    "name",
+                    "startedAt",
+                    "completed"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "sessionId": {
+                        "type": ["integer", "null"],
+                        "description": "The session this workout was started from; null once that template is deleted."
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completed": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "LoggedSet": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "workoutExerciseId",
+                    "reps",
+                    "weight",
+                    "done",
+                    "position"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "workoutExerciseId": {
+                        "type": "integer"
+                    },
+                    "reps": {
+                        "type": ["integer", "null"]
+                    },
+                    "weight": {
+                        "type": ["number", "null"],
+                        "description": "Kilograms; null until entered."
+                    },
+                    "done": {
+                        "type": "boolean"
+                    },
+                    "position": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "WorkoutExercise": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "entryId",
+                    "exerciseId",
+                    "position",
+                    "exercise",
+                    "sets"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "entryId": {
+                        "type": "integer"
+                    },
+                    "exerciseId": {
+                        "type": "integer"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "exercise": {
+                        "$ref": "#/components/schemas/Exercise"
+                    },
+                    "sets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LoggedSet"
+                        }
+                    }
+                }
+            },
+            "WorkoutEntry": {
+                "type": "object",
+                "required": ["id", "workoutId", "position", "exercises"],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "workoutId": {
+                        "type": "integer"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "exercises": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkoutExercise"
+                        }
+                    }
+                }
+            },
+            "WorkoutWithEntries": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "userId",
+                    "sessionId",
+                    "name",
+                    "startedAt",
+                    "completed",
+                    "entries"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "sessionId": {
+                        "type": ["integer", "null"]
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completed": {
+                        "type": "boolean"
+                    },
+                    "entries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkoutEntry"
+                        }
+                    }
+                }
+            },
+            "TemplateStatus": {
+                "type": "object",
+                "description": "A workout's link to its source template, plus whether the workout's structure has diverged from it — gates the sync-back affordance.",
+                "required": ["id", "name", "diverged"],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "diverged": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "WorkoutDetail": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "userId",
+                    "sessionId",
+                    "name",
+                    "startedAt",
+                    "completed",
+                    "entries",
+                    "template"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "sessionId": {
+                        "type": ["integer", "null"]
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completed": {
+                        "type": "boolean"
+                    },
+                    "entries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/WorkoutEntry"
+                        }
+                    },
+                    "template": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/TemplateStatus"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Null when no template survives."
+                    }
+                }
+            },
+            "WorkoutSaveResult": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "userId",
+                    "sessionId",
+                    "name",
+                    "startedAt",
+                    "completed",
+                    "template"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "sessionId": {
+                        "type": ["integer", "null"]
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completed": {
+                        "type": "boolean"
+                    },
+                    "template": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/TemplateStatus"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "description": "Recomputed against the just-persisted tree, so clients track divergence without a follow-up read."
+                    }
+                }
+            },
+            "StartWorkoutInput": {
+                "type": "object",
+                "required": ["sessionId"],
+                "properties": {
+                    "sessionId": {
+                        "type": "integer",
+                        "description": "The session template to copy. Rep targets seed each set; open targets seed from the last logged reps."
+                    }
+                }
+            },
+            "LoggedSetInput": {
+                "type": "object",
+                "properties": {
+                    "reps": {
+                        "type": ["integer", "null"]
+                    },
+                    "weight": {
+                        "type": ["number", "null"],
+                        "description": "Kilograms; negative or non-finite values normalise to null."
+                    },
+                    "done": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                }
+            },
+            "WorkoutExerciseInput": {
+                "type": "object",
+                "required": ["exerciseId", "sets"],
+                "properties": {
+                    "exerciseId": {
+                        "type": "integer"
+                    },
+                    "sets": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/components/schemas/LoggedSetInput"
+                        }
+                    }
+                }
+            },
+            "WorkoutEntryInput": {
+                "type": "object",
+                "required": ["exercises"],
+                "properties": {
+                    "exercises": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/components/schemas/WorkoutExerciseInput"
+                        }
+                    }
+                }
+            },
+            "WorkoutInput": {
+                "type": "object",
+                "required": ["entries"],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Only applied when non-empty; otherwise the name snapshot stays untouched."
+                    },
+                    "completed": {
+                        "type": "boolean",
+                        "default": false
+                    },
+                    "startedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "entries": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/components/schemas/WorkoutEntryInput"
+                        }
+                    }
+                }
+            },
+            "ToSessionInput": {
+                "type": "object",
+                "required": ["mode"],
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "enum": ["update", "create"],
+                        "description": "`update` rewrites the source template in place; `create` makes a new template and re-points the workout at it."
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Required when mode is `create`."
+                    }
+                }
+            },
+            "Bodyweight": {
+                "type": "object",
+                "required": ["id", "userId", "date", "weight", "createdAt"],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "integer"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "The calendar day weighed (YYYY-MM-DD), one weigh-in per user and day."
+                    },
+                    "weight": {
+                        "type": "number",
+                        "description": "Kilograms."
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "BodyweightInput": {
+                "type": "object",
+                "required": ["date", "weight"],
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "weight": {
+                        "type": "number",
+                        "minimum": 20,
+                        "maximum": 400,
+                        "description": "Kilograms, pinned to two decimals."
+                    }
+                }
+            },
+            "Ok": {
+                "type": "object",
+                "required": ["ok"],
+                "properties": {
+                    "ok": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ApiError": {
+                "type": "object",
+                "description": "h3 error payload. `data` rides along for clients that branch on the cause (e.g. the exercise delete 409 carries ExerciseUsage under `data.usage`).",
+                "properties": {
+                    "statusCode": {
+                        "type": "integer"
+                    },
+                    "statusMessage": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {}
+                }
+            }
+        }
+    }
+}

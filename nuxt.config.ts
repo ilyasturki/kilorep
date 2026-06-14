@@ -27,6 +27,23 @@ export default defineNuxtConfig({
         // JWKS and sign its own Google-shaped tokens.
         googleJwksUrl: 'https://www.googleapis.com/oauth2/v3/certs',
     },
+    // The API contract the native Android client is generated from
+    // (ADR-0004): route metas annotate each handler, and
+    // scripts/export-openapi.mjs merges in openapi/components.json and writes
+    // the committed spec. Dev-only — production never serves the spec.
+    nitro: {
+        experimental: {
+            openAPI: true,
+        },
+        openAPI: {
+            meta: {
+                title: 'Kilorep API',
+                description:
+                    'Workout session manager and weight tracker. Sessions prescribe the plan; workouts record what actually happened in the gym.',
+                version: pkg.version,
+            },
+        },
+    },
     // Bundle the locally-installed @iconify-json/tabler set so icons resolve
     // offline with no Iconify API calls.
     icon: {

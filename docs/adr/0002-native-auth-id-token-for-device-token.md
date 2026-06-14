@@ -30,3 +30,7 @@ auth is extended from `/mcp` to all of `/api/*`.
   sealed-cookie ones.
 - The ID-token verification endpoint must be disabled in single-user mode
   (there is no Google client to validate an audience against).
+- Bearer tokens are scoped out of `/api/account/*` (403): per-device
+  revocation only contains a stolen token if that token cannot mint sibling
+  tokens that survive its own revocation, or delete the account. Account and
+  token management remain session-cookie-only.

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    web:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: oven-sh/setup-bun@v2
+            - run: bun install --frozen-lockfile
+
+            - name: Unit tests
+              run: bun run test:unit
+
+            - name: Contract test (responses validated against openapi/kilorep.json)
+              run: bun run test:contract
+
+            - name: Isolation suite (sealed-cookie + bearer paths)
+              run: |
+                  NUXT_OAUTH_GOOGLE_CLIENT_ID=x \
+                  NUXT_OAUTH_GOOGLE_CLIENT_SECRET=y \
+                  NUXT_SESSION_PASSWORD=test-password-at-least-32-characters-long \
+                  DB_FILE_NAME=.data/test-auth.db \
+                  NUXT_GOOGLE_JWKS_URL=http://localhost:4098/jwks \
+                  NUXT_IGNORE_LOCK=1 \
+                  bunx nuxt dev --port 4099 &
+                  bun run test:isolation
+
+    android:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: android
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: '17'
+            - uses: gradle/actions/setup-gradle@v4
+
+            # The Kotlin client is generated from openapi/kilorep.json at build
+            # time, so an API change that breaks the app breaks this job — the
+            # contract has nowhere to drift (ADR-0004).
+            - name: Generate + compile API client
+              run: ./gradlew :api:compileKotlin
+
+            - name: JVM unit tests (sync engine, drafts, ViewModels)
+              run: ./gradlew :app:testDebugUnitTest
+
+            - name: Assemble debug APK
+              run: ./gradlew :app:assembleDebug

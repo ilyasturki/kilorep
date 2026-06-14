@@ -1,3 +1,46 @@
+defineRouteMeta({
+    openAPI: {
+        operationId: 'deleteSession',
+        tags: ['sessions'],
+        summary: 'Delete a session template',
+        description:
+            'Workouts started from it keep their copied trees; their sessionId is nulled.',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                description: 'The session id',
+                schema: {
+                    type: 'integer',
+                },
+            },
+        ],
+        responses: {
+            '200': {
+                description: 'The deleted session row.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/Session',
+                        },
+                    },
+                },
+            },
+            '404': {
+                description: 'Session not found.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
 export default defineEventHandler((event) => {
     const userId = requireUserId(event)
     const id = getIdParam(event, 'session')

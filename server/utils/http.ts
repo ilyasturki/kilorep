@@ -18,6 +18,14 @@ export function unauthorized(message: string): never {
     })
 }
 
+export function forbidden(message: string): never {
+    throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden',
+        message,
+    })
+}
+
 export function notFound(message: string): never {
     throw createError({ statusCode: 404, statusMessage: 'Not Found', message })
 }

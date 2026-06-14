@@ -7,7 +7,7 @@ Workout session manager for gym and weight tracker. Simple and minimalist, no fi
 - Bun as package manager
 - UI components : reka-ui (Lift design system — tokens + component classes in app/assets/css/main.css, ui wrappers in app/components/ui)
 - hosted on nixos vps
-- (later) native android mobile app that will use the nitro backend
+- native android app (Kotlin/Compose) in android/
 
 # Dev server
 

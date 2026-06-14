@@ -3,6 +3,8 @@ import type { H3Event } from 'h3'
 declare module 'h3' {
     interface H3EventContext {
         userId?: number
+        /** Set when auth came from a bearer token rather than the session cookie. */
+        authMethod?: 'token'
     }
 }
 

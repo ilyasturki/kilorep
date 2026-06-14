@@ -29,3 +29,10 @@ result-*
 
 # Claude Code project MCP config (may contain bearer tokens)
 .mcp.json
+
+# Android app build outputs (android/)
+android/.gradle
+android/.kotlin
+android/build
+android/*/build
+android/local.properties

@@ -1,3 +1,68 @@
+defineRouteMeta({
+    openAPI: {
+        operationId: 'mergeExercise',
+        tags: ['exercises'],
+        summary:
+            'Merge this exercise into another, re-pointing every reference',
+        description:
+            "The source's names live on as the target's aliases, so search still finds the survivor.",
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                description: 'The source exercise id',
+                schema: {
+                    type: 'integer',
+                },
+            },
+        ],
+        requestBody: {
+            required: true,
+            content: {
+                'application/json': {
+                    schema: {
+                        $ref: '#/components/schemas/MergeInput',
+                    },
+                },
+            },
+        },
+        responses: {
+            '200': {
+                description: 'The surviving exercise with gained aliases.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/Exercise',
+                        },
+                    },
+                },
+            },
+            '400': {
+                description:
+                    'Invalid target id, or merging an exercise into itself.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+            '404': {
+                description: 'Exercise not found.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
 export default defineEventHandler(async (event) => {
     const userId = requireUserId(event)
     const id = getIdParam(event, 'exercise')

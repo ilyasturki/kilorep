@@ -1,3 +1,74 @@
+defineRouteMeta({
+    openAPI: {
+        operationId: 'updateBodyweight',
+        tags: ['bodyweight'],
+        summary: 'Edit a weigh-in',
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                description: 'The weigh-in id',
+                schema: {
+                    type: 'integer',
+                },
+            },
+        ],
+        requestBody: {
+            required: true,
+            content: {
+                'application/json': {
+                    schema: {
+                        $ref: '#/components/schemas/BodyweightInput',
+                    },
+                },
+            },
+        },
+        responses: {
+            '200': {
+                description: 'The updated weigh-in.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/Bodyweight',
+                        },
+                    },
+                },
+            },
+            '400': {
+                description: 'Invalid date or weight.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+            '404': {
+                description: 'Weigh-in not found.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+            '409': {
+                description: 'That date already has a weigh-in.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
 export default defineEventHandler(async (event) => {
     const userId = requireUserId(event)
     const id = getIdParam(event, 'weigh-in')

@@ -1,0 +1,45 @@
+name: Android release
+
+# Tag `android-vX.Y.Z` → signed APK on a GitHub Release, which Obtainium
+# watches for updates. Bump versionCode/versionName in
+# android/app/build.gradle.kts alongside the tag.
+on:
+    push:
+        tags: ['android-v*']
+
+permissions:
+    contents: write
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: android
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: '17'
+            - uses: gradle/actions/setup-gradle@v4
+
+            - name: Decode signing keystore
+              run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/kilorep.keystore
+
+            - name: Build signed release APK
+              env:
+                  KILOREP_KEYSTORE: /tmp/kilorep.keystore
+                  KILOREP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+                  KILOREP_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+                  KILOREP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+              run: ./gradlew :app:assembleRelease
+
+            - name: Name the artifact after the tag
+              run: cp app/build/outputs/apk/release/app-release.apk "kilorep-${GITHUB_REF_NAME}.apk"
+
+            - name: Publish GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: android/kilorep-*.apk
+                  generate_release_notes: true

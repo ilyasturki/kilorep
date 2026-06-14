@@ -1,6 +1,37 @@
 // Deletes the account with everything it owns, then clears the session.
 // Auth mode only — on a single-user instance "delete my account" would mean
 // wiping the whole database, which is the operator's call, not an endpoint's.
+defineRouteMeta({
+    openAPI: {
+        operationId: 'deleteAccount',
+        tags: ['account'],
+        summary: 'Delete the account with everything it owns',
+        responses: {
+            '200': {
+                description: 'Account deleted, session cleared.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/Ok',
+                        },
+                    },
+                },
+            },
+            '404': {
+                description:
+                    'Single-user instance: account deletion does not exist.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
 export default defineEventHandler(async (event) => {
     requireAuthMode()
     const userId = requireUserId(event)

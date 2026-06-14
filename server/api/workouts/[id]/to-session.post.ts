@@ -7,6 +7,71 @@ import type { WorkoutTemplateStatus } from '~~/server/database/schema'
  * against the template actually followed. Both modes keep the old template's
  * prescribed reps for sets that still match (see `workoutToSessionEntries`).
  */
+defineRouteMeta({
+    openAPI: {
+        operationId: 'workoutToSession',
+        tags: ['workouts'],
+        summary:
+            "Save a diverged workout's structure back to a session template",
+        parameters: [
+            {
+                name: 'id',
+                in: 'path',
+                required: true,
+                description: 'The workout id',
+                schema: {
+                    type: 'integer',
+                },
+            },
+        ],
+        requestBody: {
+            required: true,
+            content: {
+                'application/json': {
+                    schema: {
+                        $ref: '#/components/schemas/ToSessionInput',
+                    },
+                },
+            },
+        },
+        responses: {
+            '200': {
+                description:
+                    'The template now backing the workout; diverged is always false.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/TemplateStatus',
+                        },
+                    },
+                },
+            },
+            '400': {
+                description:
+                    'Invalid mode, missing name, or no exercises to save.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+            '404': {
+                description:
+                    'Workout (or, for update mode, its template) not found.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
 export default defineEventHandler(
     async (event): Promise<WorkoutTemplateStatus> => {
         const userId = requireUserId(event)

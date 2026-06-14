@@ -1,0 +1,23 @@
+# nix-built SDK + emulator (scripts/emulator.sh, nix/sdk.nix)
+/.nix-android-sdk
+/result
+/result-*
+
+# machine-local SDK pointer
+/local.properties
+
+# Gradle / Android build output
+.gradle/
+build/
+/app/build/
+/api/build/
+/.kotlin/
+/.cxx/
+
+# IDE
+*.iml
+/.idea/
+/captures/
+
+# Claude Code local settings (per-developer)
+/.claude/settings.local.json

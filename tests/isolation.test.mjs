@@ -177,6 +177,17 @@ async function mcp(token, tool, args = {}) {
 }
 
 // ── Setup: two fresh accounts straight in the DB ────────────────────────────
+// CI boots the auth-mode instance in the background and runs this suite
+// immediately; the DB file and its schema only exist once the server is up,
+// so wait before opening it.
+const baseMode = await waitForMode(BASE)
+assert.ok(baseMode, `no instance reachable at ${BASE}`)
+assert.equal(
+    baseMode.authEnabled,
+    true,
+    `instance at ${BASE} is not in auth mode`,
+)
+
 const suffix = randomBytes(4).toString('hex')
 const db = new Database(DB_FILE)
 const insertUser = db.prepare(
@@ -273,6 +284,33 @@ check('malformed token → 401', () => assert.equal(garbage.status, 401))
 const missing = await api({}, '/api/auth/device', { method: 'POST', body: {} })
 check('missing idToken → 400', () => assert.equal(missing.status, 400))
 
+// Re-onboarding signs in again under the same device name: it must rotate
+// that device's token, not stack rows toward the token limit.
+const rotateName = `Iso Rotate ${suffix}`
+const rotateFirst = await deviceSignIn(
+    { sub: `iso-a-${suffix}`, email: 'a@iso.test' },
+    rotateName,
+)
+const rotateSecond = await deviceSignIn(
+    { sub: `iso-a-${suffix}`, email: 'a@iso.test' },
+    rotateName,
+)
+const rotatedList = await api(cookieA, '/api/account/tokens')
+check('same-device re-sign-in leaves exactly one token', () => {
+    assert.equal(rotateFirst.status, 200)
+    assert.equal(rotateSecond.status, 200)
+    const matching = (rotatedList.body ?? []).filter(
+        (t) => t.label === rotateName,
+    )
+    assert.equal(matching.length, 1)
+    assert.equal(matching[0].id, rotateSecond.body?.record?.id)
+})
+
+const rotatedOut = await api(asBearer(rotateFirst.body?.token), '/api/workouts')
+check('the rotated-out token no longer authenticates', () =>
+    assert.equal(rotatedOut.status, 401),
+)
+
 // ── A creates one of everything ─────────────────────────────────────────────
 console.log('\nA creates data')
 const exA = await api(cookieA, '/api/exercises', {
@@ -325,6 +363,28 @@ check('unknown bearer token → 401', () =>
 
 const anonymous = await api({}, '/api/workouts')
 check('no credentials at all → 401', () => assert.equal(anonymous.status, 401))
+
+// ── ...but not /api/account: a stolen token must stay revocable ─────────────
+console.log('\nBearer tokens are scoped out of account management')
+const bearerMint = await api(bearerA, '/api/account/tokens', {
+    method: 'POST',
+    body: { label: 'escalated' },
+})
+check('bearer token cannot mint sibling tokens → 403', () =>
+    assert.equal(bearerMint.status, 403),
+)
+
+const bearerTokenList = await api(bearerA, '/api/account/tokens')
+check('bearer token cannot list tokens → 403', () =>
+    assert.equal(bearerTokenList.status, 403),
+)
+
+const bearerAccountDelete = await api(bearerA, '/api/account', {
+    method: 'DELETE',
+})
+check('bearer token cannot delete the account → 403', () =>
+    assert.equal(bearerAccountDelete.status, 403),
+)
 
 // ── B sees none of it, over both auth paths ─────────────────────────────────
 console.log('\nB reads are blank')
