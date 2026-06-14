@@ -26,7 +26,7 @@ sealed interface OnboardingStep {
 /**
  * Server-first onboarding: probe `/api/auth/mode`, then either skip sign-in
  * entirely (self-hosted single-user) or exchange a Credential Manager ID
- * token for a device token (ADR-0002). The Google account picker itself is
+ * token for a device token. The Google account picker itself is
  * platform UI and stays in the composable; this holds everything testable.
  */
 class OnboardingViewModel(

@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Lift — brutalist-sharp design system, ported from the web tokens in
- * app/assets/css/main.css (ADR-0003). Dark-first, square corners, hairline
+ * app/assets/css/main.css. Dark-first, square corners, hairline
  * borders, one volt accent. Token changes on the web must be mirrored here
  * by hand.
  */

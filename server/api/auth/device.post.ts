@@ -1,5 +1,5 @@
 /**
- * Native-app sign-in (ADR-0002): exchanges a Google ID token, obtained
+ * Native-app sign-in: exchanges a Google ID token, obtained
  * on-device via Credential Manager, for a long-lived device token minted from
  * the same table as the MCP tokens — so it shows up in web settings and is
  * revocable per device. Identity is provider + `sub`, the same rule as the

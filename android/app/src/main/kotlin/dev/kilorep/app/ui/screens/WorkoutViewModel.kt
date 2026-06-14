@@ -104,7 +104,7 @@ class WorkoutViewModel(
     fun discard() = repo.discardDraft(localId)
 
     /**
-     * The sync-back affordance (CONTEXT.md: Diverged) only makes sense once
+     * The sync-back affordance only makes sense once
      * the server holds the latest tree — refresh after the draft turns clean.
      */
     fun refreshTemplate() {

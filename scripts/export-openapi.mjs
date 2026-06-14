@@ -1,6 +1,6 @@
 /**
  * Exports the committed OpenAPI contract (openapi/kilorep.json) that the
- * Android client is code-generated from (ADR-0004).
+ * Android client is code-generated from.
  *
  * Nitro assembles the document at runtime from the defineRouteMeta
  * annotations on each /api route, but its experimental openAPI support has

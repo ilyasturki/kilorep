@@ -47,7 +47,7 @@ import dev.kilorep.app.ui.theme.LiftType
 import dev.kilorep.app.ui.theme.Text
 
 /**
- * The gym loop (CONTEXT.md): everything here must work offline and one-
+ * The gym loop: everything here must work offline and one-
  * handed. Each set is a tall row — weight and reps as thumb steppers, the
  * done-tick under the right thumb. Structure edits (swap, add, remove) ride
  * along without leaving the screen.

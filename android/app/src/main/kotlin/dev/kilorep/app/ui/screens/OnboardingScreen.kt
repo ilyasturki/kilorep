@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 /**
  * Server-first onboarding. Single-user instances finish at the URL; auth
  * instances continue into the system account picker — no browser, no
- * redirect (ADR-0002).
+ * redirect.
  */
 @Composable
 fun OnboardingScreen(viewModel: OnboardingViewModel) {

@@ -39,7 +39,7 @@
           kilorep = pkgs.callPackage ./nix/package.nix {
             # Respect .gitignore so node_modules/.nuxt/.output/.data stay out of
             # the build source; bun2nix's hook recreates node_modules itself.
-            # The Android app ships separately as an APK (ADR-0004) — the
+            # The Android app ships separately as an APK — the
             # server package must not rebuild when only android/ changes.
             src = pkgs.nix-gitignore.gitignoreSource [ "android/" ] ./.;
           };

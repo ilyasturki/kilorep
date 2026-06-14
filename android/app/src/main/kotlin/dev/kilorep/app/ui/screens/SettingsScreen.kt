@@ -35,8 +35,8 @@ import dev.kilorep.app.ui.watch
 import kotlinx.coroutines.launch
 
 /**
- * Instance, identity, sync. Device tokens are revoked from the web settings
- * (per ADR-0002) — this screen owns this install's credential only.
+ * Instance, identity, sync. Device tokens are revoked from the web settings;
+ * this screen owns this install's credential only.
  */
 @Composable
 fun SettingsScreen(

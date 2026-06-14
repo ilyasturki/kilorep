@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Where this install points and who it is. The device token is the only
- * secret and lives in Keystore-backed EncryptedSharedPreferences (ADR-0002);
+ * secret and lives in Keystore-backed EncryptedSharedPreferences;
  * the server URL and probed auth mode are plain preferences.
  */
 data class AppSettings(

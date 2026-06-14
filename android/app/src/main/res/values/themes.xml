@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Lift is dark-first (ADR-0003); the window background prevents a
+    <!-- Lift is dark-first; the window background prevents a
          white flash before Compose draws. -->
     <style name="Theme.Kilorep" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/lift_bg</item>

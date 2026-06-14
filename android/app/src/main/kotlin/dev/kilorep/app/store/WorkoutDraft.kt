@@ -10,7 +10,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 /**
- * The active workout as it lives on-device (CONTEXT.md: gym loop). A draft
+ * The active workout as it lives on-device. A draft
  * is the lifter's single source of truth from start to sync: built locally
  * from a cached session so a dead zone never blocks starting, persisted on
  * every mutation so process death never loses a set, and replayed to the

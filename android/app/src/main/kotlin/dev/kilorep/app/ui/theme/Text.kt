@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.sp
 
 /**
  * Lift's type scale (from the web's component classes). Material's Text is
- * deliberately not used (ADR-0003); this thin BasicText wrapper defaults to
+ * deliberately not used; this thin BasicText wrapper defaults to
  * Archivo and the current ink.
  */
 object LiftType {

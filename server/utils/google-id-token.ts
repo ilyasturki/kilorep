@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 
-/** The identity claims device sign-in resolves an account by (ADR-0002). */
+/** The identity claims device sign-in resolves an account by. */
 export type GoogleIdentity = {
     sub: string
     email?: string

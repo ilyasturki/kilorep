@@ -45,7 +45,7 @@ jobs:
 
             # The Kotlin client is generated from openapi/kilorep.json at build
             # time, so an API change that breaks the app breaks this job — the
-            # contract has nowhere to drift (ADR-0004).
+            # contract has nowhere to drift.
             - name: Generate + compile API client
               run: ./gradlew :api:compileKotlin
 

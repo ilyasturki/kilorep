@@ -50,7 +50,6 @@
         "@iconify-json/tabler": "^1.2.35",
         "@seriousme/openapi-schema-validator": "^2.9.0",
         "@types/better-sqlite3": "^7.6.13",
-        "@vite-pwa/nuxt": "^1.1.1",
         "ajv": "^8.20.0",
         "ajv-formats": "^3.0.1",
         "drizzle-kit": "^0.31.10",
