@@ -1,13 +1,17 @@
-// Locale-aware day formatting shared across the workout and exercise views.
-export const fmtDate = (d: string | Date) =>
-    new Date(d).toLocaleDateString(undefined, {
+import { appLocale } from '~/utils/appLocale'
+
+// Day formatting in the active locale (see utils/appLocale.ts), kept in step
+// with the reka DatePicker and number readouts. The optional locale override
+// lets the Settings preview show a not-yet-applied choice.
+export const fmtDate = (d: string | Date, locale = appLocale.value) =>
+    new Date(d).toLocaleDateString(locale, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
     })
 
 export const fmtDateShort = (d: string | Date) =>
-    new Date(d).toLocaleDateString(undefined, {
+    new Date(d).toLocaleDateString(appLocale.value, {
         day: 'numeric',
         month: 'short',
     })

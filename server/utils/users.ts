@@ -117,3 +117,23 @@ export function syncUserCatalog(userId: number, cursor: number): void {
             .run()
     })
 }
+
+/** The user's saved locale, or null when they follow the device. */
+export function getUserLocale(userId: number): string | null {
+    return (
+        useDrizzle()
+            .select({ locale: tables.users.locale })
+            .from(tables.users)
+            .where(eq(tables.users.id, userId))
+            .get()?.locale ?? null
+    )
+}
+
+/** Pin (or, with null, clear) the user's number/date locale. */
+export function setUserLocale(userId: number, locale: string | null): void {
+    useDrizzle()
+        .update(tables.users)
+        .set({ locale })
+        .where(eq(tables.users.id, userId))
+        .run()
+}

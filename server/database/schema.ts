@@ -30,6 +30,9 @@ export const users = sqliteTable(
         // How many entries of EXERCISE_CATALOG this user has been offered
         // (see plugins/seed.ts).
         catalogCursor: integer('catalog_cursor').notNull().default(0),
+        // BCP-47 tag the UI formats numbers/dates with (Settings); null follows
+        // the device. Validated against SUPPORTED_LOCALES (shared/locales.ts).
+        locale: text('locale'),
     },
     (table) => [
         uniqueIndex('users_provider_account_unique').on(

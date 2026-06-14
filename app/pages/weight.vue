@@ -10,8 +10,6 @@ const {
 const toast = useToast()
 
 const toMs = (d: string) => parseLocalDay(d).getTime()
-const fmt2 = (n: number) => n.toFixed(2)
-const signed = (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`
 
 const todayStr = toDateInput(new Date())
 
@@ -178,13 +176,13 @@ async function confirmDelete() {
             <template v-if="entries?.length">
                 <div class="wk-stat">
                     <span class="stat-num mono">
-                        {{ latest ? fmt2(latest.weight) : '—' }}
+                        {{ latest ? fmtFixed2(latest.weight) : '—' }}
                     </span>
                     <span class="stat-lab">CURRENT · KG</span>
                 </div>
                 <div class="wk-stat">
                     <span class="stat-num mono">
-                        {{ rangeChange == null ? '—' : signed(rangeChange) }}
+                        {{ rangeChange == null ? '—' : fmtSigned2(rangeChange) }}
                     </span>
                     <span class="stat-lab">CHANGE · {{ rangeLabel }}</span>
                 </div>
@@ -192,14 +190,14 @@ async function confirmDelete() {
                     v-if="minMax"
                     class="wk-stat"
                 >
-                    <span class="stat-num mono">{{ fmt2(minMax.min) }}</span>
+                    <span class="stat-num mono">{{ fmtFixed2(minMax.min) }}</span>
                     <span class="stat-lab">LOWEST · KG</span>
                 </div>
                 <div
                     v-if="minMax"
                     class="wk-stat"
                 >
-                    <span class="stat-num mono">{{ fmt2(minMax.max) }}</span>
+                    <span class="stat-num mono">{{ fmtFixed2(minMax.max) }}</span>
                     <span class="stat-lab">HIGHEST · KG</span>
                 </div>
             </template>
@@ -281,10 +279,10 @@ async function confirmDelete() {
                     fmtDate(parseLocalDay(row.date))
                 }}</span>
                 <span class="wlog-weight mono">
-                    {{ fmt2(row.weight) }}<span class="wlog-unit">kg</span>
+                    {{ fmtFixed2(row.weight) }}<span class="wlog-unit">kg</span>
                 </span>
                 <span class="wlog-delta mono">
-                    {{ row.delta == null ? '' : signed(row.delta) }}
+                    {{ row.delta == null ? '' : fmtSigned2(row.delta) }}
                 </span>
                 <div class="wlog-actions">
                     <button

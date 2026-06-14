@@ -15,6 +15,8 @@ import 'chartjs-adapter-date-fns'
 
 import { Line } from 'vue-chartjs'
 
+import { appLocale } from '~/utils/appLocale'
+
 Chart.register(
     LineController,
     LineElement,
@@ -82,6 +84,8 @@ const chartData = computed<ChartData<'line'>>(() => ({
 const chartOptions = computed<ChartOptions<'line'>>(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    // Match the rest of the app: format axis ticks in the active locale.
+    locale: appLocale.value,
     interaction: { mode: 'index', intersect: false },
     plugins: {
         legend: { display: false },
@@ -90,7 +94,8 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
             callbacks: {
                 title: (items: TooltipItem<'line'>[]) =>
                     fmtDate(new Date(items[0]!.parsed.x ?? 0)),
-                label: (item: TooltipItem<'line'>) => `${item.parsed.y} kg`,
+                label: (item: TooltipItem<'line'>) =>
+                    `${fmtWeight(item.parsed.y ?? 0)} kg`,
             },
         },
     },

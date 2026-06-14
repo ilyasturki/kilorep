@@ -65,14 +65,14 @@ type GlanceExercise =
 // Top weight stands in for the working load; just the count when nothing's logged.
 const exSummary = (ex: GlanceExercise) =>
     ex.top != null ?
-        `${plural(ex.setCount, 'set')} · ${ex.top} kg`
+        `${plural(ex.setCount, 'set')} · ${fmtWeight(ex.top)} kg`
     :   plural(ex.setCount, 'set')
 
 const metaLine = (w: (typeof ordered.value)[number]) =>
     [
         plural(w.stats.exercises, 'exercise'),
         plural(w.stats.sets, 'set'),
-        `${w.stats.volume.toLocaleString()} kg`,
+        `${fmtVolume(w.stats.volume)} kg`,
     ].join(' · ')
 
 // Resolved on the client only: relative labels depend on "now", so SSR renders

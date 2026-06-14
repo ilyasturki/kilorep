@@ -92,8 +92,8 @@ const topTargets = computed(() =>
     topMuscles(draft.value, exerciseMuscles.value),
 )
 
-const fmtWeight = (w: number | undefined | null) =>
-    w == null ? '—' : `${w} kg`
+const weightLabel = (w: number | undefined | null) =>
+    w == null ? '—' : `${fmtWeight(w)} kg`
 const exVolume = (ex: ExerciseDraft) => setVolume(ex.sets)
 
 // The workout's day is editable anytime (even once completed). Only the calendar
@@ -470,7 +470,9 @@ async function changeDate() {
                     @update:model-value="changeDate"
                 />
                 <div class="wk-stat">
-                    <span class="stat-num mono">{{ totals.volume }}</span>
+                    <span class="stat-num mono">{{
+                        fmtVolume(totals.volume)
+                    }}</span>
                     <span class="stat-lab">VOLUME · KG</span>
                 </div>
                 <div class="wk-stat">
@@ -774,7 +776,7 @@ async function changeDate() {
                                 {{ item.ex.name }}
                             </NuxtLink>
                             <span class="kicker"
-                                >{{ exVolume(item.ex) }} kg</span
+                                >{{ fmtVolume(exVolume(item.ex)) }} kg</span
                             >
                         </div>
                         <div
@@ -784,7 +786,7 @@ async function changeDate() {
                         >
                             <span class="set-lab">{{ si + 1 }}</span>
                             <span class="logline-load">
-                                {{ fmtWeight(set.weight) }}
+                                {{ weightLabel(set.weight) }}
                                 <span class="x">×</span>
                                 {{ set.reps ?? '?' }}
                             </span>

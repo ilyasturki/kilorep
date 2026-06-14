@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { SUPPORTED_LOCALES } from '~~/shared/locales'
+import { appLocale } from '~/utils/appLocale'
+
 // Account settings only exist in auth mode; self-hosted instances without
 // creds bounce home (the auth middleware has filled the state by now).
 definePageMeta({
@@ -18,6 +21,47 @@ const { appVersion } = useRuntimeConfig().public
 const { data: tokens, error: tokensError } = await useFetch(
     '/api/account/tokens',
 )
+
+// ── Number & date format ────────────────────────────────────────────────────
+// 'auto' is the UI stand-in for a null pin (follow the device); UiSelect only
+// takes string|number values.
+const AUTO = 'auto'
+const localeItems = [
+    { label: 'Automatic (device)', value: AUTO },
+    ...SUPPORTED_LOCALES,
+]
+const { data: prefs } = await useFetch('/api/account/preferences')
+const localeChoice = ref<string>(prefs.value?.locale ?? AUTO)
+
+// Preview the chosen format through the same formatters the app uses, so the
+// two can't drift; the override shows the choice before it's saved/applied.
+const samplePreview = computed(() => {
+    const loc =
+        localeChoice.value === AUTO ? navigator.language : localeChoice.value
+    return `${fmtFixed2(82.5, loc)} kg · ${fmtDate(new Date(), loc)}`
+})
+
+async function saveLocale(value: string | undefined) {
+    if (value == null) return
+    const prev = localeChoice.value
+    localeChoice.value = value
+    const locale = value === AUTO ? null : value
+    try {
+        await $fetch('/api/account/preferences', {
+            method: 'PATCH',
+            body: { locale },
+        })
+        // Apply everywhere instantly; null falls back to the device.
+        appLocale.value = locale ?? navigator.language
+        toast.add({ title: 'Format updated', color: 'success' })
+    } catch (error) {
+        localeChoice.value = prev
+        toast.add({
+            title: errorMessage(error, 'Could not update the format'),
+            color: 'error',
+        })
+    }
+}
 
 function lastUsed(value: string | Date | null): string {
     if (!value) return 'never used'
@@ -234,6 +278,26 @@ async function deleteAccount() {
                     <span class="acct-email">{{ user?.email }}</span>
                 </div>
             </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head mb-4">
+                <span class="kicker kicker--accent"
+                    >Number &amp; date format</span
+                >
+            </div>
+            <p class="settings-hint">
+                How weights, volumes and dates are written. "Automatic" follows
+                this device; pick a region to keep it the same on every browser.
+            </p>
+            <UiSelect
+                :model-value="localeChoice"
+                :items="localeItems"
+                @update:model-value="saveLocale"
+            />
+            <p class="settings-hint mt-2">
+                Preview: <span class="mono">{{ samplePreview }}</span>
+            </p>
         </div>
 
         <div class="card">

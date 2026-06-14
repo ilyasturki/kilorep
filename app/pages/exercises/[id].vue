@@ -116,7 +116,7 @@ const videoUrl = computed(
                     <span class="stat-num mono">
                         {{
                             detail.best ?
-                                `${detail.best.weight}×${detail.best.reps}`
+                                `${fmtWeight(detail.best.weight)}×${detail.best.reps}`
                             :   '—'
                         }}
                     </span>
@@ -161,7 +161,7 @@ const videoUrl = computed(
                             class="set-chip"
                             :class="{ 'set-chip--off': !s.done }"
                         >
-                            {{ s.weight == null ? '—' : s.weight
+                            {{ s.weight == null ? '—' : fmtWeight(s.weight)
                             }}<span class="x">×</span>{{ s.reps ?? '?' }}
                         </span>
                     </div>
