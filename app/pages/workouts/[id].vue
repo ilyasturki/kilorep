@@ -23,10 +23,12 @@ type SetDraft = {
     done: boolean
 }
 type ExerciseDraft = { exerciseId: number; name: string; sets: SetDraft[] }
-type EntryDraft = { exercises: ExerciseDraft[] }
+// id is a client-only key for the reorder animation, never sent to the server.
+type EntryDraft = { id: number; exercises: ExerciseDraft[] }
 
 const draft = ref<EntryDraft[]>(
     (workout.value?.entries ?? []).map((entry) => ({
+        id: uid(),
         exercises: entry.exercises.map((ex) => ({
             exerciseId: ex.exerciseId,
             name: ex.exercise.name,
@@ -76,6 +78,7 @@ const blocks = computed(() => {
     let n = 0
     return draft.value.map((entry, entryIndex) => ({
         entryIndex,
+        entryId: entry.id,
         isSuperset: entry.exercises.length > 1,
         exercises: entry.exercises.map((ex, exIndex) => ({
             ex,
@@ -192,7 +195,7 @@ function newExerciseDraft(picked: Exercise): ExerciseDraft {
 function confirmAdd() {
     const picked = exerciseById(addExerciseId.value)
     if (!picked) return
-    draft.value.push({ exercises: [newExerciseDraft(picked)] })
+    draft.value.push({ id: uid(), exercises: [newExerciseDraft(picked)] })
     addExerciseId.value = undefined
     addOpen.value = false
 }
@@ -212,7 +215,10 @@ function openAddSuperset() {
 }
 function confirmAddSuperset() {
     if (supersetPicked.value.length < 2) return
-    draft.value.push({ exercises: supersetPicked.value.map(newExerciseDraft) })
+    draft.value.push({
+        id: uid(),
+        exercises: supersetPicked.value.map(newExerciseDraft),
+    })
     supersetOpen.value = false
 }
 
@@ -243,7 +249,7 @@ function ungroupEntry(entryIndex: number) {
     draft.value.splice(
         entryIndex,
         1,
-        ...entry.exercises.map((ex) => ({ exercises: [ex] })),
+        ...entry.exercises.map((ex) => ({ id: uid(), exercises: [ex] })),
     )
 }
 
@@ -547,10 +553,14 @@ async function changeDate() {
 
         <!-- Tracking -->
         <template v-if="editing">
-            <div class="space-y-3">
+            <TransitionGroup
+                name="reorder"
+                tag="div"
+                class="space-y-3"
+            >
                 <div
                     v-for="block in blocks"
-                    :key="block.entryIndex"
+                    :key="block.entryId"
                     class="builder-block"
                     :class="{ 'builder-block--ss': block.isSuperset }"
                 >
@@ -717,7 +727,7 @@ async function changeDate() {
                         }}
                     </button>
                 </div>
-            </div>
+            </TransitionGroup>
 
             <div class="mt-3 flex flex-wrap gap-2">
                 <button
@@ -750,7 +760,7 @@ async function changeDate() {
             <div class="card">
                 <div
                     v-for="block in blocks"
-                    :key="block.entryIndex"
+                    :key="block.entryId"
                     class="plan-block"
                     :class="{ 'plan-block--ss': block.isSuperset }"
                 >

@@ -2413,6 +2413,18 @@
         }
     }
 
+    /* FLIP slide for the move up/down reorder buttons. Only -move is styled, so
+       adding or removing an item stays instant while a reorder glides. */
+    .reorder-move {
+        transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .reorder-move {
+            transition: none;
+        }
+    }
+
     @keyframes fade {
         from {
             opacity: 0;

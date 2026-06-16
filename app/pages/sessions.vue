@@ -11,7 +11,8 @@ const [{ data: sessions, status, refresh }, { data: exercises }] =
 // decided at workout time.
 type SetDraft = { reps: number | undefined }
 type ExerciseDraft = { exerciseId: number | undefined; sets: SetDraft[] }
-type EntryDraft = { exercises: ExerciseDraft[] }
+// id is a client-only key for the reorder animation, never sent to the server.
+type EntryDraft = { id: number; exercises: ExerciseDraft[] }
 type SessionDraft = { name: string; entries: EntryDraft[] }
 
 const newSet = (): SetDraft => ({ reps: undefined })
@@ -20,6 +21,7 @@ const newExercise = (): ExerciseDraft => ({
     sets: [newSet()],
 })
 const newEntry = (exerciseCount = 1): EntryDraft => ({
+    id: uid(),
     exercises: Array.from({ length: exerciseCount }, newExercise),
 })
 const emptyDraft = (): SessionDraft => ({
@@ -44,6 +46,7 @@ function editSession(session: SessionWithEntries) {
     draft.value = {
         name: session.name,
         entries: session.entries.map((entry) => ({
+            id: uid(),
             exercises: entry.exercises.map((se) => ({
                 exerciseId: se.exerciseId,
                 sets: se.sets.map((s) => ({ reps: s.reps ?? undefined })),
@@ -239,10 +242,14 @@ function planBlocks(session: SessionWithEntries) {
                     />
                 </div>
 
-                <div class="space-y-3">
+                <TransitionGroup
+                    name="reorder"
+                    tag="div"
+                    class="space-y-3"
+                >
                     <div
                         v-for="(entry, entryIndex) in draft.entries"
-                        :key="entryIndex"
+                        :key="entry.id"
                         class="builder-block"
                         :class="{
                             'builder-block--ss': entry.exercises.length > 1,
@@ -375,7 +382,7 @@ function planBlocks(session: SessionWithEntries) {
                             Add exercise to superset
                         </button>
                     </div>
-                </div>
+                </TransitionGroup>
 
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -443,8 +450,10 @@ function planBlocks(session: SessionWithEntries) {
         >
             No sessions yet. Create your first routine.
         </div>
-        <div
+        <TransitionGroup
             v-else
+            name="reorder"
+            tag="div"
             class="space-y-4"
         >
             <div
@@ -540,7 +549,7 @@ function planBlocks(session: SessionWithEntries) {
                     </div>
                 </div>
             </div>
-        </div>
+        </TransitionGroup>
 
         <!-- Delete session -->
         <UiModal
