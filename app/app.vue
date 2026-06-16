@@ -120,12 +120,10 @@ useHead({
                         to="/settings"
                         class="side-account"
                     >
-                        <img
-                            v-if="user?.avatarUrl"
-                            :src="user.avatarUrl"
-                            class="side-avatar"
-                            alt=""
-                            referrerpolicy="no-referrer"
+                        <Icon
+                            name="tabler:user"
+                            :size="18"
+                            class="side-account-icon"
                         />
                         <span class="side-user-name">{{
                             user?.name ?? user?.email

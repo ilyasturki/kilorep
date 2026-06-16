@@ -448,15 +448,14 @@
         text-decoration: none;
     }
 
-    .side-account:hover .side-user-name {
+    .side-account:hover .side-user-name,
+    .side-account:hover .side-account-icon {
         color: var(--ink);
     }
 
-    .side-avatar {
-        width: 26px;
-        height: 26px;
-        border-radius: 50%;
+    .side-account-icon {
         flex: none;
+        color: var(--ink-2);
     }
 
     .side-user-name {
