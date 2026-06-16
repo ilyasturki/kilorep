@@ -526,34 +526,12 @@ async function changeDate() {
             </div>
         </div>
 
-        <div class="wk-actions">
-            <button
-                v-if="editing"
-                type="button"
-                class="btn-primary"
-                :disabled="saving"
-                @click="finish"
-            >
-                <Icon
-                    name="tabler:check"
-                    :size="16"
-                />
-                Finish workout
-            </button>
-            <button
-                v-else
-                type="button"
-                class="btn-ghost"
-                :disabled="saving"
-                @click="reopen"
-            >
-                <Icon
-                    name="tabler:pencil"
-                    :size="15"
-                />
-                Reopen to edit
-            </button>
-        </div>
+        <WorkoutActions
+            :editing="editing"
+            :saving="saving"
+            @finish="finish"
+            @reopen="reopen"
+        />
 
         <!-- Tracking -->
         <template v-if="editing">
@@ -818,6 +796,14 @@ async function changeDate() {
                 </div>
             </div>
         </template>
+
+        <WorkoutActions
+            foot
+            :editing="editing"
+            :saving="saving"
+            @finish="finish"
+            @reopen="reopen"
+        />
 
         <!-- Add exercise -->
         <UiModal

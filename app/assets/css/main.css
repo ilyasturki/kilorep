@@ -182,9 +182,7 @@
         color: var(--accent-text);
     }
 
-    /* Top inset lives on .page, not here: a sticky child (the workout action
-       bar) pins at the scroll container's content edge, so top padding here
-       would leave a gap above the pinned bar that scrolled rows peek through. */
+    /* Top inset lives on .page, not here. */
     .main-scroll {
         flex: 1;
         padding: 0 22px 96px;
@@ -293,8 +291,7 @@
 
     /* Desktop: swap bottom tabs for a left sidebar */
     @media (min-width: 860px) {
-        /* App-shell: pin sidebar + topbar, scroll only the content. Lets the
-           workout action bar stick to the top of .main-scroll. */
+        /* App-shell: pin sidebar + topbar, scroll only the content. */
         .shell {
             flex-direction: row;
             height: 100dvh;
@@ -769,8 +766,7 @@
         gap: 12px;
     }
 
-    /* Plain button row at the foot of a card — no sticky-bar chrome (kept
-       distinct from .wk-actions, which pins the workout's finish bar). */
+    /* Plain button row at the foot of a card. */
     .card-actions {
         display: flex;
         gap: 10px;
@@ -1781,15 +1777,20 @@
        of floating in a dark band. Opaque bg + bottom border so rows scroll
        behind it cleanly. */
     .wk-actions {
-        position: sticky;
-        top: 0;
-        z-index: 20;
         display: flex;
         gap: 10px;
         padding-bottom: 14px;
         margin-bottom: 18px;
-        background: var(--bg);
         border-bottom: 1px solid var(--line);
+    }
+
+    .wk-actions--foot {
+        padding-bottom: 0;
+        margin-bottom: 0;
+        padding-top: 14px;
+        margin-top: 18px;
+        border-bottom: none;
+        border-top: 1px solid var(--line);
     }
 
     .wk-actions .btn-ghost,
