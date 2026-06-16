@@ -112,11 +112,15 @@ function composedStartedAt() {
     return startedAt.toISOString()
 }
 
-const newSet = (): SetDraft => ({ reps: 8, weight: undefined, done: true })
+const newSet = (): SetDraft => ({
+    reps: undefined,
+    weight: undefined,
+    done: true,
+})
 
 function addSet(ex: ExerciseDraft) {
     // Copy the last set verbatim — even blank fields — so the new row mirrors
-    // whatever the lifter is mid-typing instead of snapping reps back to 8.
+    // whatever the lifter is mid-typing instead of resetting to a blank set.
     const last = ex.sets.at(-1)
     ex.sets.push(last ? { ...last, done: true } : newSet())
 }
@@ -160,8 +164,8 @@ function confirmSwap() {
 }
 
 // Confirm before dropping an exercise — a stray tap on the X would otherwise
-// wipe all its logged sets with no undo. Reps and done are prefilled defaults,
-// so a typed weight is the only sign of real data: without one, skip the dialog.
+// wipe all its logged sets with no undo. A fresh set starts blank, so any typed
+// reps or weight is real data worth confirming; with none, skip the dialog.
 const removeTarget = ref<{
     entryIndex: number
     exIndex: number
@@ -169,7 +173,7 @@ const removeTarget = ref<{
 }>()
 function promptRemove(entryIndex: number, exIndex: number, name: string) {
     const ex = draft.value[entryIndex]?.exercises[exIndex]
-    if (ex && !ex.sets.some((s) => s.weight != null)) {
+    if (ex && !ex.sets.some((s) => s.weight != null || s.reps != null)) {
         removeExercise(entryIndex, exIndex)
         return
     }
