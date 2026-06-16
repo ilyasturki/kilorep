@@ -362,6 +362,40 @@
         }
     }
 
+    /* Sidebar Start/Continue CTA. Mirrors .btn-primary but stretches full-width
+       and centres to a lone icon when the sidebar is collapsed. */
+    .side-cta-slot {
+        margin-bottom: 16px;
+    }
+
+    .side-cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        width: 100%;
+        padding: 12px 14px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        border: none;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        text-decoration: none;
+        transition:
+            filter 0.15s,
+            transform 0.08s;
+    }
+
+    .side-cta:hover {
+        filter: brightness(1.06);
+    }
+
+    .side-cta:active {
+        transform: scale(0.99);
+    }
+
     .nav {
         display: flex;
         flex-direction: column;

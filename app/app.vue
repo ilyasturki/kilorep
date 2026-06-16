@@ -88,6 +88,13 @@ useHead({
                     </button>
                 </div>
 
+                <div class="side-cta-slot">
+                    <WorkoutStartButton
+                        variant="sidebar"
+                        :collapsed="collapsed"
+                    />
+                </div>
+
                 <nav class="nav">
                     <NuxtLink
                         v-for="link in links"

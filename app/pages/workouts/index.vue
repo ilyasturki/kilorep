@@ -1,14 +1,7 @@
 <script setup lang="ts">
-import type {
-    SessionWithEntries,
-    WorkoutWithEntries,
-} from '~~/server/database/schema'
+import type { WorkoutWithEntries } from '~~/server/database/schema'
 
-const [{ data: workouts, status, refresh }, { data: sessions }] =
-    await Promise.all([
-        useFetch<WorkoutWithEntries[]>('/api/workouts'),
-        useFetch<SessionWithEntries[]>('/api/sessions'),
-    ])
+const { workouts, status, refresh } = useActiveWorkout()
 
 const toast = useToast()
 
@@ -85,33 +78,6 @@ onMounted(() => {
 const dayLabel = (w: WorkoutWithEntries) =>
     now.value ? fmtRelativeDay(w.startedAt, now.value) : fmtDate(w.startedAt)
 
-const sessionSummary = (s: SessionWithEntries) => {
-    const count = s.entries.reduce((n, e) => n + e.exercises.length, 0)
-    return plural(count, 'exercise')
-}
-
-const pickerOpen = ref(false)
-const starting = ref(false)
-
-async function startWorkout(sessionId: number) {
-    starting.value = true
-    try {
-        const workout = await $fetch('/api/workouts', {
-            method: 'POST',
-            body: { sessionId },
-        })
-        pickerOpen.value = false
-        await navigateTo(`/workouts/${workout.id}`)
-    } catch (error: unknown) {
-        toast.add({
-            title: errorMessage(error, 'Could not start the workout'),
-            color: 'error',
-        })
-    } finally {
-        starting.value = false
-    }
-}
-
 const deleteTarget = ref<WorkoutWithEntries | null>(null)
 const deleting = ref(false)
 
@@ -139,17 +105,7 @@ async function confirmDelete() {
 <template>
     <div>
         <div class="mb-5 flex items-end justify-end gap-4">
-            <button
-                type="button"
-                class="btn-primary"
-                @click="pickerOpen = true"
-            >
-                <Icon
-                    name="tabler:plus"
-                    :size="16"
-                />
-                Start workout
-            </button>
+            <WorkoutStartButton variant="page" />
         </div>
 
         <div
@@ -265,43 +221,6 @@ async function confirmDelete() {
                 </div>
             </div>
         </div>
-
-        <!-- Template picker -->
-        <UiModal
-            v-model:open="pickerOpen"
-            title="Start workout"
-            description="Pick a session template to begin tracking."
-        >
-            <div
-                v-if="!sessions?.length"
-                class="empty"
-            >
-                No templates yet.
-                <NuxtLink
-                    to="/sessions"
-                    class="kicker--accent"
-                >
-                    Create a session
-                </NuxtLink>
-                first.
-            </div>
-            <div
-                v-else
-                class="space-y-2"
-            >
-                <button
-                    v-for="s in sessions"
-                    :key="s.id"
-                    type="button"
-                    class="btn-ghost w-full justify-between"
-                    :disabled="starting"
-                    @click="startWorkout(s.id)"
-                >
-                    <span class="font-semibold">{{ s.name }}</span>
-                    <span class="kicker">{{ sessionSummary(s) }}</span>
-                </button>
-            </div>
-        </UiModal>
 
         <!-- Delete workout -->
         <UiModal
