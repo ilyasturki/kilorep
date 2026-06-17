@@ -36,3 +36,8 @@ android/.kotlin
 android/build
 android/*/build
 android/local.properties
+
+# Exercise illustration source rasters: regenerable (Codex + scripts/illustrations/
+# GOAL.md) and large (~240 MB). Only the traced public/illustrations/*.svg ship.
+scripts/illustrations/raw/
+scripts/illustrations/model-sources/

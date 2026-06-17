@@ -65,6 +65,8 @@ const videoUrl = computed(
             Also known as {{ detail.aliases.join(', ') }}
         </p>
 
+        <ExerciseIllustration :name="detail.name" />
+
         <!-- How to -->
         <section class="detail-section">
             <span class="kicker">How to</span>
