@@ -1,20 +1,30 @@
 import { appLocale } from '~/utils/appLocale'
 
 // Day formatting in the active locale (see utils/appLocale.ts), kept in step
-// with the reka DatePicker and number readouts. The optional locale override
-// lets the Settings preview show a not-yet-applied choice.
-export const fmtDate = (d: string | Date, locale = appLocale.value) =>
-    new Date(d).toLocaleDateString(locale, {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    })
+// with the reka DatePicker and number readouts. Constructing a date formatter
+// is costly and these run over lists, so cache one per locale and reuse it.
+const dateFormat = (options: Intl.DateTimeFormatOptions) => {
+    const byLocale = new Map<string | undefined, Intl.DateTimeFormat>()
+    return (locale: string | undefined) => {
+        let fmt = byLocale.get(locale)
+        if (!fmt)
+            byLocale.set(
+                locale,
+                (fmt = new Intl.DateTimeFormat(locale, options)),
+            )
+        return fmt
+    }
+}
 
+// The optional locale override lets the Settings preview show a not-yet-applied
+// choice.
+const fullFmt = dateFormat({ day: 'numeric', month: 'short', year: 'numeric' })
+export const fmtDate = (d: string | Date, locale = appLocale.value) =>
+    fullFmt(locale).format(new Date(d))
+
+const shortFmt = dateFormat({ day: 'numeric', month: 'short' })
 export const fmtDateShort = (d: string | Date) =>
-    new Date(d).toLocaleDateString(appLocale.value, {
-        day: 'numeric',
-        month: 'short',
-    })
+    shortFmt(appLocale.value).format(new Date(d))
 
 // Inverse of toDateInput (shared/utils/date.ts): parse a 'YYYY-MM-DD' day to a Date at LOCAL midnight,
 // so the rendered day always matches the stored day whatever the runtime tz.

@@ -25,9 +25,19 @@ function foldChar(ch: string): string {
     return folded[0] ?? ch
 }
 
+// Item labels and keywords are static while the query changes on every
+// keystroke, so memoize the fold: each distinct string is normalized once and
+// reused across keystrokes (the cache stays small — a catalog of names plus the
+// short queries typed this session).
+const normCache = new Map<string, string>()
+
 function normalize(s: string): string {
-    let out = ''
-    for (let i = 0; i < s.length; i++) out += foldChar(s[i]!)
+    let out = normCache.get(s)
+    if (out === undefined) {
+        out = ''
+        for (let i = 0; i < s.length; i++) out += foldChar(s[i]!)
+        normCache.set(s, out)
+    }
     return out
 }
 
