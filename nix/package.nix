@@ -16,7 +16,8 @@ let
 in
 stdenv.mkDerivation {
   pname = "kilorep";
-  version = "0.0.1";
+  # Single source of truth: track the app version declared in package.json.
+  version = (lib.importJSON ../package.json).version;
 
   inherit src;
 
