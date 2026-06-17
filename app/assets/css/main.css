@@ -1133,7 +1133,9 @@
             padding-right: 0;
         }
 
-        .xtags {
+        /* Scoped to table rows: bare .xtags would leak display:contents to the
+           exercise detail page, where it makes the tag stretch as a flex item. */
+        .xrow .xtags {
             display: contents;
         }
 
@@ -2192,6 +2194,36 @@
     }
 
     /* ===== Exercise detail =============================== */
+    /* Wide screens split the detail into a reference column (illustration,
+       how-to, muscles) and a data column (history, programmed-in); phones keep
+       it a single stacked column. Vertical rhythm comes from .detail-section's
+       own top margin, so the grid only owns the column gap. */
+    .ex-detail-grid {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ex-detail-col {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    @media (min-width: 760px) {
+        .ex-detail-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 0 40px;
+            align-items: start;
+        }
+
+        /* Drop the first section's lead so History tops out level with the
+           illustration instead of 30px lower. */
+        .ex-detail-col > .detail-section:first-child {
+            margin-top: 0;
+        }
+    }
+
     .detail-section {
         margin-top: 30px;
     }

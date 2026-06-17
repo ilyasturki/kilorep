@@ -31,7 +31,6 @@ const { data: svg } = await useAsyncData(
     color: var(--ink-2);
     display: flex;
     justify-content: center;
-    padding: 4px 0 8px;
 }
 
 .exercise-illu :deep(svg) {
