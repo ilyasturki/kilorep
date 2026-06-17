@@ -1,6 +1,7 @@
 // Volume is load × reps summed over sets, with un-entered weights and reps
 // counted as 0 — a cleared NumberField leaves undefined in the draft.
-// Shared by the workout list and detail pages so the definition stays single.
+// Shared by the workout list/detail pages, the dashboard, and the server so the
+// definition stays single across app and API.
 type StatSet = { reps?: number | null; weight?: number | null }
 type StatEntry = { exercises: { sets: StatSet[] }[] }
 
@@ -22,3 +23,8 @@ export function workoutStats(entries: StatEntry[]) {
     }
     return { exercises, sets, volume: Math.round(volume) }
 }
+
+// Epley estimated 1RM: weight × (1 + reps/30). A single rep returns the weight
+// itself, so a 1-rep set never reads as a higher "estimate" than it was.
+export const epley1rm = (weight: number, reps: number) =>
+    weight * (1 + reps / 30)

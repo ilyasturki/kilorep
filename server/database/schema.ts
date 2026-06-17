@@ -398,3 +398,57 @@ export const bodyweight = sqliteTable(
 
 export type Bodyweight = typeof bodyweight.$inferSelect
 export type NewBodyweight = typeof bodyweight.$inferInsert
+
+/** A 7-day rollup behind a dashboard summary card. */
+export type DashboardPeriodStats = {
+    workouts: number
+    sets: number
+    volume: number
+}
+
+/**
+ * The payload of `GET /api/dashboard` — every overview widget pre-computed
+ * server-side so the (client-rendered) page makes one request and never does
+ * clock-relative math at render. Counts all logged workouts, including any in
+ * progress.
+ */
+export type DashboardData = {
+    // Last 7 days against the 7 days before it, for week-over-week deltas.
+    summary: {
+        current: DashboardPeriodStats
+        previous: DashboardPeriodStats
+    }
+    // Eight rolling weekly volume buckets, oldest first. `weekStart` is the
+    // 'YYYY-MM-DD' first day of each window.
+    volumeTrend: { weekStart: string; volume: number }[]
+    // Last 30 days of weigh-ins, plus the current weight (most recent overall,
+    // not window-limited) and the change across the window.
+    bodyweight: {
+        points: { date: string; weight: number }[]
+        current: number | null
+        change: number | null
+    }
+    // Up to five most-trained muscles over the last 7 days.
+    topMuscles: string[]
+    // The three most recent workouts with their rolled-up totals.
+    recentWorkouts: {
+        id: number
+        name: string
+        startedAt: Workout['startedAt']
+        completed: boolean
+        exercises: number
+        sets: number
+        volume: number
+    }[]
+    // Up to five current best estimated-1RM PRs (one per exercise), newest
+    // achievement first.
+    prs: {
+        exerciseId: number
+        name: string
+        est1rm: number
+        weight: number
+        reps: number
+        workoutId: number
+        startedAt: Workout['startedAt']
+    }[]
+}

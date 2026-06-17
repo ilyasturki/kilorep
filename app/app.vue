@@ -22,6 +22,11 @@ const collapsed = useCookie<boolean>('sidebar-collapsed', {
 // Settings only exists for signed-in accounts (token, deletion); a
 // self-hosted instance without auth has nothing to put there.
 const links = computed(() => [
+    {
+        label: 'Dashboard',
+        to: '/dashboard',
+        icon: 'tabler:layout-dashboard',
+    },
     { label: 'Workouts', to: '/workouts', icon: 'tabler:activity' },
     { label: 'Sessions', to: '/sessions', icon: 'tabler:list-check' },
     { label: 'Exercises', to: '/exercises', icon: 'tabler:dumbbell' },

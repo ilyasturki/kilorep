@@ -1,0 +1,259 @@
+<script setup lang="ts">
+import type { DashboardData } from '~~/server/database/schema'
+
+const { data, status } = await useFetch<DashboardData>('/api/dashboard')
+
+// Relative day labels depend on "now"; resolve it after mount so the value is
+// the viewer's own clock (the app renders client-side, but this also keeps the
+// helper's contract — `now` is injected, never read mid-render).
+const now = ref<Date>()
+onMounted(() => {
+    now.value = new Date()
+})
+const dayLabel = (d: DashboardData['recentWorkouts'][number]['startedAt']) =>
+    now.value ? fmtRelativeDay(d, now.value) : fmtDate(d)
+
+// Summary cards: current 7d value with a signed change against the prior 7d.
+type Metric = {
+    key: 'workouts' | 'sets' | 'volume'
+    label: string
+    unit?: string
+}
+const METRICS: Metric[] = [
+    { key: 'workouts', label: 'Workouts' },
+    { key: 'sets', label: 'Sets' },
+    { key: 'volume', label: 'Volume', unit: 'kg' },
+]
+const delta = (m: Metric) => {
+    const s = data.value?.summary
+    if (!s) return null
+    return s.current[m.key] - s.previous[m.key]
+}
+const deltaText = (d: number) => `${d > 0 ? '+' : ''}${fmtVolume(d)}`
+
+const volumePoints = computed(() =>
+    (data.value?.volumeTrend ?? []).map((b) => ({
+        label: fmtDateShort(parseLocalDay(b.weekStart)),
+        value: b.volume,
+    })),
+)
+const hasVolume = computed(() =>
+    (data.value?.volumeTrend ?? []).some((b) => b.volume > 0),
+)
+
+const weightPoints = computed(() =>
+    (data.value?.bodyweight.points ?? []).map((p) => ({
+        x: parseLocalDay(p.date).getTime(),
+        y: p.weight,
+    })),
+)
+</script>
+
+<template>
+    <div
+        v-if="status === 'pending' && !data"
+        class="empty"
+    >
+        Loading…
+    </div>
+
+    <div v-else-if="data">
+        <!-- 7-day summary with week-over-week deltas -->
+        <div class="dash-stats mb-6">
+            <div
+                v-for="m in METRICS"
+                :key="m.key"
+                class="card dash-stat"
+            >
+                <span class="stat-lab">{{ m.label }} · 7D</span>
+                <span class="stat-num mono">
+                    {{ fmtVolume(data.summary.current[m.key]) }}
+                    <span
+                        v-if="m.unit"
+                        class="dash-unit"
+                        >{{ m.unit }}</span
+                    >
+                </span>
+                <span
+                    v-if="delta(m) !== null"
+                    class="dash-delta mono"
+                    :class="{
+                        'dash-delta--up': delta(m)! > 0,
+                        'dash-delta--down': delta(m)! < 0,
+                    }"
+                >
+                    {{ delta(m) === 0 ? 'No change' : deltaText(delta(m)!) }}
+                    <span v-if="delta(m) !== 0">vs prev 7d</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="dash-grid">
+            <!-- Volume trend (headline, full width) -->
+            <div class="card dash-span">
+                <div class="card-head mb-4">
+                    <span class="kicker">Volume · last 8 weeks</span>
+                </div>
+                <div class="wchart">
+                    <ClientOnly v-if="hasVolume">
+                        <VolumeChart :points="volumePoints" />
+                        <template #fallback>
+                            <div class="wchart-loading" />
+                        </template>
+                    </ClientOnly>
+                    <div
+                        v-else
+                        class="wchart-empty"
+                    >
+                        No volume logged in the last 8 weeks.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bodyweight, last 30 days -->
+            <div class="card">
+                <div class="card-head mb-4">
+                    <span class="kicker">Bodyweight · last 30 days</span>
+                </div>
+                <template v-if="data.bodyweight.points.length">
+                    <div class="dash-bw-stats">
+                        <div class="dash-bw-stat">
+                            <span class="stat-num mono">{{
+                                data.bodyweight.current != null ?
+                                    fmtFixed2(data.bodyweight.current)
+                                :   '—'
+                            }}</span>
+                            <span class="stat-lab">Current · kg</span>
+                        </div>
+                        <div class="dash-bw-stat">
+                            <span class="stat-num mono">{{
+                                data.bodyweight.change == null ?
+                                    '—'
+                                :   fmtSigned2(data.bodyweight.change)
+                            }}</span>
+                            <span class="stat-lab">Change · 30d</span>
+                        </div>
+                    </div>
+                    <div class="wchart wchart--sm">
+                        <ClientOnly>
+                            <WeightChart
+                                :points="weightPoints"
+                                time-unit="day"
+                            />
+                            <template #fallback>
+                                <div class="wchart-loading" />
+                            </template>
+                        </ClientOnly>
+                    </div>
+                </template>
+                <div
+                    v-else
+                    class="dash-empty"
+                >
+                    No weigh-ins in the last 30 days.
+                </div>
+            </div>
+
+            <!-- Muscles trained, last 7 days -->
+            <div class="card">
+                <div class="card-head mb-4">
+                    <span class="kicker">Muscles · last 7 days</span>
+                </div>
+                <TopMuscles
+                    v-if="data.topMuscles.length"
+                    :muscles="data.topMuscles"
+                />
+                <div
+                    v-else
+                    class="dash-empty"
+                >
+                    Train something this week to see muscle coverage.
+                </div>
+            </div>
+
+            <!-- Recent workouts -->
+            <div class="card">
+                <div class="card-head mb-4">
+                    <span class="kicker">Recent workouts</span>
+                    <NuxtLink
+                        to="/workouts"
+                        class="dash-more"
+                        >All</NuxtLink
+                    >
+                </div>
+                <div
+                    v-if="data.recentWorkouts.length"
+                    class="dash-list"
+                >
+                    <NuxtLink
+                        v-for="w in data.recentWorkouts"
+                        :key="w.id"
+                        :to="`/workouts/${w.id}`"
+                        class="dash-row"
+                    >
+                        <div class="dash-row-main">
+                            <span class="dash-row-name">{{ w.name }}</span>
+                            <span class="dash-row-sub">
+                                {{ plural(w.exercises, 'exercise') }} ·
+                                {{ plural(w.sets, 'set') }} ·
+                                {{ fmtVolume(w.volume) }} kg
+                            </span>
+                        </div>
+                        <span
+                            class="tag"
+                            :class="{ 'tag--accent': !w.completed }"
+                        >
+                            {{
+                                w.completed ?
+                                    dayLabel(w.startedAt)
+                                :   'In progress'
+                            }}
+                        </span>
+                    </NuxtLink>
+                </div>
+                <div
+                    v-else
+                    class="dash-empty"
+                >
+                    No workouts yet. Start one from a session template.
+                </div>
+            </div>
+
+            <!-- Personal records -->
+            <div class="card">
+                <div class="card-head mb-4">
+                    <span class="kicker">Personal records</span>
+                </div>
+                <div
+                    v-if="data.prs.length"
+                    class="dash-list"
+                >
+                    <NuxtLink
+                        v-for="pr in data.prs"
+                        :key="pr.exerciseId"
+                        :to="`/exercises/${pr.exerciseId}`"
+                        class="dash-row"
+                    >
+                        <div class="dash-row-main">
+                            <span class="dash-row-name">{{ pr.name }}</span>
+                            <span class="dash-row-sub">
+                                {{ fmtWeight(pr.weight) }} kg × {{ pr.reps }} ·
+                                {{ dayLabel(pr.startedAt) }}
+                            </span>
+                        </div>
+                        <span class="dash-pr-est mono">
+                            {{ fmtWeight(pr.est1rm) }}
+                            <span class="dash-pr-unit">kg est.</span>
+                        </span>
+                    </NuxtLink>
+                </div>
+                <div
+                    v-else
+                    class="dash-empty"
+                >
+                    Log some sets to start setting records.
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
