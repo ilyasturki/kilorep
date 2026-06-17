@@ -54,3 +54,30 @@ jobs:
 
             - name: Assemble debug APK
               run: ./gradlew :app:assembleDebug
+
+    nix:
+        runs-on: ubuntu-latest
+        # A stale nix/bun.nix makes the sandboxed `bun install` hang on doomed
+        # network retries instead of failing; the timeout turns that (or any
+        # other build stall) into a red check rather than a stuck job.
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v4
+            - uses: cachix/install-nix-action@v31
+              with:
+                  extra_nix_config: |
+                      experimental-features = nix-command flakes
+                      extra-substituters = https://nix-community.cachix.org
+                      extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+
+            # bun.lock can change without nix/bun.nix being regenerated; in the
+            # sandboxed build that drift hangs on the missing packages. Regenerate
+            # and diff so the drift is caught here with a clear fix, not at deploy.
+            - name: nix/bun.nix is in sync with bun.lock
+              run: |
+                  nix run github:nix-community/bun2nix/2.1.0 -- -o nix/bun.nix
+                  git diff --exit-code nix/bun.nix \
+                    || { echo "::error::nix/bun.nix is stale — run 'nix run github:nix-community/bun2nix/2.1.0 -- -o nix/bun.nix' and commit the result"; exit 1; }
+
+            - name: Build the server package
+              run: nix build .#kilorep -L
