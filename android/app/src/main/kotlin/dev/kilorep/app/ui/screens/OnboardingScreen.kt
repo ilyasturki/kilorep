@@ -71,6 +71,16 @@ fun OnboardingScreen(viewModel: OnboardingViewModel) {
             )
 
             when (val current = step) {
+                OnboardingStep.Probing -> {
+                    Kicker("Connecting")
+                    Text(
+                        "Reaching ${OnboardingViewModel.DEFAULT_SERVER}…",
+                        style = LiftType.secondary,
+                        color = colors.ink2,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+
                 OnboardingStep.Server, OnboardingStep.Done -> {
                     Kicker("Your server")
                     LiftTextField(
@@ -148,7 +158,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel) {
                         height = 52.dp,
                     )
                     GhostButton(
-                        "Back",
+                        "Use a different server",
                         onClick = viewModel::backToServer,
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                     )

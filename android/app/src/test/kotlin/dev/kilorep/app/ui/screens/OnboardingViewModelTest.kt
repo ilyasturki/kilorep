@@ -41,6 +41,22 @@ class OnboardingViewModelTest {
                 files = JsonStore(Files.createTempDirectory("kilorep-test").toFile()),
                 onDirtyDrafts = {},
             ),
+            // These cases drive probe() explicitly; the auto-probe is its own test.
+            defaultServer = null,
+        )
+    }
+
+    private fun freshInstall(defaultServer: String): OnboardingViewModel {
+        val backend = Backend(settings, onAuthRejected = {})
+        return OnboardingViewModel(
+            settings,
+            backend,
+            Repo(
+                backend = backend,
+                files = JsonStore(Files.createTempDirectory("kilorep-test").toFile()),
+                onDirtyDrafts = {},
+            ),
+            defaultServer = defaultServer,
         )
     }
 
@@ -112,6 +128,35 @@ class OnboardingViewModelTest {
         awaitUntil("onboarding completes") { viewModel.step.value == OnboardingStep.Done }
         assertEquals("kr_minted", settings.current.deviceToken)
         assertTrue(settings.current.ready)
+    }
+
+    @Test
+    fun `fresh install auto-probes the default and lands on sign-in`() {
+        server.enqueue(
+            MockResponse()
+                .setBody("""{"authEnabled":true,"googleClientId":"abc.apps.example"}""")
+                .setHeader("Content-Type", "application/json"),
+        )
+
+        val auto = freshInstall(defaultServer = baseUrl())
+
+        awaitUntil("sign-in step reached") { auto.step.value is OnboardingStep.SignIn }
+        val step = assertIs<OnboardingStep.SignIn>(auto.step.value)
+        assertEquals(baseUrl(), step.serverUrl)
+        assertEquals("abc.apps.example", step.googleClientId)
+    }
+
+    @Test
+    fun `failed auto-probe falls back to manual entry`() {
+        val url = baseUrl()
+        server.shutdown()
+
+        val auto = freshInstall(defaultServer = url)
+
+        awaitUntil("error surfaces") { auto.error.value != null }
+        assertEquals(OnboardingStep.Server, auto.step.value)
+        // Pre-filled so the user can retry or point elsewhere.
+        assertEquals(url, auto.initialUrl)
     }
 
     @Test

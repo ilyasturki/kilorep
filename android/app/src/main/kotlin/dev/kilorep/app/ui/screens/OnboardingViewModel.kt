@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 sealed interface OnboardingStep {
+    /** Auto-probing the default instance on a fresh install. */
+    data object Probing : OnboardingStep
+
     /** Enter (or correct) the instance URL. */
     data object Server : OnboardingStep
 
@@ -33,14 +36,25 @@ class OnboardingViewModel(
     private val settings: Settings,
     private val backend: Backend,
     private val repo: Repo,
+    private val defaultServer: String? = DEFAULT_SERVER,
 ) : ViewModel() {
 
     val step = MutableStateFlow<OnboardingStep>(OnboardingStep.Server)
     val busy = MutableStateFlow(false)
     val error = MutableStateFlow<String?>(null)
 
-    /** Pre-filled when re-onboarding after a revoked token. */
-    val initialUrl: String get() = settings.current.serverUrl ?: ""
+    /** Pre-filled when re-onboarding, or to retry/self-host after auto-probe. */
+    val initialUrl: String get() = settings.current.serverUrl ?: defaultServer ?: ""
+
+    init {
+        // Fresh install: skip straight to the hosted instance. Self-hosters
+        // reach the manual entry from "Use a different server" on sign-in,
+        // and a failed probe falls back there on its own.
+        if (settings.current.serverUrl == null && defaultServer != null) {
+            step.value = OnboardingStep.Probing
+            probe(defaultServer)
+        }
+    }
 
     fun probe(rawUrl: String) {
         val url = normalize(rawUrl) ?: run {
@@ -58,6 +72,7 @@ class OnboardingViewModel(
                     val clientId = mode.googleClientId
                     if (clientId == null) {
                         error.value = "Server reports auth without a Google client id"
+                        step.value = OnboardingStep.Server
                     } else {
                         step.value = OnboardingStep.SignIn(url, clientId)
                     }
@@ -67,6 +82,7 @@ class OnboardingViewModel(
                 throw e
             } catch (e: Exception) {
                 error.value = "Could not reach the server (${e.userMessage()})"
+                step.value = OnboardingStep.Server
             } finally {
                 busy.value = false
             }
@@ -126,5 +142,10 @@ class OnboardingViewModel(
         } else {
             "https://$trimmed"
         }
+    }
+
+    companion object {
+        /** The hosted instance every fresh install points at by default. */
+        const val DEFAULT_SERVER = "kilorep.com"
     }
 }
