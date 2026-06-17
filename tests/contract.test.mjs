@@ -285,6 +285,16 @@ await call('/api/bodyweight/{id}', {
     url: `/api/bodyweight/${weighIn.id}`,
 })
 
+// ── Account preferences ─────────────────────────────────────────────────────
+await call('/api/account/preferences')
+await call('/api/account/preferences', {
+    method: 'patch',
+    body: { locale: 'en-GB' },
+})
+
+// ── Dashboard ───────────────────────────────────────────────────────────────
+await call('/api/dashboard')
+
 // ── Delete success paths: a throwaway session + exercise ───────────────────
 const throwawayEx = await call('/api/exercises', {
     method: 'post',

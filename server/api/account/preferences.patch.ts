@@ -1,5 +1,45 @@
 import { isSupportedLocale } from '~~/shared/locales'
 
+defineRouteMeta({
+    openAPI: {
+        operationId: 'updateAccountPreferences',
+        tags: ['account'],
+        summary: 'Update the display preferences',
+        requestBody: {
+            required: true,
+            content: {
+                'application/json': {
+                    schema: {
+                        $ref: '#/components/schemas/AccountPreferences',
+                    },
+                },
+            },
+        },
+        responses: {
+            '200': {
+                description: 'The updated display preferences.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/AccountPreferences',
+                        },
+                    },
+                },
+            },
+            '400': {
+                description: 'Unsupported locale tag.',
+                content: {
+                    'application/json': {
+                        schema: {
+                            $ref: '#/components/schemas/ApiError',
+                        },
+                    },
+                },
+            },
+        },
+    },
+})
+
 export default defineEventHandler(async (event) => {
     const userId = requireUserId(event)
     const body = (await readBody<Record<string, unknown>>(event)) ?? {}

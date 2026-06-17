@@ -69,6 +69,16 @@
                 "label": { "type": "string", "minLength": 1, "maxLength": 60 }
             }
         },
+        "AccountPreferences": {
+            "type": "object",
+            "required": ["locale"],
+            "properties": {
+                "locale": {
+                    "type": ["string", "null"],
+                    "description": "BCP-47 tag handed to Intl and reka for number/date formatting (fr-FR, en-FR, en-US, en-GB, de-DE), or null to follow the device locale. Validated server-side against the supported set."
+                }
+            }
+        },
         "MuscleTarget": {
             "type": "object",
             "required": ["muscle", "intensity"],

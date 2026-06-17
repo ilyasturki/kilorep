@@ -2,7 +2,7 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Kilorep API",
-        "version": "0.0.5",
+        "version": "0.0.6",
         "description": "Workout session manager and weight tracker. Sessions prescribe the plan; workouts record what actually happened in the gym."
     },
     "paths": {
@@ -34,6 +34,64 @@
                 },
                 "operationId": "deleteAccount",
                 "summary": "Delete the account with everything it owns"
+            }
+        },
+        "/api/account/preferences": {
+            "get": {
+                "tags": ["account"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The current display preferences.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountPreferences"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "getAccountPreferences",
+                "summary": "Read the display preferences"
+            },
+            "patch": {
+                "tags": ["account"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The updated display preferences.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccountPreferences"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Unsupported locale tag.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "updateAccountPreferences",
+                "summary": "Update the display preferences",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AccountPreferences"
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/account/tokens": {
@@ -462,6 +520,26 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/dashboard": {
+            "get": {
+                "tags": ["dashboard"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Last-7-day summary with week-over-week deltas, an 8-week volume trend, a 30-day bodyweight window, top muscles, recent workouts and estimated-1RM PRs.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "getDashboard",
+                "summary": "Pre-computed training overview for the dashboard page"
             }
         },
         "/api/exercises": {
@@ -1313,6 +1391,16 @@
                     }
                 }
             },
+            "AccountPreferences": {
+                "type": "object",
+                "required": ["locale"],
+                "properties": {
+                    "locale": {
+                        "type": ["string", "null"],
+                        "description": "BCP-47 tag handed to Intl and reka for number/date formatting (fr-FR, en-FR, en-US, en-GB, de-DE), or null to follow the device locale. Validated server-side against the supported set."
+                    }
+                }
+            },
             "MuscleTarget": {
                 "type": "object",
                 "required": ["muscle", "intensity"],
@@ -1947,10 +2035,46 @@
                     }
                 }
             },
+            "TemplateChange": {
+                "type": "object",
+                "description": "One way a workout's tree differs from its template, keyed by exercise so a client can render names from its catalog. 'sets'/'reps' carry the workout's value plus the template's ('was'); 'reordered' is a catch-all order/grouping change. 'reps' deltas are observational — an Update keeps the template's prescribed reps.",
+                "required": ["kind"],
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "added",
+                            "removed",
+                            "sets",
+                            "reps",
+                            "reordered"
+                        ]
+                    },
+                    "exerciseId": {
+                        "type": "integer"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Set count on the workout side (kind 'sets')."
+                    },
+                    "was": {
+                        "type": ["integer", "null"],
+                        "description": "Template's set count (kind 'sets') or prescribed reps (kind 'reps', null when open)."
+                    },
+                    "setIndex": {
+                        "type": "integer",
+                        "description": "Zero-based set position (kind 'reps')."
+                    },
+                    "reps": {
+                        "type": ["integer", "null"],
+                        "description": "Workout's reps at that set (kind 'reps', null when open)."
+                    }
+                }
+            },
             "TemplateStatus": {
                 "type": "object",
-                "description": "A workout's link to its source template, plus whether the workout's structure has diverged from it — gates the sync-back affordance.",
-                "required": ["id", "name", "diverged"],
+                "description": "A workout's link to its source template: identity, whether its structure has diverged (gates the sync-back affordance), and the itemised changes for the diff view. 'changes' may include rep deltas even when 'diverged' is false, since reps alone never count as structural drift.",
+                "required": ["id", "name", "diverged", "changes"],
                 "properties": {
                     "id": {
                         "type": "integer"
@@ -1960,6 +2084,12 @@
                     },
                     "diverged": {
                         "type": "boolean"
+                    },
+                    "changes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TemplateChange"
+                        }
                     }
                 }
             },
