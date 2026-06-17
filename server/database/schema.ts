@@ -303,15 +303,40 @@ export type WorkoutWithEntries = Workout & {
 }
 
 /**
+ * One way a workout's tree differs from its template, keyed by exercise so the
+ * client can render names from its catalog. `sets`/`reps` carry the workout's
+ * value plus the template's (`was`) for a "now (was)" readout; `reordered` is a
+ * catch-all for an order/superset-grouping change that moved no exercise in or
+ * out. Rep deltas are observational — `Update` keeps the template's existing
+ * prescriptions, so a rep change shown here is not what syncing back applies.
+ */
+export type TemplateChange =
+    | { kind: 'added'; exerciseId: number }
+    | { kind: 'removed'; exerciseId: number }
+    | { kind: 'sets'; exerciseId: number; count: number; was: number }
+    | {
+          kind: 'reps'
+          exerciseId: number
+          setIndex: number
+          reps: number | null
+          was: number | null
+      }
+    | { kind: 'reordered' }
+
+/**
  * A workout's link to its source template: null when no template survives
- * (deleted since), otherwise the template's identity plus whether the
- * workout's structure has drifted from it. Recomputed on every workout
- * read/write so the sync-back affordance tracks the saved tree.
+ * (deleted since), otherwise the template's identity, whether the workout's
+ * structure has drifted from it, and the itemised changes for the diff view.
+ * Recomputed on every workout read/write so the sync-back affordance tracks the
+ * saved tree. `changes` may include rep deltas even when `diverged` is false
+ * (reps alone never count as structural drift), so the strip stays gated on
+ * `diverged` while the modal lists everything.
  */
 export type WorkoutTemplateStatus = {
     id: number
     name: string
     diverged: boolean
+    changes: TemplateChange[]
 } | null
 
 /** The payload of `GET /api/workouts/:id` — the tree plus template status. */

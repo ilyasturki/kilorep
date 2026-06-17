@@ -1837,6 +1837,57 @@
         color: var(--ink-2);
     }
 
+    .wk-sync-text--btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .wk-sync-text--btn:hover {
+        color: var(--ink);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    /* Itemised workout-vs-template diff inside its modal */
+    .wk-diff {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    .wk-diff-row {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        color: var(--ink);
+    }
+
+    .wk-diff-sign {
+        flex: none;
+        width: 1ch;
+        font-weight: 800;
+        color: var(--ink-3);
+    }
+
+    .wk-diff-row--add .wk-diff-sign {
+        color: var(--accent-text);
+    }
+
+    .wk-diff-row--remove .wk-diff-sign {
+        color: #e5484d;
+    }
+
+    .wk-diff-note {
+        margin-top: 14px;
+        color: var(--ink-3);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
     /* ===== reka-ui DatePicker =========================== */
     /* Editable workout date — segmented field + popover calendar */
     .datepicker-field {

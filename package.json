@@ -18,7 +18,7 @@
         "openapi:export": "node scripts/export-openapi.mjs && prettier --write --log-level warn openapi/kilorep.json",
         "test:isolation": "node tests/isolation.test.mjs",
         "test:contract": "node tests/contract.test.mjs",
-        "test:unit": "bun test tests/workoutStats.test.ts",
+        "test:unit": "bun test tests/workoutStats.test.ts tests/templateDiff.test.ts",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:push": "drizzle-kit push",

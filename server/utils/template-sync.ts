@@ -1,4 +1,7 @@
-import type { WorkoutTemplateStatus } from '~~/server/database/schema'
+import type {
+    TemplateChange,
+    WorkoutTemplateStatus,
+} from '~~/server/database/schema'
 import type { ParsedSession } from '~~/server/utils/sessions'
 
 // The structural skeleton both trees share: entry grouping/order, the
@@ -35,12 +38,87 @@ export function structuresDiffer(
     })
 }
 
+type StructureExercise = StructureEntry['exercises'][number]
+
+const flattenExercises = (entries: StructureEntry[]): StructureExercise[] =>
+    entries.flatMap((entry) => entry.exercises)
+
+/**
+ * Itemises how a workout's tree differs from its template, for the diff view.
+ * Exercises are matched by id, FIFO, exactly as `workoutToSessionEntries`
+ * claims them, so added/removed/kept mirror what an Update reconciles. Kept
+ * exercises also report set-count and per-set rep-target deltas. A pure reorder
+ * or superset regrouping moves nothing in or out, so it surfaces as a single
+ * `reordered` note rather than a wall of phantom add/remove pairs.
+ */
+export function diffWorkoutFromTemplate(
+    workout: StructureEntry[],
+    template: StructureEntry[],
+): TemplateChange[] {
+    const changes: TemplateChange[] = []
+
+    const unclaimed = new Map<number, StructureExercise[]>()
+    for (const ex of flattenExercises(template)) {
+        const queue = unclaimed.get(ex.exerciseId) ?? []
+        queue.push(ex)
+        unclaimed.set(ex.exerciseId, queue)
+    }
+
+    let structural = false
+    for (const ex of flattenExercises(workout)) {
+        const prescribed = unclaimed.get(ex.exerciseId)?.shift()
+        if (!prescribed) {
+            changes.push({ kind: 'added', exerciseId: ex.exerciseId })
+            structural = true
+            continue
+        }
+        if (ex.sets.length !== prescribed.sets.length) {
+            changes.push({
+                kind: 'sets',
+                exerciseId: ex.exerciseId,
+                count: ex.sets.length,
+                was: prescribed.sets.length,
+            })
+            structural = true
+        }
+        const overlap = Math.min(ex.sets.length, prescribed.sets.length)
+        for (let i = 0; i < overlap; i++) {
+            const reps = ex.sets[i]!.reps
+            const was = prescribed.sets[i]!.reps
+            if (reps !== was) {
+                changes.push({
+                    kind: 'reps',
+                    exerciseId: ex.exerciseId,
+                    setIndex: i,
+                    reps,
+                    was,
+                })
+            }
+        }
+    }
+
+    for (const queue of unclaimed.values()) {
+        for (const ex of queue) {
+            changes.push({ kind: 'removed', exerciseId: ex.exerciseId })
+            structural = true
+        }
+    }
+
+    if (!structural && structuresDiffer(workout, template)) {
+        changes.push({ kind: 'reordered' })
+    }
+
+    return changes
+}
+
 /**
  * Resolves a workout's template link for the API: null when the template is
- * gone, otherwise its identity plus the structural diff. There is no
- * copy-time snapshot of the template, so the comparison is always against its
- * current state — a template edited mid-workout reads as divergence too,
- * which is the honest answer either way.
+ * gone, otherwise its identity plus the itemised diff. There is no copy-time
+ * snapshot of the template, so the comparison is always against its current
+ * state — a template edited mid-workout reads as divergence too, which is the
+ * honest answer either way. `diverged` (which gates the strip) is true iff a
+ * structural change exists: every change kind but `reps` is structural, so a
+ * rep-only delta leaves the list non-empty while the strip stays hidden.
  */
 export function workoutTemplateStatus(
     userId: number,
@@ -50,10 +128,12 @@ export function workoutTemplateStatus(
     if (sessionId == null) return null
     const session = loadSessionTrees(userId, [sessionId])[0]
     if (!session) return null
+    const changes = diffWorkoutFromTemplate(entries, session.entries)
     return {
         id: session.id,
         name: session.name,
-        diverged: structuresDiffer(entries, session.entries),
+        diverged: changes.some((change) => change.kind !== 'reps'),
+        changes,
     }
 }
 

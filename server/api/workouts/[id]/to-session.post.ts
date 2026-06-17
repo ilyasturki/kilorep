@@ -106,7 +106,12 @@ export default defineEventHandler(
                     source.entries,
                 ),
             })
-            return { id: updated.id, name: updated.name, diverged: false }
+            return {
+                id: updated.id,
+                name: updated.name,
+                diverged: false,
+                changes: [],
+            }
         }
 
         const name = body?.name?.trim()
@@ -127,6 +132,11 @@ export default defineEventHandler(
                 .run()
             return session
         })
-        return { id: created.id, name: created.name, diverged: false }
+        return {
+            id: created.id,
+            name: created.name,
+            diverged: false,
+            changes: [],
+        }
     },
 )

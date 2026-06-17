@@ -383,6 +383,55 @@ async function reopen() {
 const updateOpen = ref(false)
 const createOpen = ref(false)
 const createName = ref('')
+const diffOpen = ref(false)
+
+// Render the server's itemised diff. Names come from the catalog (the change
+// list is keyed by id), so a removed exercise no longer in the draft still
+// resolves; an open rep target (null) reads as "open" rather than a blank.
+type DiffRow = { sign: string; tone: 'add' | 'remove' | 'edit'; text: string }
+const diffItems = computed<DiffRow[]>(() => {
+    const name = (exId: number) => exerciseById(exId)?.name ?? 'Exercise'
+    const reps = (r: number | null) => (r == null ? 'open' : String(r))
+    return (template.value?.changes ?? []).map((change): DiffRow => {
+        switch (change.kind) {
+            case 'added':
+                return {
+                    sign: '+',
+                    tone: 'add',
+                    text: `Added ${name(change.exerciseId)}`,
+                }
+            case 'removed':
+                return {
+                    sign: '−',
+                    tone: 'remove',
+                    text: `Removed ${name(change.exerciseId)}`,
+                }
+            case 'sets':
+                return {
+                    sign: '~',
+                    tone: 'edit',
+                    text: `${name(change.exerciseId)} · ${plural(change.count, 'set')} (was ${change.was})`,
+                }
+            case 'reps':
+                return {
+                    sign: '~',
+                    tone: 'edit',
+                    text: `${name(change.exerciseId)} set ${change.setIndex + 1} · ${reps(change.reps)} reps (was ${reps(change.was)})`,
+                }
+            case 'reordered':
+                return {
+                    sign: '~',
+                    tone: 'edit',
+                    text: 'Reordered or regrouped exercises',
+                }
+        }
+    })
+})
+// Rep deltas are observational — Update keeps the template's prescriptions — so
+// only footnote that when a rep row is actually on screen.
+const hasRepDiff = computed(() =>
+    (template.value?.changes ?? []).some((change) => change.kind === 'reps'),
+)
 
 function openCreate() {
     createName.value =
@@ -499,12 +548,23 @@ async function changeDate() {
                     name="tabler:git-fork"
                     :size="14"
                 />
-                <span class="wk-sync-text">
-                    {{
-                        template ?
-                            `Differs from ${template.name}`
-                        :   'Not saved as a session'
-                    }}
+                <button
+                    v-if="template"
+                    type="button"
+                    class="wk-sync-text wk-sync-text--btn"
+                    @click="diffOpen = true"
+                >
+                    Differs from {{ template.name }}
+                    <Icon
+                        name="tabler:chevron-right"
+                        :size="13"
+                    />
+                </button>
+                <span
+                    v-else
+                    class="wk-sync-text"
+                >
+                    Not saved as a session
                 </span>
                 <button
                     v-if="template"
@@ -990,6 +1050,41 @@ async function changeDate() {
                         :size="16"
                     />
                     Remove
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- What differs from the template -->
+        <UiModal
+            v-model:open="diffOpen"
+            :title="`Differs from ${template?.name ?? 'session'}`"
+            description="How this workout differs from the session."
+        >
+            <ul class="wk-diff">
+                <li
+                    v-for="(row, i) in diffItems"
+                    :key="i"
+                    class="wk-diff-row"
+                    :class="`wk-diff-row--${row.tone}`"
+                >
+                    <span class="wk-diff-sign mono">{{ row.sign }}</span>
+                    <span>{{ row.text }}</span>
+                </li>
+            </ul>
+            <p
+                v-if="hasRepDiff"
+                class="wk-diff-note"
+            >
+                Reps shown are this workout's. Updating the session keeps its
+                prescribed reps and syncs the structure only.
+            </p>
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="diffOpen = false"
+                >
+                    Close
                 </button>
             </template>
         </UiModal>

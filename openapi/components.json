@@ -523,14 +523,46 @@
                 }
             }
         },
+        "TemplateChange": {
+            "type": "object",
+            "description": "One way a workout's tree differs from its template, keyed by exercise so a client can render names from its catalog. 'sets'/'reps' carry the workout's value plus the template's ('was'); 'reordered' is a catch-all order/grouping change. 'reps' deltas are observational — an Update keeps the template's prescribed reps.",
+            "required": ["kind"],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": ["added", "removed", "sets", "reps", "reordered"]
+                },
+                "exerciseId": { "type": "integer" },
+                "count": {
+                    "type": "integer",
+                    "description": "Set count on the workout side (kind 'sets')."
+                },
+                "was": {
+                    "type": ["integer", "null"],
+                    "description": "Template's set count (kind 'sets') or prescribed reps (kind 'reps', null when open)."
+                },
+                "setIndex": {
+                    "type": "integer",
+                    "description": "Zero-based set position (kind 'reps')."
+                },
+                "reps": {
+                    "type": ["integer", "null"],
+                    "description": "Workout's reps at that set (kind 'reps', null when open)."
+                }
+            }
+        },
         "TemplateStatus": {
             "type": "object",
-            "description": "A workout's link to its source template, plus whether the workout's structure has diverged from it — gates the sync-back affordance.",
-            "required": ["id", "name", "diverged"],
+            "description": "A workout's link to its source template: identity, whether its structure has diverged (gates the sync-back affordance), and the itemised changes for the diff view. 'changes' may include rep deltas even when 'diverged' is false, since reps alone never count as structural drift.",
+            "required": ["id", "name", "diverged", "changes"],
             "properties": {
                 "id": { "type": "integer" },
                 "name": { "type": "string" },
-                "diverged": { "type": "boolean" }
+                "diverged": { "type": "boolean" },
+                "changes": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/TemplateChange" }
+                }
             }
         },
         "WorkoutDetail": {
