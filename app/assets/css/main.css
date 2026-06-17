@@ -1799,10 +1799,19 @@
        behind it cleanly. */
     .wk-actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         padding-bottom: 14px;
         margin-bottom: 18px;
         border-bottom: 1px solid var(--line);
+    }
+
+    /* Full-width row under the buttons explaining why Resume is disabled. */
+    .wk-actions-hint {
+        flex-basis: 100%;
+        margin: 0;
+        color: var(--ink-3);
+        font-size: 12px;
     }
 
     .wk-actions--foot {

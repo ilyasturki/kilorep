@@ -41,9 +41,19 @@ const draft = ref<EntryDraft[]>(
     })),
 )
 
-// Edit when the workout is unfinished; review (read-only) once completed, until
-// the lifter reopens it.
-const editing = ref(!workout.value?.completed)
+// `completed` is the persisted status; `editing` is a pure view↔edit toggle,
+// independent of it. A finished workout opens read-only and Edit flips `editing`
+// without un-completing it, so editing never re-activates the workout.
+const completed = ref(!!workout.value?.completed)
+const editing = ref(!completed.value)
+
+const { active, refresh: refreshActiveWorkout } = useActiveWorkout()
+
+// Resuming re-opens this workout while another is already in progress, breaking
+// the single-active convention the Start CTA leans on. Block it then.
+const resumeBlocked = computed(
+    () => active.value != null && active.value.id !== id,
+)
 
 // The template link drives the sync-back strip. PUT responses refresh it, so
 // the offer tracks the last autosaved tree (~1s behind the draft), never a
@@ -64,8 +74,8 @@ usePageHeader(() => {
     return {
         title: workout.value.name,
         tag: {
-            label: editing.value ? 'In progress' : 'Completed',
-            accent: editing.value,
+            label: completed.value ? 'Completed' : 'In progress',
+            accent: !completed.value,
         },
         back: '/workouts',
     }
@@ -278,12 +288,12 @@ const saving = ref(false)
 
 // Persist the whole workout and sync the returned row back, so the date stat
 // reflects any day shift the server applied.
-async function persist(completed: boolean, opts?: { keepalive?: boolean }) {
+async function persist(nextCompleted: boolean, opts?: { keepalive?: boolean }) {
     const updated = await $fetch<Workout & { template: WorkoutTemplateStatus }>(
         `/api/workouts/${id}`,
         {
             method: 'PUT',
-            body: buildBody(completed),
+            body: buildBody(nextCompleted),
             keepalive: opts?.keepalive,
         },
     )
@@ -292,6 +302,7 @@ async function persist(completed: boolean, opts?: { keepalive?: boolean }) {
         workout.value.completed = updated.completed
         dateValue.value = toDateInput(updated.startedAt)
     }
+    completed.value = updated.completed
     template.value = updated.template
     return updated
 }
@@ -306,8 +317,9 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
 }
 
 // Auto-save replaces the old save button: edits persist on their own ~1s after
-// they settle, silently. Explicit actions (finish/reopen/date) cancel a pending
-// save and supersede it; only errors surface, as a toast.
+// they settle, silently, preserving the current completed status. Explicit
+// actions (finish/resume/date) cancel a pending save and supersede it; only
+// errors surface, as a toast.
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 function cancelSave() {
     clearTimeout(saveTimer)
@@ -317,7 +329,7 @@ function scheduleSave() {
     clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
         saveTimer = undefined
-        enqueue(() => persist(false)).catch((error: unknown) => {
+        enqueue(() => persist(completed.value)).catch((error: unknown) => {
             toast.add({
                 title: errorMessage(error, 'Could not save the workout'),
                 color: 'error',
@@ -338,12 +350,12 @@ watch(
 onBeforeRouteLeave(async () => {
     if (!saveTimer) return
     cancelSave()
-    await enqueue(() => persist(false)).catch(() => {})
+    await enqueue(() => persist(completed.value)).catch(() => {})
 })
 useEventListener('beforeunload', () => {
     if (!saveTimer) return
     // keepalive lets the flush outlive the page on a hard close/refresh.
-    persist(false, { keepalive: true }).catch(() => {})
+    persist(completed.value, { keepalive: true }).catch(() => {})
 })
 
 async function finish() {
@@ -351,6 +363,7 @@ async function finish() {
     saving.value = true
     try {
         await enqueue(() => persist(true))
+        await refreshActiveWorkout()
         toast.add({ title: 'Workout finished', color: 'success' })
         await navigateTo('/workouts')
     } catch (error: unknown) {
@@ -363,16 +376,23 @@ async function finish() {
     }
 }
 
-async function reopen() {
+const resumeOpen = ref(false)
+
+// Resume genuinely re-opens a finished workout for more training: it clears
+// `completed` (making it the active workout again) and drops into edit mode,
+// unlike Edit which leaves the status untouched.
+async function resume() {
     cancelSave()
     saving.value = true
     try {
         await enqueue(() => persist(false))
         editing.value = true
-        toast.add({ title: 'Workout reopened', color: 'success' })
+        resumeOpen.value = false
+        await refreshActiveWorkout()
+        toast.add({ title: 'Workout resumed', color: 'success' })
     } catch (error: unknown) {
         toast.add({
-            title: errorMessage(error, 'Could not reopen the workout'),
+            title: errorMessage(error, 'Could not resume the workout'),
             color: 'error',
         })
     } finally {
@@ -449,7 +469,7 @@ async function syncToSession(mode: 'update' | 'create') {
     try {
         if (saveTimer) {
             cancelSave()
-            await enqueue(() => persist(!editing.value))
+            await enqueue(() => persist(completed.value))
         }
         const status = await enqueue(() =>
             $fetch<WorkoutTemplateStatus>(`/api/workouts/${id}/to-session`, {
@@ -492,7 +512,7 @@ async function changeDate() {
     try {
         // Saves silently like the rest of the workout — no confirmation toast;
         // only a failure (below) surfaces.
-        await enqueue(() => persist(!editing.value))
+        await enqueue(() => persist(completed.value))
     } catch (error: unknown) {
         if (workout.value)
             dateValue.value = toDateInput(workout.value.startedAt)
@@ -587,10 +607,12 @@ async function changeDate() {
         </div>
 
         <WorkoutActions
-            :editing="editing"
+            v-model:editing="editing"
+            :completed="completed"
             :saving="saving"
+            :resume-blocked="resumeBlocked"
             @finish="finish"
-            @reopen="reopen"
+            @resume="resumeOpen = true"
         />
 
         <!-- Tracking -->
@@ -859,10 +881,12 @@ async function changeDate() {
 
         <WorkoutActions
             foot
-            :editing="editing"
+            v-model:editing="editing"
+            :completed="completed"
             :saving="saving"
+            :resume-blocked="resumeBlocked"
             @finish="finish"
-            @reopen="reopen"
+            @resume="resumeOpen = true"
         />
 
         <!-- Add exercise -->
@@ -1153,6 +1177,35 @@ async function changeDate() {
                         :size="16"
                     />
                     Create
+                </button>
+            </template>
+        </UiModal>
+
+        <!-- Resume training -->
+        <UiModal
+            v-model:open="resumeOpen"
+            title="Resume workout"
+            description="This marks the workout in progress again and makes it your active workout. Editing the sets here doesn't need this."
+        >
+            <template #footer>
+                <button
+                    type="button"
+                    class="btn-ghost"
+                    @click="resumeOpen = false"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn-primary"
+                    :disabled="saving"
+                    @click="resume"
+                >
+                    <Icon
+                        name="tabler:player-play-filled"
+                        :size="16"
+                    />
+                    Resume training
                 </button>
             </template>
         </UiModal>
