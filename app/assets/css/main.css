@@ -956,6 +956,21 @@
         border-color: color-mix(in oklab, var(--accent) 40%, var(--line));
     }
 
+    /* Quiet user-icon marking a user-added exercise (tooltip carries the
+       label); defaults are left unmarked. */
+    .custom-mark {
+        display: inline-flex;
+        align-items: center;
+        color: var(--ink-3);
+    }
+
+    /* Beside the wrappable exercise name: trails the last word inline and
+       rides on the text's midline. */
+    .xname-cell .custom-mark {
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+
     /* Header badge sitting beside a 32px delete icon-btn — match its height so
        the workout card header lines up instead of floating short. */
     .tag--lg {
@@ -1046,11 +1061,17 @@
         background: var(--surface-2);
     }
 
+    /* Name + origin icon share one cell. Kept as inline flow (not flex) so the
+       icon trails the name's last word and wraps with it rather than floating
+       centred beside the block; padding-right clears the absolute actions. */
+    .xname-cell {
+        padding-right: 82px;
+    }
+
     .xname {
         font-size: 15px;
         font-weight: 500;
         text-transform: capitalize;
-        padding-right: 82px;
     }
 
     .xtags {
@@ -1108,7 +1129,7 @@
             position: static;
         }
 
-        .xname {
+        .xname-cell {
             padding-right: 0;
         }
 

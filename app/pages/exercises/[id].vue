@@ -45,6 +45,18 @@ const videoUrl = computed(
     <div v-else>
         <div class="xtags">
             <span class="tag">{{ detail.equipment }}</span>
+            <span
+                v-if="detail.source === 'custom'"
+                class="custom-mark"
+                role="img"
+                aria-label="Custom exercise"
+                title="Custom exercise"
+            >
+                <Icon
+                    name="tabler:user"
+                    :size="16"
+                />
+            </span>
         </div>
         <p
             v-if="detail.aliases.length"

@@ -105,6 +105,7 @@ export function syncUserCatalog(userId: number, cursor: number): void {
                 EXERCISE_CATALOG.slice(cursor).map((entry) => ({
                     ...entry,
                     userId,
+                    source: 'catalog' as const,
                 })),
             )
             .onConflictDoNothing({

@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
     try {
         updated = useDrizzle()
             .update(tables.exercises)
-            .set(values)
+            .set({ ...values, source: 'custom' })
             .where(
                 and(
                     eq(tables.exercises.id, id),

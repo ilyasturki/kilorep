@@ -291,17 +291,31 @@ async function mergeExercise() {
                 :key="exercise.id"
                 class="xrow"
             >
-                <NuxtLink
-                    :to="`/exercises/${exercise.id}`"
-                    class="xname xname--link"
-                >
-                    <UiMatchedLabel
-                        :label="exercise.name"
-                        :label-positions="match.labelPositions"
-                        :keyword="match.matchedKeyword"
-                        :keyword-positions="match.keywordPositions"
-                    />
-                </NuxtLink>
+                <div class="xname-cell">
+                    <NuxtLink
+                        :to="`/exercises/${exercise.id}`"
+                        class="xname xname--link"
+                    >
+                        <UiMatchedLabel
+                            :label="exercise.name"
+                            :label-positions="match.labelPositions"
+                            :keyword="match.matchedKeyword"
+                            :keyword-positions="match.keywordPositions"
+                        />
+                    </NuxtLink>
+                    <span
+                        v-if="exercise.source === 'custom'"
+                        class="custom-mark"
+                        role="img"
+                        aria-label="Custom exercise"
+                        title="Custom exercise"
+                    >
+                        <Icon
+                            name="tabler:user"
+                            :size="16"
+                        />
+                    </span>
+                </div>
                 <div class="xtags">
                     <span class="tag">{{ exercise.equipment }}</span>
                     <span

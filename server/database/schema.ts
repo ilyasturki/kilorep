@@ -99,6 +99,12 @@ export type Equipment = (typeof EQUIPMENT)[number]
 export const EXERCISE_TYPES = ['compound', 'isolation'] as const
 export type ExerciseType = (typeof EXERCISE_TYPES)[number]
 
+// Where an exercise came from: `catalog` was seeded from the default catalog,
+// `custom` was added by the user. Editing a catalog movement reclassifies it
+// to `custom`, since it no longer matches what shipped.
+export const EXERCISE_SOURCES = ['catalog', 'custom'] as const
+export type ExerciseSource = (typeof EXERCISE_SOURCES)[number]
+
 export const exercises = sqliteTable(
     'exercises',
     {
@@ -109,6 +115,12 @@ export const exercises = sqliteTable(
         name: text('name').notNull(),
         equipment: text('equipment').$type<Equipment>().notNull(),
         type: text('type').$type<ExerciseType>().notNull(),
+        // Defaults to `custom` so user-created rows are tagged without the
+        // insert paths having to set it; the seeder stamps `catalog` instead.
+        source: text('source')
+            .$type<ExerciseSource>()
+            .notNull()
+            .default('custom'),
         // The muscles this exercise works, each tagged with its relative intensity.
         // Stored as JSON; a bench press and a pec fly both hit the chest, but only
         // the bench press also loads the triceps and front delts at medium effort.
