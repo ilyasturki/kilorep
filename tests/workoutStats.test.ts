@@ -5,7 +5,7 @@
 // tolerate missing reps/weight without poisoning the sum with NaN.
 import { expect, test } from 'bun:test'
 
-import { setVolume, workoutStats } from '../app/utils/workoutStats'
+import { setVolume, workoutStats } from '../shared/utils/stats'
 
 test('volume is load × reps summed over sets', () => {
     expect(setVolume([{ reps: 10, weight: 20 }])).toBe(200)

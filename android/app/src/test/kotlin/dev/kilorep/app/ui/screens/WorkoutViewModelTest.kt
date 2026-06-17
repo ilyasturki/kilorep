@@ -145,7 +145,7 @@ class WorkoutViewModelTest {
             MockResponse().setBody(
                 """{"id":55,"userId":1,"sessionId":7,"name":"Push Day",
                    "startedAt":"2026-06-12T18:00:00Z","completed":true,
-                   "template":{"id":7,"name":"Push Day","diverged":false}}""",
+                   "template":{"id":7,"name":"Push Day","diverged":false,"changes":[]}}""",
             ).setHeader("Content-Type", "application/json"),
         )
         server.enqueue(
