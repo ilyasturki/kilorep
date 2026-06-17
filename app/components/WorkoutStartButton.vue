@@ -46,10 +46,8 @@ async function openPicker() {
     }
 }
 
-const sessionSummary = (s: SessionWithEntries) => {
-    const count = s.entries.reduce((n, e) => n + e.exercises.length, 0)
-    return plural(count, 'exercise')
-}
+const sessionSummary = (s: SessionWithEntries) =>
+    plural(workoutStats(s.entries).exercises, 'exercise')
 
 async function startWorkout(sessionId: number) {
     starting.value = true
