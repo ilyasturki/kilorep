@@ -6,6 +6,7 @@ import dev.kilorep.api.models.WorkoutDetail
 import dev.kilorep.api.models.WorkoutEntryInput
 import dev.kilorep.api.models.WorkoutExerciseInput
 import dev.kilorep.api.models.WorkoutInput
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -26,7 +27,16 @@ data class DraftSet(
     val done: Boolean,
     /** The prescribed rep target, shown beside what's being logged. */
     val target: Int?,
-)
+) {
+    /**
+     * Web has no separate "done" step — typing the load and reps logs the set.
+     * Mirror that: once a set has both, it counts as performed. Only flips
+     * false→true, so the tick stays user-overridable and clearing a field on
+     * an already-ticked set never silently un-ticks it.
+     */
+    fun autoDone(): DraftSet =
+        if (reps != null && weight != null && !done) copy(done = true) else this
+}
 
 data class DraftExercise(
     val exerciseId: Int,
@@ -117,12 +127,14 @@ data class WorkoutDraft(
         mapExercise(entryIndex, exerciseIndex) { exercise ->
             val last = exercise.sets.lastOrNull()
             exercise.copy(
+                // Carrying a full set forward means it already has load+reps, so
+                // it lands done — matching web, where an added set defaults done.
                 sets = exercise.sets + DraftSet(
                     reps = last?.reps,
                     weight = last?.weight,
                     done = false,
                     target = last?.target,
-                ),
+                ).autoDone(),
             )
         }
 
@@ -171,6 +183,23 @@ data class WorkoutDraft(
             }
         },
     ).pruneEmpty()
+
+    /**
+     * Reorders a whole entry; a plain exercise or a superset block moves as a
+     * unit, mirroring web's up/down controls. Out-of-range moves are no-ops.
+     */
+    fun moveEntry(from: Int, to: Int): WorkoutDraft {
+        if (from !in entries.indices || to !in entries.indices || from == to) return this
+        val reordered = entries.toMutableList().apply { add(to, removeAt(from)) }
+        return copy(entries = reordered, dirty = true)
+    }
+
+    /**
+     * Moves the workout to another calendar day, keeping the original
+     * time-of-day so same-day ordering stays stable (matches web).
+     */
+    fun withDay(day: LocalDate): WorkoutDraft =
+        copy(startedAt = OffsetDateTime.parse(startedAt).with(day).toString(), dirty = true)
 
     fun finish(): WorkoutDraft = copy(completed = true, dirty = true)
 

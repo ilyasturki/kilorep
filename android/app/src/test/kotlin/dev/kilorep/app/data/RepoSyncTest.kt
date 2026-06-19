@@ -154,6 +154,15 @@ class RepoSyncTest {
     }
 
     @Test
+    fun `starting again hands back the in-progress workout, never a second`() = runBlocking {
+        val first = repo.startWorkout(session())
+        val again = repo.startWorkout(session())
+
+        assertEquals(first.localId, again.localId, "a second start must continue the active one")
+        assertEquals(1, repo.drafts.value.count { !it.completed })
+    }
+
+    @Test
     fun `an unedited draft keeps today's terminal behavior`() = runBlocking {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse = when (request.method) {

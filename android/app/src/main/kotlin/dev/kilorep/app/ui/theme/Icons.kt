@@ -195,6 +195,26 @@ object LiftIcons {
         circle(12f, 12f, 1f)
         circle(19f, 12f, 1f)
     }
+    val Play = strokeIcon("play") {
+        moveTo(8f, 5f); lineTo(8f, 19f); lineTo(19f, 12f); close()
+    }
+    val Grid = strokeIcon("grid") {
+        moveTo(4f, 4f); lineTo(10f, 4f); lineTo(10f, 10f); lineTo(4f, 10f); close()
+        moveTo(14f, 4f); lineTo(20f, 4f); lineTo(20f, 10f); lineTo(14f, 10f); close()
+        moveTo(4f, 14f); lineTo(10f, 14f); lineTo(10f, 20f); lineTo(4f, 20f); close()
+        moveTo(14f, 14f); lineTo(20f, 14f); lineTo(20f, 20f); lineTo(14f, 20f); close()
+    }
+    val User = strokeIcon("user") {
+        circle(12f, 8f, 3.5f)
+        moveTo(6f, 20f)
+        arcTo(6f, 6f, 0f, false, true, 18f, 20f)
+    }
+    val Calendar = strokeIcon("calendar") {
+        moveTo(4f, 6f); lineTo(20f, 6f); lineTo(20f, 20f); lineTo(4f, 20f); close()
+        moveTo(4f, 10f); lineTo(20f, 10f)
+        moveTo(8f, 4f); lineTo(8f, 8f)
+        moveTo(16f, 4f); lineTo(16f, 8f)
+    }
 }
 
 @Composable

@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -189,6 +190,26 @@ fun DoneTick(
             LiftIcons.Check,
             tint = if (done) colors.accentInk else colors.ink3,
             size = 22.dp,
+        )
+    }
+}
+
+/** Square-cornered modal card shell, Lift-skinned — the surround shared by the app's custom dialogs. */
+@Composable
+fun LiftDialogCard(
+    onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = Lift.colors
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+                .border(1.dp, colors.line2)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content,
         )
     }
 }

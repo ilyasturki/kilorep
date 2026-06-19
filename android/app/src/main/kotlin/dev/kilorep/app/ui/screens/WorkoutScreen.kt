@@ -4,9 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -26,31 +26,42 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kilorep.api.models.ToSessionInput
 import dev.kilorep.app.data.SyncStatus
+import dev.kilorep.app.store.DraftEntry
 import dev.kilorep.app.store.DraftExercise
+import dev.kilorep.app.store.WorkoutDraft
 import dev.kilorep.app.ui.components.ConfirmDialog
 import dev.kilorep.app.ui.components.DoneTick
 import dev.kilorep.app.ui.components.ExercisePicker
 import dev.kilorep.app.ui.components.GhostButton
 import dev.kilorep.app.ui.components.Kicker
 import dev.kilorep.app.ui.components.LiftCard
+import dev.kilorep.app.ui.components.LiftDialogCard
 import dev.kilorep.app.ui.components.LiftIconButton
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.LiftTextField
 import dev.kilorep.app.ui.components.PrimaryButton
+import dev.kilorep.app.ui.components.StatCell
 import dev.kilorep.app.ui.components.StepperField
 import dev.kilorep.app.ui.components.Tag
+import dev.kilorep.app.ui.formatDate
+import dev.kilorep.app.ui.formatReps
+import dev.kilorep.app.ui.formatVolume
 import dev.kilorep.app.ui.formatWeight
 import dev.kilorep.app.ui.parseWeight
 import dev.kilorep.app.ui.theme.Lift
+import dev.kilorep.app.ui.theme.LiftIcon
 import dev.kilorep.app.ui.theme.LiftIcons
 import dev.kilorep.app.ui.theme.LiftType
 import dev.kilorep.app.ui.theme.Text
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import kotlin.math.roundToLong
 
 /**
- * The gym loop: everything here must work offline and one-
- * handed. Each set is a tall row — weight and reps as thumb steppers, the
- * done-tick under the right thumb. Structure edits (swap, add, remove) ride
- * along without leaving the screen.
+ * The gym loop and the workout's whole lifecycle (web's /workouts/[id]):
+ * in-progress workouts open in edit mode for one-handed logging; finished ones
+ * open read-only with an Edit toggle and a guarded Resume. Editing never
+ * un-finishes a workout — only Resume does. Everything works offline.
  */
 @Composable
 fun WorkoutScreen(
@@ -63,17 +74,24 @@ fun WorkoutScreen(
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val template by viewModel.template.collectAsStateWithLifecycle()
     val syncBackResult by viewModel.syncBackResult.collectAsStateWithLifecycle()
+    val otherActive by viewModel.otherActive.collectAsStateWithLifecycle()
     val colors = Lift.colors
 
     var picker by remember { mutableStateOf<PickerTarget?>(null) }
     var confirmRemove by remember { mutableStateOf<Triple<Int, Int, Int?>?>(null) }
     var confirmDiscard by remember { mutableStateOf(false) }
+    var confirmResume by remember { mutableStateOf(false) }
     var namingTemplate by remember { mutableStateOf(false) }
+    var editingDate by remember { mutableStateOf(false) }
 
     val current = draft ?: run {
         LaunchedEffect(Unit) { onBack() }
         return
     }
+
+    // `completed` is the persisted status; `editing` is a pure view↔edit
+    // toggle. A finished workout opens read-only; an in-progress one in edit.
+    var editing by remember { mutableStateOf(!current.completed) }
 
     LaunchedEffect(current.dirty, current.serverId) {
         if (!current.dirty && current.serverId != null) viewModel.refreshTemplate()
@@ -102,45 +120,32 @@ fun WorkoutScreen(
             ) {
                 item { SyncStateRow(current.dirty, current.completed, syncStatus, viewModel) }
 
+                item { StatsRow(current, onEditDate = { editingDate = true }) }
+
                 itemsIndexed(current.entries, key = { _, entry -> entry.id }) { entryIndex, entry ->
-                    LiftCard(padding = 12.dp) {
-                        if (entry.exercises.size > 1) {
-                            Kicker(
-                                "Superset · ${entry.exercises.size} rotated",
-                                accent = true,
-                                modifier = Modifier.padding(bottom = 8.dp),
-                            )
-                        }
-                        entry.exercises.forEachIndexed { exerciseIndex, exercise ->
-                            ExerciseBlock(
-                                entryIndex = entryIndex,
-                                exerciseIndex = exerciseIndex,
-                                exercise = exercise,
-                                rotationTag = if (entry.exercises.size > 1) {
-                                    ('A' + exerciseIndex).toString()
-                                } else {
-                                    null
-                                },
-                                viewModel = viewModel,
-                                onSwap = { picker = PickerTarget.Swap(entryIndex, exerciseIndex) },
-                                onRemove = {
-                                    confirmRemove = Triple(entryIndex, exerciseIndex, null)
-                                },
-                                onRemoveSet = { setIndex ->
-                                    confirmRemove = Triple(entryIndex, exerciseIndex, setIndex)
-                                },
-                            )
-                        }
+                    if (editing) {
+                        EditableEntryCard(
+                            entryIndex = entryIndex,
+                            entry = entry,
+                            entryCount = current.entries.size,
+                            viewModel = viewModel,
+                            onPicker = { picker = it },
+                            onConfirmRemove = { confirmRemove = it },
+                        )
+                    } else {
+                        LiftCard(padding = 14.dp) { ReviewBlock(entry) }
                     }
                 }
 
-                item {
-                    GhostButton(
-                        "Add exercise",
-                        onClick = { picker = PickerTarget.Add },
-                        icon = LiftIcons.Plus,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                if (editing) {
+                    item {
+                        GhostButton(
+                            "Add exercise",
+                            onClick = { picker = PickerTarget.Add },
+                            icon = LiftIcons.Plus,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
 
                 if (template?.diverged == true && !current.dirty) {
@@ -163,7 +168,7 @@ fun WorkoutScreen(
                 }
             }
 
-            // The finish bar lives under the thumb, like the web's .wk-actions.
+            // The action bar lives under the thumb, like the web's .wk-actions.
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -171,6 +176,7 @@ fun WorkoutScreen(
                     .padding(horizontal = 14.dp, vertical = 10.dp)
                     .navigationBarsPadding()
                     .imePadding(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (!current.completed) {
                     PrimaryButton(
@@ -182,11 +188,37 @@ fun WorkoutScreen(
                         enabled = current.isSyncable,
                     )
                 } else {
-                    GhostButton(
-                        "Reopen workout",
-                        onClick = { viewModel.reopen() },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (editing) {
+                            GhostButton(
+                                "Done editing",
+                                onClick = { editing = false },
+                                modifier = Modifier.weight(1f),
+                                icon = LiftIcons.Check,
+                            )
+                        } else {
+                            GhostButton(
+                                "Edit",
+                                onClick = { editing = true },
+                                modifier = Modifier.weight(1f),
+                                icon = LiftIcons.Pencil,
+                            )
+                        }
+                        GhostButton(
+                            "Resume training",
+                            onClick = { confirmResume = true },
+                            modifier = Modifier.weight(1f),
+                            icon = LiftIcons.Play,
+                            enabled = !otherActive,
+                        )
+                    }
+                    if (otherActive) {
+                        Text(
+                            "Finish your active workout before resuming this one.",
+                            style = LiftType.secondary,
+                            color = colors.ink3,
+                        )
+                    }
                 }
             }
         }
@@ -217,11 +249,7 @@ fun WorkoutScreen(
     confirmRemove?.let { (entry, exercise, setIndex) ->
         ConfirmDialog(
             title = if (setIndex == null) "Remove exercise?" else "Remove set ${setIndex + 1}?",
-            body = if (setIndex == null) {
-                "Its logged sets go with it."
-            } else {
-                null
-            },
+            body = if (setIndex == null) "Its logged sets go with it." else null,
             confirmLabel = "Remove",
             danger = true,
             onConfirm = {
@@ -248,6 +276,30 @@ fun WorkoutScreen(
                 onBack()
             },
             onDismiss = { confirmDiscard = false },
+        )
+    }
+
+    if (confirmResume) {
+        ConfirmDialog(
+            title = "Resume workout?",
+            body = "This marks it in progress again and makes it your active workout. Editing the sets here does not need this.",
+            confirmLabel = "Resume training",
+            onConfirm = {
+                viewModel.resume()
+                editing = true
+                confirmResume = false
+            },
+            onDismiss = { confirmResume = false },
+        )
+    }
+
+    if (editingDate) {
+        DateShiftDialog(
+            current = remember(current.startedAt) {
+                OffsetDateTime.parse(current.startedAt).toLocalDate()
+            },
+            onPick = { viewModel.setDay(it) },
+            onDismiss = { editingDate = false },
         )
     }
 
@@ -289,6 +341,140 @@ private fun SyncStateRow(
                 GhostButton("Retry", onClick = viewModel::retrySync, height = 32.dp)
             }
             else -> if (dirty) Tag("Not synced") else Tag("Synced")
+        }
+    }
+}
+
+/** Date (tap to edit) · volume · sets — the web's .wk-stats strip. */
+@Composable
+private fun StatsRow(draft: WorkoutDraft, onEditDate: () -> Unit) {
+    val (volume, sets) = remember(draft.entries) {
+        var v = 0.0
+        var s = 0
+        draft.entries.forEach { entry ->
+            entry.exercises.forEach { ex ->
+                s += ex.sets.size
+                ex.sets.forEach { v += (it.weight ?: 0.0) * (it.reps ?: 0) }
+            }
+        }
+        v.roundToLong() to s
+    }
+    val day = remember(draft.startedAt) { OffsetDateTime.parse(draft.startedAt).toLocalDate() }
+    Row(
+        Modifier.fillMaxWidth().padding(top = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        LiftCard(modifier = Modifier.weight(1.3f).clickable(onClick = onEditDate), padding = 12.dp) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LiftIcon(LiftIcons.Calendar, tint = Lift.colors.ink2, size = 15.dp)
+                Text(formatDate(day), style = LiftType.mono, maxLines = 1)
+            }
+            Text("DATE", style = LiftType.tag, color = Lift.colors.ink3, modifier = Modifier.padding(top = 4.dp))
+        }
+        StatCell(formatVolume(volume), "VOLUME · KG", Modifier.weight(1f))
+        StatCell(sets.toString(), "SETS", Modifier.weight(1f))
+    }
+}
+
+/** One entry in edit mode: optional superset header + reorder, then its blocks. */
+@Composable
+private fun EditableEntryCard(
+    entryIndex: Int,
+    entry: DraftEntry,
+    entryCount: Int,
+    viewModel: WorkoutViewModel,
+    onPicker: (PickerTarget) -> Unit,
+    onConfirmRemove: (Triple<Int, Int, Int?>) -> Unit,
+) {
+    LiftCard(padding = 12.dp) {
+        val superset = entry.exercises.size > 1
+        if (superset || entryCount > 1) {
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (superset) {
+                    Kicker("Superset · ${entry.exercises.size} rotated", accent = true)
+                }
+                Spacer(Modifier.weight(1f))
+                if (entryCount > 1) {
+                    MoveButtons(
+                        canUp = entryIndex > 0,
+                        canDown = entryIndex < entryCount - 1,
+                        onUp = { viewModel.moveEntryUp(entryIndex) },
+                        onDown = { viewModel.moveEntryDown(entryIndex) },
+                    )
+                }
+            }
+        }
+        entry.exercises.forEachIndexed { exerciseIndex, exercise ->
+            ExerciseBlock(
+                entryIndex = entryIndex,
+                exerciseIndex = exerciseIndex,
+                exercise = exercise,
+                rotationTag = if (superset) ('A' + exerciseIndex).toString() else null,
+                viewModel = viewModel,
+                onSwap = { onPicker(PickerTarget.Swap(entryIndex, exerciseIndex)) },
+                onRemove = { onConfirmRemove(Triple(entryIndex, exerciseIndex, null)) },
+                onRemoveSet = { setIndex -> onConfirmRemove(Triple(entryIndex, exerciseIndex, setIndex)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun MoveButtons(
+    canUp: Boolean,
+    canDown: Boolean,
+    onUp: () -> Unit,
+    onDown: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        LiftIconButton(LiftIcons.ArrowUp, onClick = onUp, size = 34.dp, iconSize = 16.dp, enabled = canUp)
+        LiftIconButton(LiftIcons.ArrowDown, onClick = onDown, size = 34.dp, iconSize = 16.dp, enabled = canDown)
+    }
+}
+
+/** Read-only readout of one entry: load × reps with a done check per set. */
+@Composable
+private fun ReviewBlock(entry: DraftEntry) {
+    val colors = Lift.colors
+    if (entry.exercises.size > 1) {
+        Kicker("Superset", accent = true, modifier = Modifier.padding(bottom = 8.dp))
+    }
+    entry.exercises.forEachIndexed { i, exercise ->
+        val volume = exercise.sets.sumOf { (it.weight ?: 0.0) * (it.reps ?: 0) }.roundToLong()
+        Column(Modifier.padding(top = if (i == 0) 0.dp else 12.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(exercise.name, style = LiftType.rowTitle, modifier = Modifier.weight(1f), maxLines = 2)
+                Text("${formatVolume(volume)} kg", style = LiftType.kicker, color = colors.ink3)
+            }
+            exercise.sets.forEachIndexed { si, set ->
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("${si + 1}", style = LiftType.tag, color = colors.ink3)
+                    Text(
+                        "${formatWeight(set.weight)} kg × ${formatReps(set.reps)}",
+                        style = LiftType.mono,
+                        modifier = Modifier.weight(1f),
+                    )
+                    LiftIcon(
+                        LiftIcons.Check,
+                        tint = if (set.done) colors.accentText else colors.ink3,
+                        size = 15.dp,
+                    )
+                }
+            }
         }
     }
 }
@@ -424,34 +610,78 @@ private fun SyncBackStrip(
 }
 
 @Composable
+private fun DateShiftDialog(
+    current: LocalDate,
+    onPick: (LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val today = LocalDate.now()
+    var day by remember { mutableStateOf(current) }
+    val colors = Lift.colors
+    fun clamp(d: LocalDate) = if (d.isAfter(today)) today else d
+    LiftDialogCard(onDismiss = onDismiss) {
+        Text("Workout date", style = LiftType.rowTitle)
+        Text(formatDate(day), style = LiftType.statNum, color = colors.accentText)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GhostButton("− Week", { day = day.minusWeeks(1) }, Modifier.weight(1f), height = 40.dp)
+            GhostButton("− Day", { day = day.minusDays(1) }, Modifier.weight(1f), height = 40.dp)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GhostButton(
+                "+ Day",
+                { day = clamp(day.plusDays(1)) },
+                Modifier.weight(1f),
+                height = 40.dp,
+                enabled = day.isBefore(today),
+            )
+            GhostButton(
+                "+ Week",
+                { day = clamp(day.plusWeeks(1)) },
+                Modifier.weight(1f),
+                height = 40.dp,
+                enabled = day.isBefore(today),
+            )
+        }
+        GhostButton(
+            "Today",
+            { day = today },
+            Modifier.fillMaxWidth(),
+            height = 40.dp,
+            enabled = day != today,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GhostButton("Cancel", onDismiss, Modifier.weight(1f))
+            PrimaryButton(
+                "Set date",
+                onClick = {
+                    onPick(day)
+                    onDismiss()
+                },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
 private fun NewTemplateDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf("") }
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        val colors = Lift.colors
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .border(1.dp, colors.line2)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text("New session template", style = LiftType.rowTitle)
-            LiftTextField(
-                value = name,
-                onValueChange = { name = it },
-                placeholder = "Template name",
-                modifier = Modifier.fillMaxWidth(),
+    LiftDialogCard(onDismiss = onDismiss) {
+        Text("New session template", style = LiftType.rowTitle)
+        LiftTextField(
+            value = name,
+            onValueChange = { name = it },
+            placeholder = "Template name",
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GhostButton("Cancel", onDismiss, Modifier.weight(1f))
+            PrimaryButton(
+                "Create",
+                onClick = { onCreate(name) },
+                modifier = Modifier.weight(1f),
+                enabled = name.isNotBlank(),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                GhostButton("Cancel", onDismiss, Modifier.weight(1f))
-                PrimaryButton(
-                    "Create",
-                    onClick = { onCreate(name) },
-                    modifier = Modifier.weight(1f),
-                    enabled = name.isNotBlank(),
-                )
-            }
         }
     }
 }

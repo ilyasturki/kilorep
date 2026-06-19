@@ -130,8 +130,9 @@ class WorkoutViewModelTest {
     @Test
     fun `finish replays create-then-put and the draft leaves the queue`() {
         val vm = startedViewModel()
+        // Logging the load auto-completes the set — web has no separate tick.
         vm.setWeight(0, 0, 0, 80.0)
-        vm.toggleDone(0, 0, 0)
+        assertTrue(vm.draft.value!!.entries[0].exercises[0].sets[0].done)
 
         // POST /api/workouts (create from session) → PUT /api/workouts/55 →
         // GET /api/workouts (history refresh after a successful sync).
@@ -186,6 +187,14 @@ class WorkoutViewModelTest {
         val draft = vm.draft.value
         assertNotNull(draft, "an unsynced workout must never be dropped")
         assertTrue(draft.dirty)
+    }
+
+    @Test
+    fun `the lone active workout reports no other active workout`() {
+        val vm = startedViewModel()
+        // The Resume guard leans on this; a single in-progress workout has no
+        // rival, so resuming it would never break single-active.
+        assertFalse(vm.otherActive.value, "a single in-progress workout has no rival")
     }
 
     @Test

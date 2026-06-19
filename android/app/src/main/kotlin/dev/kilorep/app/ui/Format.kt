@@ -28,6 +28,23 @@ fun formatWeight(weight: Double?): String = when {
 
 fun formatReps(reps: Int?): String = reps?.toString() ?: "?"
 
+/** "1 set" / "2 sets" — the web's plural() for the simple nouns we count. */
+fun plural(count: Int, noun: String): String =
+    "$count $noun${if (count == 1) "" else "s"}"
+
+/** Signed two-decimal kg delta ("+1.50" / "-0.80"), matching web's fmtSigned2. */
+fun formatSigned(value: Double): String {
+    val sign = if (value > 0) "+" else if (value < 0) "-" else ""
+    return "$sign${String.format(Locale.ENGLISH, "%.2f", kotlin.math.abs(value))}"
+}
+
+/** Two-decimal kg ("78.50"), matching web's fmtFixed2 for bodyweight stats. */
+fun formatFixed2(value: Double): String = String.format(Locale.ENGLISH, "%.2f", value)
+
+/** Whole-number volume with thousands grouping, matching web's fmtVolume. */
+fun formatVolume(value: Long): String =
+    String.format(Locale.ENGLISH, "%,d", value)
+
 /** Comma-tolerant weight entry ("82,5" from a numeric keypad locale). */
 fun parseWeight(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
 

@@ -16,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import dev.kilorep.api.models.ExerciseDetail
 import dev.kilorep.app.data.Repo
@@ -60,6 +61,7 @@ fun ExerciseDetailScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var deleteBlocked by remember { mutableStateOf<String?>(null) }
     val colors = Lift.colors
+    val uriHandler = LocalUriHandler.current
 
     LaunchedEffect(exerciseId, catalog) {
         repo.exerciseDetail(exerciseId)
@@ -103,6 +105,22 @@ fun ExerciseDetailScreen(
                             IntensityBadge(it.muscle, it.intensity.value)
                         }
                     }
+                }
+            }
+            item {
+                LiftCard(padding = 14.dp) {
+                    Kicker("How to")
+                    GhostButton(
+                        "Watch form tutorials on YouTube",
+                        onClick = {
+                            val q = java.net.URLEncoder.encode(
+                                "${current.name} proper form technique",
+                                "UTF-8",
+                            )
+                            uriHandler.openUri("https://www.youtube.com/results?search_query=$q")
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
                 }
             }
             if (current.best != null) {

@@ -27,19 +27,19 @@ import dev.kilorep.app.ui.components.LiftBottomBar
 import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.screens.BodyweightScreen
+import dev.kilorep.app.ui.screens.DashboardScreen
 import dev.kilorep.app.ui.screens.ExerciseDetailScreen
 import dev.kilorep.app.ui.screens.ExerciseEditorScreen
 import dev.kilorep.app.ui.screens.ExercisesScreen
-import dev.kilorep.app.ui.screens.HistoryScreen
 import dev.kilorep.app.ui.screens.OnboardingScreen
 import dev.kilorep.app.ui.screens.OnboardingViewModel
 import dev.kilorep.app.ui.screens.SessionEditorScreen
 import dev.kilorep.app.ui.screens.SessionEditorViewModel
 import dev.kilorep.app.ui.screens.SessionsScreen
 import dev.kilorep.app.ui.screens.SettingsScreen
-import dev.kilorep.app.ui.screens.TrainScreen
 import dev.kilorep.app.ui.screens.WorkoutScreen
 import dev.kilorep.app.ui.screens.WorkoutViewModel
+import dev.kilorep.app.ui.screens.WorkoutsScreen
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcon
 import dev.kilorep.app.ui.theme.LiftIcons
@@ -49,11 +49,10 @@ import dev.kilorep.app.ui.theme.Text
 import kotlinx.coroutines.launch
 
 private val TABS = listOf(
-    BottomTab("train", "Train", LiftIcons.Barbell),
-    BottomTab("history", "History", LiftIcons.Clock),
+    BottomTab("dashboard", "Dashboard", LiftIcons.Grid),
+    BottomTab("workouts", "Workouts", LiftIcons.Barbell),
     BottomTab("sessions", "Sessions", LiftIcons.ListDetails),
     BottomTab("exercises", "Exercises", LiftIcons.Search),
-    BottomTab("more", "More", LiftIcons.Dots),
 )
 
 @Composable
@@ -84,30 +83,40 @@ private fun MainNav(container: AppContainer) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     fun openDraft(localId: String) = navController.navigate("workout/$localId")
+    fun openServerWorkout(id: Int) = scope.launch {
+        repo.openWorkout(id).onSuccess { openDraft(it.localId) }
+    }
+    // Tab navigation that keeps a single back-stack entry per tab and restores
+    // its scroll/state — shared by the bottom bar and in-page "see all" links.
+    fun selectTab(route: String) = navController.navigate(route) {
+        popUpTo("dashboard") { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
 
     Column(Modifier.fillMaxSize().background(Lift.colors.bg)) {
         Box(Modifier.weight(1f)) {
             NavHost(
                 navController = navController,
-                startDestination = "train",
+                startDestination = "dashboard",
             ) {
-                composable("train") {
-                    TrainScreen(
+                composable("dashboard") {
+                    DashboardScreen(
                         repo = repo,
                         offline = offline,
-                        onOpenWorkout = ::openDraft,
-                        onStart = { session -> openDraft(repo.startWorkout(session).localId) },
+                        onOpenDraft = ::openDraft,
+                        onOpenServerWorkout = { openServerWorkout(it) },
+                        onOpenExercise = { navController.navigate("exercise/$it") },
+                        onSeeAllWorkouts = { selectTab("workouts") },
+                        onProfile = { navController.navigate("profile") },
                     )
                 }
-                composable("history") {
-                    HistoryScreen(
+                composable("workouts") {
+                    WorkoutsScreen(
                         repo = repo,
                         offline = offline,
-                        onOpenServerWorkout = { id ->
-                            scope.launch {
-                                repo.openWorkout(id).onSuccess { openDraft(it.localId) }
-                            }
-                        },
+                        onOpenDraft = ::openDraft,
+                        onOpenServerWorkout = { openServerWorkout(it) },
                     )
                 }
                 composable("sessions") {
@@ -129,10 +138,11 @@ private fun MainNav(container: AppContainer) {
                         onCreate = { navController.navigate("exercise-editor") },
                     )
                 }
-                composable("more") {
-                    MoreScreen(
+                composable("profile") {
+                    ProfileScreen(
                         onBodyweight = { navController.navigate("bodyweight") },
                         onSettings = { navController.navigate("settings") },
+                        onBack = { navController.popBackStack() },
                         offline = offline,
                     )
                 }
@@ -236,25 +246,20 @@ private fun MainNav(container: AppContainer) {
             LiftBottomBar(
                 tabs = TABS,
                 currentRoute = currentRoute,
-                onSelect = { route ->
-                    navController.navigate(route) {
-                        popUpTo("train") { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
+                onSelect = { selectTab(it) },
             )
         }
     }
 }
 
 @Composable
-private fun MoreScreen(
+private fun ProfileScreen(
     onBodyweight: () -> Unit,
     onSettings: () -> Unit,
+    onBack: () -> Unit,
     offline: Boolean,
 ) {
-    LiftScreen(title = "More", offline = offline) {
+    LiftScreen(title = "Profile", onBack = onBack, offline = offline) {
         Column(
             Modifier
                 .fillMaxSize()

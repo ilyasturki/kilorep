@@ -135,6 +135,10 @@ class Repo(
 
     /** Starts a workout from a cached session — works in a dead zone. */
     fun startWorkout(session: SessionWithEntries): WorkoutDraft {
+        // One active workout at a time (web's invariant): if something is
+        // already in progress, hand that back rather than open a second. The
+        // CTA already shows "Continue" in that case; this is the backstop.
+        drafts.value.firstOrNull { !it.completed }?.let { return it }
         val draft = WorkoutDraft.fromSession(
             session,
             localId = UUID.randomUUID().toString(),

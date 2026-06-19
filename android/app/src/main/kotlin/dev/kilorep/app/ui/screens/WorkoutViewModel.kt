@@ -36,6 +36,19 @@ class WorkoutViewModel(
         .map { it[localId] }
         .stateIn(vmScope, SharingStarted.Eagerly, null)
 
+    /**
+     * True when another workout is already in progress. Resuming this one then
+     * would break the single-active invariant the Start CTA leans on, so the
+     * UI blocks it (web's resumeBlocked).
+     */
+    val otherActive: StateFlow<Boolean> = repo.drafts
+        .map { list -> list.any { !it.completed && it.localId != localId } }
+        .stateIn(
+            vmScope,
+            SharingStarted.Eagerly,
+            repo.drafts.value.any { !it.completed && it.localId != localId },
+        )
+
     /** Template link for the sync-back affordance; null until known. */
     val template = MutableStateFlow<TemplateStatus?>(null)
     val syncBackResult = MutableStateFlow<String?>(null)
@@ -45,15 +58,16 @@ class WorkoutViewModel(
     }
 
     fun setReps(entry: Int, exercise: Int, set: Int, reps: Int?) =
-        update { it.updateSet(entry, exercise, set) { s -> s.copy(reps = reps) } }
+        update { it.updateSet(entry, exercise, set) { s -> s.copy(reps = reps).autoDone() } }
 
     fun setWeight(entry: Int, exercise: Int, set: Int, weight: Double?) =
-        update { it.updateSet(entry, exercise, set) { s -> s.copy(weight = weight) } }
+        update { it.updateSet(entry, exercise, set) { s -> s.copy(weight = weight).autoDone() } }
 
     fun stepReps(entry: Int, exercise: Int, set: Int, delta: Int) =
         update {
             it.updateSet(entry, exercise, set) { s ->
                 s.copy(reps = ((s.reps ?: 0) + delta).coerceAtLeast(0).takeIf { r -> r > 0 })
+                    .autoDone()
             }
         }
 
@@ -64,7 +78,7 @@ class WorkoutViewModel(
                 // Typed weights are arbitrary doubles; adding 2.5 to them
                 // drifts in binary, so quantize what gets stored.
                 val next = roundWeight(((s.weight ?: 0.0) + delta * 2.5).coerceAtLeast(0.0))
-                s.copy(weight = next.takeIf { w -> w > 0.0 })
+                s.copy(weight = next.takeIf { w -> w > 0.0 }).autoDone()
             }
         }
 
@@ -85,6 +99,13 @@ class WorkoutViewModel(
     fun removeExercise(entry: Int, exercise: Int) =
         update { it.removeExercise(entry, exercise) }
 
+    fun moveEntryUp(entry: Int) = update { it.moveEntry(entry, entry - 1) }
+
+    fun moveEntryDown(entry: Int) = update { it.moveEntry(entry, entry + 1) }
+
+    /** Re-dates the workout (calendar day only; the time-of-day is kept). */
+    fun setDay(day: java.time.LocalDate) = update { it.withDay(day) }
+
     fun rename(name: String) {
         if (name.isNotBlank()) update { it.copy(name = name.trim(), dirty = true) }
     }
@@ -95,7 +116,13 @@ class WorkoutViewModel(
         vmScope.launch { repo.syncNow() }
     }
 
-    fun reopen() = update { it.copy(completed = false, dirty = true) }
+    /**
+     * Re-opens a finished workout for more training: clears completed (making
+     * it the active workout again) and the caller drops into edit mode. Edit
+     * mode alone never calls this — editing a finished workout leaves it
+     * finished (web's resume vs. edit distinction).
+     */
+    fun resume() = update { it.copy(completed = false, dirty = true) }
 
     fun retrySync() {
         vmScope.launch { repo.syncNow() }

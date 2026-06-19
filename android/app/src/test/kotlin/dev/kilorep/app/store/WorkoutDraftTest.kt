@@ -229,4 +229,59 @@ class WorkoutDraftTest {
         assertEquals("Push Day", input.name)
         assertEquals(OffsetDateTime.parse("2026-06-12T18:00:00Z"), input.startedAt)
     }
+
+    @Test
+    fun `logging load and reps auto-completes a set`() {
+        val seeded = started().entries[0].exercises[0].sets[0]
+        // Started from a template: reps present (the target) but no load — not done.
+        assertEquals(8, seeded.reps)
+        assertFalse(seeded.done)
+
+        // Entering the load is the completing act; web has no separate tick.
+        val logged = started().updateSet(0, 0, 0) { it.copy(weight = 80.0).autoDone() }
+        assertTrue(logged.entries[0].exercises[0].sets[0].done)
+    }
+
+    @Test
+    fun `auto-done only ticks, never un-ticks`() {
+        // An open set (reps still to be decided) does not auto-complete on load alone.
+        assertFalse(DraftSet(reps = null, weight = 50.0, done = false, target = null).autoDone().done)
+        // Clearing the load on a ticked set leaves the tick — only the user un-ticks.
+        assertTrue(DraftSet(reps = 8, weight = null, done = true, target = 8).autoDone().done)
+    }
+
+    @Test
+    fun `an added set carrying a full effort lands done`() {
+        val draft = started()
+            // Log the bench's last set fully, then carry it forward.
+            .updateSet(0, 0, 1) { it.copy(reps = 8, weight = 80.0).autoDone() }
+            .addSet(0, 0)
+        val added = draft.entries[0].exercises[0].sets.last()
+        assertEquals(80.0, added.weight)
+        assertTrue(added.done)
+    }
+
+    @Test
+    fun `moving an entry reorders the block as a unit and dirties`() {
+        // Reuse one base: fromSession mints fresh entry ids, so two starts differ.
+        val base = started().copy(dirty = false)
+        val draft = base.moveEntry(0, 1)
+
+        assertEquals("Overhead Press", draft.entries[0].exercises[0].name)
+        assertEquals("Bench Press", draft.entries[1].exercises[0].name)
+        assertTrue(draft.dirty)
+        // Out-of-range is a no-op, dirtiness included.
+        assertEquals(base, base.moveEntry(0, 9))
+    }
+
+    @Test
+    fun `re-dating keeps the original time of day`() {
+        val moved = started().withDay(java.time.LocalDate.of(2026, 1, 5))
+
+        assertEquals(
+            OffsetDateTime.parse("2026-01-05T18:00:00Z"),
+            OffsetDateTime.parse(moved.startedAt),
+        )
+        assertTrue(moved.dirty)
+    }
 }

@@ -2,6 +2,7 @@ package dev.kilorep.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -102,6 +103,78 @@ fun IntensityBadge(muscle: String, intensity: String, modifier: Modifier = Modif
     }
 }
 
+/**
+ * .xmuscles — the dashboard/workout muscle readout. Rank, not intensity,
+ * drives the fill: the leader is solid, the rest fade, mirroring the web's
+ * TopMuscles so the visual language stays single across surfaces.
+ */
+@Composable
+fun TopMuscles(muscles: List<String>, modifier: Modifier = Modifier) {
+    if (muscles.isEmpty()) return
+    val colors = Lift.colors
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        muscles.forEachIndexed { index, muscle ->
+            val (bg, ink, line) = when (index) {
+                0 -> Triple(colors.accent, colors.accentInk, colors.accent)
+                1 -> Triple(
+                    colors.accentTint,
+                    colors.accentText,
+                    colors.accent.copy(alpha = 0.35f),
+                )
+                else -> Triple(Color.Transparent, colors.ink2, colors.line2)
+            }
+            Box(
+                Modifier
+                    .background(bg)
+                    .border(1.dp, line)
+                    .padding(horizontal = 9.dp, vertical = 3.dp),
+            ) {
+                Text(
+                    muscle.replaceFirstChar { it.uppercase() },
+                    style = LiftType.secondary,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.W600,
+                    color = ink,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/** .toggle — segmented control; the active option fills volt (bodyweight ranges). */
+@Composable
+fun SegmentedToggle(
+    options: List<String>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Lift.colors
+    Row(
+        modifier = modifier.border(1.dp, colors.line2),
+    ) {
+        options.forEach { option ->
+            val on = option == selected
+            Box(
+                Modifier
+                    .background(if (on) colors.accent else Color.Transparent)
+                    .clickable { onSelect(option) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    option.uppercase(),
+                    style = LiftType.tag,
+                    color = if (on) colors.accentInk else colors.ink2,
+                )
+            }
+        }
+    }
+}
+
 /** Section header row: kicker on the left, optional action on the right. */
 @Composable
 fun SectionHeader(
@@ -116,6 +189,33 @@ fun SectionHeader(
     ) {
         Kicker(title)
         if (action != null) action()
+    }
+}
+
+/**
+ * .dash-stat — a big number over a small uppercase label. Boxed in a card by
+ * default; pass `card = false` for the bare variant used inside an existing card.
+ */
+@Composable
+fun StatCell(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    card: Boolean = true,
+) {
+    val content: @Composable ColumnScope.() -> Unit = {
+        Text(value, style = LiftType.statNum, maxLines = 1)
+        Text(
+            label.uppercase(),
+            style = LiftType.tag,
+            color = Lift.colors.ink3,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+    if (card) {
+        LiftCard(modifier = modifier, padding = 12.dp, content = content)
+    } else {
+        Column(modifier, content = content)
     }
 }
 
