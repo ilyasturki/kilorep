@@ -2,7 +2,7 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Kilorep API",
-        "version": "0.0.7",
+        "version": "0.0.8",
         "description": "Workout session manager and weight tracker. Sessions prescribe the plan; workouts record what actually happened in the gym."
     },
     "paths": {
