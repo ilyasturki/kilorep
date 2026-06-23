@@ -57,7 +57,5 @@ export default defineEventHandler(async (event) => {
         badRequest('A valid "sessionId" is required')
     }
 
-    return useDrizzle().transaction((tx) =>
-        copySessionToWorkout(tx, userId, sessionId),
-    )
+    return copySessionToWorkout(userId, sessionId)
 })

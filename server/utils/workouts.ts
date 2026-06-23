@@ -100,12 +100,13 @@ export function parseWorkoutInput(body: WorkoutInput): ParsedWorkout {
 }
 
 /**
- * Inserts the entry/exercise/set tree for an existing workout row. The caller
- * owns the transaction so the workout and its tree commit (or roll back)
- * together; array index becomes the stored `position`. `userId` guards the
- * referenced exercises — a payload may only log the user's own catalog.
+ * Inserts the entry/exercise/set tree for a workout row, inside the caller's
+ * transaction so the row and its tree commit (or roll back) together; array
+ * index becomes the stored `position`. `userId` guards the referenced
+ * exercises — a payload may only log the user's own catalog. Internal to the
+ * write operations below; transports call `createWorkout` or `saveWorkout`.
  */
-export function writeWorkoutEntries(
+function writeWorkoutEntries(
     tx: DbTransaction,
     userId: number,
     workoutId: number,
@@ -147,6 +148,84 @@ export function writeWorkoutEntries(
                 )
                 .run()
         })
+    })
+}
+
+/**
+ * Creates a workout row from a parsed payload and writes its tree, in one
+ * transaction it owns. `sessionId` links the workout to a template (null for an
+ * ad-hoc log); `defaultName` names it when the payload left `name` blank — the
+ * caller passes the template's name there. The load is whatever the payload
+ * carries, so this is the "log it after the fact" path, not the template copy.
+ */
+export function createWorkout(
+    userId: number,
+    parsed: ParsedWorkout,
+    sessionId: number | null = null,
+    defaultName = 'Workout',
+): Workout {
+    return useDrizzle().transaction((tx) => {
+        const row = tx
+            .insert(tables.workouts)
+            .values({
+                userId,
+                sessionId,
+                name: parsed.name ?? defaultName,
+                startedAt: parsed.startedAt ?? new Date(),
+                completed: parsed.completed,
+            })
+            .returning()
+            .get()
+        writeWorkoutEntries(tx, userId, row.id, parsed.entries)
+        return row
+    })
+}
+
+/**
+ * Replaces an existing workout's row fields and its whole logged tree, in one
+ * transaction it owns. 404s when the workout isn't the user's. The tree is
+ * replaced rather than diffed — the simplest correct way to persist arbitrary
+ * add/remove/reorder edits; deleting the entries cascades to their exercises
+ * and sets. `name` is left untouched unless the payload sets one; the original
+ * time-of-day is kept when only the calendar day moved.
+ */
+export function saveWorkout(
+    userId: number,
+    id: number,
+    parsed: ParsedWorkout,
+): Workout {
+    return useDrizzle().transaction((tx) => {
+        const existing = tx
+            .select()
+            .from(tables.workouts)
+            .where(
+                and(
+                    eq(tables.workouts.id, id),
+                    eq(tables.workouts.userId, userId),
+                ),
+            )
+            .get()
+        if (!existing) {
+            notFound('Workout not found')
+        }
+
+        const row = tx
+            .update(tables.workouts)
+            .set({
+                ...(parsed.name ? { name: parsed.name } : {}),
+                startedAt: parsed.startedAt ?? existing.startedAt,
+                completed: parsed.completed,
+            })
+            .where(eq(tables.workouts.id, id))
+            .returning()
+            .get()
+
+        tx.delete(tables.workoutEntries)
+            .where(eq(tables.workoutEntries.workoutId, id))
+            .run()
+        writeWorkoutEntries(tx, userId, id, parsed.entries)
+
+        return row
     })
 }
 
@@ -228,118 +307,120 @@ function lastLoggedReps(
  * fill in. An open target (null reps) seeds from the lifter's last logged reps
  * for that exercise instead, staying blank when there is no history. The copy
  * means later edits to the template never touch this history. Throws 404 when
- * the template is gone. Caller owns the transaction.
+ * the template is gone. Owns its transaction so the new workout and its whole
+ * seeded tree commit together.
  */
 export function copySessionToWorkout(
-    tx: DbTransaction,
     userId: number,
     sessionId: number,
 ): Workout {
-    const session = tx
-        .select()
-        .from(tables.sessions)
-        .where(
-            and(
-                eq(tables.sessions.id, sessionId),
-                eq(tables.sessions.userId, userId),
+    return useDrizzle().transaction((tx) => {
+        const session = tx
+            .select()
+            .from(tables.sessions)
+            .where(
+                and(
+                    eq(tables.sessions.id, sessionId),
+                    eq(tables.sessions.userId, userId),
+                ),
+            )
+            .get()
+        if (!session) {
+            notFound('Session not found')
+        }
+
+        const entries = tx
+            .select()
+            .from(tables.sessionEntries)
+            .where(eq(tables.sessionEntries.sessionId, sessionId))
+            .orderBy(asc(tables.sessionEntries.position))
+            .all()
+        const entryIds = entries.map((e) => e.id)
+        const sessionExercises =
+            entryIds.length > 0 ?
+                tx
+                    .select()
+                    .from(tables.sessionExercises)
+                    .where(inArray(tables.sessionExercises.entryId, entryIds))
+                    .orderBy(asc(tables.sessionExercises.position))
+                    .all()
+            :   []
+        const exerciseIds = sessionExercises.map((e) => e.id)
+        const templateSets =
+            exerciseIds.length > 0 ?
+                tx
+                    .select()
+                    .from(tables.sets)
+                    .where(inArray(tables.sets.sessionExerciseId, exerciseIds))
+                    .orderBy(asc(tables.sets.position))
+                    .all()
+            :   []
+        const setsByExercise = groupBy(templateSets, (s) => s.sessionExerciseId)
+        const exercisesByEntry = groupBy(sessionExercises, (e) => e.entryId)
+
+        const openExerciseIds = [
+            ...new Set(
+                sessionExercises
+                    .filter((ex) =>
+                        (setsByExercise.get(ex.id) ?? []).some(
+                            (set) => set.reps == null,
+                        ),
+                    )
+                    .map((ex) => ex.exerciseId),
             ),
-        )
-        .get()
-    if (!session) {
-        notFound('Session not found')
-    }
+        ]
+        const lastRepsByExercise = lastLoggedReps(tx, userId, openExerciseIds)
 
-    const entries = tx
-        .select()
-        .from(tables.sessionEntries)
-        .where(eq(tables.sessionEntries.sessionId, sessionId))
-        .orderBy(asc(tables.sessionEntries.position))
-        .all()
-    const entryIds = entries.map((e) => e.id)
-    const sessionExercises =
-        entryIds.length > 0 ?
-            tx
-                .select()
-                .from(tables.sessionExercises)
-                .where(inArray(tables.sessionExercises.entryId, entryIds))
-                .orderBy(asc(tables.sessionExercises.position))
-                .all()
-        :   []
-    const exerciseIds = sessionExercises.map((e) => e.id)
-    const templateSets =
-        exerciseIds.length > 0 ?
-            tx
-                .select()
-                .from(tables.sets)
-                .where(inArray(tables.sets.sessionExerciseId, exerciseIds))
-                .orderBy(asc(tables.sets.position))
-                .all()
-        :   []
-    const setsByExercise = groupBy(templateSets, (s) => s.sessionExerciseId)
-    const exercisesByEntry = groupBy(sessionExercises, (e) => e.entryId)
-
-    const openExerciseIds = [
-        ...new Set(
-            sessionExercises
-                .filter((ex) =>
-                    (setsByExercise.get(ex.id) ?? []).some(
-                        (set) => set.reps == null,
-                    ),
-                )
-                .map((ex) => ex.exerciseId),
-        ),
-    ]
-    const lastRepsByExercise = lastLoggedReps(tx, userId, openExerciseIds)
-
-    const workout = tx
-        .insert(tables.workouts)
-        .values({ userId, name: session.name, sessionId: session.id })
-        .returning()
-        .get()
-
-    entries.forEach((entry, entryIndex) => {
-        const entryRow = tx
-            .insert(tables.workoutEntries)
-            .values({ workoutId: workout.id, position: entryIndex })
+        const workout = tx
+            .insert(tables.workouts)
+            .values({ userId, name: session.name, sessionId: session.id })
             .returning()
             .get()
 
-        const exercises = exercisesByEntry.get(entry.id) ?? []
-        exercises.forEach((ex, exIndex) => {
-            const exerciseRow = tx
-                .insert(tables.workoutExercises)
-                .values({
-                    entryId: entryRow.id,
-                    exerciseId: ex.exerciseId,
-                    position: exIndex,
-                })
+        entries.forEach((entry, entryIndex) => {
+            const entryRow = tx
+                .insert(tables.workoutEntries)
+                .values({ workoutId: workout.id, position: entryIndex })
                 .returning()
                 .get()
 
-            const sets = setsByExercise.get(ex.id) ?? []
-            if (sets.length > 0) {
-                // The last set's reps cover positions beyond the history.
-                const lastReps = lastRepsByExercise.get(ex.exerciseId)
-                tx.insert(tables.workoutSets)
-                    .values(
-                        sets.map((set, setIndex) => ({
-                            workoutExerciseId: exerciseRow.id,
-                            reps:
-                                set.reps
-                                ?? lastReps?.[setIndex]
-                                ?? lastReps?.at(-1)
-                                ?? null,
-                            weight: null,
-                            done: false,
-                            position: setIndex,
-                        })),
-                    )
-                    .run()
-            }
-        })
-    })
+            const exercises = exercisesByEntry.get(entry.id) ?? []
+            exercises.forEach((ex, exIndex) => {
+                const exerciseRow = tx
+                    .insert(tables.workoutExercises)
+                    .values({
+                        entryId: entryRow.id,
+                        exerciseId: ex.exerciseId,
+                        position: exIndex,
+                    })
+                    .returning()
+                    .get()
 
-    return workout
+                const sets = setsByExercise.get(ex.id) ?? []
+                if (sets.length > 0) {
+                    // The last set's reps cover positions beyond the history.
+                    const lastReps = lastRepsByExercise.get(ex.exerciseId)
+                    tx.insert(tables.workoutSets)
+                        .values(
+                            sets.map((set, setIndex) => ({
+                                workoutExerciseId: exerciseRow.id,
+                                reps:
+                                    set.reps
+                                    ?? lastReps?.[setIndex]
+                                    ?? lastReps?.at(-1)
+                                    ?? null,
+                                weight: null,
+                                done: false,
+                                position: setIndex,
+                            })),
+                        )
+                        .run()
+                }
+            })
+        })
+
+        return workout
+    })
 }
 
 /**

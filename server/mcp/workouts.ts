@@ -5,10 +5,10 @@ import { and, asc, desc, eq, tables, useDrizzle } from '~~/server/utils/drizzle'
 import { badRequest } from '~~/server/utils/http'
 import {
     copySessionToWorkout,
+    createWorkout,
     deleteWorkout,
     loadWorkoutTrees,
     parseWorkoutInput,
-    writeWorkoutEntries,
 } from '~~/server/utils/workouts'
 import { toDateInput } from '~~/shared/utils/date'
 import {
@@ -108,23 +108,13 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                     startedAt: input.date,
                     entries,
                 })
-                const startedAt = parsed.startedAt ?? new Date()
 
-                const workout = useDrizzle().transaction((tx) => {
-                    const row = tx
-                        .insert(tables.workouts)
-                        .values({
-                            userId,
-                            sessionId: template?.id ?? null,
-                            name: parsed.name ?? template?.name ?? 'Workout',
-                            startedAt,
-                            completed: parsed.completed,
-                        })
-                        .returning()
-                        .get()
-                    writeWorkoutEntries(tx, userId, row.id, parsed.entries)
-                    return row
-                })
+                const workout = createWorkout(
+                    userId,
+                    parsed,
+                    template?.id ?? null,
+                    template?.name ?? 'Workout',
+                )
 
                 return `Logged:\n${formatWorkout(loadWorkoutTrees(userId, [workout.id])[0]!)}`
             }),
@@ -147,9 +137,7 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
         (input) =>
             run(() => {
                 const template = resolveSessionTemplate(userId, input.session)
-                const workout = useDrizzle().transaction((tx) =>
-                    copySessionToWorkout(tx, userId, template.id),
-                )
+                const workout = copySessionToWorkout(userId, template.id)
                 return `Started:\n${formatWorkout(loadWorkoutTrees(userId, [workout.id])[0]!)}\nLog sets with log_set as you go.`
             }),
     )

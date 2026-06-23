@@ -5,6 +5,19 @@ import type {
     WorkoutDetail,
     WorkoutTemplateStatus,
 } from '~~/server/database/schema'
+import type {
+    WorkoutEntryDraft as EntryDraft,
+    WorkoutExerciseDraft as ExerciseDraft,
+} from '~/utils/workoutDraft'
+import {
+    addWorkoutSet,
+    newWorkoutExercise,
+    removeWorkoutExercise,
+    removeWorkoutSet,
+    ungroupWorkoutEntry,
+    workoutDraftFromEntries,
+    workoutDraftToBody,
+} from '~/utils/workoutDraft'
 
 const route = useRoute()
 const id = Number(route.params.id)
@@ -15,30 +28,8 @@ const [{ data: workout }, { data: exercises }] = await Promise.all([
     useFetch<Exercise[]>('/api/exercises'),
 ])
 
-// reps/weight are undefined while their NumberField is cleared mid-edit, and
-// reps also when seeded from an open-target template set with no history yet.
-type SetDraft = {
-    reps: number | undefined
-    weight: number | undefined
-    done: boolean
-}
-type ExerciseDraft = { exerciseId: number; name: string; sets: SetDraft[] }
-// id is a client-only key for the reorder animation, never sent to the server.
-type EntryDraft = { id: number; exercises: ExerciseDraft[] }
-
 const draft = ref<EntryDraft[]>(
-    (workout.value?.entries ?? []).map((entry) => ({
-        id: uid(),
-        exercises: entry.exercises.map((ex) => ({
-            exerciseId: ex.exerciseId,
-            name: ex.exercise.name,
-            sets: ex.sets.map((s) => ({
-                reps: s.reps ?? undefined,
-                weight: s.weight ?? undefined,
-                done: s.done,
-            })),
-        })),
-    })),
+    workoutDraftFromEntries(workout.value?.entries ?? []),
 )
 
 // `completed` is the persisted status; `editing` is a pure view↔edit toggle,
@@ -122,26 +113,14 @@ function composedStartedAt() {
     return startedAt.toISOString()
 }
 
-const newSet = (): SetDraft => ({
-    reps: undefined,
-    weight: undefined,
-    done: true,
-})
-
 function addSet(ex: ExerciseDraft) {
-    // Copy the last set verbatim — even blank fields — so the new row mirrors
-    // whatever the lifter is mid-typing instead of resetting to a blank set.
-    const last = ex.sets.at(-1)
-    ex.sets.push(last ? { ...last, done: true } : newSet())
+    addWorkoutSet(ex)
 }
 function removeSet(ex: ExerciseDraft, index: number) {
-    ex.sets.splice(index, 1)
+    removeWorkoutSet(ex, index)
 }
 function removeExercise(entryIndex: number, exIndex: number) {
-    const entry = draft.value[entryIndex]
-    if (!entry) return
-    entry.exercises.splice(exIndex, 1)
-    if (entry.exercises.length === 0) draft.value.splice(entryIndex, 1)
+    removeWorkoutExercise(draft.value, entryIndex, exIndex)
 }
 
 const exerciseById = (exId: number | undefined) =>
@@ -198,13 +177,7 @@ function confirmRemove() {
 const addOpen = ref(false)
 const addExerciseId = ref<number>()
 
-function newExerciseDraft(picked: Exercise): ExerciseDraft {
-    return {
-        exerciseId: picked.id,
-        name: picked.name,
-        sets: [newSet()],
-    }
-}
+const newExerciseDraft = newWorkoutExercise
 
 function confirmAdd() {
     const picked = exerciseById(addExerciseId.value)
@@ -256,32 +229,15 @@ function confirmAddTo() {
     addToTarget.value = undefined
 }
 
-// Ungrouping reuses the draft exercise objects, so logged sets survive.
 function ungroupEntry(entryIndex: number) {
-    const entry = draft.value[entryIndex]
-    if (!entry || entry.exercises.length < 2) return
-    draft.value.splice(
-        entryIndex,
-        1,
-        ...entry.exercises.map((ex) => ({ id: uid(), exercises: [ex] })),
-    )
+    ungroupWorkoutEntry(draft.value, entryIndex)
 }
 
 function buildBody(completed: boolean) {
-    return {
+    return workoutDraftToBody(draft.value, {
         completed,
         startedAt: composedStartedAt(),
-        entries: draft.value.map((entry) => ({
-            exercises: entry.exercises.map((ex) => ({
-                exerciseId: ex.exerciseId,
-                sets: ex.sets.map((s) => ({
-                    reps: s.reps,
-                    weight: s.weight ?? null,
-                    done: s.done,
-                })),
-            })),
-        })),
-    }
+    })
 }
 
 const saving = ref(false)

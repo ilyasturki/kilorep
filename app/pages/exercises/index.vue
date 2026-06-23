@@ -24,37 +24,6 @@ const {
 // empty query keeps the catalog order.
 const search = ref('')
 
-// Muscle groups collapse the 20-muscle vocabulary into the six regions the
-// filter offers. Flattening them in order rebuilds the form's muscle list, so
-// the two can't drift; each muscle belongs to exactly one group.
-const MUSCLE_GROUPS = {
-    Chest: ['upper chest', 'chest', 'lower chest'],
-    Shoulders: ['front delts', 'side delts', 'rear delts'],
-    Back: ['lats', 'rhomboids', 'traps', 'lower back'],
-    Arms: ['biceps', 'brachialis', 'forearms', 'triceps'],
-    Legs: ['quads', 'hamstrings', 'glutes', 'calves'],
-    Core: ['abs', 'obliques'],
-} as const
-type MuscleGroup = keyof typeof MUSCLE_GROUPS
-const MUSCLE_GROUP_NAMES = Object.keys(MUSCLE_GROUPS) as MuscleGroup[]
-
-// The muscle vocabulary the form offers and the table knows how to render.
-const muscleOptions = Object.values(MUSCLE_GROUPS).flat()
-
-const muscleToGroup = new Map<string, MuscleGroup>(
-    MUSCLE_GROUP_NAMES.flatMap((group) =>
-        MUSCLE_GROUPS[group].map((muscle) => [muscle, group] as const),
-    ),
-)
-const groupsOf = (exercise: Exercise) => {
-    const groups = new Set<MuscleGroup>()
-    for (const m of exercise.muscles) {
-        const group = muscleToGroup.get(m.muscle)
-        if (group) groups.add(group)
-    }
-    return groups
-}
-
 // Facet filters: an empty list means "no constraint". Within a facet the picks
 // are OR'd; the three facets (and the search box) are AND'd together.
 const equipmentFilter = ref<Equipment[]>([])

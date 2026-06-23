@@ -1,5 +1,17 @@
 <script setup lang="ts">
 import type { Exercise, SessionWithEntries } from '~~/server/database/schema'
+import type {
+    SessionEntryDraft as EntryDraft,
+    SessionExerciseDraft as ExerciseDraft,
+    SessionDraft,
+} from '~/utils/sessionDraft'
+import {
+    emptySessionDraft,
+    newSessionEntry,
+    newSessionExercise,
+    newSessionSet,
+    sessionDraftFromSession,
+} from '~/utils/sessionDraft'
 
 const [{ data: sessions, status, refresh }, { data: exercises }] =
     await Promise.all([
@@ -7,29 +19,7 @@ const [{ data: sessions, status, refresh }, { data: exercises }] =
         useFetch<Exercise[]>('/api/exercises'),
     ])
 
-// reps stays undefined for a set without a target — the count is then
-// decided at workout time.
-type SetDraft = { reps: number | undefined }
-type ExerciseDraft = { exerciseId: number | undefined; sets: SetDraft[] }
-// id is a client-only key for the reorder animation, never sent to the server.
-type EntryDraft = { id: number; exercises: ExerciseDraft[] }
-type SessionDraft = { name: string; entries: EntryDraft[] }
-
-const newSet = (): SetDraft => ({ reps: undefined })
-const newExercise = (): ExerciseDraft => ({
-    exerciseId: undefined,
-    sets: [newSet()],
-})
-const newEntry = (exerciseCount = 1): EntryDraft => ({
-    id: uid(),
-    exercises: Array.from({ length: exerciseCount }, newExercise),
-})
-const emptyDraft = (): SessionDraft => ({
-    name: '',
-    entries: [newEntry()],
-})
-
-const draft = ref<SessionDraft>(emptyDraft())
+const draft = ref<SessionDraft>(emptySessionDraft())
 const builderOpen = ref(false)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
@@ -42,22 +32,13 @@ const view = useCookie<'detailed' | 'condensed'>('sessions-view', {
 
 function openBuilder() {
     editingId.value = null
-    draft.value = emptyDraft()
+    draft.value = emptySessionDraft()
     builderOpen.value = true
 }
 
 function editSession(session: SessionWithEntries) {
     editingId.value = session.id
-    draft.value = {
-        name: session.name,
-        entries: session.entries.map((entry) => ({
-            id: uid(),
-            exercises: entry.exercises.map((se) => ({
-                exerciseId: se.exerciseId,
-                sets: se.sets.map((s) => ({ reps: s.reps ?? undefined })),
-            })),
-        })),
-    }
+    draft.value = sessionDraftFromSession(session)
     builderOpen.value = true
 }
 
@@ -67,22 +48,22 @@ function closeBuilder() {
 }
 
 function addExercise() {
-    draft.value.entries.push(newEntry())
+    draft.value.entries.push(newSessionEntry())
 }
 function addSuperset() {
-    draft.value.entries.push(newEntry(2))
+    draft.value.entries.push(newSessionEntry(2))
 }
 function removeEntry(index: number) {
     draft.value.entries.splice(index, 1)
 }
 function addExerciseToEntry(entry: EntryDraft) {
-    entry.exercises.push(newExercise())
+    entry.exercises.push(newSessionExercise())
 }
 function removeExerciseFromEntry(entry: EntryDraft, index: number) {
     entry.exercises.splice(index, 1)
 }
 function addSet(exercise: ExerciseDraft) {
-    exercise.sets.push(newSet())
+    exercise.sets.push(newSessionSet())
 }
 function removeSet(exercise: ExerciseDraft, index: number) {
     exercise.sets.splice(index, 1)

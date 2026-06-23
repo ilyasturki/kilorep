@@ -1,0 +1,220 @@
+// Domain tests for the deepened workout write modules, against an in-memory
+// database (see ./setup.ts). These paths — transaction ownership, tree stitch,
+// open-target seeding — were previously reachable only through a full HTTP
+// round-trip; now the module interface is the test surface. Run: bun run test:domain
+import { beforeEach, expect, test } from 'vitest'
+
+import { tables, useDrizzle } from '../../server/utils/drizzle'
+import { createExercise } from '../../server/utils/exercises'
+import {
+    createSessionTree,
+    parseSessionInput,
+} from '../../server/utils/sessions'
+import {
+    copySessionToWorkout,
+    createWorkout,
+    loadWorkoutTrees,
+    parseWorkoutInput,
+    saveWorkout,
+} from '../../server/utils/workouts'
+
+let userId: number
+
+function newUser(): number {
+    return useDrizzle()
+        .insert(tables.users)
+        .values({ provider: 'local', providerAccountId: `u${Math.random()}` })
+        .returning()
+        .get().id
+}
+
+const benchInput = {
+    name: 'Bench',
+    equipment: 'barbell',
+    type: 'compound',
+    muscles: [{ muscle: 'chest', intensity: 'high' }],
+}
+
+// Each test runs against its own user; every query is userId-scoped, so prior
+// tests' rows never leak in.
+beforeEach(() => {
+    userId = newUser()
+})
+
+test('createWorkout persists the tree and loadWorkoutTrees reads it back', () => {
+    const ex = createExercise(userId, benchInput)
+    const parsed = parseWorkoutInput({
+        name: 'Push',
+        completed: true,
+        entries: [
+            {
+                exercises: [
+                    {
+                        exerciseId: ex.id,
+                        sets: [
+                            { reps: 8, weight: 60, done: true },
+                            { reps: 7, weight: 60, done: true },
+                        ],
+                    },
+                ],
+            },
+        ],
+    })
+
+    const workout = createWorkout(userId, parsed)
+    const tree = loadWorkoutTrees(userId, [workout.id])[0]!
+
+    expect(tree.name).toBe('Push')
+    expect(tree.completed).toBe(true)
+    expect(tree.entries).toHaveLength(1)
+    const logged = tree.entries[0]!.exercises[0]!
+    expect(logged.exerciseId).toBe(ex.id)
+    expect(logged.sets.map((s) => [s.reps, s.weight, s.done])).toEqual([
+        [8, 60, true],
+        [7, 60, true],
+    ])
+})
+
+test('createWorkout falls back to the default name when the payload has none', () => {
+    const ex = createExercise(userId, benchInput)
+    const parsed = parseWorkoutInput({
+        completed: false,
+        entries: [{ exercises: [{ exerciseId: ex.id, sets: [{ reps: 5 }] }] }],
+    })
+    const workout = createWorkout(userId, parsed, null, 'Leg Day')
+    expect(workout.name).toBe('Leg Day')
+    expect(workout.sessionId).toBeNull()
+})
+
+test('saveWorkout replaces the whole tree and updates row fields', () => {
+    const bench = createExercise(userId, benchInput)
+    const workout = createWorkout(
+        userId,
+        parseWorkoutInput({
+            completed: false,
+            entries: [
+                { exercises: [{ exerciseId: bench.id, sets: [{ reps: 5 }] }] },
+            ],
+        }),
+    )
+
+    const row = createExercise(userId, {
+        name: 'Row',
+        equipment: 'cable',
+        type: 'compound',
+        muscles: [{ muscle: 'lats', intensity: 'high' }],
+    })
+    saveWorkout(
+        userId,
+        workout.id,
+        parseWorkoutInput({
+            completed: true,
+            entries: [
+                {
+                    exercises: [
+                        {
+                            exerciseId: row.id,
+                            sets: [{ reps: 10, weight: 40, done: true }],
+                        },
+                    ],
+                },
+            ],
+        }),
+    )
+
+    const tree = loadWorkoutTrees(userId, [workout.id])[0]!
+    expect(tree.completed).toBe(true)
+    expect(tree.entries).toHaveLength(1)
+    expect(tree.entries[0]!.exercises[0]!.exerciseId).toBe(row.id)
+    expect(tree.entries[0]!.exercises[0]!.sets).toHaveLength(1)
+})
+
+test('saveWorkout 404s on a workout another user owns, leaving it untouched', () => {
+    const ex = createExercise(userId, benchInput)
+    const workout = createWorkout(
+        userId,
+        parseWorkoutInput({
+            completed: true,
+            entries: [
+                { exercises: [{ exerciseId: ex.id, sets: [{ reps: 5 }] }] },
+            ],
+        }),
+    )
+
+    const intruder = newUser()
+    const intruderEx = createExercise(intruder, benchInput)
+    expect(() =>
+        saveWorkout(
+            intruder,
+            workout.id,
+            parseWorkoutInput({
+                completed: false,
+                entries: [
+                    {
+                        exercises: [
+                            { exerciseId: intruderEx.id, sets: [{ reps: 1 }] },
+                        ],
+                    },
+                ],
+            }),
+        ),
+    ).toThrow()
+
+    // The owner's workout is unchanged.
+    expect(loadWorkoutTrees(userId, [workout.id])[0]!.completed).toBe(true)
+})
+
+test('copySessionToWorkout seeds an open target from the last logged reps, load left open', () => {
+    const squat = createExercise(userId, {
+        name: 'Squat',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [{ muscle: 'quads', intensity: 'high' }],
+    })
+
+    // A prior workout logged Squat at 5 reps.
+    createWorkout(
+        userId,
+        parseWorkoutInput({
+            completed: true,
+            entries: [
+                {
+                    exercises: [
+                        {
+                            exerciseId: squat.id,
+                            sets: [{ reps: 5, weight: 100, done: true }],
+                        },
+                    ],
+                },
+            ],
+        }),
+    )
+
+    // A template prescribing Squat with an open rep target (null).
+    const session = createSessionTree(
+        userId,
+        parseSessionInput({
+            name: 'Leg Day',
+            entries: [
+                {
+                    exercises: [
+                        { exerciseId: squat.id, sets: [{ reps: null }] },
+                    ],
+                },
+            ],
+        }),
+    )
+
+    const workout = copySessionToWorkout(userId, session.id)
+    const tree = loadWorkoutTrees(userId, [workout.id])[0]!
+    const set = tree.entries[0]!.exercises[0]!.sets[0]!
+
+    expect(workout.sessionId).toBe(session.id)
+    expect(set.reps).toBe(5) // seeded from the last logged reps
+    expect(set.weight).toBeNull() // load left blank for the lifter
+    expect(set.done).toBe(false)
+})
+
+test('parseWorkoutInput rejects a payload with no usable exercise', () => {
+    expect(() => parseWorkoutInput({ entries: [] })).toThrow()
+})

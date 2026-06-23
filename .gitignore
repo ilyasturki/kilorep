@@ -5,6 +5,8 @@
 .nitro
 .cache
 dist
+# Generated module-setup marker (written by @nuxt/test-utils on prepare)
+.nuxtrc
 
 # Node dependencies
 node_modules
@@ -22,6 +24,7 @@ logs
 .env
 .env.*
 !.env.example
+!.env.test
 
 # Nix build symlink
 result
