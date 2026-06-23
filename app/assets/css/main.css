@@ -252,6 +252,19 @@
         align-items: center;
         gap: 11px;
         min-width: 0;
+        color: var(--ink);
+        text-decoration: none;
+    }
+
+    .topbar-logo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        align-self: center;
+        color: var(--accent-text);
+        padding: 6px;
+        margin: -6px -6px -6px 0;
     }
 
     .side-toggle {
@@ -299,6 +312,11 @@
         }
 
         .tabbar {
+            display: none;
+        }
+
+        /* Logo lives in the sidebar on desktop; the topbar copy is mobile-only. */
+        .topbar-logo {
             display: none;
         }
 
@@ -2680,10 +2698,53 @@
         color: var(--ink-3);
     }
 
+    /* The 7-day summary stays three-up on phones, so the cards must shrink to
+       hold a grouped volume figure (e.g. "124,500 kg") without the unbreakable
+       number overflowing its card. Smaller value/label type plus tighter
+       padding keeps the row even and scannable on narrow viewports. */
+    @media (max-width: 480px) {
+        .dash-stats {
+            gap: 8px;
+        }
+
+        .dash-stat {
+            padding: 14px 12px;
+        }
+
+        .dash-stat .stat-lab {
+            letter-spacing: 0.06em;
+        }
+
+        .dash-stat .stat-num {
+            font-size: 18px;
+        }
+
+        .dash-unit {
+            font-size: 10px;
+        }
+
+        .dash-delta {
+            gap: 4px;
+            font-size: 10px;
+        }
+
+        .dash-delta span {
+            font-size: 9px;
+        }
+    }
+
     .dash-grid {
         display: grid;
         grid-template-columns: 1fr;
         gap: 16px;
+    }
+
+    /* A grid item's auto minimum is its content width; for the chart cards that
+       is the Chart.js canvas, which would hold the track open and overflow the
+       viewport on mobile. min-width:0 lets the track shrink so the responsive
+       canvas can follow. */
+    .dash-grid > .card {
+        min-width: 0;
     }
 
     @media (min-width: 760px) {

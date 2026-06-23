@@ -38,6 +38,13 @@ const links = computed(() => [
 
 const APP_NAME = 'Kilorep'
 
+// The logo is the dashboard entry point (sidebar on desktop, topbar on mobile),
+// so the bottom tab bar drops the redundant Dashboard tab — which also eases the
+// five-tab crowding on narrow viewports.
+const tabLinks = computed(() =>
+    links.value.filter((link) => link.to !== '/dashboard'),
+)
+
 const section = computed(
     () => links.value.find((link) => route.path.startsWith(link.to))?.label,
 )
@@ -66,10 +73,14 @@ useHead({
                 :class="{ collapsed }"
             >
                 <div class="brand">
-                    <span class="brand-mark">
+                    <NuxtLink
+                        to="/dashboard"
+                        class="brand-mark"
+                        aria-label="Dashboard"
+                    >
                         <UiLogo class="brand-logo" />
                         <span class="brand-name">{{ APP_NAME }}</span>
-                    </span>
+                    </NuxtLink>
                     <button
                         type="button"
                         class="side-toggle"
@@ -189,6 +200,13 @@ useHead({
                             {{ title }}
                         </h1>
                     </div>
+                    <NuxtLink
+                        to="/dashboard"
+                        class="topbar-logo"
+                        aria-label="Dashboard"
+                    >
+                        <UiLogo class="brand-logo" />
+                    </NuxtLink>
                 </header>
 
                 <main class="main-scroll">
@@ -200,7 +218,7 @@ useHead({
 
             <nav class="tabbar">
                 <NuxtLink
-                    v-for="link in links"
+                    v-for="link in tabLinks"
                     :key="link.to"
                     :to="link.to"
                     class="tab"
