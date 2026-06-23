@@ -35,6 +35,11 @@ const editingId = ref<number | null>(null)
 const saving = ref(false)
 const toast = useToast()
 
+// Display density, remembered per device (web-only, kept off the API contract).
+const view = useCookie<'detailed' | 'condensed'>('sessions-view', {
+    default: () => 'detailed',
+})
+
 function openBuilder() {
     editingId.value = null
     draft.value = emptyDraft()
@@ -159,6 +164,12 @@ async function confirmDelete() {
 const exerciseName = (id: number) =>
     exercises.value?.find((e) => e.id === id)?.name ?? `#${id}`
 
+// One-line content summary for the condensed view.
+const countLabel = (session: SessionWithEntries) => {
+    const { exercises: ex, sets } = workoutStats(session.entries)
+    return `${plural(ex, 'exercise')} · ${plural(sets, 'set')}`
+}
+
 const exerciseMuscles = computed(() => musclesByExercise(exercises.value ?? []))
 const sessionMuscles = computed(
     () =>
@@ -204,11 +215,31 @@ function planBlocks(session: SessionWithEntries) {
 
 <template>
     <div>
-        <div class="mb-5 flex items-end justify-end gap-4">
+        <div class="mb-5 flex items-center gap-4">
+            <div
+                v-if="sessions?.length"
+                class="toggle"
+            >
+                <button
+                    type="button"
+                    class="toggle-opt"
+                    :class="{ on: view === 'detailed' }"
+                    @click="view = 'detailed'"
+                >
+                    Detailed
+                </button>
+                <button
+                    type="button"
+                    class="toggle-opt"
+                    :class="{ on: view === 'condensed' }"
+                    @click="view = 'condensed'"
+                >
+                    Condensed
+                </button>
+            </div>
             <button
-                v-if="!builderOpen"
                 type="button"
-                class="btn-primary"
+                class="btn-primary ml-auto"
                 @click="openBuilder"
             >
                 <Icon
@@ -220,16 +251,11 @@ function planBlocks(session: SessionWithEntries) {
         </div>
 
         <!-- Builder -->
-        <div
-            v-if="builderOpen"
-            class="card mb-8"
+        <UiModal
+            :open="builderOpen"
+            :title="editingId ? 'Edit session' : 'New session'"
+            @update:open="(open) => !open && closeBuilder()"
         >
-            <div class="card-head mb-4">
-                <span class="kicker kicker--accent">
-                    {{ editingId ? 'Edit session' : 'New session' }}
-                </span>
-            </div>
-
             <div class="space-y-4">
                 <div class="field">
                     <label class="field-label">
@@ -255,14 +281,11 @@ function planBlocks(session: SessionWithEntries) {
                             'builder-block--ss': entry.exercises.length > 1,
                         }"
                     >
-                        <div class="mb-3 flex items-center justify-between">
-                            <span class="tag">
-                                {{
-                                    entry.exercises.length > 1 ?
-                                        'Superset'
-                                    :   'Exercise'
-                                }}
-                            </span>
+                        <div
+                            v-if="entry.exercises.length > 1"
+                            class="mb-3 flex items-center justify-between"
+                        >
+                            <span class="tag">Superset</span>
                             <div class="flex items-center gap-1">
                                 <MoveButtons
                                     label="block"
@@ -324,6 +347,38 @@ function planBlocks(session: SessionWithEntries) {
                                             :size="16"
                                         />
                                     </button>
+                                    <div
+                                        v-else
+                                        class="flex items-center gap-1"
+                                    >
+                                        <MoveButtons
+                                            label="block"
+                                            :can-up="entryIndex > 0"
+                                            :can-down="
+                                                entryIndex
+                                                < draft.entries.length - 1
+                                            "
+                                            @move="
+                                                (dir) =>
+                                                    moveItem(
+                                                        draft.entries,
+                                                        entryIndex,
+                                                        dir,
+                                                    )
+                                            "
+                                        />
+                                        <button
+                                            type="button"
+                                            class="icon-btn sm icon-btn--danger"
+                                            aria-label="Remove block"
+                                            @click="removeEntry(entryIndex)"
+                                        >
+                                            <Icon
+                                                name="tabler:trash"
+                                                :size="15"
+                                            />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="space-y-2 pl-1">
@@ -410,7 +465,7 @@ function planBlocks(session: SessionWithEntries) {
                 </div>
             </div>
 
-            <div class="modal-foot">
+            <template #footer>
                 <button
                     type="button"
                     class="btn-ghost"
@@ -434,8 +489,8 @@ function planBlocks(session: SessionWithEntries) {
                         : 'Save session'
                     }}
                 </button>
-            </div>
-        </div>
+            </template>
+        </UiModal>
 
         <!-- List -->
         <div
@@ -454,14 +509,15 @@ function planBlocks(session: SessionWithEntries) {
             v-else
             name="reorder"
             tag="div"
-            class="space-y-4"
+            :class="view === 'condensed' ? 'space-y-2' : 'space-y-4'"
         >
             <div
                 v-for="(session, sessionIndex) in sessions"
                 :key="session.id"
-                class="card"
+                :class="view === 'condensed' ? 'session-row' : 'card'"
             >
-                <div class="card-head">
+                <!-- Condensed: one line per session -->
+                <template v-if="view === 'condensed'">
                     <div class="flex min-w-0 items-center gap-2.5">
                         <h3 class="session-name min-w-0">
                             <button
@@ -472,16 +528,11 @@ function planBlocks(session: SessionWithEntries) {
                                 {{ session.name }}
                             </button>
                         </h3>
-                        <span class="tag">
-                            {{
-                                plural(
-                                    workoutStats(session.entries).sets,
-                                    'set',
-                                )
-                            }}
+                        <span class="session-meta">
+                            {{ countLabel(session) }}
                         </span>
                     </div>
-                    <div class="flex items-center gap-1">
+                    <div class="flex shrink-0 items-center gap-1">
                         <MoveButtons
                             label="session"
                             :can-up="sessionIndex > 0 && !reordering"
@@ -514,40 +565,99 @@ function planBlocks(session: SessionWithEntries) {
                             />
                         </button>
                     </div>
-                </div>
+                </template>
 
-                <TopMuscles
-                    :muscles="sessionMuscles.get(session.id) ?? []"
-                    class="mt-3"
-                />
-
-                <div class="plan-list">
-                    <div
-                        v-for="block in planBlocks(session)"
-                        :key="block.key"
-                        class="plan-block"
-                        :class="{ 'plan-block--ss': block.isSuperset }"
-                    >
-                        <span
-                            v-if="block.isSuperset"
-                            class="ss-tag"
-                        >
-                            SUPERSET
-                        </span>
-                        <NuxtLink
-                            v-for="ex in block.exercises"
-                            :key="ex.key"
-                            :to="`/exercises/${ex.exerciseId}`"
-                            class="plan-ex plan-ex--link"
-                        >
-                            <span class="plan-ex-idx">
-                                {{ String(ex.n).padStart(2, '0') }}
+                <template v-else>
+                    <div class="card-head">
+                        <div class="flex min-w-0 items-center gap-2.5">
+                            <h3 class="session-name min-w-0">
+                                <button
+                                    type="button"
+                                    class="session-name-btn max-w-full truncate"
+                                    @click="editSession(session)"
+                                >
+                                    {{ session.name }}
+                                </button>
+                            </h3>
+                            <span class="tag">
+                                {{
+                                    plural(
+                                        workoutStats(session.entries).sets,
+                                        'set',
+                                    )
+                                }}
                             </span>
-                            <span class="plan-ex-name">{{ ex.name }}</span>
-                            <span class="plan-ex-target">{{ ex.summary }}</span>
-                        </NuxtLink>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <MoveButtons
+                                label="session"
+                                :can-up="sessionIndex > 0 && !reordering"
+                                :can-down="
+                                    sessionIndex < (sessions?.length ?? 0) - 1
+                                    && !reordering
+                                "
+                                @move="(dir) => moveSession(sessionIndex, dir)"
+                            />
+                            <button
+                                type="button"
+                                class="icon-btn sm"
+                                aria-label="Edit session"
+                                @click="editSession(session)"
+                            >
+                                <Icon
+                                    name="tabler:pencil"
+                                    :size="15"
+                                />
+                            </button>
+                            <button
+                                type="button"
+                                class="icon-btn sm icon-btn--danger"
+                                aria-label="Delete session"
+                                @click="deleteTarget = session"
+                            >
+                                <Icon
+                                    name="tabler:trash"
+                                    :size="15"
+                                />
+                            </button>
+                        </div>
                     </div>
-                </div>
+
+                    <TopMuscles
+                        :muscles="sessionMuscles.get(session.id) ?? []"
+                        class="mt-3"
+                    />
+
+                    <div class="plan-list">
+                        <div
+                            v-for="block in planBlocks(session)"
+                            :key="block.key"
+                            class="plan-block"
+                            :class="{ 'plan-block--ss': block.isSuperset }"
+                        >
+                            <span
+                                v-if="block.isSuperset"
+                                class="ss-tag"
+                            >
+                                SUPERSET
+                            </span>
+                            <NuxtLink
+                                v-for="ex in block.exercises"
+                                :key="ex.key"
+                                :to="`/exercises/${ex.exerciseId}`"
+                                class="plan-ex plan-ex--link"
+                            >
+                                <span class="plan-ex-idx">
+                                    {{ String(ex.n).padStart(2, '0') }}
+                                </span>
+                                <span class="plan-ex-name">{{ ex.name }}</span>
+                                <span class="plan-ex-target">{{
+                                    ex.summary
+                                }}</span>
+                            </NuxtLink>
+                        </div>
+                    </div>
+                </template>
             </div>
         </TransitionGroup>
 

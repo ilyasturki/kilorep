@@ -1034,6 +1034,85 @@
         color: var(--ink-3);
     }
 
+    /* ===== Exercise facets (filter dropdowns) ========== */
+    .facets {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .filter-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: var(--surface);
+        border: 1px solid var(--line-2);
+        color: var(--ink-2);
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 600;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition:
+            color 0.12s,
+            border-color 0.12s;
+    }
+
+    .filter-trigger:hover,
+    .filter-trigger[data-state='open'] {
+        border-color: var(--accent);
+        color: var(--ink);
+    }
+
+    .filter-trigger.active {
+        color: var(--ink);
+    }
+
+    .filter-trigger > svg {
+        color: var(--ink-3);
+    }
+
+    /* Active-pick count, mirroring the accent fill used elsewhere for "on". */
+    .filter-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    /* Popover list reuses .select-content/.select-viewport/.select-item; these
+       rows are plain buttons, so they need their own hover (no data-highlighted)
+       and a trigger-independent min-width. */
+    .filter-content {
+        min-width: 168px;
+    }
+
+    .filter-item {
+        width: 100%;
+        background: none;
+        border: none;
+        font-family: inherit;
+        font-weight: 500;
+        text-align: left;
+    }
+
+    .filter-item:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+    }
+
+    .facet-clear {
+        margin-left: auto;
+    }
+
     /* ===== Responsive "table" (Exercises) ================ */
     .xtable {
         border: 1px solid var(--line-2);
@@ -1042,6 +1121,38 @@
 
     .xhead {
         display: none;
+    }
+
+    /* Sortable column header: a bare button that keeps the kicker label and
+       adds a direction arrow. The arrow stays dim until the column is active. */
+    .xsort {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .xsort-icon {
+        color: var(--ink-3);
+        opacity: 0.45;
+        transition: opacity 0.12s;
+    }
+
+    .xsort:hover .xsort-icon {
+        opacity: 0.8;
+    }
+
+    .xsort.on .kicker {
+        color: var(--accent-text);
+    }
+
+    .xsort.on .xsort-icon {
+        color: var(--accent-text);
+        opacity: 1;
     }
 
     .xrow {
@@ -1061,11 +1172,29 @@
         background: var(--surface-2);
     }
 
-    /* Name + origin icon share one cell. Kept as inline flow (not flex) so the
-       icon trails the name's last word and wraps with it rather than floating
-       centred beside the block; padding-right clears the absolute actions. */
+    /* Thumbnail to the left, name block to the right. padding-right clears the
+       absolute actions. */
     .xname-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         padding-right: 82px;
+    }
+
+    /* Reserved square slot: holds the illustration when one exists, stays as
+       empty space otherwise so names line up in a column. */
+    .xthumb {
+        flex: none;
+        width: 56px;
+        height: 56px;
+        overflow: hidden;
+    }
+
+    /* Name + origin icon kept as inline flow so the icon trails the name's last
+       word and wraps with it rather than floating centred beside the block. */
+    .xname-text {
+        flex: 1;
+        min-width: 0;
     }
 
     .xname {
@@ -1151,6 +1280,31 @@
         font-weight: 800;
         letter-spacing: -0.02em;
         text-transform: capitalize;
+    }
+
+    /* Condensed view: each session collapses to a single scannable line. */
+    .session-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 13px 18px;
+        background: var(--surface);
+        border: 1px solid var(--line-2);
+    }
+
+    .session-row .session-name {
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .session-meta {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+        white-space: nowrap;
     }
 
     /* The title doubles as the edit affordance — same quiet hover tint as

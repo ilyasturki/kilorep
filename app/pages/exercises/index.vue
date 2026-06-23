@@ -23,9 +23,88 @@ const {
 // searching behaves identically everywhere. Best matches sort to the top; an
 // empty query keeps the catalog order.
 const search = ref('')
+
+// Muscle groups collapse the 20-muscle vocabulary into the six regions the
+// filter offers. Flattening them in order rebuilds the form's muscle list, so
+// the two can't drift; each muscle belongs to exactly one group.
+const MUSCLE_GROUPS = {
+    Chest: ['upper chest', 'chest', 'lower chest'],
+    Shoulders: ['front delts', 'side delts', 'rear delts'],
+    Back: ['lats', 'rhomboids', 'traps', 'lower back'],
+    Arms: ['biceps', 'brachialis', 'forearms', 'triceps'],
+    Legs: ['quads', 'hamstrings', 'glutes', 'calves'],
+    Core: ['abs', 'obliques'],
+} as const
+type MuscleGroup = keyof typeof MUSCLE_GROUPS
+const MUSCLE_GROUP_NAMES = Object.keys(MUSCLE_GROUPS) as MuscleGroup[]
+
+// The muscle vocabulary the form offers and the table knows how to render.
+const muscleOptions = Object.values(MUSCLE_GROUPS).flat()
+
+const muscleToGroup = new Map<string, MuscleGroup>(
+    MUSCLE_GROUP_NAMES.flatMap((group) =>
+        MUSCLE_GROUPS[group].map((muscle) => [muscle, group] as const),
+    ),
+)
+const groupsOf = (exercise: Exercise) => {
+    const groups = new Set<MuscleGroup>()
+    for (const m of exercise.muscles) {
+        const group = muscleToGroup.get(m.muscle)
+        if (group) groups.add(group)
+    }
+    return groups
+}
+
+// Facet filters: an empty list means "no constraint". Within a facet the picks
+// are OR'd; the three facets (and the search box) are AND'd together.
+const equipmentFilter = ref<Equipment[]>([])
+const typeFilter = ref<ExerciseType[]>([])
+const muscleFilter = ref<MuscleGroup[]>([])
+
+const hasFilters = computed(
+    () =>
+        equipmentFilter.value.length > 0
+        || typeFilter.value.length > 0
+        || muscleFilter.value.length > 0,
+)
+function clearFilters() {
+    equipmentFilter.value = []
+    typeFilter.value = []
+    muscleFilter.value = []
+}
+
+// A column sort overrides the fuzzy ranking when set; null falls back to it
+// (best match first, else catalog order). Clicking a header cycles
+// asc -> desc -> off, so the default order is always reachable.
+type SortKey = 'name' | 'equipment' | 'type'
+const sort = ref<{ key: SortKey; dir: 'asc' | 'desc' } | null>(null)
+function toggleSort(key: SortKey) {
+    if (sort.value?.key !== key) sort.value = { key, dir: 'asc' }
+    else if (sort.value.dir === 'asc') sort.value = { key, dir: 'desc' }
+    else sort.value = null
+}
+const sortIcon = (key: SortKey) =>
+    sort.value?.key !== key ? 'tabler:arrows-sort'
+    : sort.value.dir === 'asc' ? 'tabler:arrow-narrow-up'
+    : 'tabler:arrow-narrow-down'
+
 const tokens = computed(() => fuzzyTokens(search.value))
 const filteredExercises = computed(() => {
     const hits = (exercises.value ?? []).flatMap((exercise) => {
+        if (
+            equipmentFilter.value.length
+            && !equipmentFilter.value.includes(exercise.equipment)
+        )
+            return []
+        if (
+            typeFilter.value.length
+            && !typeFilter.value.includes(exercise.type)
+        )
+            return []
+        if (muscleFilter.value.length) {
+            const groups = groupsOf(exercise)
+            if (!muscleFilter.value.some((g) => groups.has(g))) return []
+        }
         const match = fuzzyMatch(
             exercise.name,
             exerciseSearchKeywords(exercise),
@@ -33,33 +112,19 @@ const filteredExercises = computed(() => {
         )
         return match ? [{ exercise, match }] : []
     })
-    hits.sort((a, b) => b.match.score - a.match.score)
+    const order = sort.value
+    if (order) {
+        const dir = order.dir === 'asc' ? 1 : -1
+        hits.sort(
+            (a, b) =>
+                dir
+                * a.exercise[order.key].localeCompare(b.exercise[order.key]),
+        )
+    } else {
+        hits.sort((a, b) => b.match.score - a.match.score)
+    }
     return hits
 })
-
-// The muscle vocabulary the form offers and the table knows how to render.
-const muscleOptions = [
-    'upper chest',
-    'chest',
-    'lower chest',
-    'front delts',
-    'side delts',
-    'rear delts',
-    'lats',
-    'rhomboids',
-    'traps',
-    'lower back',
-    'biceps',
-    'brachialis',
-    'forearms',
-    'triceps',
-    'quads',
-    'hamstrings',
-    'glutes',
-    'calves',
-    'abs',
-    'obliques',
-]
 
 type MuscleField = { muscle: string; intensity: MuscleIntensity }
 const blankMuscle = (): MuscleField => ({ muscle: '', intensity: 'high' })
@@ -258,11 +323,77 @@ async function mergeExercise() {
             </button>
         </div>
 
+        <div class="facets">
+            <UiFilterMenu
+                v-model="equipmentFilter"
+                label="Equipment"
+                :items="[...EQUIPMENT]"
+            />
+            <UiFilterMenu
+                v-model="typeFilter"
+                label="Type"
+                :items="[...EXERCISE_TYPES]"
+            />
+            <UiFilterMenu
+                v-model="muscleFilter"
+                label="Muscles"
+                :items="MUSCLE_GROUP_NAMES"
+            />
+            <button
+                v-if="hasFilters"
+                type="button"
+                class="btn-link facet-clear"
+                @click="clearFilters"
+            >
+                <Icon
+                    name="tabler:x"
+                    :size="14"
+                />
+                Clear
+            </button>
+        </div>
+
         <div class="xtable">
             <div class="xhead">
-                <span class="kicker">Name</span>
-                <span class="kicker">Equipment</span>
-                <span class="kicker">Type</span>
+                <button
+                    type="button"
+                    class="xsort"
+                    :class="{ on: sort?.key === 'name' }"
+                    @click="toggleSort('name')"
+                >
+                    <span class="kicker">Name</span>
+                    <Icon
+                        :name="sortIcon('name')"
+                        :size="13"
+                        class="xsort-icon"
+                    />
+                </button>
+                <button
+                    type="button"
+                    class="xsort"
+                    :class="{ on: sort?.key === 'equipment' }"
+                    @click="toggleSort('equipment')"
+                >
+                    <span class="kicker">Equipment</span>
+                    <Icon
+                        :name="sortIcon('equipment')"
+                        :size="13"
+                        class="xsort-icon"
+                    />
+                </button>
+                <button
+                    type="button"
+                    class="xsort"
+                    :class="{ on: sort?.key === 'type' }"
+                    @click="toggleSort('type')"
+                >
+                    <span class="kicker">Type</span>
+                    <Icon
+                        :name="sortIcon('type')"
+                        :size="13"
+                        class="xsort-icon"
+                    />
+                </button>
                 <span class="kicker">Muscles</span>
                 <span />
             </div>
@@ -283,7 +414,7 @@ async function mergeExercise() {
                 v-else-if="!filteredExercises.length"
                 class="xempty"
             >
-                No exercises match your search.
+                No exercises match your search or filters.
             </div>
 
             <div
@@ -292,28 +423,36 @@ async function mergeExercise() {
                 class="xrow"
             >
                 <div class="xname-cell">
-                    <NuxtLink
-                        :to="`/exercises/${exercise.id}`"
-                        class="xname xname--link"
+                    <div
+                        class="xthumb"
+                        aria-hidden="true"
                     >
-                        <UiMatchedLabel
-                            :label="exercise.name"
-                            :label-positions="match.labelPositions"
-                            :keyword="match.matchedKeyword"
-                            :keyword-positions="match.keywordPositions"
-                        />
-                    </NuxtLink>
-                    <span
-                        v-if="exercise.source === 'custom'"
-                        class="custom-mark"
-                        role="img"
-                        aria-label="Custom exercise"
-                        title="Custom exercise"
-                    >
-                        <Icon
-                            name="tabler:user"
-                            :size="16"
-                        />
+                        <ExerciseIllustration :name="exercise.name" />
+                    </div>
+                    <span class="xname-text">
+                        <NuxtLink
+                            :to="`/exercises/${exercise.id}`"
+                            class="xname xname--link"
+                        >
+                            <UiMatchedLabel
+                                :label="exercise.name"
+                                :label-positions="match.labelPositions"
+                                :keyword="match.matchedKeyword"
+                                :keyword-positions="match.keywordPositions"
+                            />
+                        </NuxtLink>
+                        <span
+                            v-if="exercise.source === 'custom'"
+                            class="custom-mark"
+                            role="img"
+                            aria-label="Custom exercise"
+                            title="Custom exercise"
+                        >
+                            <Icon
+                                name="tabler:user"
+                                :size="16"
+                            />
+                        </span>
                     </span>
                 </div>
                 <div class="xtags">
