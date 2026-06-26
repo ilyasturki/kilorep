@@ -1,0 +1,205 @@
+<script setup lang="ts">
+import type {
+    Equipment,
+    Exercise,
+    ExerciseType,
+    MuscleIntensity,
+} from '~~/server/database/schema'
+import {
+    EQUIPMENT,
+    EXERCISE_TYPES,
+    MUSCLE_INTENSITIES,
+} from '~~/server/database/schema'
+
+const props = withDefaults(
+    defineProps<{
+        // When set, the form edits this exercise (PATCH); otherwise it creates
+        // one (POST). Read once at mount, so re-target by remounting (`:key`).
+        exercise?: Exercise | null
+        // Seed the name field (the combobox passes its unmatched query).
+        initialName?: string
+        // Focus and select the name field on mount (inline create flow).
+        autofocus?: boolean
+        // Tighter spacing and narrower selects for the inline combobox variant.
+        compact?: boolean
+        namePlaceholder?: string
+    }>(),
+    { namePlaceholder: 'e.g. Barbell Bench Press' },
+)
+
+// Emitted on a successful save with the created/updated row; the host decides
+// what to do next (refresh its list, select it, close the modal).
+const emit = defineEmits<{ saved: [exercise: Exercise] }>()
+
+type MuscleField = { muscle: string; intensity: MuscleIntensity }
+const blankMuscle = (): MuscleField => ({ muscle: '', intensity: 'high' })
+
+const ex = props.exercise
+const form = reactive({
+    name: ex?.name ?? props.initialName?.trim() ?? '',
+    equipment: ex?.equipment ?? ('barbell' as Equipment),
+    type: ex?.type ?? ('compound' as ExerciseType),
+    muscles:
+        ex?.muscles.length ?
+            ex.muscles.map((m) => ({ ...m }))
+        :   [blankMuscle()],
+})
+
+const toast = useToast()
+const submitting = ref(false)
+const canSubmit = computed(
+    () => form.name.trim().length > 0 && form.muscles.some((m) => m.muscle),
+)
+
+function addMuscle() {
+    form.muscles.push(blankMuscle())
+}
+
+function removeMuscle(index: number) {
+    form.muscles.splice(index, 1)
+}
+
+async function submit() {
+    if (!canSubmit.value || submitting.value) return
+    submitting.value = true
+    const id = props.exercise?.id ?? null
+    try {
+        const saved = await $fetch<Exercise>(
+            id === null ? '/api/exercises' : `/api/exercises/${id}`,
+            {
+                method: id === null ? 'POST' : 'PATCH',
+                body: {
+                    name: form.name.trim(),
+                    equipment: form.equipment,
+                    type: form.type,
+                    muscles: form.muscles.filter((m) => m.muscle),
+                },
+            },
+        )
+        emit('saved', saved)
+        toast.add({
+            title: id === null ? 'Exercise added' : 'Exercise updated',
+            color: 'success',
+        })
+    } catch (error) {
+        toast.add({
+            title:
+                id === null ?
+                    'Could not add exercise'
+                :   'Could not update exercise',
+            description: errorMessage(error, 'Please try again.'),
+            color: 'error',
+        })
+    } finally {
+        submitting.value = false
+    }
+}
+
+const nameInput = ref<HTMLInputElement | null>(null)
+onMounted(() => {
+    if (!props.autofocus) return
+    nameInput.value?.focus()
+    nameInput.value?.select()
+})
+
+defineExpose({ submit, canSubmit, submitting })
+</script>
+
+<template>
+    <form
+        :class="compact ? 'space-y-3' : 'space-y-4'"
+        @submit.prevent="submit"
+    >
+        <div class="field">
+            <label class="field-label"> Name <span class="req">*</span> </label>
+            <input
+                ref="nameInput"
+                v-model="form.name"
+                class="input"
+                :placeholder="namePlaceholder"
+                @keydown.enter.prevent="submit"
+            />
+        </div>
+
+        <div
+            class="flex flex-wrap items-start"
+            :class="compact ? 'gap-x-4 gap-y-3' : 'gap-x-6 gap-y-4'"
+        >
+            <div
+                class="field"
+                :class="compact ? 'w-40' : 'w-44'"
+            >
+                <label class="field-label">Equipment</label>
+                <UiSelect
+                    v-model="form.equipment"
+                    :items="[...EQUIPMENT]"
+                />
+            </div>
+            <div class="field">
+                <label class="field-label">Type</label>
+                <div class="toggle">
+                    <button
+                        v-for="t in EXERCISE_TYPES"
+                        :key="t"
+                        type="button"
+                        class="toggle-opt"
+                        :class="{ on: form.type === t }"
+                        @click="form.type = t"
+                    >
+                        {{ t }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+            <label class="field-label">
+                Muscles <span class="req">*</span>
+            </label>
+            <div class="space-y-2">
+                <div
+                    v-for="(m, index) in form.muscles"
+                    :key="index"
+                    class="flex gap-2"
+                >
+                    <div class="min-w-0 flex-1">
+                        <UiSelect
+                            v-model="m.muscle"
+                            :items="muscleOptions"
+                            placeholder="Muscle"
+                        />
+                    </div>
+                    <div :class="compact ? 'w-28' : 'w-32'">
+                        <UiSelect
+                            v-model="m.intensity"
+                            :items="[...MUSCLE_INTENSITIES]"
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        class="icon-btn"
+                        :disabled="form.muscles.length === 1"
+                        aria-label="Remove muscle"
+                        @click="removeMuscle(index)"
+                    >
+                        <Icon
+                            name="tabler:x"
+                            :size="16"
+                        />
+                    </button>
+                </div>
+                <button
+                    type="button"
+                    class="btn-link"
+                    @click="addMuscle"
+                >
+                    <Icon
+                        name="tabler:plus"
+                        :size="14"
+                    />
+                    Add muscle
+                </button>
+            </div>
+        </div>
+    </form>
+</template>

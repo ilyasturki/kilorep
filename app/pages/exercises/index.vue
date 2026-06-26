@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { FetchError } from 'ofetch'
+import {
+    PopoverContent,
+    PopoverPortal,
+    PopoverRoot,
+    PopoverTrigger,
+} from 'reka-ui'
 
 import type {
     Equipment,
     Exercise,
     ExerciseType,
-    MuscleIntensity,
 } from '~~/server/database/schema'
-import {
-    EQUIPMENT,
-    EXERCISE_TYPES,
-    MUSCLE_INTENSITIES,
-} from '~~/server/database/schema'
+import { EQUIPMENT, EXERCISE_TYPES } from '~~/server/database/schema'
 
 const {
     data: exercises,
@@ -25,21 +26,43 @@ const {
 const search = ref('')
 
 // Facet filters: an empty list means "no constraint". Within a facet the picks
-// are OR'd; the three facets (and the search box) are AND'd together.
-const equipmentFilter = ref<Equipment[]>([])
-const typeFilter = ref<ExerciseType[]>([])
-const muscleFilter = ref<MuscleGroup[]>([])
+// are OR'd; the three facets (and the search box) are AND'd together. They live
+// in one object so the single Filter popover can drive them generically.
+const filters = reactive({
+    equipment: [] as Equipment[],
+    type: [] as ExerciseType[],
+    muscles: [] as MuscleGroup[],
+})
+type FacetKey = keyof typeof filters
 
-const hasFilters = computed(
+// One row per facet drives the Filter popover; the helpers below are
+// facet-agnostic so adding a facet is a single entry here.
+const FACETS: { key: FacetKey; label: string; items: readonly string[] }[] = [
+    { key: 'equipment', label: 'Equipment', items: EQUIPMENT },
+    { key: 'type', label: 'Type', items: EXERCISE_TYPES },
+    { key: 'muscles', label: 'Muscles', items: MUSCLE_GROUP_NAMES },
+]
+
+const activeCount = computed(
     () =>
-        equipmentFilter.value.length > 0
-        || typeFilter.value.length > 0
-        || muscleFilter.value.length > 0,
+        filters.equipment.length + filters.type.length + filters.muscles.length,
 )
+const hasFilters = computed(() => activeCount.value > 0)
+
+const isActive = (key: FacetKey, value: string) =>
+    (filters[key] as string[]).includes(value)
+
+function toggleFilter(key: FacetKey, value: string) {
+    const picks = filters[key] as string[]
+    const at = picks.indexOf(value)
+    if (at === -1) picks.push(value)
+    else picks.splice(at, 1)
+}
+
 function clearFilters() {
-    equipmentFilter.value = []
-    typeFilter.value = []
-    muscleFilter.value = []
+    filters.equipment = []
+    filters.type = []
+    filters.muscles = []
 }
 
 // A column sort overrides the fuzzy ranking when set; null falls back to it
@@ -61,18 +84,15 @@ const tokens = computed(() => fuzzyTokens(search.value))
 const filteredExercises = computed(() => {
     const hits = (exercises.value ?? []).flatMap((exercise) => {
         if (
-            equipmentFilter.value.length
-            && !equipmentFilter.value.includes(exercise.equipment)
+            filters.equipment.length
+            && !filters.equipment.includes(exercise.equipment)
         )
             return []
-        if (
-            typeFilter.value.length
-            && !typeFilter.value.includes(exercise.type)
-        )
+        if (filters.type.length && !filters.type.includes(exercise.type))
             return []
-        if (muscleFilter.value.length) {
+        if (filters.muscles.length) {
             const groups = groupsOf(exercise)
-            if (!muscleFilter.value.some((g) => groups.has(g))) return []
+            if (!filters.muscles.some((g) => groups.has(g))) return []
         }
         const match = fuzzyMatch(
             exercise.name,
@@ -95,86 +115,29 @@ const filteredExercises = computed(() => {
     return hits
 })
 
-type MuscleField = { muscle: string; intensity: MuscleIntensity }
-const blankMuscle = (): MuscleField => ({ muscle: '', intensity: 'high' })
-const blankForm = () => ({
-    name: '',
-    equipment: 'barbell' as Equipment,
-    type: 'compound' as ExerciseType,
-    muscles: [blankMuscle()],
-})
-
+// Add/edit share one modal: `editing` null means add, otherwise prefill from
+// that exercise. The shared ExerciseForm owns the fields, validation, and save;
+// we only refetch and close once it reports success.
 const toast = useToast()
 const isFormOpen = ref(false)
-const editingId = ref<number | null>(null)
-const submitting = ref(false)
-const form = reactive(blankForm())
+const editing = ref<Exercise | null>(null)
+const exerciseForm = useTemplateRef('exerciseForm')
 
-const isEditing = computed(() => editingId.value !== null)
-const canSubmit = computed(
-    () => form.name.trim().length > 0 && form.muscles.some((m) => m.muscle),
-)
+const isEditing = computed(() => editing.value !== null)
 
 function openAdd() {
-    editingId.value = null
-    Object.assign(form, blankForm())
+    editing.value = null
     isFormOpen.value = true
 }
 
 function openEdit(exercise: Exercise) {
-    editingId.value = exercise.id
-    Object.assign(form, {
-        name: exercise.name,
-        equipment: exercise.equipment,
-        type: exercise.type,
-        muscles:
-            exercise.muscles.length ?
-                exercise.muscles.map((m) => ({ ...m }))
-            :   [blankMuscle()],
-    })
+    editing.value = exercise
     isFormOpen.value = true
 }
 
-function addMuscle() {
-    form.muscles.push(blankMuscle())
-}
-
-function removeMuscle(index: number) {
-    form.muscles.splice(index, 1)
-}
-
-async function submit() {
-    if (!canSubmit.value) return
-    submitting.value = true
-    const id = editingId.value
-    try {
-        await $fetch(id === null ? '/api/exercises' : `/api/exercises/${id}`, {
-            method: id === null ? 'POST' : 'PATCH',
-            body: {
-                name: form.name.trim(),
-                equipment: form.equipment,
-                type: form.type,
-                muscles: form.muscles.filter((m) => m.muscle),
-            },
-        })
-        await refresh()
-        isFormOpen.value = false
-        toast.add({
-            title: id === null ? 'Exercise added' : 'Exercise updated',
-            color: 'success',
-        })
-    } catch (error) {
-        toast.add({
-            title:
-                id === null ?
-                    'Could not add exercise'
-                :   'Could not update exercise',
-            description: errorMessage(error, 'Please try again.'),
-            color: 'error',
-        })
-    } finally {
-        submitting.value = false
-    }
+async function onSaved() {
+    await refresh()
+    isFormOpen.value = false
 }
 
 const exerciseToDelete = ref<Exercise | null>(null)
@@ -264,7 +227,7 @@ async function mergeExercise() {
 
 <template>
     <div>
-        <div class="mb-5 flex items-center justify-between gap-4">
+        <div class="toolbar">
             <div class="search-box">
                 <Icon
                     name="tabler:search"
@@ -279,6 +242,67 @@ async function mergeExercise() {
                     spellcheck="false"
                 />
             </div>
+
+            <PopoverRoot>
+                <PopoverTrigger
+                    class="filter-trigger"
+                    :class="{ active: hasFilters }"
+                    aria-label="Filter exercises"
+                >
+                    <Icon
+                        name="tabler:filter"
+                        :size="17"
+                    />
+                    <span
+                        v-if="activeCount"
+                        class="filter-count"
+                    >
+                        {{ activeCount }}
+                    </span>
+                </PopoverTrigger>
+                <PopoverPortal>
+                    <PopoverContent
+                        class="select-content filter-panel"
+                        align="end"
+                        :side-offset="6"
+                    >
+                        <div
+                            v-for="facet in FACETS"
+                            :key="facet.key"
+                            class="filter-section"
+                        >
+                            <span class="filter-section-label">
+                                {{ facet.label }}
+                            </span>
+                            <div class="filter-options">
+                                <button
+                                    v-for="item in facet.items"
+                                    :key="item"
+                                    type="button"
+                                    class="filter-chip"
+                                    :class="{ on: isActive(facet.key, item) }"
+                                    @click="toggleFilter(facet.key, item)"
+                                >
+                                    {{ item }}
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            v-if="hasFilters"
+                            type="button"
+                            class="btn-link filter-clear"
+                            @click="clearFilters"
+                        >
+                            <Icon
+                                name="tabler:x"
+                                :size="14"
+                            />
+                            Clear all
+                        </button>
+                    </PopoverContent>
+                </PopoverPortal>
+            </PopoverRoot>
+
             <button
                 type="button"
                 class="btn-primary"
@@ -289,36 +313,6 @@ async function mergeExercise() {
                     :size="16"
                 />
                 Add
-            </button>
-        </div>
-
-        <div class="facets">
-            <UiFilterMenu
-                v-model="equipmentFilter"
-                label="Equipment"
-                :items="[...EQUIPMENT]"
-            />
-            <UiFilterMenu
-                v-model="typeFilter"
-                label="Type"
-                :items="[...EXERCISE_TYPES]"
-            />
-            <UiFilterMenu
-                v-model="muscleFilter"
-                label="Muscles"
-                :items="MUSCLE_GROUP_NAMES"
-            />
-            <button
-                v-if="hasFilters"
-                type="button"
-                class="btn-link facet-clear"
-                @click="clearFilters"
-            >
-                <Icon
-                    name="tabler:x"
-                    :size="14"
-                />
-                Clear
             </button>
         </div>
 
@@ -492,96 +486,12 @@ async function mergeExercise() {
                 :   'Add a new movement to your catalog.'
             "
         >
-            <form
-                class="space-y-4"
-                @submit.prevent="submit"
-            >
-                <div class="field">
-                    <label class="field-label">
-                        Name <span class="req">*</span>
-                    </label>
-                    <input
-                        v-model="form.name"
-                        class="input"
-                        placeholder="e.g. Barbell Bench Press"
-                    />
-                </div>
-
-                <div class="flex flex-wrap items-start gap-x-6 gap-y-4">
-                    <div class="field w-44">
-                        <label class="field-label">Equipment</label>
-                        <UiSelect
-                            v-model="form.equipment"
-                            :items="[...EQUIPMENT]"
-                        />
-                    </div>
-                    <div class="field">
-                        <label class="field-label">Type</label>
-                        <div class="toggle">
-                            <button
-                                v-for="t in EXERCISE_TYPES"
-                                :key="t"
-                                type="button"
-                                class="toggle-opt"
-                                :class="{ on: form.type === t }"
-                                @click="form.type = t"
-                            >
-                                {{ t }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="field">
-                    <label class="field-label">
-                        Muscles <span class="req">*</span>
-                    </label>
-                    <div class="space-y-2">
-                        <div
-                            v-for="(m, index) in form.muscles"
-                            :key="index"
-                            class="flex gap-2"
-                        >
-                            <div class="min-w-0 flex-1">
-                                <UiSelect
-                                    v-model="m.muscle"
-                                    :items="muscleOptions"
-                                    placeholder="Muscle"
-                                />
-                            </div>
-                            <div class="w-32">
-                                <UiSelect
-                                    v-model="m.intensity"
-                                    :items="[...MUSCLE_INTENSITIES]"
-                                />
-                            </div>
-                            <button
-                                type="button"
-                                class="icon-btn"
-                                :disabled="form.muscles.length === 1"
-                                aria-label="Remove muscle"
-                                @click="removeMuscle(index)"
-                            >
-                                <Icon
-                                    name="tabler:x"
-                                    :size="16"
-                                />
-                            </button>
-                        </div>
-                        <button
-                            type="button"
-                            class="btn-link"
-                            @click="addMuscle"
-                        >
-                            <Icon
-                                name="tabler:plus"
-                                :size="14"
-                            />
-                            Add muscle
-                        </button>
-                    </div>
-                </div>
-            </form>
+            <ExerciseForm
+                ref="exerciseForm"
+                :key="editing?.id ?? 'new'"
+                :exercise="editing"
+                @saved="onSaved"
+            />
 
             <template #footer>
                 <button
@@ -594,14 +504,24 @@ async function mergeExercise() {
                 <button
                     type="button"
                     class="btn-primary"
-                    :disabled="!canSubmit || submitting"
-                    @click="submit"
+                    :disabled="
+                        !exerciseForm?.canSubmit || exerciseForm?.submitting
+                    "
+                    @click="exerciseForm?.submit()"
                 >
                     <template v-if="isEditing">
-                        {{ submitting ? 'Saving…' : 'Save changes' }}
+                        {{
+                            exerciseForm?.submitting ? 'Saving…' : (
+                                'Save changes'
+                            )
+                        }}
                     </template>
                     <template v-else>
-                        {{ submitting ? 'Adding…' : 'Add exercise' }}
+                        {{
+                            exerciseForm?.submitting ? 'Adding…' : (
+                                'Add exercise'
+                            )
+                        }}
                     </template>
                 </button>
             </template>
