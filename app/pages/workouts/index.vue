@@ -5,6 +5,13 @@ const { workouts, status, refresh } = useActiveWorkout()
 
 const toast = useToast()
 
+// Display density, remembered per device (web-only, never sent to the server).
+const VIEWS = ['detailed', 'condensed', 'calendar'] as const
+const view = useLocalStorage<(typeof VIEWS)[number]>(
+    'workouts-view',
+    'detailed',
+)
+
 // In-progress workouts first, then finished history. Each group already arrives
 // newest-first from the API. Flatten each workout's entry tree into numbered
 // glance rows (01..N across supersets) so the card shows what was trained at a
@@ -68,6 +75,10 @@ const metaLine = (w: (typeof ordered.value)[number]) =>
         `${fmtVolume(w.stats.volume)} kg`,
     ].join(' · ')
 
+// Compact two-stat summary for the condensed line.
+const countLabel = (w: (typeof ordered.value)[number]) =>
+    `${plural(w.stats.exercises, 'exercise')} · ${plural(w.stats.sets, 'set')}`
+
 // Resolved on the client only: relative labels depend on "now", so SSR renders
 // the absolute date and the client swaps in "Today"/"Yesterday" after mount —
 // no hydration mismatch, and the right day in the viewer's own timezone.
@@ -104,8 +115,25 @@ async function confirmDelete() {
 
 <template>
     <div>
-        <div class="mb-5 flex items-end justify-end gap-4">
-            <WorkoutStartButton variant="page" />
+        <div class="mb-5 flex items-center gap-4 view-bar">
+            <div
+                v-if="ordered.length"
+                class="toggle"
+            >
+                <button
+                    v-for="opt in VIEWS"
+                    :key="opt"
+                    type="button"
+                    class="toggle-opt"
+                    :class="{ on: view === opt }"
+                    @click="view = opt"
+                >
+                    {{ opt }}
+                </button>
+            </div>
+            <div class="ml-auto">
+                <WorkoutStartButton variant="page" />
+            </div>
         </div>
 
         <div
@@ -120,105 +148,143 @@ async function confirmDelete() {
         >
             No workouts yet. Start one from a session template.
         </div>
+        <WorkoutCalendar
+            v-else-if="view === 'calendar'"
+            :workouts="workouts"
+        />
         <div
             v-else
-            class="space-y-4"
+            :class="view === 'condensed' ? 'space-y-2' : 'space-y-4'"
         >
             <div
                 v-for="w in ordered"
                 :key="w.id"
-                class="card"
+                :class="view === 'condensed' ? 'session-row' : 'card'"
             >
-                <div class="card-head">
-                    <NuxtLink
-                        :to="`/workouts/${w.id}`"
-                        class="session-name"
-                    >
-                        {{ w.name }}
-                    </NuxtLink>
-                    <div class="flex items-center gap-2">
+                <!-- Condensed: one scannable line per workout -->
+                <template v-if="view === 'condensed'">
+                    <div class="flex min-w-0 items-center gap-2.5">
+                        <NuxtLink
+                            :to="`/workouts/${w.id}`"
+                            class="session-name min-w-0 max-w-full truncate"
+                        >
+                            {{ w.name }}
+                        </NuxtLink>
                         <span
-                            class="tag tag--lg"
+                            class="tag"
                             :class="{ 'tag--accent': !w.completed }"
                         >
                             {{ w.completed ? dayLabel(w) : 'In progress' }}
                         </span>
-                        <button
-                            type="button"
-                            class="icon-btn sm icon-btn--danger"
-                            aria-label="Delete workout"
-                            @click="deleteTarget = w"
+                        <span class="session-meta max-[479px]:hidden">{{
+                            countLabel(w)
+                        }}</span>
+                    </div>
+                    <button
+                        type="button"
+                        class="icon-btn sm icon-btn--danger shrink-0"
+                        aria-label="Delete workout"
+                        @click="deleteTarget = w"
+                    >
+                        <Icon
+                            name="tabler:trash"
+                            :size="15"
+                        />
+                    </button>
+                </template>
+
+                <template v-else>
+                    <div class="card-head">
+                        <NuxtLink
+                            :to="`/workouts/${w.id}`"
+                            class="session-name"
+                        >
+                            {{ w.name }}
+                        </NuxtLink>
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="tag tag--lg"
+                                :class="{ 'tag--accent': !w.completed }"
+                            >
+                                {{ w.completed ? dayLabel(w) : 'In progress' }}
+                            </span>
+                            <button
+                                type="button"
+                                class="icon-btn sm icon-btn--danger"
+                                aria-label="Delete workout"
+                                @click="deleteTarget = w"
+                            >
+                                <Icon
+                                    name="tabler:trash"
+                                    :size="15"
+                                />
+                            </button>
+                        </div>
+                    </div>
+
+                    <TopMuscles
+                        :muscles="w.muscles"
+                        class="mt-3"
+                    />
+
+                    <p class="wk-meta">{{ metaLine(w) }}</p>
+
+                    <div
+                        v-if="w.blocks.length"
+                        class="wk-glance"
+                    >
+                        <div
+                            v-for="(block, bi) in w.blocks"
+                            :key="bi"
+                            class="plan-block"
+                            :class="{ 'plan-block--ss': block.isSuperset }"
+                        >
+                            <span
+                                v-if="block.isSuperset"
+                                class="ss-tag"
+                            >
+                                SUPERSET
+                            </span>
+                            <NuxtLink
+                                v-for="ex in block.exercises"
+                                :key="ex.key"
+                                :to="`/exercises/${ex.exerciseId}`"
+                                class="plan-ex plan-ex--link"
+                            >
+                                <span class="plan-ex-idx">{{ pad(ex.n) }}</span>
+                                <span class="plan-ex-name">{{ ex.name }}</span>
+                                <span class="plan-ex-target">{{
+                                    exSummary(ex)
+                                }}</span>
+                            </NuxtLink>
+                        </div>
+                    </div>
+
+                    <div class="card-actions">
+                        <NuxtLink
+                            v-if="!w.completed"
+                            :to="`/workouts/${w.id}`"
+                            class="btn-primary"
                         >
                             <Icon
-                                name="tabler:trash"
-                                :size="15"
+                                name="tabler:player-play-filled"
+                                :size="16"
                             />
-                        </button>
-                    </div>
-                </div>
-
-                <TopMuscles
-                    :muscles="w.muscles"
-                    class="mt-3"
-                />
-
-                <p class="wk-meta">{{ metaLine(w) }}</p>
-
-                <div
-                    v-if="w.blocks.length"
-                    class="wk-glance"
-                >
-                    <div
-                        v-for="(block, bi) in w.blocks"
-                        :key="bi"
-                        class="plan-block"
-                        :class="{ 'plan-block--ss': block.isSuperset }"
-                    >
-                        <span
-                            v-if="block.isSuperset"
-                            class="ss-tag"
-                        >
-                            SUPERSET
-                        </span>
+                            Resume
+                        </NuxtLink>
                         <NuxtLink
-                            v-for="ex in block.exercises"
-                            :key="ex.key"
-                            :to="`/exercises/${ex.exerciseId}`"
-                            class="plan-ex plan-ex--link"
+                            v-else
+                            :to="`/workouts/${w.id}`"
+                            class="btn-ghost"
                         >
-                            <span class="plan-ex-idx">{{ pad(ex.n) }}</span>
-                            <span class="plan-ex-name">{{ ex.name }}</span>
-                            <span class="plan-ex-target">{{
-                                exSummary(ex)
-                            }}</span>
+                            Review
+                            <Icon
+                                name="tabler:chevron-right"
+                                :size="16"
+                            />
                         </NuxtLink>
                     </div>
-                </div>
-
-                <div class="card-actions">
-                    <NuxtLink
-                        v-if="!w.completed"
-                        :to="`/workouts/${w.id}`"
-                        class="btn-primary"
-                    >
-                        <Icon
-                            name="tabler:player-play-filled"
-                            :size="16"
-                        />
-                        Resume
-                    </NuxtLink>
-                    <NuxtLink
-                        v-else
-                        :to="`/workouts/${w.id}`"
-                        class="btn-ghost"
-                    >
-                        Review
-                        <Icon
-                            name="tabler:chevron-right"
-                            :size="16"
-                        />
-                    </NuxtLink>
-                </div>
+                </template>
             </div>
         </div>
 

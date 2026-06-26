@@ -26,6 +26,19 @@ const shortFmt = dateFormat({ day: 'numeric', month: 'short' })
 export const fmtDateShort = (d: string | Date) =>
     shortFmt(appLocale.value).format(new Date(d))
 
+// Calendar heading, e.g. "June 2026".
+const monthYearFmt = dateFormat({ month: 'long', year: 'numeric' })
+export const fmtMonthYear = (d: Date, locale = appLocale.value) =>
+    monthYearFmt(locale).format(d)
+
+// Short weekday names ordered Mon..Sun (the app's week start), read off a
+// reference week — 2024-01-01 was a Monday — so the labels follow the locale.
+const weekdayFmt = dateFormat({ weekday: 'short' })
+export const weekdayLabels = (locale = appLocale.value) =>
+    Array.from({ length: 7 }, (_, i) =>
+        weekdayFmt(locale).format(new Date(2024, 0, 1 + i)),
+    )
+
 // Inverse of toDateInput (shared/utils/date.ts): parse a 'YYYY-MM-DD' day to a Date at LOCAL midnight,
 // so the rendered day always matches the stored day whatever the runtime tz.
 export const parseLocalDay = (d: string) => new Date(`${d}T00:00:00`)
