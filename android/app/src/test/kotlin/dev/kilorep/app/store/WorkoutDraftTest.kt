@@ -112,18 +112,18 @@ class WorkoutDraftTest {
         assertEquals(null, bench.sets[1].reps)
         assertEquals(null, bench.sets[1].target)
         // The load is never prescribed — always starts blank.
-        assertTrue(bench.sets.all { it.weight == null && !it.done })
+        assertTrue(bench.sets.all { it.weight == null })
     }
 
     @Test
-    fun `ticking a set marks the draft dirty`() {
+    fun `editing a set marks the draft dirty`() {
         val clean = started().copy(dirty = false)
-        val ticked = clean.updateSet(0, 0, 0) { it.copy(done = true) }
+        val edited = clean.updateSet(0, 0, 0) { it.copy(weight = 80.0) }
 
-        assertTrue(ticked.dirty)
-        assertTrue(ticked.entries[0].exercises[0].sets[0].done)
+        assertTrue(edited.dirty)
+        assertEquals(80.0, edited.entries[0].exercises[0].sets[0].weight)
         // Untouched siblings stay untouched.
-        assertFalse(ticked.entries[0].exercises[0].sets[1].done)
+        assertEquals(null, edited.entries[0].exercises[0].sets[1].weight)
     }
 
     @Test
@@ -136,7 +136,6 @@ class WorkoutDraftTest {
         assertEquals(3, draft.entries[0].exercises[0].sets.size)
         val added = draft.entries[0].exercises[0].sets[2]
         assertEquals(null, added.weight)
-        assertFalse(added.done)
 
         // …and after removing the open set, a new one seeds from the loaded one.
         val reseeded = draft
@@ -151,14 +150,13 @@ class WorkoutDraftTest {
     @Test
     fun `swapping an exercise keeps the logged sets`() {
         val draft = started()
-            .updateSet(0, 0, 0) { it.copy(weight = 60.0, done = true) }
+            .updateSet(0, 0, 0) { it.copy(weight = 60.0) }
             .swapExercise(0, 0, 99, "Dumbbell Press")
 
         val swapped = draft.entries[0].exercises[0]
         assertEquals(99, swapped.exerciseId)
         assertEquals("Dumbbell Press", swapped.name)
         assertEquals(60.0, swapped.sets[0].weight)
-        assertTrue(swapped.sets[0].done)
     }
 
     @Test
@@ -231,34 +229,14 @@ class WorkoutDraftTest {
     }
 
     @Test
-    fun `logging load and reps auto-completes a set`() {
-        val seeded = started().entries[0].exercises[0].sets[0]
-        // Started from a template: reps present (the target) but no load — not done.
-        assertEquals(8, seeded.reps)
-        assertFalse(seeded.done)
-
-        // Entering the load is the completing act; web has no separate tick.
-        val logged = started().updateSet(0, 0, 0) { it.copy(weight = 80.0).autoDone() }
-        assertTrue(logged.entries[0].exercises[0].sets[0].done)
-    }
-
-    @Test
-    fun `auto-done only ticks, never un-ticks`() {
-        // An open set (reps still to be decided) does not auto-complete on load alone.
-        assertFalse(DraftSet(reps = null, weight = 50.0, done = false, target = null).autoDone().done)
-        // Clearing the load on a ticked set leaves the tick — only the user un-ticks.
-        assertTrue(DraftSet(reps = 8, weight = null, done = true, target = 8).autoDone().done)
-    }
-
-    @Test
-    fun `an added set carrying a full effort lands done`() {
+    fun `an added set carries the previous effort forward`() {
         val draft = started()
             // Log the bench's last set fully, then carry it forward.
-            .updateSet(0, 0, 1) { it.copy(reps = 8, weight = 80.0).autoDone() }
+            .updateSet(0, 0, 1) { it.copy(reps = 8, weight = 80.0) }
             .addSet(0, 0)
         val added = draft.entries[0].exercises[0].sets.last()
         assertEquals(80.0, added.weight)
-        assertTrue(added.done)
+        assertEquals(8, added.reps)
     }
 
     @Test

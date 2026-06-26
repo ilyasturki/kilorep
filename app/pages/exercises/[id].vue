@@ -203,7 +203,6 @@ const videoUrl = computed(
                                     v-for="(s, si) in w.sets"
                                     :key="si"
                                     class="set-chip"
-                                    :class="{ 'set-chip--off': !s.done }"
                                 >
                                     {{
                                         s.weight == null ?

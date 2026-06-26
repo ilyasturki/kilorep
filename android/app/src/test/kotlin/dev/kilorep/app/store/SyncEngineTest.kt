@@ -28,8 +28,8 @@ private fun draft(
                     exerciseId = 3,
                     name = "Bench Press",
                     sets = listOf(
-                        DraftSet(reps = reps, weight = 80.0, done = true, target = 8),
-                        DraftSet(reps = null, weight = null, done = false, target = 8),
+                        DraftSet(reps = reps, weight = 80.0, target = 8),
+                        DraftSet(reps = null, weight = null, target = 8),
                     ),
                 ),
             ),
@@ -95,7 +95,6 @@ class SyncEngineTest {
         assertEquals(2, sets.size)
         assertEquals(8, sets[0].reps)
         assertEquals(80.0, sets[0].weight)
-        assertEquals(true, sets[0].done)
         // A cleared set keeps its slot with nulls — autosave can't drop rows.
         assertEquals(null, sets[1].reps)
         assertEquals(null, sets[1].weight)

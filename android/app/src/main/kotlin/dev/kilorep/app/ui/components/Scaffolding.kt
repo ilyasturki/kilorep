@@ -1,6 +1,5 @@
 package dev.kilorep.app.ui.components
 
-import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -152,45 +150,6 @@ fun LiftBottomBar(
                 }
             }
         }
-    }
-}
-
-/**
- * The gym loop's done-tick: a 44dp bordered square that fills volt when
- * done, confirming with a haptic so the lifter feels it without reading
- * the screen.
- */
-@Composable
-fun DoneTick(
-    done: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = Lift.colors
-    val view = LocalView.current
-    Box(
-        modifier = modifier
-            .size(52.dp)
-            .background(if (done) colors.accent else colors.surface)
-            .border(1.dp, if (done) colors.accent else colors.line2)
-            .clickable {
-                @Suppress("DEPRECATION")
-                view.performHapticFeedback(
-                    if (android.os.Build.VERSION.SDK_INT >= 30) {
-                        HapticFeedbackConstants.CONFIRM
-                    } else {
-                        HapticFeedbackConstants.VIRTUAL_KEY
-                    },
-                )
-                onToggle()
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        LiftIcon(
-            LiftIcons.Check,
-            tint = if (done) colors.accentInk else colors.ink3,
-            size = 22.dp,
-        )
     }
 }
 

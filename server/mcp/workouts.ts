@@ -29,7 +29,7 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
             title: 'Log a workout',
             description:
                 'Log a complete workout in one call — the main way to record training described after the fact '
-                + '("log today\'s push day: bench 80kg×8/8/7 …"). Creates the workout with all sets marked done. '
+                + '("log today\'s push day: bench 80kg×8/8/7 …"). '
                 + 'Pass "session" to link it to a template; otherwise it is logged ad hoc.',
             inputSchema: {
                 exercises: z
@@ -97,7 +97,6 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                             sets: ex.sets.map((set) => ({
                                 reps: set.reps,
                                 weight: set.weight ?? null,
-                                done: true,
                             })),
                         },
                     ],
@@ -147,9 +146,9 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
         {
             title: 'Log a set',
             description:
-                'Record one set of the workout in progress: fills in the weight (and reps) and ticks the set off. '
-                + 'Targets the next pending set of that exercise unless "set" is given; appends a new set when all '
-                + 'prescribed ones are done, and adds the exercise to the workout if it is not in it yet.',
+                'Record one set of the workout in progress: fills in the weight (and reps). '
+                + 'Targets the next set of that exercise still missing a load unless "set" is given; appends a new '
+                + 'set when every prescribed one is filled, and adds the exercise to the workout if it is not in it yet.',
             inputSchema: {
                 exercise: z.string().describe('Exercise name (fuzzy-matched)'),
                 weight: z
@@ -168,7 +167,7 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                     .positive()
                     .optional()
                     .describe(
-                        '1-based set number; defaults to the next pending set',
+                        '1-based set number; defaults to the next set still missing a load',
                     ),
                 workout: z
                     .number()
@@ -176,12 +175,6 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                     .positive()
                     .optional()
                     .describe('Workout id; defaults to the one in progress'),
-                done: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        'Default true; pass false to record without ticking off',
-                    ),
             },
             annotations: { destructiveHint: false },
         },
@@ -190,7 +183,6 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                 const db = useDrizzle()
                 const workout = resolveWorkout(userId, input.workout)
                 const exercise = resolveExercise(userId, input.exercise)
-                const done = input.done ?? true
                 const weight = input.weight ?? null
 
                 // The workout's sets for this exercise, in tree order, so a
@@ -270,7 +262,6 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                                 workoutExerciseId: workoutExercise.id,
                                 reps: input.reps!,
                                 weight,
-                                done,
                                 position: 0,
                             })
                             .run()
@@ -278,10 +269,12 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                     logged = { weight, reps: input.reps }
                     label = `${exercise.name} (added to workout) set 1`
                 } else {
-                    const nextPending = rows.findIndex((row) => !row.set.done)
+                    const nextOpen = rows.findIndex(
+                        (row) => row.set.weight == null,
+                    )
                     const index =
                         input.set != null ? input.set - 1
-                        : nextPending !== -1 ? nextPending
+                        : nextOpen !== -1 ? nextOpen
                         : rows.length
                     if (index > rows.length) {
                         badRequest(
@@ -294,7 +287,7 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                         const last = rows[rows.length - 1]!
                         if (input.reps == null) {
                             badRequest(
-                                `All ${rows.length} prescribed sets of ${exercise.name} are done — pass "reps" to log an extra set`,
+                                `All ${rows.length} prescribed sets of ${exercise.name} are filled — pass "reps" to log an extra set`,
                             )
                         }
                         db.insert(tables.workoutSets)
@@ -302,7 +295,6 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                                 workoutExerciseId: last.workoutExerciseId,
                                 reps: input.reps,
                                 weight,
-                                done,
                                 position: last.set.position + 1,
                             })
                             .run()
@@ -316,7 +308,7 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                             )
                         }
                         db.update(tables.workoutSets)
-                            .set({ weight, reps, done })
+                            .set({ weight, reps })
                             .where(eq(tables.workoutSets.id, target.id))
                             .run()
                         logged = { weight, reps }
@@ -325,8 +317,8 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                 }
 
                 const tree = loadWorkoutTrees(userId, [workout.id])[0]!
-                const { done: doneCount, total } = countSets(tree)
-                return `Logged ${label}: ${formatSet({ ...logged, done })} — ${doneCount}/${total} sets done in #${workout.id} ${workout.name}`
+                const { total } = countSets(tree)
+                return `Logged ${label}: ${formatSet(logged)} — ${total} sets in #${workout.id} ${workout.name}`
             }),
     )
 
@@ -357,10 +349,8 @@ export function registerWorkoutTools(server: McpServer, userId: number) {
                     .where(eq(tables.workouts.id, workout.id))
                     .run()
                 const tree = loadWorkoutTrees(userId, [workout.id])[0]!
-                const { done, total } = countSets(tree)
-                const pending =
-                    done < total ? ` (${total - done} sets left pending)` : ''
-                return `Finished #${workout.id} ${workout.name} — ${done}/${total} sets done${pending}`
+                const { total } = countSets(tree)
+                return `Finished #${workout.id} ${workout.name} — ${total} sets logged`
             }),
     )
 

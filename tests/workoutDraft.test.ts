@@ -26,16 +26,14 @@ import {
 
 // ── workout draft ──────────────────────────────────────────────────────────
 
-test('add set copies the last set verbatim and marks it done', () => {
+test('add set copies the last set verbatim', () => {
     const ex: WorkoutExerciseDraft = { exerciseId: 1, name: 'Bench', sets: [] }
-    addWorkoutSet(ex) // first set: blank, done
-    expect(ex.sets).toEqual([
-        { reps: undefined, weight: undefined, done: true },
-    ])
+    addWorkoutSet(ex) // first set: blank
+    expect(ex.sets).toEqual([{ reps: undefined, weight: undefined }])
 
-    ex.sets[0] = { reps: 8, weight: 60, done: false }
-    addWorkoutSet(ex) // copy the (mid-typed) last set, force done
-    expect(ex.sets[1]).toEqual({ reps: 8, weight: 60, done: true })
+    ex.sets[0] = { reps: 8, weight: 60 }
+    addWorkoutSet(ex) // copy the (mid-typed) last set
+    expect(ex.sets[1]).toEqual({ reps: 8, weight: 60 })
 })
 
 test('removing the last exercise of an entry drops the entry; otherwise keeps it', () => {
@@ -59,7 +57,7 @@ test('ungrouping a superset splits it into one entry per exercise, reusing the o
     const a: WorkoutExerciseDraft = {
         exerciseId: 1,
         name: 'A',
-        sets: [{ reps: 5, weight: 1, done: true }],
+        sets: [{ reps: 5, weight: 1 }],
     }
     const b: WorkoutExerciseDraft = { exerciseId: 2, name: 'B', sets: [] }
     const entries: WorkoutEntryDraft[] = [{ id: 9, exercises: [a, b] }]
@@ -69,7 +67,7 @@ test('ungrouping a superset splits it into one entry per exercise, reusing the o
     expect(entries[1].exercises[0]).toBe(b)
 })
 
-test('serialization rides undefined weight as null and preserves reps/done', () => {
+test('serialization rides undefined weight as null and preserves reps', () => {
     const entries: WorkoutEntryDraft[] = [
         {
             id: 1,
@@ -77,7 +75,7 @@ test('serialization rides undefined weight as null and preserves reps/done', () 
                 {
                     exerciseId: 7,
                     name: 'OHP',
-                    sets: [{ reps: 8, weight: undefined, done: false }],
+                    sets: [{ reps: 8, weight: undefined }],
                 },
             ],
         },
@@ -94,7 +92,7 @@ test('serialization rides undefined weight as null and preserves reps/done', () 
                 exercises: [
                     {
                         exerciseId: 7,
-                        sets: [{ reps: 8, weight: null, done: false }],
+                        sets: [{ reps: 8, weight: null }],
                     },
                 ],
             },
@@ -109,7 +107,7 @@ test('hydration turns null reps/weight from the API into undefined for the input
                 {
                     exerciseId: 3,
                     exercise: { name: 'Row' },
-                    sets: [{ reps: null, weight: null, done: false }],
+                    sets: [{ reps: null, weight: null }],
                 },
             ],
         },
@@ -118,7 +116,6 @@ test('hydration turns null reps/weight from the API into undefined for the input
     expect(draft[0].exercises[0].sets[0]).toEqual({
         reps: undefined,
         weight: undefined,
-        done: false,
     })
 })
 
@@ -126,7 +123,7 @@ test('newWorkoutExercise seeds one blank set', () => {
     expect(newWorkoutExercise({ id: 4, name: 'Curl' })).toEqual({
         exerciseId: 4,
         name: 'Curl',
-        sets: [{ reps: undefined, weight: undefined, done: true }],
+        sets: [{ reps: undefined, weight: undefined }],
     })
 })
 

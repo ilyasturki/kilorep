@@ -146,26 +146,19 @@ export function resolveWorkout(userId: number, id?: number): Workout {
     )
 }
 
-export function formatSet(
-    set: Pick<LoggedSet, 'weight' | 'reps' | 'done'>,
-): string {
+export function formatSet(set: Pick<LoggedSet, 'weight' | 'reps'>): string {
     const load = set.weight == null ? '?' : `${set.weight}kg`
-    return `${load}×${set.reps ?? '?'}${set.done ? '' : ' (pending)'}`
+    return `${load}×${set.reps ?? '?'}`
 }
 
-export function countSets(workout: WorkoutWithEntries): {
-    done: number
-    total: number
-} {
-    let done = 0
+export function countSets(workout: WorkoutWithEntries): { total: number } {
     let total = 0
     for (const entry of workout.entries) {
         for (const ex of entry.exercises) {
             total += ex.sets.length
-            done += ex.sets.filter((set) => set.done).length
         }
     }
-    return { done, total }
+    return { total }
 }
 
 export function formatWorkout(workout: WorkoutWithEntries): string {

@@ -24,19 +24,9 @@ import java.util.UUID
 data class DraftSet(
     val reps: Int?,
     val weight: Double?,
-    val done: Boolean,
     /** The prescribed rep target, shown beside what's being logged. */
     val target: Int?,
-) {
-    /**
-     * Web has no separate "done" step — typing the load and reps logs the set.
-     * Mirror that: once a set has both, it counts as performed. Only flips
-     * false→true, so the tick stays user-overridable and clearing a field on
-     * an already-ticked set never silently un-ticks it.
-     */
-    fun autoDone(): DraftSet =
-        if (reps != null && weight != null && !done) copy(done = true) else this
-}
+)
 
 data class DraftExercise(
     val exerciseId: Int,
@@ -94,7 +84,6 @@ data class WorkoutDraft(
                                     LoggedSetInput(
                                         reps = set.reps,
                                         weight = set.weight,
-                                        done = set.done,
                                     )
                                 },
                             )
@@ -127,14 +116,12 @@ data class WorkoutDraft(
         mapExercise(entryIndex, exerciseIndex) { exercise ->
             val last = exercise.sets.lastOrNull()
             exercise.copy(
-                // Carrying a full set forward means it already has load+reps, so
-                // it lands done — matching web, where an added set defaults done.
+                // Carry the previous set forward — the likeliest next effort.
                 sets = exercise.sets + DraftSet(
                     reps = last?.reps,
                     weight = last?.weight,
-                    done = false,
                     target = last?.target,
-                ).autoDone(),
+                ),
             )
         }
 
@@ -165,7 +152,7 @@ data class WorkoutDraft(
                 DraftExercise(
                     exerciseId = exerciseId,
                     name = name,
-                    sets = listOf(DraftSet(reps = null, weight = null, done = false, target = null)),
+                    sets = listOf(DraftSet(reps = null, weight = null, target = null)),
                 ),
             ),
         ),
@@ -265,7 +252,6 @@ data class WorkoutDraft(
                                             DraftSet(
                                                 reps = set.reps,
                                                 weight = null,
-                                                done = false,
                                                 target = set.reps,
                                             )
                                         },
@@ -301,7 +287,6 @@ data class WorkoutDraft(
                                                 DraftSet(
                                                     reps = set.reps,
                                                     weight = set.weight,
-                                                    done = set.done,
                                                     target = null,
                                                 )
                                             },

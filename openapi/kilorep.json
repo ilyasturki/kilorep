@@ -1497,16 +1497,13 @@
             },
             "ExerciseHistorySet": {
                 "type": "object",
-                "required": ["reps", "weight", "done"],
+                "required": ["reps", "weight"],
                 "properties": {
                     "reps": {
                         "type": ["integer", "null"]
                     },
                     "weight": {
                         "type": ["number", "null"]
-                    },
-                    "done": {
-                        "type": "boolean"
                     }
                 }
             },
@@ -1916,7 +1913,6 @@
                     "workoutExerciseId",
                     "reps",
                     "weight",
-                    "done",
                     "position"
                 ],
                 "properties": {
@@ -1932,9 +1928,6 @@
                     "weight": {
                         "type": ["number", "null"],
                         "description": "Kilograms; null until entered."
-                    },
-                    "done": {
-                        "type": "boolean"
                     },
                     "position": {
                         "type": "integer"
@@ -2207,10 +2200,6 @@
                     "weight": {
                         "type": ["number", "null"],
                         "description": "Kilograms; negative or non-finite values normalise to null."
-                    },
-                    "done": {
-                        "type": "boolean",
-                        "default": false
                     }
                 }
             },

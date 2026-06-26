@@ -12,7 +12,6 @@ import type {
 type LoggedSetInput = {
     reps?: number | null
     weight?: number | null
-    done?: boolean
 }
 type WorkoutExerciseInput = { exerciseId?: number; sets?: LoggedSetInput[] }
 type WorkoutEntryInput = { exercises?: WorkoutExerciseInput[] }
@@ -26,7 +25,6 @@ export type WorkoutInput = {
 type ParsedLoggedSet = {
     reps: number | null
     weight: number | null
-    done: boolean
 }
 type ParsedExercise = { exerciseId: number; sets: ParsedLoggedSet[] }
 type ParsedEntry = { exercises: ParsedExercise[] }
@@ -40,7 +38,7 @@ export type ParsedWorkout = {
 /**
  * Validates and normalises a workout update payload. Mirrors `parseSessionInput`
  * but each set also carries the logged load: `weight` (kilograms, null until
- * entered) and `done`. A set keeps its slot with null reps while its field is
+ * entered). A set keeps its slot with null reps while its field is
  * cleared, so an autosave mid-edit can't silently drop the row. Exercises
  * without a valid catalog id are dropped; a 400 is thrown when nothing usable
  * remains. `name` is only returned when explicitly provided and non-empty,
@@ -66,7 +64,6 @@ export function parseWorkoutInput(body: WorkoutInput): ParsedWorkout {
                                 ) ?
                                     null
                                 :   weight,
-                            done: Boolean(set?.done),
                         }
                     }),
                 }))
@@ -142,7 +139,6 @@ function writeWorkoutEntries(
                         workoutExerciseId: exerciseRow.id,
                         reps: set.reps,
                         weight: set.weight,
-                        done: set.done,
                         position: setIndex,
                     })),
                 )
@@ -410,7 +406,6 @@ export function copySessionToWorkout(
                                     ?? lastReps?.at(-1)
                                     ?? null,
                                 weight: null,
-                                done: false,
                                 position: setIndex,
                             })),
                         )

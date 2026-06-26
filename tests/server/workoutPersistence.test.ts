@@ -52,8 +52,8 @@ test('createWorkout persists the tree and loadWorkoutTrees reads it back', () =>
                     {
                         exerciseId: ex.id,
                         sets: [
-                            { reps: 8, weight: 60, done: true },
-                            { reps: 7, weight: 60, done: true },
+                            { reps: 8, weight: 60 },
+                            { reps: 7, weight: 60 },
                         ],
                     },
                 ],
@@ -69,9 +69,9 @@ test('createWorkout persists the tree and loadWorkoutTrees reads it back', () =>
     expect(tree.entries).toHaveLength(1)
     const logged = tree.entries[0]!.exercises[0]!
     expect(logged.exerciseId).toBe(ex.id)
-    expect(logged.sets.map((s) => [s.reps, s.weight, s.done])).toEqual([
-        [8, 60, true],
-        [7, 60, true],
+    expect(logged.sets.map((s) => [s.reps, s.weight])).toEqual([
+        [8, 60],
+        [7, 60],
     ])
 })
 
@@ -114,7 +114,7 @@ test('saveWorkout replaces the whole tree and updates row fields', () => {
                     exercises: [
                         {
                             exerciseId: row.id,
-                            sets: [{ reps: 10, weight: 40, done: true }],
+                            sets: [{ reps: 10, weight: 40 }],
                         },
                     ],
                 },
@@ -182,7 +182,7 @@ test('copySessionToWorkout seeds an open target from the last logged reps, load 
                     exercises: [
                         {
                             exerciseId: squat.id,
-                            sets: [{ reps: 5, weight: 100, done: true }],
+                            sets: [{ reps: 5, weight: 100 }],
                         },
                     ],
                 },
@@ -212,7 +212,6 @@ test('copySessionToWorkout seeds an open target from the last logged reps, load 
     expect(workout.sessionId).toBe(session.id)
     expect(set.reps).toBe(5) // seeded from the last logged reps
     expect(set.weight).toBeNull() // load left blank for the lifter
-    expect(set.done).toBe(false)
 })
 
 test('parseWorkoutInput rejects a payload with no usable exercise', () => {

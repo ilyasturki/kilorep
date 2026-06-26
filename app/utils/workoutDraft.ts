@@ -6,7 +6,6 @@ import { uid } from './uid'
 export type WorkoutSetDraft = {
     reps: number | undefined
     weight: number | undefined
-    done: boolean
 }
 export type WorkoutExerciseDraft = {
     exerciseId: number
@@ -20,15 +19,15 @@ export type WorkoutEntryDraft = {
 }
 
 export function newWorkoutSet(): WorkoutSetDraft {
-    return { reps: undefined, weight: undefined, done: true }
+    return { reps: undefined, weight: undefined }
 }
 
 // The set produced by "add set": copy the last one verbatim — even blank
-// fields — so the new row mirrors whatever the lifter is mid-typing, marked
-// done; an exercise with no sets yet starts from a blank one.
+// fields — so the new row mirrors whatever the lifter is mid-typing; an
+// exercise with no sets yet starts from a blank one.
 export function nextWorkoutSet(sets: WorkoutSetDraft[]): WorkoutSetDraft {
     const last = sets.at(-1)
-    return last ? { ...last, done: true } : newWorkoutSet()
+    return last ? { ...last } : newWorkoutSet()
 }
 
 export function newWorkoutExercise(exercise: {
@@ -49,7 +48,7 @@ type FetchedWorkoutEntry = {
     exercises: {
         exerciseId: number
         exercise: { name: string }
-        sets: { reps: number | null; weight: number | null; done: boolean }[]
+        sets: { reps: number | null; weight: number | null }[]
     }[]
 }
 
@@ -66,7 +65,6 @@ export function workoutDraftFromEntries(
             sets: ex.sets.map((s) => ({
                 reps: s.reps ?? undefined,
                 weight: s.weight ?? undefined,
-                done: s.done,
             })),
         })),
     }))
@@ -111,7 +109,7 @@ export function ungroupWorkoutEntry(
 }
 
 // Serialize the draft to the PUT /api/workouts/:id body: undefined weight rides
-// as null, reps pass through as-is, done is preserved per set.
+// as null, reps pass through as-is.
 export function workoutDraftToBody(
     entries: WorkoutEntryDraft[],
     opts: { completed: boolean; startedAt: string | undefined },
@@ -125,7 +123,6 @@ export function workoutDraftToBody(
                 sets: ex.sets.map((s) => ({
                     reps: s.reps,
                     weight: s.weight ?? null,
-                    done: s.done,
                 })),
             })),
         })),

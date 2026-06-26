@@ -820,15 +820,6 @@ async function changeDate() {
                                 <span class="x">×</span>
                                 {{ set.reps ?? '?' }}
                             </span>
-                            <span
-                                class="logline-check"
-                                :class="{ skipped: !set.done }"
-                            >
-                                <Icon
-                                    name="tabler:check"
-                                    :size="15"
-                                />
-                            </span>
                         </div>
                     </div>
                 </div>

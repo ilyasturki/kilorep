@@ -30,7 +30,6 @@ import dev.kilorep.app.store.DraftEntry
 import dev.kilorep.app.store.DraftExercise
 import dev.kilorep.app.store.WorkoutDraft
 import dev.kilorep.app.ui.components.ConfirmDialog
-import dev.kilorep.app.ui.components.DoneTick
 import dev.kilorep.app.ui.components.ExercisePicker
 import dev.kilorep.app.ui.components.GhostButton
 import dev.kilorep.app.ui.components.Kicker
@@ -438,7 +437,7 @@ private fun MoveButtons(
     }
 }
 
-/** Read-only readout of one entry: load × reps with a done check per set. */
+/** Read-only readout of one entry: load × reps per set. */
 @Composable
 private fun ReviewBlock(entry: DraftEntry) {
     val colors = Lift.colors
@@ -467,11 +466,6 @@ private fun ReviewBlock(entry: DraftEntry) {
                         "${formatWeight(set.weight)} kg × ${formatReps(set.reps)}",
                         style = LiftType.mono,
                         modifier = Modifier.weight(1f),
-                    )
-                    LiftIcon(
-                        LiftIcons.Check,
-                        tint = if (set.done) colors.accentText else colors.ink3,
-                        size = 15.dp,
                     )
                 }
             }
@@ -519,8 +513,8 @@ private fun ExerciseBlock(
                 Modifier
                     .fillMaxWidth()
                     .padding(top = 10.dp)
-                    .border(1.dp, if (set.done) colors.accent.copy(alpha = 0.4f) else colors.line)
-                    .background(if (set.done) colors.accentTint else colors.surface)
+                    .border(1.dp, colors.line)
+                    .background(colors.surface)
                     .padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -569,10 +563,6 @@ private fun ExerciseBlock(
                         onStep = { viewModel.stepReps(entryIndex, exerciseIndex, setIndex, it) },
                         suffix = "REPS",
                         modifier = Modifier.weight(1f),
-                    )
-                    DoneTick(
-                        done = set.done,
-                        onToggle = { viewModel.toggleDone(entryIndex, exerciseIndex, setIndex) },
                     )
                 }
             }

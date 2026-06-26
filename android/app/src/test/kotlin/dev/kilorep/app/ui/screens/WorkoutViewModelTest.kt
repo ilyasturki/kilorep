@@ -100,15 +100,15 @@ class WorkoutViewModelTest {
     }
 
     @Test
-    fun `ticking a set persists and schedules background sync`() {
+    fun `editing a set persists and schedules background sync`() {
         val vm = startedViewModel()
         dirtyKicks = 0
 
-        vm.toggleDone(0, 0, 0)
+        vm.setWeight(0, 0, 0, 80.0)
 
         val draft = vm.draft.value
         assertNotNull(draft)
-        assertTrue(draft.entries[0].exercises[0].sets[0].done)
+        assertEquals(80.0, draft.entries[0].exercises[0].sets[0].weight)
         assertTrue(draft.dirty)
         assertTrue(dirtyKicks > 0, "a dirty draft must schedule the sync worker")
     }
@@ -130,9 +130,7 @@ class WorkoutViewModelTest {
     @Test
     fun `finish replays create-then-put and the draft leaves the queue`() {
         val vm = startedViewModel()
-        // Logging the load auto-completes the set — web has no separate tick.
         vm.setWeight(0, 0, 0, 80.0)
-        assertTrue(vm.draft.value!!.entries[0].exercises[0].sets[0].done)
 
         // POST /api/workouts (create from session) → PUT /api/workouts/55 →
         // GET /api/workouts (history refresh after a successful sync).
@@ -166,7 +164,6 @@ class WorkoutViewModelTest {
         val payload = put.body.readUtf8()
         assertTrue(payload.contains("\"completed\":true"))
         assertTrue(payload.contains("\"weight\":80.0"))
-        assertTrue(payload.contains("\"done\":true"))
 
         // Synced + completed → the draft is gone; history owns it now.
         awaitUntil("draft leaves the queue") { vm.draft.value == null }

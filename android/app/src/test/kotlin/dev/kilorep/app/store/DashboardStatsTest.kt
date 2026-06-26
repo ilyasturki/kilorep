@@ -24,7 +24,7 @@ private fun ex(
     exerciseId: Int,
     name: String,
     muscles: List<MuscleTarget>,
-    sets: List<Triple<Double?, Int?, Boolean>>,
+    sets: List<Pair<Double?, Int?>>,
 ) = WorkoutExercise(
     id = exerciseId * 100,
     entryId = exerciseId * 100 + 1,
@@ -45,7 +45,6 @@ private fun ex(
             workoutExerciseId = exerciseId * 100,
             reps = s.second,
             weight = s.first,
-            done = s.third,
             position = i,
         )
     },
@@ -80,17 +79,17 @@ class DashboardStatsTest {
                 ex(
                     10, "Bench Press",
                     listOf(mt("chest", MuscleTarget.Intensity.high), mt("triceps", MuscleTarget.Intensity.medium)),
-                    listOf(Triple(80.0, 8, true), Triple(80.0, 5, true)),
+                    listOf(Pair(80.0, 8), Pair(80.0, 5)),
                 ),
             ),
         ),
         workout(
             2, "Legs", "2026-06-08T18:00:00Z",
-            listOf(ex(20, "Squat", listOf(mt("quads", MuscleTarget.Intensity.high)), listOf(Triple(100.0, 5, true)))),
+            listOf(ex(20, "Squat", listOf(mt("quads", MuscleTarget.Intensity.high)), listOf(Pair(100.0, 5)))),
         ),
         workout(
             3, "Old", "2026-05-01T18:00:00Z",
-            listOf(ex(10, "Bench Press", emptyList(), listOf(Triple(90.0, 3, true)))),
+            listOf(ex(10, "Bench Press", emptyList(), listOf(Pair(90.0, 3)))),
         ),
     )
 

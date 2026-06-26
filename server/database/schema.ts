@@ -265,10 +265,9 @@ export const workoutExercises = sqliteTable('workout_exercises', {
 })
 
 // A logged set: the reps actually performed and the load lifted, in kilograms.
-// `weight` stays null until entered; `done` flips as the lifter ticks the set
-// off during the workout. `reps` is null while not entered — cleared mid-edit
-// or seeded from an open-target template set with no history. Readers render
-// it as "?" and count it as 0 in volume.
+// `weight` stays null until entered; `reps` is null while not entered — cleared
+// mid-edit or seeded from an open-target template set with no history. Readers
+// render it as "?" and count it as 0 in volume.
 export const workoutSets = sqliteTable('workout_sets', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     workoutExerciseId: integer('workout_exercise_id')
@@ -276,7 +275,6 @@ export const workoutSets = sqliteTable('workout_sets', {
         .references(() => workoutExercises.id, { onDelete: 'cascade' }),
     reps: integer('reps'),
     weight: real('weight'),
-    done: integer('done', { mode: 'boolean' }).notNull().default(false),
     position: integer('position').notNull().default(0),
 })
 
@@ -345,7 +343,7 @@ export type WorkoutDetail = WorkoutWithEntries & {
 }
 
 /** One logged set of an exercise, surfaced in its history view. */
-export type ExerciseHistorySet = Pick<LoggedSet, 'reps' | 'weight' | 'done'>
+export type ExerciseHistorySet = Pick<LoggedSet, 'reps' | 'weight'>
 
 /** A past workout that included an exercise, with the sets logged for it. */
 export type ExerciseHistoryWorkout = {

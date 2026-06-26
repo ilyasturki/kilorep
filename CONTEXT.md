@@ -14,9 +14,8 @@ architecture reviews should use these exact terms rather than inventing synonyms
   in a template carries only a rep target (`null` = an **open target**, decided
   at workout time). Has no logged load.
 - **Workout** — one performed instance, usually copied from a session. Its sets
-  carry the logged **load** (`weight`) and a `done` tick on top of reps. A
-  workout keeps a `sessionId` link to the template it followed (nullable for an
-  ad-hoc log).
+  carry the logged **load** (`weight`) on top of reps. A workout keeps a
+  `sessionId` link to the template it followed (nullable for an ad-hoc log).
 - **Entry** — one row of a session/workout tree. An entry with more than one
   exercise is a **superset**.
 - **Set** — the leaf of the tree. Prescribed (template) vs logged (workout).

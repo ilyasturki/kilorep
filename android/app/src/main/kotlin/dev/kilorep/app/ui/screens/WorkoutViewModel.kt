@@ -58,16 +58,15 @@ class WorkoutViewModel(
     }
 
     fun setReps(entry: Int, exercise: Int, set: Int, reps: Int?) =
-        update { it.updateSet(entry, exercise, set) { s -> s.copy(reps = reps).autoDone() } }
+        update { it.updateSet(entry, exercise, set) { s -> s.copy(reps = reps) } }
 
     fun setWeight(entry: Int, exercise: Int, set: Int, weight: Double?) =
-        update { it.updateSet(entry, exercise, set) { s -> s.copy(weight = weight).autoDone() } }
+        update { it.updateSet(entry, exercise, set) { s -> s.copy(weight = weight) } }
 
     fun stepReps(entry: Int, exercise: Int, set: Int, delta: Int) =
         update {
             it.updateSet(entry, exercise, set) { s ->
                 s.copy(reps = ((s.reps ?: 0) + delta).coerceAtLeast(0).takeIf { r -> r > 0 })
-                    .autoDone()
             }
         }
 
@@ -78,12 +77,9 @@ class WorkoutViewModel(
                 // Typed weights are arbitrary doubles; adding 2.5 to them
                 // drifts in binary, so quantize what gets stored.
                 val next = roundWeight(((s.weight ?: 0.0) + delta * 2.5).coerceAtLeast(0.0))
-                s.copy(weight = next.takeIf { w -> w > 0.0 }).autoDone()
+                s.copy(weight = next.takeIf { w -> w > 0.0 })
             }
         }
-
-    fun toggleDone(entry: Int, exercise: Int, set: Int) =
-        update { it.updateSet(entry, exercise, set) { s -> s.copy(done = !s.done) } }
 
     fun addSet(entry: Int, exercise: Int) = update { it.addSet(entry, exercise) }
 

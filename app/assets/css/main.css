@@ -2334,7 +2334,7 @@
     /* Review mode: one read-only "weight × reps" line per logged set */
     .logline {
         display: grid;
-        grid-template-columns: 30px 1fr auto;
+        grid-template-columns: 30px 1fr;
         align-items: center;
         gap: 12px;
         padding: 9px 0;
@@ -2354,15 +2354,6 @@
     .logline-load .x {
         color: var(--ink-3);
         margin: 0 6px;
-    }
-
-    .logline-check {
-        display: inline-flex;
-        color: var(--accent-text);
-    }
-
-    .logline-check.skipped {
-        color: var(--ink-3);
     }
 
     /* ===== Exercise detail =============================== */
@@ -2586,11 +2577,6 @@
     .set-chip .x {
         color: var(--ink-3);
         margin: 0 3px;
-    }
-
-    .set-chip--off {
-        color: var(--ink-3);
-        border-style: dashed;
     }
 
     /* ----- Programmed-in session chips ----- */

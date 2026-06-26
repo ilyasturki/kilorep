@@ -248,7 +248,6 @@ export function getExerciseDetail(id: number, userId: number): ExerciseDetail {
             entry.sets.push({
                 reps: set.reps,
                 weight: set.weight,
-                done: set.done,
             })
         }
     }

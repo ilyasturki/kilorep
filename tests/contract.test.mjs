@@ -252,8 +252,8 @@ await call('/api/workouts/{id}', {
                     {
                         exerciseId: bench.id,
                         sets: [
-                            { reps: 5, weight: 80, done: true },
-                            { reps: 5, weight: 82.5, done: true },
+                            { reps: 5, weight: 80 },
+                            { reps: 5, weight: 82.5 },
                         ],
                     },
                 ],
