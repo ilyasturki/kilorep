@@ -22,9 +22,7 @@ const RANGES = [
 ] as const
 type RangeKey = (typeof RANGES)[number]['key']
 
-// Default 'all' keeps the server render free of any new Date() math, so the
-// stats strip hydrates without a clock-driven mismatch.
-const range = ref<RangeKey>('all')
+const range = useLocalStorage<RangeKey>('weight-progression-range', 'all')
 const rangeLabel = computed(
     () => RANGES.find((r) => r.key === range.value)?.label ?? '',
 )
@@ -182,7 +180,9 @@ async function confirmDelete() {
                 </div>
                 <div class="wk-stat">
                     <span class="stat-num mono">
-                        {{ rangeChange == null ? '—' : fmtSigned2(rangeChange) }}
+                        {{
+                            rangeChange == null ? '—' : fmtSigned2(rangeChange)
+                        }}
                     </span>
                     <span class="stat-lab">CHANGE · {{ rangeLabel }}</span>
                 </div>
@@ -190,14 +190,18 @@ async function confirmDelete() {
                     v-if="minMax"
                     class="wk-stat"
                 >
-                    <span class="stat-num mono">{{ fmtFixed2(minMax.min) }}</span>
+                    <span class="stat-num mono">{{
+                        fmtFixed2(minMax.min)
+                    }}</span>
                     <span class="stat-lab">LOWEST · KG</span>
                 </div>
                 <div
                     v-if="minMax"
                     class="wk-stat"
                 >
-                    <span class="stat-num mono">{{ fmtFixed2(minMax.max) }}</span>
+                    <span class="stat-num mono">{{
+                        fmtFixed2(minMax.max)
+                    }}</span>
                     <span class="stat-lab">HIGHEST · KG</span>
                 </div>
             </template>
