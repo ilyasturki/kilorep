@@ -1381,11 +1381,39 @@
         text-transform: inherit;
         color: inherit;
         text-align: left;
-        cursor: pointer;
     }
 
     .session-name-btn:hover {
         color: var(--accent-text);
+    }
+
+    /* Drag-to-reorder grip (condensed rows). Deliberately not a <button> and not
+       focusable — the up/down arrows stay the keyboard/screen-reader path, so a
+       screen reader shouldn't meet a second, pointer-only control. touch-action:
+       none lets a touch-drag begin without the list scrolling underneath it. */
+    .drag-handle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        margin-left: -4px;
+        padding: 4px;
+        color: var(--ink-3);
+        cursor: grab;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    .drag-handle:hover {
+        color: var(--ink-2);
+    }
+
+    /* While a reorder is saving, the arrows disable; the handle matches by going
+       inert so a second drag can't race the in-flight PATCH. */
+    .drag-handle.is-locked {
+        pointer-events: none;
+        opacity: 0.4;
     }
 
     .plan-list {
@@ -3012,6 +3040,53 @@
 
     @media (prefers-reduced-motion: reduce) {
         .reorder-move {
+            transition: none;
+        }
+    }
+
+    /* Drag-to-reorder (condensed rows). The lifted row sets its transform inline
+       and tracks the pointer with its own transition:none, so it isn't here;
+       these rules glide the siblings aside to open the drop slot. */
+    .is-reordering .session-row {
+        transition: transform 0.16s ease;
+    }
+
+    /* The lift splits across the two elements: z-index sits on the static slot
+       (TransitionGroup's child, which never moves) so stacking stays put, while
+       the shadow and grab cursor ride the inner row that tracks the pointer. */
+    .reorder-lift {
+        position: relative;
+        z-index: 30;
+    }
+
+    .reorder-dragging {
+        cursor: grabbing;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Hold the grabbing cursor across the whole page for the duration of a drag
+       and suppress text selection: without this the handle's own cursor: grab
+       wins under the pointer and dragging over a name selects its text. The
+       class is toggled on <body> by usePointerReorder. */
+    body.reorder-grabbing,
+    body.reorder-grabbing * {
+        cursor: grabbing !important;
+    }
+
+    body.reorder-grabbing {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+    }
+
+    /* The drop commits in one frame: live transforms come off as the real array
+       order takes over. Freezing every row's transition on that frame stops the
+       already-correct rows from animating the swap, and stops FLIP from firing. */
+    .reorder-frozen > * {
+        transition: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .is-reordering .session-row {
             transition: none;
         }
     }

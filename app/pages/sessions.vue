@@ -5,6 +5,7 @@ import type {
     SessionExerciseDraft as ExerciseDraft,
     SessionDraft,
 } from '~/utils/sessionDraft'
+import { moveItemTo } from '~/utils/moveItemTo'
 import {
     emptySessionDraft,
     newSessionEntry,
@@ -105,9 +106,12 @@ async function save() {
 
 const reordering = ref(false)
 
-async function moveSession(index: number, dir: -1 | 1) {
+// The reorder endpoint takes the full id list (a permutation), so the arrows and
+// the drag handle persist the same way: mutate the local order, then send it. On
+// failure we refetch the authoritative order rather than guess at a rollback.
+async function persistOrder() {
     const list = sessions.value
-    if (!list || !moveItem(list, index, dir)) return
+    if (!list) return
     reordering.value = true
     try {
         await $fetch('/api/sessions/reorder', {
@@ -124,6 +128,24 @@ async function moveSession(index: number, dir: -1 | 1) {
         reordering.value = false
     }
 }
+
+// Arrows nudge by one and stay the keyboard/screen-reader path; the drag handle
+// produces an arbitrary from→to move. Both feed persistOrder.
+async function moveSession(index: number, dir: -1 | 1) {
+    if (!sessions.value || !moveItem(sessions.value, index, dir)) return
+    await persistOrder()
+}
+
+const { dragIndex, isDragging, noTransition, onHandlePointerDown, rowStyle } =
+    usePointerReorder({
+        count: () => sessions.value?.length ?? 0,
+        disabled: () => reordering.value,
+        onCommit: (from, to) => {
+            if (!sessions.value) return
+            sessions.value = moveItemTo(sessions.value, from, to)
+            void persistOrder()
+        },
+    })
 
 const deleteTarget = ref<SessionWithEntries | null>(null)
 const deleting = ref(false)
@@ -499,67 +521,50 @@ function planBlocks(session: SessionWithEntries) {
             v-else
             name="reorder"
             tag="div"
-            :class="view === 'condensed' ? 'space-y-2' : 'space-y-4'"
+            :class="[
+                view === 'condensed' ? 'space-y-2' : 'space-y-4',
+                { 'is-reordering': isDragging, 'reorder-frozen': noTransition },
+            ]"
         >
             <div
                 v-for="(session, sessionIndex) in sessions"
                 :key="session.id"
-                :class="view === 'condensed' ? 'session-row' : 'card'"
+                data-reorder-row
+                class="reorder-slot"
+                :class="{ 'reorder-lift': dragIndex === sessionIndex }"
             >
-                <!-- Condensed: one line per session -->
-                <template v-if="view === 'condensed'">
-                    <div class="flex min-w-0 items-center gap-2.5">
-                        <h3 class="session-name min-w-0">
-                            <button
-                                type="button"
-                                class="session-name-btn max-w-full truncate"
-                                @click="editSession(session)"
-                            >
-                                {{ session.name }}
-                            </button>
-                        </h3>
-                        <span class="session-meta">
-                            {{ countLabel(session) }}
-                        </span>
-                    </div>
-                    <div class="flex shrink-0 items-center gap-1">
-                        <MoveButtons
-                            label="session"
-                            :can-up="sessionIndex > 0 && !reordering"
-                            :can-down="
-                                sessionIndex < (sessions?.length ?? 0) - 1
-                                && !reordering
+                <!-- The drag transform lives on this inner row, never on the slot
+                     above: TransitionGroup's FLIP only watches its own child (the
+                     slot), so keeping the slot still stops it from writing a
+                     competing transform and flinging the lifted row off-screen. -->
+                <div
+                    :class="[
+                        view === 'condensed' ? 'session-row' : 'card',
+                        { 'reorder-dragging': dragIndex === sessionIndex },
+                    ]"
+                    :style="
+                        view === 'condensed' ?
+                            rowStyle(sessionIndex)
+                        :   undefined
+                    "
+                >
+                    <!-- Condensed: one line per session -->
+                    <template v-if="view === 'condensed'">
+                        <span
+                            v-if="(sessions?.length ?? 0) > 1"
+                            class="drag-handle"
+                            :class="{ 'is-locked': reordering }"
+                            aria-hidden="true"
+                            @pointerdown="
+                                (e) => onHandlePointerDown(e, sessionIndex)
                             "
-                            @move="(dir) => moveSession(sessionIndex, dir)"
-                        />
-                        <button
-                            type="button"
-                            class="icon-btn sm"
-                            aria-label="Edit session"
-                            @click="editSession(session)"
                         >
                             <Icon
-                                name="tabler:pencil"
-                                :size="15"
+                                name="tabler:grip-vertical"
+                                :size="16"
                             />
-                        </button>
-                        <button
-                            type="button"
-                            class="icon-btn sm icon-btn--danger"
-                            aria-label="Delete session"
-                            @click="deleteTarget = session"
-                        >
-                            <Icon
-                                name="tabler:trash"
-                                :size="15"
-                            />
-                        </button>
-                    </div>
-                </template>
-
-                <template v-else>
-                    <div class="card-head">
-                        <div class="flex min-w-0 items-center gap-2.5">
+                        </span>
+                        <div class="flex min-w-0 flex-1 items-center gap-2.5">
                             <h3 class="session-name min-w-0">
                                 <button
                                     type="button"
@@ -569,16 +574,11 @@ function planBlocks(session: SessionWithEntries) {
                                     {{ session.name }}
                                 </button>
                             </h3>
-                            <span class="tag">
-                                {{
-                                    plural(
-                                        workoutStats(session.entries).sets,
-                                        'set',
-                                    )
-                                }}
+                            <span class="session-meta">
+                                {{ countLabel(session) }}
                             </span>
                         </div>
-                        <div class="flex items-center gap-1">
+                        <div class="flex shrink-0 items-center gap-1">
                             <MoveButtons
                                 label="session"
                                 :can-up="sessionIndex > 0 && !reordering"
@@ -611,43 +611,105 @@ function planBlocks(session: SessionWithEntries) {
                                 />
                             </button>
                         </div>
-                    </div>
+                    </template>
 
-                    <TopMuscles
-                        :muscles="sessionMuscles.get(session.id) ?? []"
-                        class="mt-3"
-                    />
-
-                    <div class="plan-list">
-                        <div
-                            v-for="block in planBlocks(session)"
-                            :key="block.key"
-                            class="plan-block"
-                            :class="{ 'plan-block--ss': block.isSuperset }"
-                        >
-                            <span
-                                v-if="block.isSuperset"
-                                class="ss-tag"
-                            >
-                                SUPERSET
-                            </span>
-                            <NuxtLink
-                                v-for="ex in block.exercises"
-                                :key="ex.key"
-                                :to="`/exercises/${ex.exerciseId}`"
-                                class="plan-ex plan-ex--link"
-                            >
-                                <span class="plan-ex-idx">
-                                    {{ String(ex.n).padStart(2, '0') }}
+                    <template v-else>
+                        <div class="card-head">
+                            <div class="flex min-w-0 items-center gap-2.5">
+                                <h3 class="session-name min-w-0">
+                                    <button
+                                        type="button"
+                                        class="session-name-btn max-w-full truncate"
+                                        @click="editSession(session)"
+                                    >
+                                        {{ session.name }}
+                                    </button>
+                                </h3>
+                                <span class="tag">
+                                    {{
+                                        plural(
+                                            workoutStats(session.entries).sets,
+                                            'set',
+                                        )
+                                    }}
                                 </span>
-                                <span class="plan-ex-name">{{ ex.name }}</span>
-                                <span class="plan-ex-target">{{
-                                    ex.summary
-                                }}</span>
-                            </NuxtLink>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <MoveButtons
+                                    label="session"
+                                    :can-up="sessionIndex > 0 && !reordering"
+                                    :can-down="
+                                        sessionIndex
+                                            < (sessions?.length ?? 0) - 1
+                                        && !reordering
+                                    "
+                                    @move="
+                                        (dir) => moveSession(sessionIndex, dir)
+                                    "
+                                />
+                                <button
+                                    type="button"
+                                    class="icon-btn sm"
+                                    aria-label="Edit session"
+                                    @click="editSession(session)"
+                                >
+                                    <Icon
+                                        name="tabler:pencil"
+                                        :size="15"
+                                    />
+                                </button>
+                                <button
+                                    type="button"
+                                    class="icon-btn sm icon-btn--danger"
+                                    aria-label="Delete session"
+                                    @click="deleteTarget = session"
+                                >
+                                    <Icon
+                                        name="tabler:trash"
+                                        :size="15"
+                                    />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </template>
+
+                        <TopMuscles
+                            :muscles="sessionMuscles.get(session.id) ?? []"
+                            class="mt-3"
+                        />
+
+                        <div class="plan-list">
+                            <div
+                                v-for="block in planBlocks(session)"
+                                :key="block.key"
+                                class="plan-block"
+                                :class="{ 'plan-block--ss': block.isSuperset }"
+                            >
+                                <span
+                                    v-if="block.isSuperset"
+                                    class="ss-tag"
+                                >
+                                    SUPERSET
+                                </span>
+                                <NuxtLink
+                                    v-for="ex in block.exercises"
+                                    :key="ex.key"
+                                    :to="`/exercises/${ex.exerciseId}`"
+                                    class="plan-ex plan-ex--link"
+                                >
+                                    <span class="plan-ex-idx">
+                                        {{ String(ex.n).padStart(2, '0') }}
+                                    </span>
+                                    <span class="plan-ex-name">{{
+                                        ex.name
+                                    }}</span>
+                                    <span class="plan-ex-target">{{
+                                        ex.summary
+                                    }}</span>
+                                </NuxtLink>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
         </TransitionGroup>
 
