@@ -90,6 +90,12 @@
         font-family: inherit;
     }
 
+    /* The pointer cursor signals navigation, so it's reserved for anchors;
+       buttons keep the default arrow (Tailwind v4 Preflight's button default). */
+    a {
+        cursor: pointer;
+    }
+
     ::selection {
         background: var(--accent);
         color: var(--accent-ink);
@@ -220,7 +226,6 @@
         gap: 5px;
         background: none;
         border: none;
-        cursor: pointer;
         color: var(--ink-3);
         padding: 8px 0 4px;
     }
@@ -277,7 +282,6 @@
         background: none;
         border: 1px solid var(--line-2);
         color: var(--ink-3);
-        cursor: pointer;
         transition:
             color 0.12s,
             background 0.12s;
@@ -393,7 +397,6 @@
         background: var(--accent);
         color: var(--accent-ink);
         border: none;
-        cursor: pointer;
         font-size: 15px;
         font-weight: 800;
         letter-spacing: -0.01em;
@@ -425,7 +428,6 @@
         background: none;
         border: none;
         border-left: 2px solid transparent;
-        cursor: pointer;
         color: var(--ink-3);
         font-size: 15px;
         font-weight: 600;
@@ -490,7 +492,6 @@
         padding: 6px;
         background: none;
         border: none;
-        cursor: pointer;
         color: var(--ink-3);
         transition: color 0.12s;
     }
@@ -805,7 +806,6 @@
         background: var(--accent);
         color: var(--accent-ink);
         border: none;
-        cursor: pointer;
         font-weight: 800;
         letter-spacing: -0.01em;
         font-size: 15px;
@@ -848,7 +848,6 @@
         font-weight: 600;
         font-size: 14px;
         padding: 10px 15px;
-        cursor: pointer;
         transition: background 0.12s;
     }
 
@@ -870,7 +869,6 @@
         background: #e5484d;
         color: #fff;
         border: none;
-        cursor: pointer;
         font-weight: 800;
         font-size: 14px;
         padding: 10px 16px;
@@ -890,7 +888,6 @@
         gap: 6px;
         background: none;
         border: none;
-        cursor: pointer;
         color: var(--ink-2);
         font-weight: 600;
         font-size: 13px;
@@ -911,7 +908,6 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
         flex: none;
         transition: border-color 0.12s;
     }
@@ -944,7 +940,6 @@
         color: var(--ink);
         font-size: 13px;
         padding: 9px 0;
-        cursor: pointer;
         transition: border-color 0.12s;
     }
 
@@ -1194,7 +1189,6 @@
         background: none;
         border: none;
         padding: 0;
-        cursor: pointer;
         text-align: left;
     }
 
@@ -1575,7 +1569,6 @@
         padding: 11px 18px;
         color: var(--ink-3);
         text-transform: capitalize;
-        cursor: pointer;
         transition:
             color 0.12s,
             background 0.12s;
@@ -1632,7 +1625,6 @@
         font-family: inherit;
         font-size: 15px;
         padding: 11px 13px;
-        cursor: pointer;
         text-transform: capitalize;
         transition: border-color 0.12s;
     }
@@ -1679,7 +1671,6 @@
         font-size: 14px;
         padding: 9px 11px;
         color: var(--ink-2);
-        cursor: pointer;
         text-transform: capitalize;
         outline: none;
         user-select: none;
@@ -1740,7 +1731,6 @@
         border: none;
         padding: 0;
         color: var(--ink-3);
-        cursor: pointer;
     }
 
     .combobox-content {
@@ -1854,7 +1844,6 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
         touch-action: manipulation;
         transition:
             background 0.12s,
@@ -2139,7 +2128,6 @@
         display: inline-flex;
         align-items: center;
         gap: 2px;
-        cursor: pointer;
         text-align: left;
     }
 
@@ -2240,7 +2228,6 @@
         border: none;
         background: none;
         color: var(--ink-2);
-        cursor: pointer;
         transition:
             color 0.12s,
             background 0.12s;
@@ -2288,7 +2275,6 @@
         border: 1px solid var(--line);
         background: var(--surface);
         color: var(--ink-2);
-        cursor: pointer;
         transition:
             border-color 0.12s,
             color 0.12s;
@@ -2325,7 +2311,6 @@
         font-family: 'JetBrains Mono', monospace;
         font-size: 13px;
         color: var(--ink);
-        cursor: pointer;
         user-select: none;
         transition:
             background 0.12s,
