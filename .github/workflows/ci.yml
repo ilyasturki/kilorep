@@ -16,6 +16,9 @@ jobs:
             - name: Unit tests
               run: bun run test:unit
 
+            - name: Domain tests (server persistence on in-memory sqlite)
+              run: bun run test:domain
+
             - name: Contract test (responses validated against openapi/kilorep.json)
               run: bun run test:contract
 
