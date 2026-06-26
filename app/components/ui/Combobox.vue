@@ -32,6 +32,11 @@ const props = defineProps<{
 
 defineSlots<{
     item?: (props: { option: Matched }) => unknown
+    // Shown when nothing matches; receives the live query so callers can offer
+    // to create it. `footer` stays pinned at the bottom whether or not there
+    // are matches.
+    empty?: (props: { query: string }) => unknown
+    footer?: (props: { query: string }) => unknown
 }>()
 
 const model = defineModel<T>()
@@ -91,7 +96,14 @@ function selectAll(event: FocusEvent) {
             >
                 <ComboboxViewport class="select-viewport">
                     <ComboboxEmpty class="combobox-empty">
-                        No matching option
+                        <slot
+                            name="empty"
+                            :query="searchTerm"
+                        >
+                            <span class="combobox-empty-text">
+                                No matching option
+                            </span>
+                        </slot>
                     </ComboboxEmpty>
                     <ComboboxItem
                         v-for="option in filtered"
@@ -119,6 +131,15 @@ function selectAll(event: FocusEvent) {
                         </ComboboxItemIndicator>
                     </ComboboxItem>
                 </ComboboxViewport>
+                <div
+                    v-if="$slots.footer"
+                    class="combobox-footer"
+                >
+                    <slot
+                        name="footer"
+                        :query="searchTerm"
+                    />
+                </div>
             </ComboboxContent>
         </ComboboxPortal>
     </ComboboxRoot>

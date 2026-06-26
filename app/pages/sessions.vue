@@ -19,16 +19,23 @@ const [{ data: sessions, status, refresh }, { data: exercises }] =
         useFetch<Exercise[]>('/api/exercises'),
     ])
 
+// Adopt an inline-created exercise into the local catalog so the builder's
+// picker can resolve its label and keep it selected without a refetch.
+function onExerciseCreated(exercise: Exercise) {
+    exercises.value = [...(exercises.value ?? []), exercise]
+}
+
 const draft = ref<SessionDraft>(emptySessionDraft())
 const builderOpen = ref(false)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
 const toast = useToast()
 
-// Display density, remembered per device (web-only, kept off the API contract).
-const view = useCookie<'detailed' | 'condensed'>('sessions-view', {
-    default: () => 'detailed',
-})
+// Display density, remembered per device (web-only, never sent to the server).
+const view = useLocalStorage<'detailed' | 'condensed'>(
+    'sessions-view',
+    'detailed',
+)
 
 function openBuilder() {
     editingId.value = null
@@ -309,6 +316,8 @@ function planBlocks(session: SessionWithEntries) {
                                             v-model="exercise.exerciseId"
                                             :exercises="exercises ?? []"
                                             placeholder="Pick an exercise"
+                                            creatable
+                                            @created="onExerciseCreated"
                                         />
                                     </div>
                                     <button

@@ -1725,9 +1725,47 @@
     }
 
     .combobox-empty {
+        /* Padding lives on the inner text/actions so a full-width create row
+           (.combobox-create) isn't double-inset. */
+        padding: 0;
+    }
+
+    .combobox-empty-text {
+        display: block;
         padding: 9px 11px;
         font-size: 14px;
         color: var(--ink-3);
+    }
+
+    /* Persistent "new exercise" action, pinned below the scrolling list. */
+    .combobox-footer {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg);
+        border-top: 1px solid var(--line-2);
+        padding: 5px;
+    }
+
+    .combobox-create {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 9px 11px;
+        font-family: inherit;
+        font-size: 14px;
+        text-align: left;
+        color: var(--accent-text);
+        background: none;
+        border: none;
+    }
+
+    .combobox-create:hover {
+        background: var(--surface-2);
+    }
+
+    .combobox-create > svg {
+        flex: none;
     }
 
     /* Alternate keyword (e.g. an exercise alias) the search matched on, shown

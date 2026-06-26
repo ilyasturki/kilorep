@@ -126,6 +126,12 @@ function removeExercise(entryIndex: number, exIndex: number) {
 const exerciseById = (exId: number | undefined) =>
     exercises.value?.find((e) => e.id === exId)
 
+// Adopt an inline-created exercise into the local catalog so the picker can
+// resolve its label and keep it selected without a refetch.
+function onExerciseCreated(exercise: Exercise) {
+    exercises.value = [...(exercises.value ?? []), exercise]
+}
+
 // Swap which exercise an entry tracks (machine taken, equipment missing)
 // while keeping its logged sets. The combobox starts on the current exercise,
 // so Swap only enables once a different one is picked.
@@ -846,6 +852,8 @@ async function changeDate() {
                 v-model="addExerciseId"
                 :exercises="exercises ?? []"
                 placeholder="Pick an exercise"
+                creatable
+                @created="onExerciseCreated"
             />
             <template #footer>
                 <button
@@ -883,6 +891,8 @@ async function changeDate() {
                     v-model="supersetIds[i]"
                     :exercises="exercises ?? []"
                     placeholder="Pick an exercise"
+                    creatable
+                    @created="onExerciseCreated"
                 />
                 <button
                     type="button"
@@ -934,6 +944,8 @@ async function changeDate() {
                 v-model="addToExerciseId"
                 :exercises="exercises ?? []"
                 placeholder="Pick an exercise"
+                creatable
+                @created="onExerciseCreated"
             />
             <template #footer>
                 <button
@@ -969,6 +981,8 @@ async function changeDate() {
                 v-model="swapExerciseId"
                 :exercises="exercises ?? []"
                 placeholder="Pick an exercise"
+                creatable
+                @created="onExerciseCreated"
             />
             <template #footer>
                 <button
