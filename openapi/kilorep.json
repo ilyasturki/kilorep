@@ -1500,7 +1500,7 @@
                 "required": ["reps", "weight"],
                 "properties": {
                     "reps": {
-                        "type": ["integer", "null"]
+                        "type": ["number", "null"]
                     },
                     "weight": {
                         "type": ["number", "null"]
@@ -1544,7 +1544,7 @@
                         "type": "number"
                     },
                     "reps": {
-                        "type": "integer"
+                        "type": "number"
                     },
                     "workoutId": {
                         "type": "integer"
@@ -1923,7 +1923,7 @@
                         "type": "integer"
                     },
                     "reps": {
-                        "type": ["integer", "null"]
+                        "type": ["number", "null"]
                     },
                     "weight": {
                         "type": ["number", "null"],
@@ -2059,7 +2059,7 @@
                         "description": "Zero-based set position (kind 'reps')."
                     },
                     "reps": {
-                        "type": ["integer", "null"],
+                        "type": ["number", "null"],
                         "description": "Workout's reps at that set (kind 'reps', null when open)."
                     }
                 }
@@ -2195,7 +2195,7 @@
                 "type": "object",
                 "properties": {
                     "reps": {
-                        "type": ["integer", "null"]
+                        "type": ["number", "null"]
                     },
                     "weight": {
                         "type": ["number", "null"],

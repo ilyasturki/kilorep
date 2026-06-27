@@ -43,7 +43,7 @@ private fun ex(
         LoggedSet(
             id = exerciseId * 1000 + i,
             workoutExerciseId = exerciseId * 100,
-            reps = s.second,
+            reps = s.second?.toDouble(),
             weight = s.first,
             position = i,
         )
@@ -132,7 +132,7 @@ class DashboardStatsTest {
         assertEquals(listOf(10, 20), stats.prs.map { it.exerciseId })
         assertEquals(101.3, stats.prs[0].est1rm)
         assertEquals(80.0, stats.prs[0].weight)
-        assertEquals(8, stats.prs[0].reps)
+        assertEquals(8.0, stats.prs[0].reps)
         assertEquals(OffsetDateTime.parse("2026-06-16T18:00:00Z"), stats.prs[0].startedAt)
         assertEquals(116.7, stats.prs[1].est1rm)
     }

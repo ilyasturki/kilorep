@@ -133,7 +133,7 @@ fun ExerciseDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "${formatWeight(current.best?.weight)} kg × ${current.best?.reps}",
+                                "${formatWeight(current.best?.weight)} kg × ${formatReps(current.best?.reps)}",
                                 style = LiftType.statNum,
                             )
                             Text(

@@ -55,7 +55,7 @@ export function parseWorkoutInput(body: WorkoutInput): ParsedWorkout {
                     sets: (ex?.sets ?? []).map((set) => {
                         const weight = Number(set?.weight)
                         return {
-                            reps: parseRepsTarget(set?.reps),
+                            reps: parseLoggedReps(set?.reps),
                             weight:
                                 (
                                     set?.weight == null

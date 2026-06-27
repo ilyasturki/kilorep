@@ -217,3 +217,25 @@ test('copySessionToWorkout seeds an open target from the last logged reps, load 
 test('parseWorkoutInput rejects a payload with no usable exercise', () => {
     expect(() => parseWorkoutInput({ entries: [] })).toThrow()
 })
+
+test('parseWorkoutInput preserves fractional reps (half-reps are loggable)', () => {
+    const ex = createExercise(userId, benchInput)
+    const workout = createWorkout(
+        userId,
+        parseWorkoutInput({
+            entries: [
+                {
+                    exercises: [
+                        {
+                            exerciseId: ex.id,
+                            sets: [{ reps: 6.5, weight: 50 }],
+                        },
+                    ],
+                },
+            ],
+        }),
+    )
+    const set = loadWorkoutTrees(userId, [workout.id])[0]!.entries[0]!
+        .exercises[0]!.sets[0]!
+    expect(set.reps).toBe(6.5)
+})

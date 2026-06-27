@@ -106,7 +106,7 @@ class WorkoutDraftTest {
     fun `prescribed reps seed the log and stay visible as the target`() {
         val bench = started().entries[0].exercises[0]
 
-        assertEquals(8, bench.sets[0].reps)
+        assertEquals(8.0, bench.sets[0].reps)
         assertEquals(8, bench.sets[0].target)
         // An open target stays open: reps to be decided at the rack.
         assertEquals(null, bench.sets[1].reps)
@@ -144,7 +144,7 @@ class WorkoutDraftTest {
             .addSet(0, 0)
         val set = reseeded.entries[0].exercises[0].sets[1]
         assertEquals(82.5, set.weight)
-        assertEquals(8, set.reps)
+        assertEquals(8.0, set.reps)
     }
 
     @Test
@@ -232,11 +232,11 @@ class WorkoutDraftTest {
     fun `an added set carries the previous effort forward`() {
         val draft = started()
             // Log the bench's last set fully, then carry it forward.
-            .updateSet(0, 0, 1) { it.copy(reps = 8, weight = 80.0) }
+            .updateSet(0, 0, 1) { it.copy(reps = 8.0, weight = 80.0) }
             .addSet(0, 0)
         val added = draft.entries[0].exercises[0].sets.last()
         assertEquals(80.0, added.weight)
-        assertEquals(8, added.reps)
+        assertEquals(8.0, added.reps)
     }
 
     @Test

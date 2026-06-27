@@ -27,6 +27,7 @@ import dev.kilorep.app.ui.components.Tag
 import dev.kilorep.app.ui.components.TopMuscles
 import dev.kilorep.app.ui.formatDay
 import dev.kilorep.app.ui.formatFixed2
+import dev.kilorep.app.ui.formatReps
 import dev.kilorep.app.ui.formatSigned
 import dev.kilorep.app.ui.formatVolume
 import dev.kilorep.app.ui.formatWeight
@@ -194,7 +195,7 @@ fun DashboardScreen(
                         stats.prs.forEach { pr ->
                             DashRow(
                                 name = pr.name,
-                                sub = "${formatWeight(pr.weight)} kg × ${pr.reps} · ${formatDay(pr.startedAt)}",
+                                sub = "${formatWeight(pr.weight)} kg × ${formatReps(pr.reps)} · ${formatDay(pr.startedAt)}",
                                 trailing = "${formatWeight(pr.est1rm)} est.",
                                 accent = false,
                                 mono = true,

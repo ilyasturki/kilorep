@@ -22,9 +22,10 @@ import java.util.UUID
  * testable as plain JVM unit tests.
  */
 data class DraftSet(
-    val reps: Int?,
+    /** Logged reps; fractional to record a half-rep, like the load. */
+    val reps: Double?,
     val weight: Double?,
-    /** The prescribed rep target, shown beside what's being logged. */
+    /** The prescribed rep target (a whole count), shown beside what's logged. */
     val target: Int?,
 )
 
@@ -250,7 +251,7 @@ data class WorkoutDraft(
                                         .sortedBy { it.position }
                                         .map { set ->
                                             DraftSet(
-                                                reps = set.reps,
+                                                reps = set.reps?.toDouble(),
                                                 weight = null,
                                                 target = set.reps,
                                             )

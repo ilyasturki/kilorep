@@ -57,7 +57,7 @@ class WorkoutViewModel(
         repo.draft(localId)?.let { repo.updateDraft(transform(it)) }
     }
 
-    fun setReps(entry: Int, exercise: Int, set: Int, reps: Int?) =
+    fun setReps(entry: Int, exercise: Int, set: Int, reps: Double?) =
         update { it.updateSet(entry, exercise, set) { s -> s.copy(reps = reps) } }
 
     fun setWeight(entry: Int, exercise: Int, set: Int, weight: Double?) =
@@ -66,7 +66,7 @@ class WorkoutViewModel(
     fun stepReps(entry: Int, exercise: Int, set: Int, delta: Int) =
         update {
             it.updateSet(entry, exercise, set) { s ->
-                s.copy(reps = ((s.reps ?: 0) + delta).coerceAtLeast(0).takeIf { r -> r > 0 })
+                s.copy(reps = ((s.reps ?: 0.0) + delta).coerceAtLeast(0.0).takeIf { r -> r > 0 })
             }
         }
 

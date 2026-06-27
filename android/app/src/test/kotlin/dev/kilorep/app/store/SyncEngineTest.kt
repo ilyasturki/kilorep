@@ -12,7 +12,7 @@ private fun draft(
     sessionId: Int? = 7,
     completed: Boolean = true,
     dirty: Boolean = true,
-    reps: Int? = 8,
+    reps: Double? = 8.0,
 ) = WorkoutDraft(
     localId = localId,
     serverId = serverId,
@@ -93,7 +93,7 @@ class SyncEngineTest {
         assertEquals(true, input.completed)
         val sets = input.entries.single().exercises.single().sets
         assertEquals(2, sets.size)
-        assertEquals(8, sets[0].reps)
+        assertEquals(8.0, sets[0].reps)
         assertEquals(80.0, sets[0].weight)
         // A cleared set keeps its slot with nulls — autosave can't drop rows.
         assertEquals(null, sets[1].reps)

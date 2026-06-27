@@ -160,7 +160,7 @@
             "type": "object",
             "required": ["reps", "weight"],
             "properties": {
-                "reps": { "type": ["integer", "null"] },
+                "reps": { "type": ["number", "null"] },
                 "weight": { "type": ["number", "null"] }
             }
         },
@@ -185,7 +185,7 @@
             "required": ["weight", "reps", "workoutId", "name", "startedAt"],
             "properties": {
                 "weight": { "type": "number" },
-                "reps": { "type": "integer" },
+                "reps": { "type": "number" },
                 "workoutId": { "type": "integer" },
                 "name": { "type": "string" },
                 "startedAt": { "type": "string", "format": "date-time" }
@@ -463,7 +463,7 @@
             "properties": {
                 "id": { "type": "integer" },
                 "workoutExerciseId": { "type": "integer" },
-                "reps": { "type": ["integer", "null"] },
+                "reps": { "type": ["number", "null"] },
                 "weight": {
                     "type": ["number", "null"],
                     "description": "Kilograms; null until entered."
@@ -553,7 +553,7 @@
                     "description": "Zero-based set position (kind 'reps')."
                 },
                 "reps": {
-                    "type": ["integer", "null"],
+                    "type": ["number", "null"],
                     "description": "Workout's reps at that set (kind 'reps', null when open)."
                 }
             }
@@ -644,7 +644,7 @@
         "LoggedSetInput": {
             "type": "object",
             "properties": {
-                "reps": { "type": ["integer", "null"] },
+                "reps": { "type": ["number", "null"] },
                 "weight": {
                     "type": ["number", "null"],
                     "description": "Kilograms; negative or non-finite values normalise to null."

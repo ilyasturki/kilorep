@@ -26,7 +26,12 @@ fun formatWeight(weight: Double?): String = when {
     else -> weight.toString().trimEnd('0').trimEnd('.')
 }
 
-fun formatReps(reps: Int?): String = reps?.toString() ?: "?"
+/** Reps render like loads: whole counts plain, a half-rep keeps its ".5". */
+fun formatReps(reps: Double?): String = when {
+    reps == null -> "?"
+    reps % 1.0 == 0.0 -> reps.toInt().toString()
+    else -> reps.toString().trimEnd('0').trimEnd('.')
+}
 
 /** "1 set" / "2 sets" — the web's plural() for the simple nouns we count. */
 fun plural(count: Int, noun: String): String =
@@ -47,6 +52,9 @@ fun formatVolume(value: Long): String =
 
 /** Comma-tolerant weight entry ("82,5" from a numeric keypad locale). */
 fun parseWeight(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
+
+/** Comma-tolerant rep entry; half-reps ("6,5") are loggable like a load. */
+fun parseReps(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
 
 /**
  * Stepper math on binary doubles drifts (80.1 + 0.1 -> 80.19999…); quantize

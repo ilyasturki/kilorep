@@ -40,7 +40,7 @@ data class Pr(
     val name: String,
     val est1rm: Double,
     val weight: Double,
-    val reps: Int,
+    val reps: Double,
     val startedAt: OffsetDateTime,
 )
 
@@ -56,7 +56,7 @@ data class DashboardStats(
         private const val WEEK_MS = 7 * DAY_MS
 
         // Epley estimated 1RM: a single rep returns the weight itself.
-        fun epley1rm(weight: Double, reps: Int): Double = weight * (1 + reps / 30.0)
+        fun epley1rm(weight: Double, reps: Double): Double = weight * (1 + reps / 30.0)
 
         private fun round1(n: Double): Double = (n * 10).roundToLong() / 10.0
         private fun round2(n: Double): Double = (n * 100).roundToLong() / 100.0
@@ -95,7 +95,7 @@ data class DashboardStats(
             for (entry in w.entries) for (ex in entry.exercises) {
                 exercises++
                 sets += ex.sets.size
-                for (s in ex.sets) volume += (s.weight ?: 0.0) * (s.reps ?: 0)
+                for (s in ex.sets) volume += (s.weight ?: 0.0) * (s.reps ?: 0.0)
             }
             return Rollup(exercises, sets, volume.roundToLong())
         }

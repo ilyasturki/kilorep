@@ -46,6 +46,7 @@ import dev.kilorep.app.ui.formatDate
 import dev.kilorep.app.ui.formatReps
 import dev.kilorep.app.ui.formatVolume
 import dev.kilorep.app.ui.formatWeight
+import dev.kilorep.app.ui.parseReps
 import dev.kilorep.app.ui.parseWeight
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcon
@@ -353,7 +354,7 @@ private fun StatsRow(draft: WorkoutDraft, onEditDate: () -> Unit) {
         draft.entries.forEach { entry ->
             entry.exercises.forEach { ex ->
                 s += ex.sets.size
-                ex.sets.forEach { v += (it.weight ?: 0.0) * (it.reps ?: 0) }
+                ex.sets.forEach { v += (it.weight ?: 0.0) * (it.reps ?: 0.0) }
             }
         }
         v.roundToLong() to s
@@ -445,7 +446,7 @@ private fun ReviewBlock(entry: DraftEntry) {
         Kicker("Superset", accent = true, modifier = Modifier.padding(bottom = 8.dp))
     }
     entry.exercises.forEachIndexed { i, exercise ->
-        val volume = exercise.sets.sumOf { (it.weight ?: 0.0) * (it.reps ?: 0) }.roundToLong()
+        val volume = exercise.sets.sumOf { (it.weight ?: 0.0) * (it.reps ?: 0.0) }.roundToLong()
         Column(Modifier.padding(top = if (i == 0) 0.dp else 12.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -556,12 +557,13 @@ private fun ExerciseBlock(
                         modifier = Modifier.weight(1.15f),
                     )
                     StepperField(
-                        value = set.reps?.toString() ?: "",
+                        value = set.reps?.let(::formatReps) ?: "",
                         onValueChange = {
-                            viewModel.setReps(entryIndex, exerciseIndex, setIndex, it.toIntOrNull())
+                            viewModel.setReps(entryIndex, exerciseIndex, setIndex, parseReps(it))
                         },
                         onStep = { viewModel.stepReps(entryIndex, exerciseIndex, setIndex, it) },
                         suffix = "REPS",
+                        decimal = true,
                         modifier = Modifier.weight(1f),
                     )
                 }

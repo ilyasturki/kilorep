@@ -278,7 +278,7 @@ private fun glanceOfServer(
             exercises = entry.exercises.map { ex ->
                 exercises++
                 sets += ex.sets.size
-                volume += ex.sets.sumOf { (it.weight ?: 0.0) * (it.reps ?: 0) }
+                volume += ex.sets.sumOf { (it.weight ?: 0.0) * (it.reps ?: 0.0) }
                 forMuscles += ex.exerciseId to ex.sets.size
                 GlanceEx(ex.exerciseId, ex.exercise.name, ex.sets.size, ex.sets.mapNotNull { it.weight }.maxOrNull(), ++n)
             },
@@ -313,7 +313,7 @@ private fun glanceOfDraft(
             exercises = entry.exercises.map { ex ->
                 exercises++
                 sets += ex.sets.size
-                volume += ex.sets.sumOf { (it.weight ?: 0.0) * (it.reps ?: 0) }
+                volume += ex.sets.sumOf { (it.weight ?: 0.0) * (it.reps ?: 0.0) }
                 forMuscles += ex.exerciseId to ex.sets.size
                 GlanceEx(ex.exerciseId, ex.name, ex.sets.size, ex.sets.mapNotNull { it.weight }.maxOrNull(), ++n)
             },
