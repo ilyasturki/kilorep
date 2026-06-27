@@ -14,8 +14,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 sealed interface OnboardingStep {
-    /** Auto-probing the default instance on a fresh install. */
-    data object Probing : OnboardingStep
+    /** Reaching an instance to learn its auth mode; carries the target URL. */
+    data class Probing(val url: String) : OnboardingStep
 
     /** Enter (or correct) the instance URL. */
     data object Server : OnboardingStep
@@ -51,7 +51,6 @@ class OnboardingViewModel(
         // reach the manual entry from "Use a different server" on sign-in,
         // and a failed probe falls back there on its own.
         if (settings.current.serverUrl == null && defaultServer != null) {
-            step.value = OnboardingStep.Probing
             probe(defaultServer)
         }
     }
@@ -63,6 +62,7 @@ class OnboardingViewModel(
         }
         busy.value = true
         error.value = null
+        step.value = OnboardingStep.Probing(url)
         viewModelScope.launch {
             try {
                 val mode = withContext(Dispatchers.IO) { backend.authAt(url).getAuthMode() }

@@ -71,13 +71,19 @@ fun OnboardingScreen(viewModel: OnboardingViewModel) {
             )
 
             when (val current = step) {
-                OnboardingStep.Probing -> {
+                is OnboardingStep.Probing -> {
                     Kicker("Connecting")
                     Text(
-                        "Reaching ${OnboardingViewModel.DEFAULT_SERVER}…",
+                        "Reaching",
                         style = LiftType.secondary,
                         color = colors.ink2,
                         modifier = Modifier.padding(top = 8.dp),
+                    )
+                    Text(
+                        current.url,
+                        style = LiftType.mono,
+                        color = colors.ink,
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
 
@@ -102,6 +108,12 @@ fun OnboardingScreen(viewModel: OnboardingViewModel) {
 
                 is OnboardingStep.SignIn -> {
                     Kicker("Sign in")
+                    Text(
+                        current.serverUrl,
+                        style = LiftType.mono,
+                        color = colors.ink,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
                     Text(
                         "This instance uses Google accounts. Pick yours to mint " +
                             "this device's token — revocable any time from web settings.",
