@@ -39,6 +39,7 @@ const completed = ref(!!workout.value?.completed)
 const editing = ref(!completed.value)
 
 const { active, refresh: refreshActiveWorkout } = useActiveWorkout()
+const invalidate = usePayloadCache()
 
 // Resuming re-opens this workout while another is already in progress, breaking
 // the single-active convention the Start CTA leans on. Block it then.
@@ -266,6 +267,10 @@ async function persist(nextCompleted: boolean, opts?: { keepalive?: boolean }) {
     }
     completed.value = updated.completed
     template.value = updated.template
+    // Every write here changes what the list and the dashboard would show —
+    // volume, sets, PRs, the "in progress" grouping. Drop their cached payloads
+    // so navigating away lands on the new numbers rather than the old ones.
+    invalidate(PAYLOAD.workouts, PAYLOAD.dashboard)
     return updated
 }
 
@@ -443,6 +448,8 @@ async function syncToSession(mode: 'update' | 'create') {
             }),
         )
         template.value = status
+        // Either mode writes a template, so the sessions list is now stale.
+        invalidate(PAYLOAD.sessions)
         // Creating re-names the workout after its new template server-side;
         // mirror it so the topbar follows without a refetch. Replace the
         // object — useFetch data is a shallowRef, so a nested mutation

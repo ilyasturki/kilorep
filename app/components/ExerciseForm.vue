@@ -47,6 +47,7 @@ const form = reactive({
 })
 
 const toast = useToast()
+const invalidate = usePayloadCache()
 const submitting = ref(false)
 // The same schema the API validates against, so the button can't enable a
 // payload the server would reject.
@@ -77,6 +78,9 @@ async function submit() {
                 },
             },
         )
+        // The form is mounted from several pages; the catalog any of them has
+        // cached no longer matches.
+        invalidate(PAYLOAD.exercises)
         emit('saved', saved)
         toast.add({
             title: id === null ? 'Exercise added' : 'Exercise updated',

@@ -13,6 +13,10 @@ const online = useOnline()
 // Pages flagged bare via definePageMeta (login) stand outside the app shell.
 const bare = computed(() => route.meta.bare === true)
 
+// Prefetch the list endpoints once the shell is up, so the first visit to each
+// page renders from cache instead of an empty state.
+warmPayloadCache(() => !bare.value)
+
 const signOut = useSignOut()
 
 const collapsed = useCookie<boolean>('sidebar-collapsed', {

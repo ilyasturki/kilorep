@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { WorkoutWithEntries } from '~~/server/database/schema'
 
-const { workouts, status, refresh } = useActiveWorkout()
+const { workouts, loading, refresh } = useActiveWorkout()
 
 const toast = useToast()
+const invalidate = usePayloadCache()
 
 // Display density, remembered per device (web-only, never sent to the server).
 const VIEWS = ['detailed', 'condensed', 'calendar'] as const
@@ -100,6 +101,7 @@ async function confirmDelete() {
             method: 'DELETE',
         })
         deleteTarget.value = null
+        invalidate(PAYLOAD.dashboard)
         await refresh()
         toast.add({ title: 'Workout deleted', color: 'success' })
     } catch (error: unknown) {
@@ -137,7 +139,7 @@ async function confirmDelete() {
         </div>
 
         <div
-            v-if="status === 'pending' && !workouts?.length"
+            v-if="loading"
             class="empty"
         >
             Loading…

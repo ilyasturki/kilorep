@@ -7,7 +7,10 @@ export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: { enabled: false },
     modules: ['@vueuse/nuxt', 'reka-ui/nuxt', '@nuxt/icon', 'nuxt-auth-utils'],
-    css: ['./app/assets/css/main.css'],
+    // Aliased, not './app/…': under Vite 8 the relative form resolves against
+    // the generated .nuxt/ virtual module instead of the project root, which
+    // breaks `nuxt dev` outright ("Failed to resolve import").
+    css: ['~/assets/css/main.css'],
     runtimeConfig: {
         public: {
             appVersion: pkg.version,

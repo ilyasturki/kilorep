@@ -14,6 +14,9 @@
  */
 export default defineEventHandler(async (event) => {
     if (!event.path.startsWith('/api/')) return
+    // A single-user instance has no sessions to revoke, and no session password
+    // to unseal a cookie with — getUserSession would throw on every request.
+    if (!authEnabled()) return
     if (getHeader(event, 'authorization')?.startsWith('Bearer ')) return
 
     const session = await getUserSession(event)

@@ -16,9 +16,24 @@ import {
 
 const [{ data: sessions, status, refresh }, { data: exercises }] =
     await Promise.all([
-        useFetch<SessionWithEntries[]>('/api/sessions'),
-        useFetch<Exercise[]>('/api/exercises'),
+        useFetch<SessionWithEntries[]>(PAYLOAD.sessions, {
+            key: PAYLOAD.sessions,
+            server: false,
+            lazy: true,
+            default: () => [],
+            getCachedData: cachedPayload,
+        }),
+        useFetch<Exercise[]>(PAYLOAD.exercises, {
+            key: PAYLOAD.exercises,
+            server: false,
+            lazy: true,
+            default: () => [],
+            getCachedData: cachedPayload,
+        }),
     ])
+revalidate({ status, refresh })
+const loading = initialLoading({ status })
+const invalidate = usePayloadCache()
 
 // Adopt an inline-created exercise into the local catalog so the builder's
 // picker can resolve its label and keep it selected without a refetch.
@@ -118,6 +133,9 @@ async function persistOrder() {
             method: 'PATCH',
             body: { ids: list.map((s) => s.id) },
         })
+        // The new order is applied optimistically and never refetched on
+        // success, so the cached payload would replay the old one.
+        invalidate(PAYLOAD.sessions)
     } catch (error: unknown) {
         await refresh()
         toast.add({
@@ -506,7 +524,7 @@ function planBlocks(session: SessionWithEntries) {
 
         <!-- List -->
         <div
-            v-if="status === 'pending' && !sessions?.length"
+            v-if="loading"
             class="empty"
         >
             Loading…

@@ -7,12 +7,20 @@ import type { WorkoutWithEntries } from '~~/server/database/schema'
 // unfinished workout is the one to resume.
 export function useActiveWorkout() {
     const { data, status, refresh } = useFetch<WorkoutWithEntries[]>(
-        '/api/workouts',
-        { key: 'workouts', lazy: true, default: () => [] },
+        PAYLOAD.workouts,
+        {
+            key: PAYLOAD.workouts,
+            server: false,
+            lazy: true,
+            default: () => [],
+            getCachedData: cachedPayload,
+        },
     )
+    revalidate({ status, refresh })
+    const loading = initialLoading({ status })
     const workouts = computed(() => data.value ?? [])
     const active = computed(
         () => workouts.value.find((w) => !w.completed) ?? null,
     )
-    return { workouts, active, status, refresh }
+    return { workouts, active, status, loading, refresh }
 }

@@ -15,7 +15,16 @@ const {
     data: exercises,
     status,
     refresh,
-} = await useFetch<Exercise[]>('/api/exercises')
+} = await useFetch<Exercise[]>(PAYLOAD.exercises, {
+    key: PAYLOAD.exercises,
+    server: false,
+    lazy: true,
+    default: () => [],
+    getCachedData: cachedPayload,
+})
+revalidate({ status, refresh })
+const loading = initialLoading({ status })
+const invalidate = usePayloadCache()
 
 // Fuzzy-rank by the same matcher the combobox uses (name + aliases), so
 // searching behaves identically everywhere. Best matches sort to the top; an
@@ -204,6 +213,9 @@ async function mergeExercise() {
             method: 'POST',
             body: { targetId },
         })
+        // A merge re-points every set that referenced the source exercise, so
+        // the workout trees and the dashboard's PRs are both stale now.
+        invalidate(PAYLOAD.workouts, PAYLOAD.dashboard)
         await refresh()
         exerciseToMerge.value = null
         toast.add({
@@ -359,7 +371,7 @@ async function mergeExercise() {
             </div>
 
             <div
-                v-if="status === 'pending' && !exercises?.length"
+                v-if="loading"
                 class="xempty"
             >
                 Loading…

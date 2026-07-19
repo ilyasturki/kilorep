@@ -6,7 +6,16 @@ const {
     data: entries,
     status,
     refresh,
-} = await useFetch<Bodyweight[]>('/api/bodyweight')
+} = await useFetch<Bodyweight[]>(PAYLOAD.bodyweight, {
+    key: PAYLOAD.bodyweight,
+    server: false,
+    lazy: true,
+    default: () => [],
+    getCachedData: cachedPayload,
+})
+revalidate({ status, refresh })
+const loading = initialLoading({ status })
+const invalidate = usePayloadCache()
 
 const toast = useToast()
 
@@ -133,6 +142,8 @@ async function save() {
         }
         formOpen.value = false
         editingId.value = null
+        // The dashboard shows current weight and its 30-day change.
+        invalidate(PAYLOAD.dashboard)
         await refresh()
         toast.add({ title: 'Weight logged', color: 'success' })
     } catch (error: unknown) {
@@ -157,6 +168,7 @@ async function confirmDelete() {
         })
         if (editingId.value === deleteTarget.value.id) formOpen.value = false
         deleteTarget.value = null
+        invalidate(PAYLOAD.dashboard)
         await refresh()
         toast.add({ title: 'Weigh-in deleted', color: 'success' })
     } catch (error: unknown) {
@@ -262,7 +274,7 @@ async function confirmDelete() {
 
         <!-- Log -->
         <div
-            v-if="status === 'pending' && !entries?.length"
+            v-if="loading"
             class="empty"
         >
             Loading…

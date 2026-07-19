@@ -15,6 +15,7 @@ const props = withDefaults(
 
 const { active, refresh } = useActiveWorkout()
 const toast = useToast()
+const invalidate = usePayloadCache()
 
 const cls = computed(() =>
     props.variant === 'sidebar' ? 'side-cta' : 'btn-primary',
@@ -57,6 +58,9 @@ async function startWorkout(sessionId: number) {
             body: { sessionId },
         })
         pickerOpen.value = false
+        // The workout list refreshes itself; the dashboard counts this workout
+        // too and would otherwise serve its cached copy on the next visit.
+        invalidate(PAYLOAD.dashboard)
         await refresh()
         await navigateTo(`/workouts/${workout.id}`)
     } catch (error: unknown) {

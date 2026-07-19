@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import type { DashboardData } from '~~/server/database/schema'
 
-const { data, status } = await useFetch<DashboardData>('/api/dashboard')
+const { data, status, refresh } = await useFetch<DashboardData>(
+    PAYLOAD.dashboard,
+    {
+        key: PAYLOAD.dashboard,
+        server: false,
+        lazy: true,
+        getCachedData: cachedPayload,
+    },
+)
+revalidate({ status, refresh })
+const loading = initialLoading({ status })
 
 // Relative day labels depend on "now"; resolve it after mount so the value is
 // the viewer's own clock (the app renders client-side, but this also keeps the
@@ -51,7 +61,7 @@ const weightPoints = computed(() =>
 
 <template>
     <div
-        v-if="status === 'pending' && !data"
+        v-if="loading"
         class="empty"
     >
         Loading…
