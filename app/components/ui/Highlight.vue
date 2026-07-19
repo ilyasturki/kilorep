@@ -33,7 +33,16 @@ export default defineComponent({
                 'span',
                 segments.value.map((seg, idx) =>
                     seg.hit ?
-                        h('mark', { key: idx, class: 'fuzzy-hit' }, seg.text)
+                        // Distinct from reka-ui's [data-highlighted] keyboard
+                        // cursor state on combobox rows.
+                        h(
+                            'mark',
+                            {
+                                key: idx,
+                                class: 'rounded-[2px] bg-accent-tint text-accent-ink',
+                            },
+                            seg.text,
+                        )
                     :   seg.text,
                 ),
             )

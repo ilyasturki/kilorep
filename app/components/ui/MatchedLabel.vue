@@ -30,7 +30,7 @@ export default defineComponent({
             ...(props.keyword ?
                 [
                     ' ',
-                    h('span', { class: 'search-alias' }, [
+                    h('span', { class: 'text-body-sm text-ink-3' }, [
                         '(',
                         h(UiHighlight, {
                             text: props.keyword,

@@ -385,21 +385,6 @@
         flex: none;
     }
 
-    /* Alternate keyword (e.g. an exercise alias) the search matched on, shown
-       in parentheses after the canonical label. */
-    .search-alias {
-        color: var(--ink-3);
-        font-size: 13px;
-    }
-
-    /* Characters a fuzzy search matched. Distinct from reka-ui's
-       [data-highlighted] keyboard-cursor state on combobox rows. */
-    .fuzzy-hit {
-        background: var(--accent-tint);
-        color: var(--accent-ink);
-        border-radius: 2px;
-    }
-
     /* ===== reka-ui NumberField ========================== */
     .numfield {
         display: inline-flex;
