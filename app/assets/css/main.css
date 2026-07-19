@@ -263,64 +263,68 @@
     }
 }
 
-@layer components {
-    /* ===== Weight tracking ============================== */
-    /* FLIP slide for the move up/down reorder buttons. Only -move is styled, so
-       adding or removing an item stays instant while a reorder glides. */
-    .reorder-move {
-        transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
+/* ============================================================
+   Reorder machinery — the only rules left outside the utility
+   system. These are hooks toggled by Vue's <TransitionGroup> and
+   usePointerReorder, and they describe relationships between
+   elements (a dragged row and its siblings) rather than the look
+   of one element, so there is no class to put in a template.
 
-    @media (prefers-reduced-motion: reduce) {
-        .reorder-move {
-            transition: none;
-        }
-    }
+   Deliberately unlayered: a drag is transient state that must win
+   over whatever utilities the row carries. Nothing competes today,
+   but the ordering should not depend on that staying true.
+   ============================================================ */
 
-    /* Drag-to-reorder (condensed rows). The lifted row sets its transform inline
-       and tracks the pointer with its own transition:none, so it isn't here;
-       these rules glide the siblings aside to open the drop slot. */
+/* FLIP slide for the move up/down reorder buttons. Only -move is styled, so
+   adding or removing an item stays instant while a reorder glides. */
+.reorder-move {
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Drag-to-reorder (condensed rows). The lifted row sets its transform inline
+   and tracks the pointer with its own transition:none, so it isn't here;
+   these rules glide the siblings aside to open the drop slot. */
+.is-reordering .reorder-row {
+    transition: transform 0.16s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reorder-move,
     .is-reordering .reorder-row {
-        transition: transform 0.16s ease;
+        transition: none;
     }
+}
 
-    /* The lift splits across the two elements: z-index sits on the static slot
-       (TransitionGroup's child, which never moves) so stacking stays put, while
-       the shadow and grab cursor ride the inner row that tracks the pointer. */
-    .reorder-lift {
-        position: relative;
-        z-index: 30;
-    }
+/* The lift splits across the two elements: z-index sits on the static slot
+   (TransitionGroup's child, which never moves) so stacking stays put, while
+   the shadow and grab cursor ride the inner row that tracks the pointer. */
+.reorder-lift {
+    position: relative;
+    z-index: 30;
+}
 
-    .reorder-dragging {
-        cursor: grabbing;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    }
+.reorder-dragging {
+    cursor: grabbing;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
 
-    /* Hold the grabbing cursor across the whole page for the duration of a drag
-       and suppress text selection: without this the handle's own cursor: grab
-       wins under the pointer and dragging over a name selects its text. The
-       class is toggled on <body> by usePointerReorder. */
-    body.reorder-grabbing,
-    body.reorder-grabbing * {
-        cursor: grabbing !important;
-    }
+/* Hold the grabbing cursor across the whole page for the duration of a drag
+   and suppress text selection: without this the handle's own cursor: grab
+   wins under the pointer and dragging over a name selects its text. The
+   class is toggled on <body> by usePointerReorder. */
+body.reorder-grabbing,
+body.reorder-grabbing * {
+    cursor: grabbing !important;
+}
 
-    body.reorder-grabbing {
-        user-select: none !important;
-        -webkit-user-select: none !important;
-    }
+body.reorder-grabbing {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
 
-    /* The drop commits in one frame: live transforms come off as the real array
-       order takes over. Freezing every row's transition on that frame stops the
-       already-correct rows from animating the swap, and stops FLIP from firing. */
-    .reorder-frozen > * {
-        transition: none !important;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .is-reordering .reorder-row {
-            transition: none;
-        }
-    }
+/* The drop commits in one frame: live transforms come off as the real array
+   order takes over. Freezing every row's transition on that frame stops the
+   already-correct rows from animating the swap, and stops FLIP from firing. */
+.reorder-frozen > * {
+    transition: none !important;
 }
