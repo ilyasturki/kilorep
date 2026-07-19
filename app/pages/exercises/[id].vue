@@ -152,31 +152,28 @@ const videoUrl = computed(
                 <section class="detail-section">
                     <span class="kicker">History</span>
                     <div class="wk-stats mb-5">
-                        <div class="wk-stat">
-                            <span class="stat-num mono text-[22px]">
+                        <UiStat>
+                            <template #value>
                                 {{
                                     detail.best ?
                                         `${fmtWeight(detail.best.weight)}×${detail.best.reps}`
                                     :   '—'
                                 }}
-                            </span>
-                            <span class="stat-lab">BEST SET · KG</span>
-                        </div>
-                        <div class="wk-stat">
-                            <span class="stat-num mono text-[22px]">{{
-                                detail.history.length
-                            }}</span>
-                            <span class="stat-lab">WORKOUTS</span>
-                        </div>
-                        <div
-                            v-if="detail.history.length"
-                            class="wk-stat"
-                        >
-                            <span class="stat-num mono text-[22px]">
+                            </template>
+                            <template #label>BEST SET · KG</template>
+                        </UiStat>
+                        <UiStat>
+                            <template #value>
+                                {{ detail.history.length }}
+                            </template>
+                            <template #label>WORKOUTS</template>
+                        </UiStat>
+                        <UiStat v-if="detail.history.length">
+                            <template #value>
                                 {{ fmtDateShort(detail.history[0]!.startedAt) }}
-                            </span>
-                            <span class="stat-lab">LAST DONE</span>
-                        </div>
+                            </template>
+                            <template #label>LAST DONE</template>
+                        </UiStat>
                     </div>
 
                     <UiCard v-if="detail.history.length">

@@ -187,38 +187,28 @@ async function confirmDelete() {
         <!-- Stats + log action share a row -->
         <div class="wk-stats mb-5">
             <template v-if="entries?.length">
-                <div class="wk-stat">
-                    <span class="stat-num mono text-[22px]">
+                <UiStat>
+                    <template #value>
                         {{ latest ? fmtFixed2(latest.weight) : '—' }}
-                    </span>
-                    <span class="stat-lab">CURRENT · KG</span>
-                </div>
-                <div class="wk-stat">
-                    <span class="stat-num mono text-[22px]">
+                    </template>
+                    <template #label>CURRENT · KG</template>
+                </UiStat>
+                <UiStat>
+                    <template #value>
                         {{
                             rangeChange == null ? '—' : fmtSigned2(rangeChange)
                         }}
-                    </span>
-                    <span class="stat-lab">CHANGE · {{ rangeLabel }}</span>
-                </div>
-                <div
-                    v-if="minMax"
-                    class="wk-stat"
-                >
-                    <span class="stat-num mono text-[22px]">{{
-                        fmtFixed2(minMax.min)
-                    }}</span>
-                    <span class="stat-lab">LOWEST · KG</span>
-                </div>
-                <div
-                    v-if="minMax"
-                    class="wk-stat"
-                >
-                    <span class="stat-num mono text-[22px]">{{
-                        fmtFixed2(minMax.max)
-                    }}</span>
-                    <span class="stat-lab">HIGHEST · KG</span>
-                </div>
+                    </template>
+                    <template #label>CHANGE · {{ rangeLabel }}</template>
+                </UiStat>
+                <UiStat v-if="minMax">
+                    <template #value>{{ fmtFixed2(minMax.min) }}</template>
+                    <template #label>LOWEST · KG</template>
+                </UiStat>
+                <UiStat v-if="minMax">
+                    <template #value>{{ fmtFixed2(minMax.max) }}</template>
+                    <template #label>HIGHEST · KG</template>
+                </UiStat>
             </template>
             <UiButton
                 type="button"

@@ -70,10 +70,14 @@ const weightPoints = computed(() =>
                 :key="m.key"
                 class="dash-stat"
             >
-                <span class="stat-lab max-sm:tracking-[0.06em]">
+                <span
+                    class="font-mono text-[9.5px] tracking-[0.16em] text-ink-3 max-sm:tracking-[0.06em]"
+                >
                     {{ m.label }} · 7D
                 </span>
-                <span class="stat-num mono text-[26px] max-sm:text-[18px]">
+                <span
+                    class="mono text-[26px] font-semibold tracking-[-0.02em] max-sm:text-[18px]"
+                >
                     {{ fmtVolume(data.summary.current[m.key]) }}
                     <span
                         v-if="m.unit"
@@ -125,20 +129,32 @@ const weightPoints = computed(() =>
                 <template v-if="data.bodyweight.points.length">
                     <div class="dash-bw-stats">
                         <div class="dash-bw-stat">
-                            <span class="stat-num mono text-[22px]">{{
-                                data.bodyweight.current != null ?
-                                    fmtFixed2(data.bodyweight.current)
-                                :   '—'
-                            }}</span>
-                            <span class="stat-lab">Current · kg</span>
+                            <span
+                                class="mono text-[22px] font-semibold tracking-[-0.02em]"
+                                >{{
+                                    data.bodyweight.current != null ?
+                                        fmtFixed2(data.bodyweight.current)
+                                    :   '—'
+                                }}</span
+                            >
+                            <span
+                                class="font-mono text-[9.5px] tracking-[0.16em] text-ink-3"
+                                >Current · kg</span
+                            >
                         </div>
                         <div class="dash-bw-stat">
-                            <span class="stat-num mono text-[22px]">{{
-                                data.bodyweight.change == null ?
-                                    '—'
-                                :   fmtSigned2(data.bodyweight.change)
-                            }}</span>
-                            <span class="stat-lab">Change · 30d</span>
+                            <span
+                                class="mono text-[22px] font-semibold tracking-[-0.02em]"
+                                >{{
+                                    data.bodyweight.change == null ?
+                                        '—'
+                                    :   fmtSigned2(data.bodyweight.change)
+                                }}</span
+                            >
+                            <span
+                                class="font-mono text-[9.5px] tracking-[0.16em] text-ink-3"
+                                >Change · 30d</span
+                            >
                         </div>
                     </div>
                     <div class="wchart wchart--sm">

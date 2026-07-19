@@ -145,19 +145,6 @@
     color: var(--ink-3);
 }
 
-@utility stat-num {
-    font-size: 30px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-}
-
-@utility stat-lab {
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    letter-spacing: 0.16em;
-    color: var(--ink-3);
-}
-
 @layer base {
     *,
     *::before,
@@ -1283,12 +1270,6 @@
     /* Log action sits opposite the stats group on the same row. */
     .wk-stats-action {
         margin-left: auto;
-    }
-
-    .wk-stat {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
     }
 
     /* Pins flush under the header so Finish/Reopen stay reachable on a long set

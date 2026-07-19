@@ -517,18 +517,14 @@ async function changeDate() {
                     aria-label="Workout date"
                     @update:model-value="changeDate"
                 />
-                <div class="wk-stat">
-                    <span class="stat-num mono text-[22px]">{{
-                        fmtVolume(totals.volume)
-                    }}</span>
-                    <span class="stat-lab">VOLUME · KG</span>
-                </div>
-                <div class="wk-stat">
-                    <span class="stat-num mono text-[22px]">{{
-                        totals.sets
-                    }}</span>
-                    <span class="stat-lab">SETS</span>
-                </div>
+                <UiStat>
+                    <template #value>{{ fmtVolume(totals.volume) }}</template>
+                    <template #label>VOLUME · KG</template>
+                </UiStat>
+                <UiStat>
+                    <template #value>{{ totals.sets }}</template>
+                    <template #label>SETS</template>
+                </UiStat>
             </div>
             <TopMuscles :muscles="topTargets" />
             <div
