@@ -230,31 +230,20 @@ async function confirmDelete() {
                         v-if="w.blocks.length"
                         class="wk-glance"
                     >
-                        <div
+                        <UiPlanBlock
                             v-for="(block, bi) in w.blocks"
                             :key="bi"
-                            class="plan-block"
-                            :class="{ 'plan-block--ss': block.isSuperset }"
+                            :superset="block.isSuperset"
                         >
-                            <span
-                                v-if="block.isSuperset"
-                                class="ss-tag"
-                            >
-                                SUPERSET
-                            </span>
-                            <NuxtLink
+                            <UiPlanExercise
                                 v-for="ex in block.exercises"
                                 :key="ex.key"
                                 :to="`/exercises/${ex.exerciseId}`"
-                                class="plan-ex plan-ex--link"
-                            >
-                                <span class="plan-ex-idx">{{ pad(ex.n) }}</span>
-                                <span class="plan-ex-name">{{ ex.name }}</span>
-                                <span class="plan-ex-target">{{
-                                    exSummary(ex)
-                                }}</span>
-                            </NuxtLink>
-                        </div>
+                                :index="pad(ex.n)"
+                                :name="ex.name"
+                                :target="exSummary(ex)"
+                            />
+                        </UiPlanBlock>
                     </div>
 
                     <UiCardActions>

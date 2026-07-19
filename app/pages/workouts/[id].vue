@@ -636,7 +636,7 @@ async function changeDate() {
                                     :to="`/exercises/${item.ex.exerciseId}`"
                                     class="wk-ex-name wk-ex-name--link"
                                 >
-                                    <span class="plan-ex-idx mono">
+                                    <span class="mono text-label text-ink-3">
                                         {{ pad(item.n) }}
                                     </span>
                                     {{ item.ex.name }}
@@ -796,18 +796,11 @@ async function changeDate() {
         <!-- Review -->
         <template v-else>
             <UiCard>
-                <div
+                <UiPlanBlock
                     v-for="block in blocks"
                     :key="block.entryId"
-                    class="plan-block"
-                    :class="{ 'plan-block--ss': block.isSuperset }"
+                    :superset="block.isSuperset"
                 >
-                    <span
-                        v-if="block.isSuperset"
-                        class="ss-tag"
-                    >
-                        SUPERSET
-                    </span>
                     <div
                         v-for="item in block.exercises"
                         :key="item.exIndex"
@@ -818,7 +811,7 @@ async function changeDate() {
                                 :to="`/exercises/${item.ex.exerciseId}`"
                                 class="wk-ex-name wk-ex-name--link"
                             >
-                                <span class="plan-ex-idx mono">
+                                <span class="mono text-label text-ink-3">
                                     {{ pad(item.n) }}
                                 </span>
                                 {{ item.ex.name }}
@@ -840,7 +833,7 @@ async function changeDate() {
                             </span>
                         </div>
                     </div>
-                </div>
+                </UiPlanBlock>
             </UiCard>
         </template>
 

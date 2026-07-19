@@ -691,8 +691,8 @@
         white-space: nowrap;
     }
 
-    /* The title doubles as the edit affordance — same quiet hover tint as
-       .plan-ex--link so the card head stays free of button chrome. */
+    /* The title doubles as the edit affordance — same quiet hover tint as a
+       plan exercise link, so the card head stays free of button chrome. */
     .session-name-btn {
         display: inline-block;
         background: none;
@@ -736,64 +736,6 @@
     .drag-handle.is-locked {
         pointer-events: none;
         opacity: 0.4;
-    }
-
-    .plan-list {
-        display: flex;
-        flex-direction: column;
-        margin-top: 8px;
-    }
-
-    .plan-block {
-        padding: 6px 0;
-        border-top: 1px solid var(--line);
-    }
-
-    .plan-block:first-child {
-        border-top: none;
-    }
-
-    .plan-block--ss {
-        border-top: none;
-        border-left: 2px solid var(--line-2);
-        padding-left: 14px;
-        margin: 8px 0;
-    }
-
-    .ss-tag {
-        display: inline-block;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9.5px;
-        font-weight: 600;
-        letter-spacing: 0.14em;
-        color: var(--ink-3);
-        padding: 6px 0 2px;
-    }
-
-    .plan-ex {
-        display: grid;
-        grid-template-columns: 28px 1fr auto;
-        align-items: center;
-        gap: 12px;
-        padding: 11px 0;
-    }
-
-    .plan-ex-idx {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
-        color: var(--ink-3);
-    }
-
-    .plan-ex-name {
-        font-size: 15px;
-        font-weight: 500;
-        text-transform: capitalize;
-    }
-
-    .plan-ex-target {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
-        color: var(--ink-2);
     }
 
     /* ===== Builder ======================================= */
@@ -1235,23 +1177,12 @@
     }
 
     /* At-a-glance exercise list on a workout card: reuses the session plan
-       readout (.plan-block/.plan-ex) so a logged workout and its template look
-       the same. Divider sets it off from the meta line above. */
+       readout (UiPlanBlock/UiPlanExercise) so a logged workout and its template
+       look the same. Divider sets it off from the meta line above. */
     .wk-glance {
         margin-top: 14px;
         padding-top: 4px;
         border-top: 1px solid var(--line);
-    }
-
-    /* Each glance row links to that exercise's history — tint the name on hover
-       so it reads as tappable without adding link chrome to the dense list. */
-    .plan-ex--link {
-        text-decoration: none;
-        color: inherit;
-    }
-
-    .plan-ex--link:hover .plan-ex-name {
-        color: var(--accent-ink);
     }
 
     /* ===== Workout tracking ============================== */
@@ -1645,7 +1576,7 @@
     }
 
     /* The name doubles as a link to the exercise's history — same quiet hover
-       tint as .plan-ex--link so the tracking view stays free of link chrome. */
+       tint as UiPlanExercise, so the tracking view stays free of link chrome. */
     .wk-ex-name--link {
         text-decoration: none;
         color: inherit;

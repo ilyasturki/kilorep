@@ -688,36 +688,21 @@ function planBlocks(session: SessionWithEntries) {
                             class="mt-3"
                         />
 
-                        <div class="plan-list">
-                            <div
+                        <div class="mt-2 flex flex-col">
+                            <UiPlanBlock
                                 v-for="block in planBlocks(session)"
                                 :key="block.key"
-                                class="plan-block"
-                                :class="{ 'plan-block--ss': block.isSuperset }"
+                                :superset="block.isSuperset"
                             >
-                                <span
-                                    v-if="block.isSuperset"
-                                    class="ss-tag"
-                                >
-                                    SUPERSET
-                                </span>
-                                <NuxtLink
+                                <UiPlanExercise
                                     v-for="ex in block.exercises"
                                     :key="ex.key"
                                     :to="`/exercises/${ex.exerciseId}`"
-                                    class="plan-ex plan-ex--link"
-                                >
-                                    <span class="plan-ex-idx">
-                                        {{ String(ex.n).padStart(2, '0') }}
-                                    </span>
-                                    <span class="plan-ex-name">{{
-                                        ex.name
-                                    }}</span>
-                                    <span class="plan-ex-target">{{
-                                        ex.summary
-                                    }}</span>
-                                </NuxtLink>
-                            </div>
+                                    :index="String(ex.n).padStart(2, '0')"
+                                    :name="ex.name"
+                                    :target="ex.summary"
+                                />
+                            </UiPlanBlock>
                         </div>
                     </template>
                 </div>
