@@ -44,6 +44,10 @@
     --ink-3: #5e5e66;
     --accent-tint: color-mix(in oklab, var(--accent) 14%, transparent);
     --accent-ink: var(--accent);
+
+    /* Destructive actions only — one red, same in both themes. */
+    --red: #e5484d;
+    --on-red: #fff;
     color-scheme: dark;
 }
 
@@ -78,9 +82,15 @@
        on-accent is the near-black that sits on an accent fill. */
     --color-accent-ink: var(--accent-ink);
     --color-on-accent: var(--on-accent);
+    --color-red: var(--red);
+    --color-on-red: var(--on-red);
 
     --font-body: 'Archivo', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    /* The hand-written CSS this replaces never named a curve, so it got the CSS
+       default. Match it, or every converted transition subtly changes easing. */
+    --default-transition-timing-function: ease;
 
     /* The sizes that actually recur. One-offs (10.5px, 22px, 30px …)
        stay as arbitrary values at their single call site rather than
