@@ -1120,9 +1120,8 @@ async function changeDate() {
                 :   'Create a new session from this workout.'
             "
         >
-            <input
+            <UiInput
                 v-model="createName"
-                class="input"
                 placeholder="Session name"
                 aria-label="Session name"
             />

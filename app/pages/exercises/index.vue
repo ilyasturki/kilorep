@@ -237,16 +237,16 @@ async function mergeExercise() {
 <template>
     <div>
         <div class="toolbar">
-            <div class="search-box">
+            <div class="relative min-w-0 max-w-[280px] flex-1">
                 <Icon
                     name="tabler:search"
                     :size="16"
-                    class="search-icon"
+                    class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3"
                 />
-                <input
+                <UiInput
                     v-model="search"
                     type="search"
-                    class="input"
+                    class="pl-[38px]"
                     placeholder="Search exercises…"
                     spellcheck="false"
                 />
@@ -569,14 +569,14 @@ async function mergeExercise() {
             :description="mergeDescription"
             @update:open="(open) => !open && (exerciseToMerge = null)"
         >
-            <div class="field">
-                <label class="field-label">Merge into</label>
+            <UiField>
+                <UiFieldLabel>Merge into</UiFieldLabel>
                 <ExerciseCombobox
                     v-model="mergeTargetId"
                     :exercises="mergeCandidates"
                     placeholder="Pick an exercise"
                 />
-            </div>
+            </UiField>
 
             <template #footer>
                 <UiButton

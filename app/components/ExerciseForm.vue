@@ -100,7 +100,12 @@ async function submit() {
     }
 }
 
-const nameInput = ref<HTMLInputElement | null>(null)
+// UiInput is a component, so this holds its instance — focus/select come from
+// the methods it exposes, not from the DOM node.
+const nameInput = ref<{
+    focus: (options?: FocusOptions) => void
+    select: () => void
+} | null>(null)
 onMounted(() => {
     if (!props.autofocus) return
     nameInput.value?.focus()
@@ -115,33 +120,31 @@ defineExpose({ submit, canSubmit, submitting })
         :class="compact ? 'space-y-3' : 'space-y-4'"
         @submit.prevent="submit"
     >
-        <div class="field">
-            <label class="field-label"> Name <span class="req">*</span> </label>
-            <input
+        <UiField>
+            <UiFieldLabel>
+                Name <span class="text-accent-ink">*</span>
+            </UiFieldLabel>
+            <UiInput
                 ref="nameInput"
                 v-model="form.name"
-                class="input"
                 :placeholder="namePlaceholder"
                 @keydown.enter.prevent="submit"
             />
-        </div>
+        </UiField>
 
         <div
             class="flex flex-wrap items-start"
             :class="compact ? 'gap-x-4 gap-y-3' : 'gap-x-6 gap-y-4'"
         >
-            <div
-                class="field"
-                :class="compact ? 'w-40' : 'w-44'"
-            >
-                <label class="field-label">Equipment</label>
+            <UiField :class="compact ? 'w-40' : 'w-44'">
+                <UiFieldLabel>Equipment</UiFieldLabel>
                 <UiSelect
                     v-model="form.equipment"
                     :items="[...EQUIPMENT]"
                 />
-            </div>
-            <div class="field">
-                <label class="field-label">Type</label>
+            </UiField>
+            <UiField>
+                <UiFieldLabel>Type</UiFieldLabel>
                 <UiSegmented>
                     <UiSegmentedOption
                         v-for="t in EXERCISE_TYPES"
@@ -153,13 +156,13 @@ defineExpose({ submit, canSubmit, submitting })
                         {{ t }}
                     </UiSegmentedOption>
                 </UiSegmented>
-            </div>
+            </UiField>
         </div>
 
-        <div class="field">
-            <label class="field-label">
-                Muscles <span class="req">*</span>
-            </label>
+        <UiField>
+            <UiFieldLabel>
+                Muscles <span class="text-accent-ink">*</span>
+            </UiFieldLabel>
             <div class="space-y-2">
                 <div
                     v-for="(m, index) in form.muscles"
@@ -203,6 +206,6 @@ defineExpose({ submit, canSubmit, submitting })
                     Add muscle
                 </UiButton>
             </div>
-        </div>
+        </UiField>
     </form>
 </template>

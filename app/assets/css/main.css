@@ -802,16 +802,6 @@
         flex: none;
     }
 
-    .token-item .input {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .input.sm {
-        padding: 7px 10px;
-        font-size: 14px;
-    }
-
     /* ===== Primitives ==================================== */
     .kicker {
         font-family: 'JetBrains Mono', monospace;
@@ -1347,68 +1337,6 @@
         color: var(--ink-3);
         width: 42px;
         flex: none;
-    }
-
-    /* ===== Form fields =================================== */
-    .field {
-        display: flex;
-        flex-direction: column;
-        gap: 7px;
-    }
-
-    .field-label {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10.5px;
-        font-weight: 600;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: var(--ink-3);
-    }
-
-    .field-label .req {
-        color: var(--accent-ink);
-    }
-
-    .input {
-        width: 100%;
-        background: var(--surface);
-        border: 1px solid var(--line-2);
-        color: var(--ink);
-        font-family: inherit;
-        font-size: 15px;
-        padding: 11px 13px;
-        outline: none;
-        transition: border-color 0.12s;
-    }
-
-    .input::placeholder {
-        color: var(--ink-3);
-    }
-
-    .input:focus {
-        border-color: var(--accent);
-    }
-
-    /* Toolbar search: an input with a leading icon, capped so it shares the
-       row with action buttons instead of stretching across it. */
-    .search-box {
-        position: relative;
-        flex: 1;
-        min-width: 0;
-        max-width: 280px;
-    }
-
-    .search-box .input {
-        padding-left: 38px;
-    }
-
-    .search-box .search-icon {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--ink-3);
-        pointer-events: none;
     }
 
     /* Lets a stretched Segmented drop onto its own line instead of pushing the

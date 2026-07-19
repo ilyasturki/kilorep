@@ -336,27 +336,27 @@ async function confirmDelete() {
                 class="space-y-4"
                 @submit.prevent="save"
             >
-                <div class="field">
-                    <label class="field-label">
-                        Date <span class="req">*</span>
-                    </label>
+                <UiField>
+                    <UiFieldLabel>
+                        Date <span class="text-accent-ink">*</span>
+                    </UiFieldLabel>
                     <UiDatePicker
                         v-model="draft.date"
                         :max="todayStr"
                         aria-label="Weigh-in date"
                     />
-                </div>
-                <div class="field">
-                    <label class="field-label">
-                        Weight (kg) <span class="req">*</span>
-                    </label>
+                </UiField>
+                <UiField>
+                    <UiFieldLabel>
+                        Weight (kg) <span class="text-accent-ink">*</span>
+                    </UiFieldLabel>
                     <UiNumberField
                         v-model="draft.weight"
                         :min="20"
                         :max="400"
                         :step="0.01"
                     />
-                </div>
+                </UiField>
             </form>
 
             <template #footer>

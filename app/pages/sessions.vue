@@ -280,16 +280,15 @@ function planBlocks(session: SessionWithEntries) {
             @update:open="(open) => !open && closeBuilder()"
         >
             <div class="space-y-4">
-                <div class="field">
-                    <label class="field-label">
-                        Name <span class="req">*</span>
-                    </label>
-                    <input
+                <UiField>
+                    <UiFieldLabel>
+                        Name <span class="text-accent-ink">*</span>
+                    </UiFieldLabel>
+                    <UiInput
                         v-model="draft.name"
-                        class="input"
                         placeholder="Push Day"
                     />
-                </div>
+                </UiField>
 
                 <TransitionGroup
                     name="reorder"

@@ -368,10 +368,11 @@ async function deleteAccount() {
                     class="token-item"
                 >
                     <template v-if="editingId === t.id">
-                        <input
+                        <UiInput
                             v-select
                             v-model="editLabel"
-                            class="input sm"
+                            size="sm"
+                            class="min-w-0 flex-1"
                             maxlength="60"
                             @keydown.enter="saveRename"
                             @keydown.esc="editingId = null"
@@ -491,9 +492,8 @@ async function deleteAccount() {
             "
         >
             <template v-if="!minted">
-                <input
+                <UiInput
                     v-model="newLabel"
-                    class="input"
                     placeholder="e.g. laptop, phone…"
                     maxlength="60"
                     @keydown.enter="createToken"
