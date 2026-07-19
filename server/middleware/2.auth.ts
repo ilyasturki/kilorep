@@ -15,6 +15,9 @@ export default defineEventHandler(async (event) => {
     // exemption.
     if (path.startsWith('/api/_auth/')) return
     if (path === '/api/auth/mode' || path === '/api/auth/device') return
+    // Deploy probe: it exposes only the version and commit, and has to answer
+    // without credentials to be useful. Exact path, like the two above.
+    if (path === '/api/_version') return
 
     if (!authEnabled()) {
         event.context.userId = ensureLocalUserId()

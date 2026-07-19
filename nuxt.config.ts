@@ -15,6 +15,10 @@ export default defineNuxtConfig({
         public: {
             appVersion: pkg.version,
         },
+        // Which commit this build came from, for /api/_version. Baked by the
+        // Nix build (KILOREP_GIT_REV from the flake's self.rev); 'dev' when
+        // running from a checkout, where the commit is whatever is checked out.
+        gitRev: process.env.KILOREP_GIT_REV ?? 'dev',
         // Sealed-cookie session lifetime (nuxt-auth-utils): 30 days.
         session: {
             maxAge: 60 * 60 * 24 * 30,

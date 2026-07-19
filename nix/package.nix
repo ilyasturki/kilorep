@@ -8,6 +8,7 @@
   makeWrapper,
   autoPatchelfHook,
   src,
+  gitRev,
 }:
 let
   # The same node is used to compile the native addon and to run the server,
@@ -42,6 +43,9 @@ stdenv.mkDerivation {
     NITRO_PRESET = "node-server";
     NUXT_TELEMETRY_DISABLED = "1";
     DO_NOT_TRACK = "1";
+    # Baked into runtimeConfig.gitRev so a deployed instance can say which
+    # commit it is running (/api/_version); .git is not in the build source.
+    KILOREP_GIT_REV = gitRev;
   };
 
   buildPhase = ''

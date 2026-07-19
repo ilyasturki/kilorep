@@ -42,6 +42,8 @@
             # The Android app ships separately as an APK — the
             # server package must not rebuild when only android/ changes.
             src = pkgs.nix-gitignore.gitignoreSource [ "android/" ] ./.;
+            # `rev` only exists for a clean tree; a dirty one still deploys.
+            gitRev = inputs.self.rev or inputs.self.dirtyRev or "unknown";
           };
         in
         {

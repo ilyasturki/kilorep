@@ -7,6 +7,7 @@
         "dev": "nuxt dev",
         "dev:solo": "nuxt dev --dotenv .env.solo",
         "dev:test": "NUXT_IGNORE_LOCK=1 nuxt dev --dotenv .env.test --port 4099",
+        "dev:prod": "DB_FILE_NAME=.data/prod.db nuxt dev",
         "start": "node .output/server/index.mjs",
         "generate": "nuxt generate",
         "preview": "nuxt preview",
@@ -25,7 +26,8 @@
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:push": "drizzle-kit push",
-        "db:studio": "drizzle-kit studio"
+        "db:studio": "drizzle-kit studio",
+        "db:pull-prod": "bash tools/prod-db/pull.sh"
     },
     "dependencies": {
         "@internationalized/date": "^3.12.2",
