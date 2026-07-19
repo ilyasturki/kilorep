@@ -45,11 +45,11 @@ const videoUrl = computed(
     <div v-else>
         <div class="ex-detail-grid">
             <div class="ex-detail-col">
-                <div class="xtags">
+                <div class="flex flex-wrap gap-[7px]">
                     <UiTag>{{ detail.equipment }}</UiTag>
                     <span
                         v-if="detail.source === 'custom'"
-                        class="custom-mark"
+                        class="inline-flex items-center text-ink-3"
                         role="img"
                         aria-label="Custom exercise"
                         title="Custom exercise"
@@ -62,7 +62,7 @@ const videoUrl = computed(
                 </div>
                 <p
                     v-if="detail.aliases.length"
-                    class="x-aka"
+                    class="mt-2.5 text-body-sm text-ink-3"
                 >
                     Also known as {{ detail.aliases.join(', ') }}
                 </p>
@@ -85,7 +85,7 @@ const videoUrl = computed(
                             <span class="mm-swatch mm-swatch--low" /> Assists
                         </span>
                     </div>
-                    <div class="xmuscles mt-4">
+                    <div class="mt-4 flex flex-wrap gap-1.5">
                         <UiBadge
                             v-for="m in sortedMuscles(detail.muscles)"
                             :key="m.muscle"

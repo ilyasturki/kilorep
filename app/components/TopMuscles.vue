@@ -9,7 +9,7 @@ const rankVariant = ['solid', 'soft', 'outline'] as const
 <template>
     <div
         v-if="muscles.length"
-        class="xmuscles"
+        class="flex flex-wrap gap-1.5"
     >
         <UiBadge
             v-for="(muscle, index) in muscles"

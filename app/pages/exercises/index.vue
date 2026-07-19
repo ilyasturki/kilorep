@@ -75,6 +75,11 @@ function clearFilters() {
 // (best match first, else catalog order). Clicking a header cycles
 // asc -> desc -> off, so the default order is always reachable.
 type SortKey = 'name' | 'equipment' | 'type'
+const SORT_COLUMNS: { key: SortKey; label: string }[] = [
+    { key: 'name', label: 'Name' },
+    { key: 'equipment', label: 'Equipment' },
+    { key: 'type', label: 'Type' },
+]
 const sort = ref<{ key: SortKey; dir: 'asc' | 'desc' } | null>(null)
 function toggleSort(key: SortKey) {
     if (sort.value?.key !== key) sort.value = { key, dir: 'asc' }
@@ -340,59 +345,34 @@ async function mergeExercise() {
             </UiButton>
         </div>
 
-        <div class="xtable">
-            <div class="xhead">
+        <div class="border border-line-2 bg-surface">
+            <!-- Column headers only exist once the row becomes a real grid. -->
+            <div
+                class="hidden lg:grid lg:grid-cols-[minmax(0,1.5fr)_132px_116px_minmax(0,2fr)_78px] lg:items-center lg:gap-[18px] lg:border-b lg:border-b-line-2 lg:px-5 lg:py-[13px]"
+            >
+                <!-- Sortable headers: bare buttons keeping the kicker label plus a
+                     direction arrow that stays dim until the column is active. -->
                 <button
+                    v-for="col in SORT_COLUMNS"
+                    :key="col.key"
                     type="button"
-                    class="xsort"
-                    :class="{ on: sort?.key === 'name' }"
-                    @click="toggleSort('name')"
+                    class="group/xsort inline-flex items-center gap-[5px] border-none bg-transparent p-0 text-left"
+                    @click="toggleSort(col.key)"
                 >
                     <span
                         class="kicker"
-                        :class="{ 'text-accent-ink': sort?.key === 'name' }"
-                        >Name</span
+                        :class="{ 'text-accent-ink': sort?.key === col.key }"
+                        >{{ col.label }}</span
                     >
                     <Icon
-                        :name="sortIcon('name')"
+                        :name="sortIcon(col.key)"
                         :size="13"
-                        class="xsort-icon"
-                    />
-                </button>
-                <button
-                    type="button"
-                    class="xsort"
-                    :class="{ on: sort?.key === 'equipment' }"
-                    @click="toggleSort('equipment')"
-                >
-                    <span
-                        class="kicker"
-                        :class="{
-                            'text-accent-ink': sort?.key === 'equipment',
-                        }"
-                        >Equipment</span
-                    >
-                    <Icon
-                        :name="sortIcon('equipment')"
-                        :size="13"
-                        class="xsort-icon"
-                    />
-                </button>
-                <button
-                    type="button"
-                    class="xsort"
-                    :class="{ on: sort?.key === 'type' }"
-                    @click="toggleSort('type')"
-                >
-                    <span
-                        class="kicker"
-                        :class="{ 'text-accent-ink': sort?.key === 'type' }"
-                        >Type</span
-                    >
-                    <Icon
-                        :name="sortIcon('type')"
-                        :size="13"
-                        class="xsort-icon"
+                        class="transition-opacity duration-[120ms]"
+                        :class="
+                            sort?.key === col.key ?
+                                'text-accent-ink opacity-100'
+                            :   'text-ink-3 opacity-45 group-hover/xsort:opacity-80'
+                        "
                     />
                 </button>
                 <span class="kicker">Muscles</span>
@@ -401,19 +381,19 @@ async function mergeExercise() {
 
             <div
                 v-if="loading"
-                class="xempty"
+                class="px-[18px] py-11 text-center text-body text-ink-2"
             >
                 Loading…
             </div>
             <div
                 v-else-if="!exercises?.length"
-                class="xempty"
+                class="px-[18px] py-11 text-center text-body text-ink-2"
             >
                 No exercises yet. Add your first movement.
             </div>
             <div
                 v-else-if="!filteredExercises.length"
-                class="xempty"
+                class="px-[18px] py-11 text-center text-body text-ink-2"
             >
                 No exercises match your search or filters.
             </div>
@@ -421,19 +401,25 @@ async function mergeExercise() {
             <div
                 v-for="{ exercise, match } in filteredExercises"
                 :key="exercise.id"
-                class="xrow"
+                class="relative flex flex-col gap-[11px] border-t border-t-line px-[18px] py-4 first:border-t-0 hover:bg-surface-2 lg:static lg:grid lg:grid-cols-[minmax(0,1.5fr)_132px_116px_minmax(0,2fr)_78px] lg:items-center lg:gap-[18px] lg:px-5 lg:py-3.5"
             >
-                <div class="xname-cell">
+                <!-- Thumbnail left, name block right; the padding clears the
+                     absolutely-positioned actions until the grid takes over. -->
+                <div class="flex items-center gap-3 pr-[82px] lg:pr-0">
+                    <!-- Reserved square slot: holds the illustration when one
+                         exists, stays empty otherwise so names line up. -->
                     <div
-                        class="xthumb"
+                        class="size-14 flex-none overflow-hidden"
                         aria-hidden="true"
                     >
                         <ExerciseIllustration :name="exercise.name" />
                     </div>
-                    <span class="xname-text">
+                    <!-- Inline flow so the origin icon trails the name's last word
+                         and wraps with it. -->
+                    <span class="min-w-0 flex-1">
                         <NuxtLink
                             :to="`/exercises/${exercise.id}`"
-                            class="xname xname--link"
+                            class="text-body-lg font-medium text-ink no-underline capitalize transition-[color] duration-[120ms] hover:text-accent-ink"
                         >
                             <UiMatchedLabel
                                 :label="exercise.name"
@@ -444,7 +430,7 @@ async function mergeExercise() {
                         </NuxtLink>
                         <span
                             v-if="exercise.source === 'custom'"
-                            class="custom-mark"
+                            class="ml-1.5 inline-flex items-center align-middle text-ink-3"
                             role="img"
                             aria-label="Custom exercise"
                             title="Custom exercise"
@@ -456,13 +442,15 @@ async function mergeExercise() {
                         </span>
                     </span>
                 </div>
-                <div class="xtags">
+                <!-- display:contents at lg lets the two tags fall into their own
+                     grid columns instead of sharing one cell. -->
+                <div class="flex flex-wrap gap-[7px] lg:contents">
                     <UiTag>{{ exercise.equipment }}</UiTag>
                     <UiTag :accent="exercise.type === 'compound'">
                         {{ exercise.type }}
                     </UiTag>
                 </div>
-                <div class="xmuscles">
+                <div class="flex flex-wrap gap-1.5">
                     <UiBadge
                         v-for="m in sortedMuscles(exercise.muscles)"
                         :key="m.muscle"
@@ -472,7 +460,9 @@ async function mergeExercise() {
                         {{ m.muscle }}
                     </UiBadge>
                 </div>
-                <div class="xcell-actions">
+                <div
+                    class="absolute top-[13px] right-3 flex gap-1.5 lg:static lg:justify-self-end"
+                >
                     <UiIconButton
                         type="button"
                         size="sm"
