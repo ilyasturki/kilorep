@@ -480,7 +480,9 @@ async function deleteAccount() {
             </p>
         </UiCard>
 
-        <p class="app-version">Kilorep v{{ appVersion }}</p>
+        <p class="text-center text-label text-ink-3">
+            Kilorep v{{ appVersion }}
+        </p>
 
         <UiModal
             v-model:open="createOpen"

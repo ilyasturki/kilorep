@@ -13,20 +13,24 @@ useHead({ title: 'Sign in · Kilorep' })
 </script>
 
 <template>
-    <div class="login-screen">
-        <div class="login-card">
-            <span class="login-brand">
-                <UiLogo class="login-logo" />
-                <span class="login-name">Kilorep</span>
+    <div class="grid min-h-dvh place-items-center bg-canvas p-6 text-ink">
+        <div
+            class="flex w-[min(380px,100%)] flex-col items-center gap-4.5 border border-line-2 bg-surface px-8 py-11 text-center"
+        >
+            <span class="flex items-center gap-3">
+                <UiLogo class="size-[34px]" />
+                <span class="text-[26px] font-extrabold tracking-[-0.03em]">
+                    Kilorep
+                </span>
             </span>
-            <p class="login-tag">
+            <p class="text-body text-balance text-ink-2">
                 Minimalist strength training — sessions, supersets and weight
                 tracking.
             </p>
             <UiButton
                 as-child
                 size="lg"
-                class="login-cta"
+                class="mt-2"
             >
                 <a href="/auth/google">
                     <Icon
@@ -38,11 +42,15 @@ useHead({ title: 'Sign in · Kilorep' })
             </UiButton>
             <p
                 v-if="failed"
-                class="login-error"
+                class="text-body-sm text-[#f87171]"
             >
                 Sign-in failed — please try again.
             </p>
         </div>
-        <p class="app-version login-version">v{{ appVersion }}</p>
+        <p
+            class="fixed right-0 bottom-[calc(10px+env(safe-area-inset-bottom))] left-0 text-center text-micro text-ink-3 opacity-55"
+        >
+            v{{ appVersion }}
+        </p>
     </div>
 </template>

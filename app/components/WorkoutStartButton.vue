@@ -17,8 +17,10 @@ const { active, refresh } = useActiveWorkout()
 const toast = useToast()
 const invalidate = usePayloadCache()
 
+// The sidebar CTA is the primary button stretched full-width; `flex` replaces
+// the button's inline-flex so the 100% width doesn't sit on a line box.
 const cls = computed(() =>
-    props.variant === 'sidebar' ? 'side-cta' : 'btn-primary',
+    props.variant === 'sidebar' ? 'flex w-full gap-[9px] px-3.5' : '',
 )
 const iconSize = computed(() => (props.variant === 'sidebar' ? 20 : 16))
 const iconOnly = computed(() => props.variant === 'sidebar' && props.collapsed)
@@ -75,19 +77,23 @@ async function startWorkout(sessionId: number) {
 </script>
 
 <template>
-    <NuxtLink
+    <UiButton
         v-if="active"
-        :to="`/workouts/${active.id}`"
+        as-child
         :class="cls"
-        :title="iconOnly ? 'Continue workout' : undefined"
     >
-        <Icon
-            name="tabler:player-play-filled"
-            :size="iconSize"
-        />
-        <span v-if="!iconOnly">Continue workout</span>
-    </NuxtLink>
-    <button
+        <NuxtLink
+            :to="`/workouts/${active.id}`"
+            :title="iconOnly ? 'Continue workout' : undefined"
+        >
+            <Icon
+                name="tabler:player-play-filled"
+                :size="iconSize"
+            />
+            <span v-if="!iconOnly">Continue workout</span>
+        </NuxtLink>
+    </UiButton>
+    <UiButton
         v-else
         type="button"
         :class="cls"
@@ -99,7 +105,7 @@ async function startWorkout(sessionId: number) {
             :size="iconSize"
         />
         <span v-if="!iconOnly">Start workout</span>
-    </button>
+    </UiButton>
 
     <UiModal
         v-model:open="pickerOpen"
