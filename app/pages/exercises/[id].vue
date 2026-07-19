@@ -151,7 +151,9 @@ const videoUrl = computed(
                 <!-- History & personal best -->
                 <section class="detail-section">
                     <span class="kicker">History</span>
-                    <div class="wk-stats mb-5">
+                    <div
+                        class="mb-5 flex flex-wrap items-center gap-x-7 gap-y-4"
+                    >
                         <UiStat>
                             <template #value>
                                 {{

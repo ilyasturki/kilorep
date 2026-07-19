@@ -22,10 +22,15 @@ import {
 } from 'reka-ui'
 import { parseDate } from '@internationalized/date'
 
+// `class` is taken as a prop and put on the field: DatePickerRoot renders no
+// element of its own, so an inherited class would be dropped on the floor.
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps<{
     max?: string
     disabled?: boolean
     ariaLabel?: string
+    class?: unknown
 }>()
 
 // The rest of the app speaks plain ISO YYYY-MM-DD; reka's field/calendar speak
@@ -52,7 +57,9 @@ const maxValue = computed(() => (props.max ? parseDate(props.max) : undefined))
     >
         <DatePickerField
             v-slot="{ segments }"
+            v-bind="$attrs"
             class="datepicker-field"
+            :class="props.class"
             :aria-label="ariaLabel"
         >
             <DatePickerInput

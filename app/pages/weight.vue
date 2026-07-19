@@ -185,7 +185,7 @@ async function confirmDelete() {
 <template>
     <div>
         <!-- Stats + log action share a row -->
-        <div class="wk-stats mb-5">
+        <div class="mb-5 flex flex-wrap items-center gap-x-7 gap-y-4">
             <template v-if="entries?.length">
                 <UiStat>
                     <template #value>
@@ -212,7 +212,7 @@ async function confirmDelete() {
             </template>
             <UiButton
                 type="button"
-                class="wk-stats-action"
+                class="ml-auto"
                 @click="openAdd"
             >
                 <Icon
@@ -242,19 +242,21 @@ async function confirmDelete() {
                     </UiSegmentedOption>
                 </UiSegmented>
             </UiCardHead>
-            <div class="wchart">
+            <!-- Chart.js sizes its canvas to the parent's box, and the parent
+                 has no intrinsic height — pin one so it has somewhere to draw. -->
+            <div class="relative h-[260px]">
                 <ClientOnly v-if="points.length">
                     <WeightChart
                         :points="points"
                         :time-unit="timeUnit"
                     />
                     <template #fallback>
-                        <div class="wchart-loading" />
+                        <div class="h-full bg-surface-2" />
                     </template>
                 </ClientOnly>
                 <div
                     v-else
-                    class="wchart-empty"
+                    class="flex h-full items-center justify-center text-body text-ink-3"
                 >
                     No weigh-ins in this range.
                 </div>
@@ -268,23 +270,37 @@ async function confirmDelete() {
         </UiEmpty>
         <div
             v-else
-            class="wlog"
+            class="border border-line-2 bg-surface"
         >
+            <!-- On phones the one-line row starves the date column first (it
+                 wraps to three lines before anything else gives). Stack the date
+                 over the weight + delta line and keep the actions on the right. -->
             <div
                 v-for="row in logRows"
                 :key="row.id"
-                class="wlog-row"
+                class="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4.5 py-3.5 not-first:border-t not-first:border-t-line max-sm:grid-cols-[auto_minmax(0,1fr)_auto] max-sm:gap-x-3 max-sm:gap-y-1 max-sm:px-3.5 max-sm:py-3"
             >
-                <span class="wlog-date">{{
-                    fmtDate(parseLocalDay(row.date))
-                }}</span>
-                <span class="wlog-weight mono">
-                    {{ fmtFixed2(row.weight) }}<span class="wlog-unit">kg</span>
+                <span
+                    class="text-body text-ink max-sm:col-start-1 max-sm:col-end-3 max-sm:row-start-1 max-sm:text-body-sm max-sm:text-ink-2"
+                >
+                    {{ fmtDate(parseLocalDay(row.date)) }}
                 </span>
-                <span class="wlog-delta mono">
+                <span
+                    class="mono text-[16px] font-semibold tracking-[-0.01em] max-sm:col-start-1 max-sm:row-start-2"
+                >
+                    {{ fmtFixed2(row.weight)
+                    }}<span class="ml-[3px] text-micro font-normal text-ink-3"
+                        >kg</span
+                    >
+                </span>
+                <span
+                    class="mono min-w-12 text-right text-body-sm text-ink-2 max-sm:col-start-2 max-sm:row-start-2 max-sm:min-w-0 max-sm:text-left"
+                >
                     {{ row.delta == null ? '' : fmtSigned2(row.delta) }}
                 </span>
-                <div class="wlog-actions">
+                <div
+                    class="flex gap-1 max-sm:col-start-3 max-sm:row-start-1 max-sm:row-end-3"
+                >
                     <UiIconButton
                         type="button"
                         size="sm"

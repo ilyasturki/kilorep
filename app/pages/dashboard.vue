@@ -105,16 +105,16 @@ const weightPoints = computed(() =>
                 <UiCardHead class="mb-4">
                     <span class="kicker">Volume · last 8 weeks</span>
                 </UiCardHead>
-                <div class="wchart">
+                <div class="relative h-[260px]">
                     <ClientOnly v-if="hasVolume">
                         <VolumeChart :points="volumePoints" />
                         <template #fallback>
-                            <div class="wchart-loading" />
+                            <div class="h-full bg-surface-2" />
                         </template>
                     </ClientOnly>
                     <div
                         v-else
-                        class="wchart-empty"
+                        class="flex h-full items-center justify-center text-body text-ink-3"
                     >
                         No volume logged in the last 8 weeks.
                     </div>
@@ -157,14 +157,14 @@ const weightPoints = computed(() =>
                             >
                         </div>
                     </div>
-                    <div class="wchart wchart--sm">
+                    <div class="relative h-[180px]">
                         <ClientOnly>
                             <WeightChart
                                 :points="weightPoints"
                                 time-unit="day"
                             />
                             <template #fallback>
-                                <div class="wchart-loading" />
+                                <div class="h-full bg-surface-2" />
                             </template>
                         </ClientOnly>
                     </div>

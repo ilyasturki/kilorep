@@ -509,9 +509,11 @@ async function changeDate() {
     </div>
     <div v-else>
         <div class="mb-8 space-y-4">
-            <div class="wk-stats">
+            <div class="flex flex-wrap items-center gap-x-7 gap-y-4">
+                <!-- Date leads on the left; push the stats group to the right. -->
                 <UiDatePicker
                     v-model="dateValue"
+                    class="mr-auto"
                     :max="today"
                     :disabled="saving"
                     aria-label="Workout date"

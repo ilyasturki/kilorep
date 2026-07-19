@@ -1255,23 +1255,6 @@
     }
 
     /* ===== Workout tracking ============================== */
-    .wk-stats {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 16px 28px;
-    }
-
-    /* Date leads on the left; push the stats group to the right edge. */
-    .wk-stats .datepicker-field {
-        margin-right: auto;
-    }
-
-    /* Log action sits opposite the stats group on the same row. */
-    .wk-stats-action {
-        margin-left: auto;
-    }
-
     /* Pins flush under the header so Finish/Reopen stay reachable on a long set
        list. No top padding: the button docks straight onto the topbar instead
        of floating in a dark band. Opaque bg + bottom border so rows scroll
@@ -2012,27 +1995,6 @@
     }
 
     /* ===== Weight tracking ============================== */
-    /* Chart.js sizes its canvas to the parent's box, and the parent has no
-       intrinsic height — pin one so the chart has somewhere to draw. */
-    .wchart {
-        position: relative;
-        height: 260px;
-    }
-
-    .wchart-loading {
-        height: 100%;
-        background: var(--surface-2);
-    }
-
-    .wchart-empty {
-        display: flex;
-        height: 100%;
-        align-items: center;
-        justify-content: center;
-        color: var(--ink-3);
-        font-size: 14px;
-    }
-
     /* ===== Dashboard ===================================== */
     .dash-stats {
         display: grid;
@@ -2118,10 +2080,6 @@
         .dash-span {
             grid-column: 1 / -1;
         }
-    }
-
-    .wchart--sm {
-        height: 180px;
     }
 
     .dash-bw-stats {
@@ -2210,87 +2168,6 @@
         padding: 8px 0;
         font-size: 14px;
         color: var(--ink-3);
-    }
-
-    .wlog {
-        border: 1px solid var(--line-2);
-        background: var(--surface);
-    }
-
-    .wlog-row {
-        display: grid;
-        grid-template-columns: 1fr auto auto auto;
-        align-items: center;
-        gap: 16px;
-        padding: 14px 18px;
-    }
-
-    .wlog-row + .wlog-row {
-        border-top: 1px solid var(--line);
-    }
-
-    .wlog-date {
-        font-size: 14px;
-        color: var(--ink);
-    }
-
-    .wlog-weight {
-        font-size: 16px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-    }
-
-    .wlog-unit {
-        margin-left: 3px;
-        font-size: 11px;
-        font-weight: 400;
-        color: var(--ink-3);
-    }
-
-    .wlog-delta {
-        min-width: 48px;
-        text-align: right;
-        font-size: 13px;
-        color: var(--ink-2);
-    }
-
-    .wlog-actions {
-        display: flex;
-        gap: 4px;
-    }
-
-    /* On phones the one-line row starves the date column first (it wraps to
-       three lines before anything else gives). Stack the date over the
-       weight + delta line and keep the actions on the right. */
-    @media (max-width: 480px) {
-        .wlog-row {
-            grid-template-columns: auto minmax(0, 1fr) auto;
-            grid-template-areas:
-                'date date actions'
-                'weight delta actions';
-            gap: 4px 12px;
-            padding: 12px 14px;
-        }
-
-        .wlog-date {
-            grid-area: date;
-            font-size: 13px;
-            color: var(--ink-2);
-        }
-
-        .wlog-weight {
-            grid-area: weight;
-        }
-
-        .wlog-delta {
-            grid-area: delta;
-            min-width: 0;
-            text-align: left;
-        }
-
-        .wlog-actions {
-            grid-area: actions;
-        }
     }
 
     /* FLIP slide for the move up/down reorder buttons. Only -move is styled, so
