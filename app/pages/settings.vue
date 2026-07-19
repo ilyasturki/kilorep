@@ -267,8 +267,8 @@ async function deleteAccount() {
 
 <template>
     <div class="space-y-4">
-        <div class="card">
-            <div class="card-head mb-4">
+        <UiCard>
+            <UiCardHead class="mb-4">
                 <span class="kicker kicker--accent">Account</span>
                 <UiButton
                     type="button"
@@ -282,7 +282,7 @@ async function deleteAccount() {
                     />
                     Sign out
                 </UiButton>
-            </div>
+            </UiCardHead>
             <div class="acct">
                 <img
                     v-if="user?.avatarUrl"
@@ -315,14 +315,14 @@ async function deleteAccount() {
                 />
                 Sign out other browsers
             </UiButton>
-        </div>
+        </UiCard>
 
-        <div class="card">
-            <div class="card-head mb-4">
+        <UiCard>
+            <UiCardHead class="mb-4">
                 <span class="kicker kicker--accent"
                     >Number &amp; date format</span
                 >
-            </div>
+            </UiCardHead>
             <p class="settings-hint">
                 How weights, volumes and dates are written. "Automatic" follows
                 this device; pick a region to keep it the same on every browser.
@@ -335,10 +335,10 @@ async function deleteAccount() {
             <p class="settings-hint mt-2">
                 Preview: <span class="mono">{{ samplePreview }}</span>
             </p>
-        </div>
+        </UiCard>
 
-        <div class="card">
-            <div class="card-head mb-4">
+        <UiCard>
+            <UiCardHead class="mb-4">
                 <span class="kicker kicker--accent">MCP access</span>
                 <UiButton
                     type="button"
@@ -352,7 +352,7 @@ async function deleteAccount() {
                     />
                     New token
                 </UiButton>
-            </div>
+            </UiCardHead>
             <p class="settings-hint">
                 Tokens let MCP clients like Claude Code log workouts and
                 weigh-ins via the <span class="mono">/mcp</span> endpoint. Each
@@ -460,10 +460,10 @@ async function deleteAccount() {
             >
                 No tokens yet — create one to connect a client.
             </p>
-        </div>
+        </UiCard>
 
-        <div class="card">
-            <div class="card-head mb-4">
+        <UiCard>
+            <UiCardHead class="mb-4">
                 <span class="kicker">Danger zone</span>
                 <UiButton
                     type="button"
@@ -472,12 +472,12 @@ async function deleteAccount() {
                 >
                     Delete account
                 </UiButton>
-            </div>
+            </UiCardHead>
             <p class="settings-hint">
                 Permanently deletes your account with every workout, session,
                 exercise and weigh-in. There is no undo.
             </p>
-        </div>
+        </UiCard>
 
         <p class="app-version">Kilorep v{{ appVersion }}</p>
 

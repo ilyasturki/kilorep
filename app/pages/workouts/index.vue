@@ -118,38 +118,29 @@ async function confirmDelete() {
 <template>
     <div>
         <div class="mb-5 flex items-center gap-4 view-bar">
-            <div
+            <UiSegmented
                 v-if="ordered.length"
-                class="toggle"
+                stretch
             >
-                <button
+                <UiSegmentedOption
                     v-for="opt in VIEWS"
                     :key="opt"
                     type="button"
-                    class="toggle-opt"
-                    :class="{ on: view === opt }"
+                    :active="view === opt"
                     @click="view = opt"
                 >
                     {{ opt }}
-                </button>
-            </div>
+                </UiSegmentedOption>
+            </UiSegmented>
             <div class="ml-auto">
                 <WorkoutStartButton variant="page" />
             </div>
         </div>
 
-        <div
-            v-if="loading"
-            class="empty"
-        >
-            Loading…
-        </div>
-        <div
-            v-else-if="!ordered.length"
-            class="empty"
-        >
+        <UiEmpty v-if="loading"> Loading… </UiEmpty>
+        <UiEmpty v-else-if="!ordered.length">
             No workouts yet. Start one from a session template.
-        </div>
+        </UiEmpty>
         <WorkoutCalendar
             v-else-if="view === 'calendar'"
             :workouts="workouts"
@@ -161,7 +152,11 @@ async function confirmDelete() {
             <div
                 v-for="w in ordered"
                 :key="w.id"
-                :class="view === 'condensed' ? 'session-row' : 'card'"
+                :class="
+                    view === 'condensed' ? 'session-row' : (
+                        'border border-line-2 bg-surface p-6'
+                    )
+                "
             >
                 <!-- Condensed: one scannable line per workout -->
                 <template v-if="view === 'condensed'">
@@ -198,7 +193,7 @@ async function confirmDelete() {
                 </template>
 
                 <template v-else>
-                    <div class="card-head">
+                    <UiCardHead>
                         <NuxtLink
                             :to="`/workouts/${w.id}`"
                             class="session-name"
@@ -225,7 +220,7 @@ async function confirmDelete() {
                                 />
                             </UiIconButton>
                         </div>
-                    </div>
+                    </UiCardHead>
 
                     <TopMuscles
                         :muscles="w.muscles"
@@ -265,7 +260,7 @@ async function confirmDelete() {
                         </div>
                     </div>
 
-                    <div class="card-actions">
+                    <UiCardActions>
                         <UiButton
                             v-if="!w.completed"
                             as-child
@@ -293,7 +288,7 @@ async function confirmDelete() {
                                 />
                             </NuxtLink>
                         </UiButton>
-                    </div>
+                    </UiCardActions>
                 </template>
             </div>
         </div>

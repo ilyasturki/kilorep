@@ -244,27 +244,22 @@ function planBlocks(session: SessionWithEntries) {
 <template>
     <div>
         <div class="mb-5 flex items-center gap-4">
-            <div
-                v-if="sessions?.length"
-                class="toggle"
-            >
-                <button
+            <UiSegmented v-if="sessions?.length">
+                <UiSegmentedOption
                     type="button"
-                    class="toggle-opt"
-                    :class="{ on: view === 'detailed' }"
+                    :active="view === 'detailed'"
                     @click="view = 'detailed'"
                 >
                     Detailed
-                </button>
-                <button
+                </UiSegmentedOption>
+                <UiSegmentedOption
                     type="button"
-                    class="toggle-opt"
-                    :class="{ on: view === 'condensed' }"
+                    :active="view === 'condensed'"
                     @click="view = 'condensed'"
                 >
                     Condensed
-                </button>
-            </div>
+                </UiSegmentedOption>
+            </UiSegmented>
             <UiButton
                 type="button"
                 class="ml-auto"
@@ -526,18 +521,10 @@ function planBlocks(session: SessionWithEntries) {
         </UiModal>
 
         <!-- List -->
-        <div
-            v-if="loading"
-            class="empty"
-        >
-            Loading…
-        </div>
-        <div
-            v-else-if="!sessions?.length"
-            class="empty"
-        >
+        <UiEmpty v-if="loading"> Loading… </UiEmpty>
+        <UiEmpty v-else-if="!sessions?.length">
             No sessions yet. Create your first routine.
-        </div>
+        </UiEmpty>
         <TransitionGroup
             v-else
             name="reorder"
@@ -560,7 +547,9 @@ function planBlocks(session: SessionWithEntries) {
                      competing transform and flinging the lifted row off-screen. -->
                 <div
                     :class="[
-                        view === 'condensed' ? 'session-row' : 'card',
+                        view === 'condensed' ? 'session-row' : (
+                            'border border-line-2 bg-surface p-6'
+                        ),
                         { 'reorder-dragging': dragIndex === sessionIndex },
                     ]"
                     :style="
@@ -636,7 +625,7 @@ function planBlocks(session: SessionWithEntries) {
                     </template>
 
                     <template v-else>
-                        <div class="card-head">
+                        <UiCardHead>
                             <div class="flex min-w-0 items-center gap-2.5">
                                 <h3 class="session-name min-w-0">
                                     <button
@@ -693,7 +682,7 @@ function planBlocks(session: SessionWithEntries) {
                                     />
                                 </UiIconButton>
                             </div>
-                        </div>
+                        </UiCardHead>
 
                         <TopMuscles
                             :muscles="sessionMuscles.get(session.id) ?? []"

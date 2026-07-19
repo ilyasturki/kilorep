@@ -142,18 +142,17 @@ defineExpose({ submit, canSubmit, submitting })
             </div>
             <div class="field">
                 <label class="field-label">Type</label>
-                <div class="toggle">
-                    <button
+                <UiSegmented>
+                    <UiSegmentedOption
                         v-for="t in EXERCISE_TYPES"
                         :key="t"
                         type="button"
-                        class="toggle-opt"
-                        :class="{ on: form.type === t }"
+                        :active="form.type === t"
                         @click="form.type = t"
                     >
                         {{ t }}
-                    </button>
-                </div>
+                    </UiSegmentedOption>
+                </UiSegmented>
             </div>
         </div>
 

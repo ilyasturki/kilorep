@@ -106,16 +106,8 @@ async function startWorkout(sessionId: number) {
         title="Start workout"
         description="Pick a session template to begin tracking."
     >
-        <div
-            v-if="sessionsLoading"
-            class="empty"
-        >
-            Loading…
-        </div>
-        <div
-            v-else-if="!sessions?.length"
-            class="empty"
-        >
+        <UiEmpty v-if="sessionsLoading"> Loading… </UiEmpty>
+        <UiEmpty v-else-if="!sessions?.length">
             No templates yet.
             <NuxtLink
                 to="/sessions"
@@ -124,7 +116,7 @@ async function startWorkout(sessionId: number) {
                 Create a session
             </NuxtLink>
             first.
-        </div>
+        </UiEmpty>
         <div
             v-else
             class="space-y-2"

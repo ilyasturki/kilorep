@@ -497,7 +497,7 @@ async function changeDate() {
 
 <template>
     <div v-if="!workout">
-        <div class="empty">
+        <UiEmpty>
             Workout not found.
             <NuxtLink
                 to="/workouts"
@@ -505,7 +505,7 @@ async function changeDate() {
             >
                 Back to workouts
             </NuxtLink>
-        </div>
+        </UiEmpty>
     </div>
     <div v-else>
         <div class="mb-8 space-y-4">
@@ -795,7 +795,7 @@ async function changeDate() {
 
         <!-- Review -->
         <template v-else>
-            <div class="card">
+            <UiCard>
                 <div
                     v-for="block in blocks"
                     :key="block.entryId"
@@ -841,7 +841,7 @@ async function changeDate() {
                         </div>
                     </div>
                 </div>
-            </div>
+            </UiCard>
         </template>
 
         <WorkoutActions

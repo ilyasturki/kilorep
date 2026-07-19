@@ -234,25 +234,24 @@ async function confirmDelete() {
         </div>
 
         <!-- Chart -->
-        <div
+        <UiCard
             v-if="entries?.length"
-            class="card mb-8"
+            class="mb-8"
         >
-            <div class="card-head mb-4">
+            <UiCardHead class="mb-4">
                 <span class="kicker">Progression</span>
-                <div class="toggle">
-                    <button
+                <UiSegmented stretch>
+                    <UiSegmentedOption
                         v-for="r in RANGES"
                         :key="r.key"
                         type="button"
-                        class="toggle-opt"
-                        :class="{ on: range === r.key }"
+                        :active="range === r.key"
                         @click="range = r.key"
                     >
                         {{ r.label }}
-                    </button>
-                </div>
-            </div>
+                    </UiSegmentedOption>
+                </UiSegmented>
+            </UiCardHead>
             <div class="wchart">
                 <ClientOnly v-if="points.length">
                     <WeightChart
@@ -270,21 +269,13 @@ async function confirmDelete() {
                     No weigh-ins in this range.
                 </div>
             </div>
-        </div>
+        </UiCard>
 
         <!-- Log -->
-        <div
-            v-if="loading"
-            class="empty"
-        >
-            Loading…
-        </div>
-        <div
-            v-else-if="!entries?.length"
-            class="empty"
-        >
+        <UiEmpty v-if="loading"> Loading… </UiEmpty>
+        <UiEmpty v-else-if="!entries?.length">
             No weigh-ins yet. Log your first to start tracking progression.
-        </div>
+        </UiEmpty>
         <div
             v-else
             class="wlog"

@@ -60,20 +60,15 @@ const weightPoints = computed(() =>
 </script>
 
 <template>
-    <div
-        v-if="loading"
-        class="empty"
-    >
-        Loading…
-    </div>
+    <UiEmpty v-if="loading"> Loading… </UiEmpty>
 
     <div v-else-if="data">
         <!-- 7-day summary with week-over-week deltas -->
         <div class="dash-stats mb-6">
-            <div
+            <UiCard
                 v-for="m in METRICS"
                 :key="m.key"
-                class="card dash-stat"
+                class="dash-stat"
             >
                 <span class="stat-lab">{{ m.label }} · 7D</span>
                 <span class="stat-num mono">
@@ -95,15 +90,15 @@ const weightPoints = computed(() =>
                     {{ delta(m) === 0 ? 'No change' : deltaText(delta(m)!) }}
                     <span v-if="delta(m) !== 0">vs prev 7d</span>
                 </span>
-            </div>
+            </UiCard>
         </div>
 
         <div class="dash-grid">
             <!-- Volume trend (headline, full width) -->
-            <div class="card dash-span">
-                <div class="card-head mb-4">
+            <UiCard class="dash-span min-w-0">
+                <UiCardHead class="mb-4">
                     <span class="kicker">Volume · last 8 weeks</span>
-                </div>
+                </UiCardHead>
                 <div class="wchart">
                     <ClientOnly v-if="hasVolume">
                         <VolumeChart :points="volumePoints" />
@@ -118,13 +113,13 @@ const weightPoints = computed(() =>
                         No volume logged in the last 8 weeks.
                     </div>
                 </div>
-            </div>
+            </UiCard>
 
             <!-- Bodyweight, last 30 days -->
-            <div class="card">
-                <div class="card-head mb-4">
+            <UiCard class="min-w-0">
+                <UiCardHead class="mb-4">
                     <span class="kicker">Bodyweight · last 30 days</span>
-                </div>
+                </UiCardHead>
                 <template v-if="data.bodyweight.points.length">
                     <div class="dash-bw-stats">
                         <div class="dash-bw-stat">
@@ -162,13 +157,13 @@ const weightPoints = computed(() =>
                 >
                     No weigh-ins in the last 30 days.
                 </div>
-            </div>
+            </UiCard>
 
             <!-- Muscles trained, last 7 days -->
-            <div class="card">
-                <div class="card-head mb-4">
+            <UiCard class="min-w-0">
+                <UiCardHead class="mb-4">
                     <span class="kicker">Muscles · last 7 days</span>
-                </div>
+                </UiCardHead>
                 <TopMuscles
                     v-if="data.topMuscles.length"
                     :muscles="data.topMuscles"
@@ -179,18 +174,18 @@ const weightPoints = computed(() =>
                 >
                     Train something this week to see muscle coverage.
                 </div>
-            </div>
+            </UiCard>
 
             <!-- Recent workouts -->
-            <div class="card">
-                <div class="card-head mb-4">
+            <UiCard class="min-w-0">
+                <UiCardHead class="mb-4">
                     <span class="kicker">Recent workouts</span>
                     <NuxtLink
                         to="/workouts"
                         class="dash-more"
                         >All</NuxtLink
                     >
-                </div>
+                </UiCardHead>
                 <div
                     v-if="data.recentWorkouts.length"
                     class="dash-list"
@@ -227,13 +222,13 @@ const weightPoints = computed(() =>
                 >
                     No workouts yet. Start one from a session template.
                 </div>
-            </div>
+            </UiCard>
 
             <!-- Personal records -->
-            <div class="card">
-                <div class="card-head mb-4">
+            <UiCard class="min-w-0">
+                <UiCardHead class="mb-4">
                     <span class="kicker">Personal records</span>
-                </div>
+                </UiCardHead>
                 <div
                     v-if="data.prs.length"
                     class="dash-list"
@@ -263,7 +258,7 @@ const weightPoints = computed(() =>
                 >
                     Log some sets to start setting records.
                 </div>
-            </div>
+            </UiCard>
         </div>
     </div>
 </template>

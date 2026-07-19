@@ -32,7 +32,7 @@ const videoUrl = computed(
 
 <template>
     <div v-if="!detail">
-        <div class="empty">
+        <UiEmpty>
             Exercise not found.
             <NuxtLink
                 to="/exercises"
@@ -40,7 +40,7 @@ const videoUrl = computed(
             >
                 Back to exercises
             </NuxtLink>
-        </div>
+        </UiEmpty>
     </div>
     <div v-else>
         <div class="ex-detail-grid">
@@ -144,12 +144,9 @@ const videoUrl = computed(
                             {{ s.name }}
                         </NuxtLink>
                     </div>
-                    <div
-                        v-else
-                        class="empty"
-                    >
+                    <UiEmpty v-else>
                         Not part of any session template yet.
-                    </div>
+                    </UiEmpty>
                 </section>
 
                 <!-- History & personal best -->
@@ -183,10 +180,7 @@ const videoUrl = computed(
                         </div>
                     </div>
 
-                    <div
-                        v-if="detail.history.length"
-                        class="card"
-                    >
+                    <UiCard v-if="detail.history.length">
                         <div
                             v-for="w in detail.history"
                             :key="w.workoutId"
@@ -213,14 +207,11 @@ const videoUrl = computed(
                                 </span>
                             </div>
                         </div>
-                    </div>
-                    <div
-                        v-else
-                        class="empty"
-                    >
+                    </UiCard>
+                    <UiEmpty v-else>
                         No logged sets yet — this exercise hasn't appeared in a
                         workout.
-                    </div>
+                    </UiEmpty>
                 </section>
             </div>
         </div>

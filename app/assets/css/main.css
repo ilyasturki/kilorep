@@ -92,6 +92,16 @@
        default. Match it, or every converted transition subtly changes easing. */
     --default-transition-timing-function: ease;
 
+    /* Lift's own five breakpoints, none of which match Tailwind's defaults. The
+       stock scale is cleared rather than extended so a stray `sm:` can't resolve
+       to a 640px edge this design has no rule at. */
+    --breakpoint-*: initial;
+    --breakpoint-xs: 360px;
+    --breakpoint-sm: 480px;
+    --breakpoint-md: 560px;
+    --breakpoint-lg: 760px;
+    --breakpoint-xl: 860px;
+
     /* The sizes that actually recur. One-offs (10.5px, 22px, 30px …)
        stay as arbitrary values at their single call site rather than
        inventing names for them. */
@@ -805,26 +815,6 @@
         color: var(--accent-ink);
     }
 
-    .card {
-        background: var(--surface);
-        border: 1px solid var(--line-2);
-        padding: 24px;
-    }
-
-    .card-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-    }
-
-    /* Plain button row at the foot of a card. */
-    .card-actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 18px;
-    }
-
     .dotsep {
         color: var(--ink-3);
     }
@@ -1481,60 +1471,13 @@
         pointer-events: none;
     }
 
-    /* Segmented toggle for a handful of fixed choices — reads as a choice,
-       not a text field, and stays compact instead of stretching like an input. */
-    .toggle {
-        display: inline-flex;
-        border: 1px solid var(--line-2);
-        background: var(--surface);
-    }
-
-    .toggle-opt {
-        font-size: 14px;
-        font-weight: 600;
-        padding: 11px 18px;
-        color: var(--ink-3);
-        text-transform: capitalize;
-        transition:
-            color 0.12s,
-            background 0.12s;
-    }
-
-    .toggle-opt + .toggle-opt {
-        border-left: 1px solid var(--line-2);
-    }
-
-    .toggle-opt:not(.on):hover {
-        color: var(--ink);
-    }
-
-    .toggle-opt.on {
-        background: var(--accent);
-        color: var(--on-accent);
-    }
-
-    /* A multi-option toggle next to an action button is wider than a phone-width
-       row, which drags the whole layout viewport past the screen (and unseats
-       the fixed tabbar). Let the row wrap and stretch the toggle across its own
-       line so the options shrink to fit instead of overflowing. Used by the
-       dashboard card head and the Workouts view bar. */
+    /* Lets a stretched Segmented drop onto its own line instead of pushing the
+       row past a phone-width viewport (which would unseat the fixed tabbar).
+       The stretching itself lives on UiSegmented's `stretch` variant; UiCardHead
+       carries its own wrap. */
     @media (max-width: 560px) {
-        .card-head,
         .view-bar {
             flex-wrap: wrap;
-        }
-
-        .card-head .toggle,
-        .view-bar .toggle {
-            flex: 1 1 100%;
-            display: flex;
-        }
-
-        .card-head .toggle-opt,
-        .view-bar .toggle-opt {
-            flex: 1;
-            padding: 11px 0;
-            text-align: center;
         }
     }
 
@@ -1930,14 +1873,6 @@
     }
 
     /* ===== Empty / loading =============================== */
-    .empty {
-        border: 1px dashed var(--line-2);
-        padding: 40px 20px;
-        text-align: center;
-        color: var(--ink-2);
-        font-size: 14px;
-    }
-
     /* ===== Workout log card ============================== */
     /* Compact totals line under the card title (exercises · sets · volume ·
        duration) — natural-reading mono, not the wide-tracked kicker. */
@@ -2844,14 +2779,6 @@
         display: grid;
         grid-template-columns: 1fr;
         gap: 16px;
-    }
-
-    /* A grid item's auto minimum is its content width; for the chart cards that
-       is the Chart.js canvas, which would hold the track open and overflow the
-       viewport on mobile. min-width:0 lets the track shrink so the responsive
-       canvas can follow. */
-    .dash-grid > .card {
-        min-width: 0;
     }
 
     @media (min-width: 760px) {
