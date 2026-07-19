@@ -546,9 +546,11 @@ function planBlocks(session: SessionWithEntries) {
                      competing transform and flinging the lifted row off-screen. -->
                 <div
                     :class="[
-                        view === 'condensed' ? 'session-row' : (
-                            'border border-line-2 bg-surface p-6'
-                        ),
+                        view === 'condensed' ?
+                            // `reorder-row` is the drag-glide hook only; the
+                            // visual styling is the utilities beside it.
+                            'reorder-row flex items-center justify-between gap-3 border border-line-2 bg-surface px-4.5 py-3.25'
+                        :   'border border-line-2 bg-surface p-6',
                         { 'reorder-dragging': dragIndex === sessionIndex },
                     ]"
                     :style="
@@ -561,8 +563,10 @@ function planBlocks(session: SessionWithEntries) {
                     <template v-if="view === 'condensed'">
                         <span
                             v-if="(sessions?.length ?? 0) > 1"
-                            class="drag-handle"
-                            :class="{ 'is-locked': reordering }"
+                            class="-ml-1 inline-flex flex-none cursor-grab touch-none items-center justify-center p-1 text-ink-3 select-none hover:text-ink-2"
+                            :class="{
+                                'pointer-events-none opacity-40': reordering,
+                            }"
                             aria-hidden="true"
                             @pointerdown="
                                 (e) => onHandlePointerDown(e, sessionIndex)
@@ -574,16 +578,20 @@ function planBlocks(session: SessionWithEntries) {
                             />
                         </span>
                         <div class="flex min-w-0 flex-1 items-center gap-2.5">
-                            <h3 class="session-name min-w-0">
+                            <h3
+                                class="min-w-0 text-[16px] font-bold tracking-[-0.02em] capitalize"
+                            >
                                 <button
                                     type="button"
-                                    class="session-name-btn max-w-full truncate"
+                                    class="inline-block max-w-full truncate border-none bg-transparent p-0 text-left text-inherit [font:inherit] [letter-spacing:inherit] [text-transform:inherit] hover:text-accent-ink"
                                     @click="editSession(session)"
                                 >
                                     {{ session.name }}
                                 </button>
                             </h3>
-                            <span class="session-meta">
+                            <span
+                                class="font-mono text-micro font-semibold tracking-[0.04em] whitespace-nowrap text-ink-3"
+                            >
                                 {{ countLabel(session) }}
                             </span>
                         </div>
@@ -626,10 +634,12 @@ function planBlocks(session: SessionWithEntries) {
                     <template v-else>
                         <UiCardHead>
                             <div class="flex min-w-0 items-center gap-2.5">
-                                <h3 class="session-name min-w-0">
+                                <h3
+                                    class="min-w-0 text-[22px] font-extrabold tracking-[-0.02em] capitalize"
+                                >
                                     <button
                                         type="button"
-                                        class="session-name-btn max-w-full truncate"
+                                        class="inline-block max-w-full truncate border-none bg-transparent p-0 text-left text-inherit [font:inherit] [letter-spacing:inherit] [text-transform:inherit] hover:text-accent-ink"
                                         @click="editSession(session)"
                                     >
                                         {{ session.name }}

@@ -658,86 +658,6 @@
         }
     }
 
-    /* ===== Session cards & plan list ===================== */
-    .session-name {
-        font-size: 22px;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        text-transform: capitalize;
-    }
-
-    /* Condensed view: each session collapses to a single scannable line. */
-    .session-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 13px 18px;
-        background: var(--surface);
-        border: 1px solid var(--line-2);
-    }
-
-    .session-row .session-name {
-        font-size: 16px;
-        font-weight: 700;
-    }
-
-    .session-meta {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        color: var(--ink-3);
-        white-space: nowrap;
-    }
-
-    /* The title doubles as the edit affordance — same quiet hover tint as a
-       plan exercise link, so the card head stays free of button chrome. */
-    .session-name-btn {
-        display: inline-block;
-        background: none;
-        border: none;
-        padding: 0;
-        font: inherit;
-        letter-spacing: inherit;
-        text-transform: inherit;
-        color: inherit;
-        text-align: left;
-    }
-
-    .session-name-btn:hover {
-        color: var(--accent-ink);
-    }
-
-    /* Drag-to-reorder grip (condensed rows). Deliberately not a <button> and not
-       focusable — the up/down arrows stay the keyboard/screen-reader path, so a
-       screen reader shouldn't meet a second, pointer-only control. touch-action:
-       none lets a touch-drag begin without the list scrolling underneath it. */
-    .drag-handle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: none;
-        margin-left: -4px;
-        padding: 4px;
-        color: var(--ink-3);
-        cursor: grab;
-        touch-action: none;
-        -webkit-user-select: none;
-        user-select: none;
-    }
-
-    .drag-handle:hover {
-        color: var(--ink-2);
-    }
-
-    /* While a reorder is saving, the arrows disable; the handle matches by going
-       inert so a second drag can't race the in-flight PATCH. */
-    .drag-handle.is-locked {
-        pointer-events: none;
-        opacity: 0.4;
-    }
-
     /* ===== Builder ======================================= */
     .builder-block {
         border: 1px solid var(--line);
@@ -2116,7 +2036,7 @@
     /* Drag-to-reorder (condensed rows). The lifted row sets its transform inline
        and tracks the pointer with its own transition:none, so it isn't here;
        these rules glide the siblings aside to open the drop slot. */
-    .is-reordering .session-row {
+    .is-reordering .reorder-row {
         transition: transform 0.16s ease;
     }
 
@@ -2155,7 +2075,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .is-reordering .session-row {
+        .is-reordering .reorder-row {
             transition: none;
         }
     }

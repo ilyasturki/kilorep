@@ -153,9 +153,9 @@ async function confirmDelete() {
                 v-for="w in ordered"
                 :key="w.id"
                 :class="
-                    view === 'condensed' ? 'session-row' : (
-                        'border border-line-2 bg-surface p-6'
-                    )
+                    view === 'condensed' ?
+                        'flex items-center justify-between gap-3 border border-line-2 bg-surface px-4.5 py-3.25'
+                    :   'border border-line-2 bg-surface p-6'
                 "
             >
                 <!-- Condensed: one scannable line per workout -->
@@ -163,16 +163,17 @@ async function confirmDelete() {
                     <div class="flex min-w-0 items-center gap-2.5">
                         <NuxtLink
                             :to="`/workouts/${w.id}`"
-                            class="session-name min-w-0 max-w-full truncate"
+                            class="min-w-0 max-w-full truncate text-[16px] font-bold tracking-[-0.02em] capitalize"
                         >
                             {{ w.name }}
                         </NuxtLink>
                         <UiTag :accent="!w.completed">
                             {{ w.completed ? dayLabel(w) : 'In progress' }}
                         </UiTag>
-                        <span class="session-meta max-[479px]:hidden">{{
-                            countLabel(w)
-                        }}</span>
+                        <span
+                            class="font-mono text-micro font-semibold tracking-[0.04em] whitespace-nowrap text-ink-3 max-[479px]:hidden"
+                            >{{ countLabel(w) }}</span
+                        >
                     </div>
                     <UiIconButton
                         type="button"
@@ -193,7 +194,7 @@ async function confirmDelete() {
                     <UiCardHead>
                         <NuxtLink
                             :to="`/workouts/${w.id}`"
-                            class="session-name"
+                            class="text-[22px] font-extrabold tracking-[-0.02em] capitalize"
                         >
                             {{ w.name }}
                         </NuxtLink>
