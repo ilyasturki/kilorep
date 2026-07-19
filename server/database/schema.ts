@@ -7,6 +7,13 @@ import {
     uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 
+import type {
+    Equipment,
+    ExerciseSource,
+    ExerciseType,
+    MuscleTarget,
+} from '../../shared/utils/exercise'
+
 /**
  * An account. With auth configured every Google sign-in maps to one row; an
  * unconfigured (self-hosted) instance runs as a single implicit row with
@@ -79,35 +86,23 @@ export type ApiToken = typeof apiTokens.$inferSelect
 /** What the tokens API exposes — everything but the hash. */
 export type ApiTokenInfo = Omit<ApiToken, 'tokenHash' | 'userId'>
 
-/** How hard an exercise works a given muscle, relative to the others it hits. */
-export const MUSCLE_INTENSITIES = ['high', 'medium', 'low'] as const
-export type MuscleIntensity = (typeof MUSCLE_INTENSITIES)[number]
-
-/** A single muscle worked by an exercise, with its relative intensity. */
-export type MuscleTarget = {
-    muscle: string
-    intensity: MuscleIntensity
-}
-
-/** Primary piece of equipment an exercise is performed with. */
-export const EQUIPMENT = [
-    'barbell',
-    'dumbbell',
-    'machine',
-    'cable',
-    'bodyweight',
-] as const
-export type Equipment = (typeof EQUIPMENT)[number]
-
-/** Whether the movement trains many muscles (compound) or one (isolation). */
-export const EXERCISE_TYPES = ['compound', 'isolation'] as const
-export type ExerciseType = (typeof EXERCISE_TYPES)[number]
-
-// Where an exercise came from: `catalog` was seeded from the default catalog,
-// `custom` was added by the user. Editing a catalog movement reclassifies it
-// to `custom`, since it no longer matches what shipped.
-export const EXERCISE_SOURCES = ['catalog', 'custom'] as const
-export type ExerciseSource = (typeof EXERCISE_SOURCES)[number]
+// Re-exported so server code keeps reading the whole data vocabulary from one
+// module. Clients must import these from shared/utils/exercise directly: this
+// file evaluates sqliteTable(), so a value import of it from app/ bundles
+// drizzle and every table definition into the browser.
+export {
+    EQUIPMENT,
+    EXERCISE_SOURCES,
+    EXERCISE_TYPES,
+    MUSCLE_INTENSITIES,
+} from '../../shared/utils/exercise'
+export type {
+    Equipment,
+    ExerciseSource,
+    ExerciseType,
+    MuscleIntensity,
+    MuscleTarget,
+} from '../../shared/utils/exercise'
 
 export const exercises = sqliteTable(
     'exercises',

@@ -1,67 +1,25 @@
+import type { ExerciseInput } from '~~/shared/validation/exercise'
 import type {
-    Equipment,
     Exercise,
     ExerciseDetail,
     ExerciseHistoryWorkout,
-    ExerciseType,
-    MuscleTarget,
 } from '../database/schema'
-import {
-    EQUIPMENT,
-    EXERCISE_TYPES,
-    MUSCLE_INTENSITIES,
-} from '../database/schema'
+import { exerciseInputSchema } from '~~/shared/validation/exercise'
+import { firstMessage } from '~~/shared/validation/primitives'
 
-function isOneOf<T extends string>(
-    values: readonly T[],
-    value: unknown,
-): value is T {
-    return (
-        typeof value === 'string'
-        && (values as readonly string[]).includes(value)
-    )
-}
-
-export type ExerciseInput = {
-    name: string
-    equipment: Equipment
-    type: ExerciseType
-    muscles: MuscleTarget[]
-}
+export type { ExerciseInput }
 
 // Validates a raw exercise payload, throwing a 400 on any malformed field.
-// Shared by the create and update handlers so both enforce the same shape.
+// Shared by the create and update handlers so both enforce the same shape —
+// and by the exercise form, which runs the same schema to gate its save button.
 export function parseExerciseInput(
     body: Record<string, unknown>,
 ): ExerciseInput {
-    const name = typeof body.name === 'string' ? body.name.trim() : ''
-    if (!name) {
-        badRequest('Name is required')
+    const result = exerciseInputSchema.safeParse(body)
+    if (!result.success) {
+        badRequest(firstMessage(result.error, 'Invalid exercise'))
     }
-
-    const { equipment, type } = body
-    if (!isOneOf(EQUIPMENT, equipment)) {
-        badRequest('Invalid equipment')
-    }
-    if (!isOneOf(EXERCISE_TYPES, type)) {
-        badRequest('Invalid type')
-    }
-
-    const muscles: MuscleTarget[] = []
-    for (const target of Array.isArray(body.muscles) ? body.muscles : []) {
-        const muscle =
-            typeof target?.muscle === 'string' ? target.muscle.trim() : ''
-        if (!muscle) continue
-        if (!isOneOf(MUSCLE_INTENSITIES, target.intensity)) {
-            badRequest('Invalid muscle intensity')
-        }
-        muscles.push({ muscle, intensity: target.intensity })
-    }
-    if (muscles.length === 0) {
-        badRequest('At least one muscle is required')
-    }
-
-    return { name, equipment, type, muscles }
+    return result.data
 }
 
 /**

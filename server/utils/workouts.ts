@@ -8,6 +8,7 @@ import type {
     WorkoutExerciseWithSets,
     WorkoutWithEntries,
 } from '~~/server/database/schema'
+import { loadSchema } from '~~/shared/validation/primitives'
 
 type LoggedSetInput = {
     reps?: number | null
@@ -52,20 +53,10 @@ export function parseWorkoutInput(body: WorkoutInput): ParsedWorkout {
             exercises: (entry?.exercises ?? [])
                 .map((ex) => ({
                     exerciseId: Number(ex?.exerciseId),
-                    sets: (ex?.sets ?? []).map((set) => {
-                        const weight = Number(set?.weight)
-                        return {
-                            reps: parseLoggedReps(set?.reps),
-                            weight:
-                                (
-                                    set?.weight == null
-                                    || !Number.isFinite(weight)
-                                    || weight < 0
-                                ) ?
-                                    null
-                                :   weight,
-                        }
-                    }),
+                    sets: (ex?.sets ?? []).map((set) => ({
+                        reps: parseLoggedReps(set?.reps),
+                        weight: loadSchema.parse(set?.weight),
+                    })),
                 }))
                 .filter(
                     (ex) =>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Bodyweight } from '~~/server/database/schema'
+import { bodyweightInputSchema } from '~~/shared/validation/bodyweight'
 
 const {
     data: entries,
@@ -89,14 +90,16 @@ const formOpen = ref(false)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
 
+// The same schema the API validates against, so the button can't enable a
+// payload the server would reject. The extra date check is deliberately
+// stricter than the schema's: the server allows a day of slack for clients in
+// a timezone ahead of it, but there is no reason to offer a future weigh-in
+// against this device's own calendar.
 const canSave = computed(() => {
     const { date, weight } = draft.value
     return (
-        !!date
-        && date <= todayStr
-        && typeof weight === 'number'
-        && weight >= 20
-        && weight <= 400
+        date <= todayStr
+        && bodyweightInputSchema.safeParse({ date, weight }).success
     )
 })
 

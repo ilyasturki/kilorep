@@ -2,6 +2,10 @@ import type {
     SessionExerciseWithSets,
     SessionWithEntries,
 } from '~~/server/database/schema'
+import {
+    loggedRepsSchema,
+    repsTargetSchema,
+} from '~~/shared/validation/primitives'
 
 type SetInput = { reps?: number | null }
 type ExerciseInput = { exerciseId?: number; sets?: SetInput[] }
@@ -21,34 +25,13 @@ export type ParsedSession = {
     entries: ParsedEntry[]
 }
 
-/**
- * A usable rep count is a positive finite number; anything else (cleared
- * field, zero, junk) normalises to null — an open target.
- */
-function parseRepCount(value: unknown): number | null {
-    const reps = Number(value)
-    return Number.isFinite(reps) && reps > 0 ? reps : null
-}
-
-/**
- * A session's rep TARGET is a whole prescription ("do 8"), so a fractional
- * input rounds to the nearest rep — the typed clients model targets as
- * integers. Logged reps keep their fraction instead (see parseLoggedReps).
- */
+/** Rep coercion is shared with the clients; see shared/validation/primitives. */
 export function parseRepsTarget(value: unknown): number | null {
-    const reps = parseRepCount(value)
-    return reps == null ? null : Math.round(reps)
+    return repsTargetSchema.parse(value)
 }
 
-/**
- * A LOGGED rep keeps its fraction: a half-rep (a failed grind on the last set)
- * is a real thing to record, and LoggedSet types reps as a number. A single
- * fractional value in a response is enough to fail strict deserialization on a
- * typed client and blank its whole history, so the contract and clients carry
- * the fraction end to end rather than the server silently rounding it away.
- */
 export function parseLoggedReps(value: unknown): number | null {
-    return parseRepCount(value)
+    return loggedRepsSchema.parse(value)
 }
 
 /**

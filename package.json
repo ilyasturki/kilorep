@@ -20,7 +20,7 @@
         "version": "node scripts/sync-spec-version.mjs && prettier --write --log-level warn openapi/kilorep.json && git add openapi/kilorep.json",
         "test:isolation": "node tests/isolation.test.mjs",
         "test:contract": "node tests/contract.test.mjs",
-        "test:unit": "bun test tests/workoutStats.test.ts tests/templateDiff.test.ts tests/workoutDraft.test.ts tests/moveItemTo.test.ts",
+        "test:unit": "bun test tests/workoutStats.test.ts tests/templateDiff.test.ts tests/workoutDraft.test.ts tests/moveItemTo.test.ts tests/validation.test.ts",
         "test:domain": "vitest run",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",

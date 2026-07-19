@@ -7,12 +7,9 @@ import {
     PopoverTrigger,
 } from 'reka-ui'
 
-import type {
-    Equipment,
-    Exercise,
-    ExerciseType,
-} from '~~/server/database/schema'
-import { EQUIPMENT, EXERCISE_TYPES } from '~~/server/database/schema'
+import type { Exercise } from '~~/server/database/schema'
+import type { Equipment, ExerciseType } from '~~/shared/utils/exercise'
+import { EQUIPMENT, EXERCISE_TYPES } from '~~/shared/utils/exercise'
 
 const {
     data: exercises,

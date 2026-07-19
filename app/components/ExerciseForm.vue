@@ -1,15 +1,16 @@
 <script setup lang="ts">
+import type { Exercise } from '~~/server/database/schema'
 import type {
     Equipment,
-    Exercise,
     ExerciseType,
     MuscleIntensity,
-} from '~~/server/database/schema'
+} from '~~/shared/utils/exercise'
 import {
     EQUIPMENT,
     EXERCISE_TYPES,
     MUSCLE_INTENSITIES,
-} from '~~/server/database/schema'
+} from '~~/shared/utils/exercise'
+import { exerciseInputSchema } from '~~/shared/validation/exercise'
 
 const props = withDefaults(
     defineProps<{
@@ -47,9 +48,9 @@ const form = reactive({
 
 const toast = useToast()
 const submitting = ref(false)
-const canSubmit = computed(
-    () => form.name.trim().length > 0 && form.muscles.some((m) => m.muscle),
-)
+// The same schema the API validates against, so the button can't enable a
+// payload the server would reject.
+const canSubmit = computed(() => exerciseInputSchema.safeParse(form).success)
 
 function addMuscle() {
     form.muscles.push(blankMuscle())
