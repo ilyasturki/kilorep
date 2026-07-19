@@ -23,13 +23,18 @@
    Dark-first, near-square corners, hairline borders, one volt
    accent. Tokens follow the system color scheme via
    prefers-color-scheme; dark is the default.
+
+   Raw CSS vars flip per theme; @theme inline below exposes them
+   as Tailwind utilities (bg-canvas, text-ink-2, border-line, …)
+   that stay theme-reactive because the utility references
+   var(--…) rather than a resolved value.
    ============================================================ */
 
 :root {
     --accent: #c5f53a;
-    --accent-ink: #0b0b0c;
+    --on-accent: #0b0b0c;
 
-    --bg: #0b0b0c;
+    --canvas: #0b0b0c;
     --surface: #141416;
     --surface-2: #1a1a1d;
     --line: rgba(255, 255, 255, 0.1);
@@ -38,13 +43,13 @@
     --ink-2: #9a9aa0;
     --ink-3: #5e5e66;
     --accent-tint: color-mix(in oklab, var(--accent) 14%, transparent);
-    --accent-text: var(--accent);
+    --accent-ink: var(--accent);
     color-scheme: dark;
 }
 
 @media (prefers-color-scheme: light) {
     :root {
-        --bg: #ecebe6;
+        --canvas: #ecebe6;
         --surface: #ffffff;
         --surface-2: #f4f3ef;
         --line: rgba(0, 0, 0, 0.12);
@@ -53,9 +58,38 @@
         --ink-2: #5c5c62;
         --ink-3: #9a9a9f;
         --accent-tint: color-mix(in oklab, var(--accent) 18%, transparent);
-        --accent-text: color-mix(in oklab, var(--accent) 58%, #000);
+        --accent-ink: color-mix(in oklab, var(--accent) 58%, #000);
         color-scheme: light;
     }
+}
+
+@theme inline {
+    --color-canvas: var(--canvas);
+    --color-surface: var(--surface);
+    --color-surface-2: var(--surface-2);
+    --color-line: var(--line);
+    --color-line-2: var(--line-2);
+    --color-ink: var(--ink);
+    --color-ink-2: var(--ink-2);
+    --color-ink-3: var(--ink-3);
+    --color-accent: var(--accent);
+    --color-accent-tint: var(--accent-tint);
+    /* accent-ink is accent-colored text (contrast-tuned on light);
+       on-accent is the near-black that sits on an accent fill. */
+    --color-accent-ink: var(--accent-ink);
+    --color-on-accent: var(--on-accent);
+
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    /* The sizes that actually recur. One-offs (10.5px, 22px, 30px …)
+       stay as arbitrary values at their single call site rather than
+       inventing names for them. */
+    --text-micro: 11px;
+    --text-label: 12px;
+    --text-body-sm: 13px;
+    --text-body: 14px;
+    --text-body-lg: 15px;
 }
 
 @layer base {
@@ -72,8 +106,8 @@
 
     body {
         margin: 0;
-        font-family: 'Archivo', system-ui, sans-serif;
-        background: var(--bg);
+        font-family: var(--font-body);
+        background: var(--canvas);
         color: var(--ink);
         -webkit-font-smoothing: antialiased;
     }
@@ -98,7 +132,7 @@
 
     ::selection {
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
     }
 }
 
@@ -114,7 +148,7 @@
         min-height: 100dvh;
         display: flex;
         flex-direction: column;
-        background: var(--bg);
+        background: var(--canvas);
         color: var(--ink);
     }
 
@@ -185,7 +219,7 @@
     }
 
     .topbar-back:hover {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     /* Top inset lives on .page, not here. */
@@ -215,7 +249,7 @@
         grid-auto-columns: minmax(0, 1fr);
         padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
         border-top: 1px solid var(--line);
-        background: color-mix(in oklab, var(--bg) 92%, transparent);
+        background: color-mix(in oklab, var(--canvas) 92%, transparent);
         backdrop-filter: blur(12px);
     }
 
@@ -267,7 +301,7 @@
         justify-content: center;
         flex: none;
         align-self: center;
-        color: var(--accent-text);
+        color: var(--accent-ink);
         padding: 6px;
         margin: -6px -6px -6px 0;
     }
@@ -295,7 +329,7 @@
     .brand-logo {
         width: 22px;
         height: 22px;
-        color: var(--accent-text);
+        color: var(--accent-ink);
         flex: none;
     }
 
@@ -395,7 +429,7 @@
         width: 100%;
         padding: 12px 14px;
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
         border: none;
         font-size: 15px;
         font-weight: 800;
@@ -516,7 +550,7 @@
         display: grid;
         place-items: center;
         padding: 24px;
-        background: var(--bg);
+        background: var(--canvas);
         color: var(--ink);
     }
 
@@ -769,7 +803,7 @@
     }
 
     .kicker--accent {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .card {
@@ -804,7 +838,7 @@
     /* ----- Buttons ----- */
     .btn-primary {
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
         border: none;
         font-weight: 800;
         letter-spacing: -0.01em;
@@ -896,7 +930,7 @@
     }
 
     .btn-link:hover {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .icon-btn {
@@ -965,7 +999,7 @@
     }
 
     .tag--accent {
-        color: var(--accent-text);
+        color: var(--accent-ink);
         border-color: color-mix(in oklab, var(--accent) 40%, var(--line));
     }
 
@@ -1007,7 +1041,7 @@
 
     .badge--solid {
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
         /* Without a rim the bright fill optically blooms past its box and the
            badge reads taller than the bordered variants. A darker-green edge
            contains it so all intensities line up at the same height. */
@@ -1017,13 +1051,13 @@
     /* The global ::selection is accent-on-ink — identical to a solid badge,
        so highlighted text would vanish into the fill. Invert it here. */
     .badge--solid::selection {
-        background: var(--accent-ink);
+        background: var(--on-accent);
         color: var(--accent);
     }
 
     .badge--soft {
         background: var(--accent-tint);
-        color: var(--accent-text);
+        color: var(--accent-ink);
         border-color: color-mix(in oklab, var(--accent) 35%, transparent);
     }
 
@@ -1102,10 +1136,10 @@
         height: 17px;
         padding: 0 4px;
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
         font-size: 10.5px;
         font-weight: 700;
-        border: 2px solid var(--bg);
+        border: 2px solid var(--canvas);
     }
 
     /* One popover holds every facet as a labelled section of toggle chips.
@@ -1163,7 +1197,7 @@
     .filter-chip.on {
         background: var(--accent);
         border-color: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
     }
 
     .filter-clear {
@@ -1203,11 +1237,11 @@
     }
 
     .xsort.on .kicker {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .xsort.on .xsort-icon {
-        color: var(--accent-text);
+        color: var(--accent-ink);
         opacity: 1;
     }
 
@@ -1378,7 +1412,7 @@
     }
 
     .session-name-btn:hover {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     /* Drag-to-reorder grip (condensed rows). Deliberately not a <button> and not
@@ -1510,7 +1544,7 @@
     }
 
     .field-label .req {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .input {
@@ -1584,7 +1618,7 @@
 
     .toggle-opt.on {
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
     }
 
     /* A multi-option toggle next to an action button is wider than a phone-width
@@ -1650,7 +1684,7 @@
     }
 
     .select-content {
-        background: var(--bg);
+        background: var(--canvas);
         border: 1px solid var(--line-2);
         min-width: var(--reka-select-trigger-width);
         max-height: var(--reka-select-content-available-height);
@@ -1682,11 +1716,11 @@
     }
 
     .select-item[data-state='checked'] {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .select-item > svg {
-        color: var(--accent-text);
+        color: var(--accent-ink);
         flex: none;
     }
 
@@ -1734,7 +1768,7 @@
     }
 
     .combobox-content {
-        background: var(--bg);
+        background: var(--canvas);
         border: 1px solid var(--line-2);
         min-width: var(--reka-combobox-trigger-width);
         /* Cap to the viewport: rich rows (silhouette + alias + badge) can be
@@ -1763,7 +1797,7 @@
     .combobox-footer {
         position: sticky;
         bottom: 0;
-        background: var(--bg);
+        background: var(--canvas);
         border-top: 1px solid var(--line-2);
         padding: 5px;
     }
@@ -1777,7 +1811,7 @@
         font-family: inherit;
         font-size: 14px;
         text-align: left;
-        color: var(--accent-text);
+        color: var(--accent-ink);
         background: none;
         border: none;
     }
@@ -1801,7 +1835,7 @@
        [data-highlighted] keyboard-cursor state on combobox rows. */
     .fuzzy-hit {
         background: var(--accent-tint);
-        color: var(--accent-text);
+        color: var(--accent-ink);
         border-radius: 2px;
     }
 
@@ -1889,7 +1923,7 @@
         max-width: 480px;
         max-height: 92vh;
         overflow-y: auto;
-        background: var(--bg);
+        background: var(--canvas);
         border: 1px solid var(--line-2);
         padding: 22px;
         animation: slideup 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -2040,7 +2074,7 @@
     }
 
     .plan-ex--link:hover .plan-ex-name {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     /* ===== Workout tracking ============================== */
@@ -2160,7 +2194,7 @@
     }
 
     .wk-diff-row--add .wk-diff-sign {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .wk-diff-row--remove .wk-diff-sign {
@@ -2210,7 +2244,7 @@
 
     .datepicker-seg:focus {
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
     }
 
     .datepicker-seg--literal {
@@ -2239,7 +2273,7 @@
     }
 
     .datepicker-content {
-        background: var(--bg);
+        background: var(--canvas);
         border: 1px solid var(--line-2);
         box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
         padding: 12px;
@@ -2327,7 +2361,7 @@
 
     .datepicker-day[data-selected] {
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
     }
 
     .datepicker-day[data-outside-view] {
@@ -2429,7 +2463,7 @@
 
     .wk-cal-day--has:hover {
         background: var(--surface-2);
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .wk-cal-day--outside {
@@ -2473,7 +2507,7 @@
     }
 
     .wk-ex-name--link:hover {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     /* Column grid shared by the header labels and each logged set row */
@@ -2631,7 +2665,7 @@
         width: 46px;
         height: 46px;
         background: var(--accent);
-        color: var(--accent-ink);
+        color: var(--on-accent);
     }
 
     .video-meta {
@@ -2764,7 +2798,7 @@
     }
 
     .hist-date:hover {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .hist-sets {
@@ -2820,7 +2854,7 @@
     }
 
     .xname--link:hover {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     /* ===== Weight tracking ============================== */
@@ -2880,7 +2914,7 @@
     }
 
     .dash-delta--up {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .dash-delta--down {
@@ -2991,7 +3025,7 @@
     }
 
     .dash-row:hover .dash-row-name {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .dash-row-main {
@@ -3039,7 +3073,7 @@
     }
 
     .dash-more:hover {
-        color: var(--accent-text);
+        color: var(--accent-ink);
     }
 
     .dash-empty {
