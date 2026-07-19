@@ -45,6 +45,14 @@
     --accent-tint: color-mix(in oklab, var(--accent) 14%, transparent);
     --accent-ink: var(--accent);
 
+    /* Accent-derived edges. These reference --line, so they follow the theme on
+       their own and only need declaring once. --accent-edge is deliberately
+       darker: without a rim the bright fill optically blooms past its box and a
+       solid badge reads taller than the bordered ones. */
+    --accent-line: color-mix(in oklab, var(--accent) 40%, var(--line));
+    --accent-line-soft: color-mix(in oklab, var(--accent) 35%, transparent);
+    --accent-edge: color-mix(in oklab, var(--accent) 62%, #000);
+
     /* Destructive actions only — one red, same in both themes. */
     --red: #e5484d;
     --on-red: #fff;
@@ -81,6 +89,9 @@
     /* accent-ink is accent-colored text (contrast-tuned on light);
        on-accent is the near-black that sits on an accent fill. */
     --color-accent-ink: var(--accent-ink);
+    --color-accent-line: var(--accent-line);
+    --color-accent-line-soft: var(--accent-line-soft);
+    --color-accent-edge: var(--accent-edge);
     --color-on-accent: var(--on-accent);
     --color-red: var(--red);
     --color-on-red: var(--on-red);
@@ -863,28 +874,6 @@
         border-color: var(--accent);
     }
 
-    /* ----- Tags & badges ----- */
-    .tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10.5px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        padding: 4px 8px;
-        border: 1px solid var(--line);
-        background: var(--surface-2);
-        color: var(--ink-2);
-        white-space: nowrap;
-    }
-
-    .tag--accent {
-        color: var(--accent-ink);
-        border-color: color-mix(in oklab, var(--accent) 40%, var(--line));
-    }
-
     /* Quiet user-icon marking a user-added exercise (tooltip carries the
        label); defaults are left unmarked. */
     .custom-mark {
@@ -898,55 +887,6 @@
     .xname-cell .custom-mark {
         margin-left: 6px;
         vertical-align: middle;
-    }
-
-    /* Header badge sitting beside a 32px delete icon-btn — match its height so
-       the workout card header lines up instead of floating short. */
-    .tag--lg {
-        height: 32px;
-        padding-block: 0;
-    }
-
-    /* Muscle-intensity badge: fill encodes how hard the muscle works.
-       solid = prime mover, soft = secondary, outline = assists. */
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.01em;
-        text-transform: capitalize;
-        padding: 3px 9px;
-        border: 1px solid transparent;
-        white-space: nowrap;
-    }
-
-    .badge--solid {
-        background: var(--accent);
-        color: var(--on-accent);
-        /* Without a rim the bright fill optically blooms past its box and the
-           badge reads taller than the bordered variants. A darker-green edge
-           contains it so all intensities line up at the same height. */
-        border-color: color-mix(in oklab, var(--accent) 62%, #000);
-    }
-
-    /* The global ::selection is accent-on-ink — identical to a solid badge,
-       so highlighted text would vanish into the fill. Invert it here. */
-    .badge--solid::selection {
-        background: var(--on-accent);
-        color: var(--accent);
-    }
-
-    .badge--soft {
-        background: var(--accent-tint);
-        color: var(--accent-ink);
-        border-color: color-mix(in oklab, var(--accent) 35%, transparent);
-    }
-
-    .badge--outline {
-        background: none;
-        color: var(--ink-2);
-        border-color: var(--line-2);
     }
 
     /* ----- Stats ----- */

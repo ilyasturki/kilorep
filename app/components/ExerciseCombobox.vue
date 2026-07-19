@@ -87,13 +87,15 @@ function onCreated(exercise: Exercise) {
                             :keyword-positions="option.keywordPositions"
                         />
                     </span>
-                    <span
+                    <UiBadge
                         v-if="topOf(option.value)"
-                        class="badge flex-none"
-                        :class="`badge--${intensityVariant[topOf(option.value)!.intensity]}`"
+                        class="flex-none"
+                        :variant="
+                            intensityVariant[topOf(option.value)!.intensity]
+                        "
                     >
                         {{ topOf(option.value)!.muscle }}
-                    </span>
+                    </UiBadge>
                 </template>
 
                 <template

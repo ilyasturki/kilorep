@@ -167,12 +167,9 @@ async function confirmDelete() {
                         >
                             {{ w.name }}
                         </NuxtLink>
-                        <span
-                            class="tag"
-                            :class="{ 'tag--accent': !w.completed }"
-                        >
+                        <UiTag :accent="!w.completed">
                             {{ w.completed ? dayLabel(w) : 'In progress' }}
-                        </span>
+                        </UiTag>
                         <span class="session-meta max-[479px]:hidden">{{
                             countLabel(w)
                         }}</span>
@@ -201,12 +198,12 @@ async function confirmDelete() {
                             {{ w.name }}
                         </NuxtLink>
                         <div class="flex items-center gap-2">
-                            <span
-                                class="tag tag--lg"
-                                :class="{ 'tag--accent': !w.completed }"
+                            <UiTag
+                                size="lg"
+                                :accent="!w.completed"
                             >
                                 {{ w.completed ? dayLabel(w) : 'In progress' }}
-                            </span>
+                            </UiTag>
                             <UiIconButton
                                 type="button"
                                 size="sm"

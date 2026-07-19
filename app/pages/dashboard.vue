@@ -204,16 +204,13 @@ const weightPoints = computed(() =>
                                 {{ fmtVolume(w.volume) }} kg
                             </span>
                         </div>
-                        <span
-                            class="tag"
-                            :class="{ 'tag--accent': !w.completed }"
-                        >
+                        <UiTag :accent="!w.completed">
                             {{
                                 w.completed ?
                                     dayLabel(w.startedAt)
                                 :   'In progress'
                             }}
-                        </span>
+                        </UiTag>
                     </NuxtLink>
                 </div>
                 <div

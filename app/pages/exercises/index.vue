@@ -428,24 +428,20 @@ async function mergeExercise() {
                     </span>
                 </div>
                 <div class="xtags">
-                    <span class="tag">{{ exercise.equipment }}</span>
-                    <span
-                        class="tag"
-                        :class="{ 'tag--accent': exercise.type === 'compound' }"
-                    >
+                    <UiTag>{{ exercise.equipment }}</UiTag>
+                    <UiTag :accent="exercise.type === 'compound'">
                         {{ exercise.type }}
-                    </span>
+                    </UiTag>
                 </div>
                 <div class="xmuscles">
-                    <span
+                    <UiBadge
                         v-for="m in sortedMuscles(exercise.muscles)"
                         :key="m.muscle"
-                        class="badge"
-                        :class="`badge--${intensityVariant[m.intensity]}`"
+                        :variant="intensityVariant[m.intensity]"
                         :title="`${m.muscle} — ${m.intensity} intensity`"
                     >
                         {{ m.muscle }}
-                    </span>
+                    </UiBadge>
                 </div>
                 <div class="xcell-actions">
                     <UiIconButton

@@ -189,13 +189,12 @@ useHead({
                                 />
                             </NuxtLink>
                             <h1 class="topbar-title">{{ header.title }}</h1>
-                            <span
+                            <UiTag
                                 v-if="header.tag"
-                                class="tag"
-                                :class="{ 'tag--accent': header.tag.accent }"
+                                :accent="header.tag.accent"
                             >
                                 {{ header.tag.label }}
-                            </span>
+                            </UiTag>
                         </div>
                         <h1
                             v-else

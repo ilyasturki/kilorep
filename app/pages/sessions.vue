@@ -308,7 +308,7 @@ function planBlocks(session: SessionWithEntries) {
                             v-if="entry.exercises.length > 1"
                             class="mb-3 flex items-center justify-between"
                         >
-                            <span class="tag">Superset</span>
+                            <UiTag>Superset</UiTag>
                             <div class="flex items-center gap-1">
                                 <MoveButtons
                                     label="block"
@@ -636,14 +636,14 @@ function planBlocks(session: SessionWithEntries) {
                                         {{ session.name }}
                                     </button>
                                 </h3>
-                                <span class="tag">
+                                <UiTag>
                                     {{
                                         plural(
                                             workoutStats(session.entries).sets,
                                             'set',
                                         )
                                     }}
-                                </span>
+                                </UiTag>
                             </div>
                             <div class="flex items-center gap-1">
                                 <MoveButtons

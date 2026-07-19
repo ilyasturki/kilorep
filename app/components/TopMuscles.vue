@@ -11,13 +11,12 @@ const rankVariant = ['solid', 'soft', 'outline'] as const
         v-if="muscles.length"
         class="xmuscles"
     >
-        <span
+        <UiBadge
             v-for="(muscle, index) in muscles"
             :key="muscle"
-            class="badge"
-            :class="`badge--${rankVariant[index] ?? 'outline'}`"
+            :variant="rankVariant[index] ?? 'outline'"
         >
             {{ muscle }}
-        </span>
+        </UiBadge>
     </div>
 </template>

@@ -601,7 +601,7 @@ async function changeDate() {
                         v-if="block.isSuperset"
                         class="mb-3 flex items-center justify-between"
                     >
-                        <span class="tag tag--accent">Superset</span>
+                        <UiTag accent>Superset</UiTag>
                         <div class="flex items-center gap-1">
                             <UiIconButton
                                 type="button"

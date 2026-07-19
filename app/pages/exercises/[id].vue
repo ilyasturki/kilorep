@@ -46,7 +46,7 @@ const videoUrl = computed(
         <div class="ex-detail-grid">
             <div class="ex-detail-col">
                 <div class="xtags">
-                    <span class="tag">{{ detail.equipment }}</span>
+                    <UiTag>{{ detail.equipment }}</UiTag>
                     <span
                         v-if="detail.source === 'custom'"
                         class="custom-mark"
@@ -86,15 +86,14 @@ const videoUrl = computed(
                         </span>
                     </div>
                     <div class="xmuscles mt-4">
-                        <span
+                        <UiBadge
                             v-for="m in sortedMuscles(detail.muscles)"
                             :key="m.muscle"
-                            class="badge"
-                            :class="`badge--${intensityVariant[m.intensity]}`"
+                            :variant="intensityVariant[m.intensity]"
                             :title="`${m.muscle} — ${m.intensity} intensity`"
                         >
                             {{ m.muscle }}
-                        </span>
+                        </UiBadge>
                     </div>
                 </section>
 
