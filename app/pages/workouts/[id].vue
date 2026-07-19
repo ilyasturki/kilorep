@@ -23,6 +23,19 @@ const route = useRoute()
 const id = Number(route.params.id)
 const toast = useToast()
 
+// Column grid shared by the header labels and each logged set row. Very narrow
+// phones drop the set-number column — the least useful cell — rather than
+// letting the inputs crush or the row overflow.
+const LOGSET =
+    'grid grid-cols-[28px_1fr_1fr_38px] items-center gap-2 max-sm:grid-cols-[22px_1fr_1fr_38px] max-sm:gap-1.5 max-xs:grid-cols-[1fr_1fr_38px] max-xs:[&>*:first-child]:hidden'
+
+// Keep the +/- steppers on phones; trim them and the input padding so a
+// 3-digit weight still reads in the field.
+const LOGSET_FIELD =
+    'w-full max-sm:[&_button]:w-6 max-sm:[&_input]:px-0.5 max-sm:[&_input]:text-body'
+
+const SET_LABEL = 'text-center font-mono text-micro text-ink-3'
+
 const [{ data: workout }, { data: exercises }] = await Promise.all([
     useFetch<WorkoutDetail>(`/api/workouts/${id}`),
     useFetch<Exercise[]>('/api/exercises'),
@@ -631,10 +644,15 @@ async function changeDate() {
                             v-for="item in block.exercises"
                             :key="item.exIndex"
                         >
-                            <div class="wk-ex-head">
+                            <div
+                                class="mb-2.5 flex items-center justify-between gap-2.5"
+                            >
+                                <!-- The name doubles as a link to the exercise's
+                                     history, tinting on hover rather than
+                                     carrying link chrome into the tracking view. -->
                                 <NuxtLink
                                     :to="`/exercises/${item.ex.exerciseId}`"
-                                    class="wk-ex-name wk-ex-name--link"
+                                    class="text-[16px] font-semibold text-inherit no-underline capitalize hover:text-accent-ink"
                                 >
                                     <span class="mono text-label text-ink-3">
                                         {{ pad(item.n) }}
@@ -695,35 +713,29 @@ async function changeDate() {
                                 </div>
                             </div>
 
-                            <div class="logset logset-head">
+                            <div :class="LOGSET">
                                 <span />
-                                <span
-                                    class="text-center font-mono text-micro text-ink-3"
-                                    >KG</span
-                                >
-                                <span
-                                    class="text-center font-mono text-micro text-ink-3"
-                                    >REPS</span
-                                >
+                                <span :class="SET_LABEL">KG</span>
+                                <span :class="SET_LABEL">REPS</span>
                                 <span />
                             </div>
                             <div
                                 v-for="(set, si) in item.ex.sets"
                                 :key="si"
-                                class="logset"
+                                class="mt-2"
+                                :class="LOGSET"
                             >
-                                <span
-                                    class="text-center font-mono text-micro text-ink-3"
-                                    >{{ si + 1 }}</span
-                                >
+                                <span :class="SET_LABEL">{{ si + 1 }}</span>
                                 <UiNumberField
                                     v-model="set.weight"
+                                    :class="LOGSET_FIELD"
                                     :min="0"
                                     :step="2.5"
                                     :step-snapping="false"
                                 />
                                 <UiNumberField
                                     v-model="set.reps"
+                                    :class="LOGSET_FIELD"
                                     :min="1"
                                 />
                                 <UiIconButton
@@ -815,10 +827,12 @@ async function changeDate() {
                         :key="item.exIndex"
                         class="mb-2"
                     >
-                        <div class="wk-ex-head">
+                        <div
+                            class="mb-2.5 flex items-center justify-between gap-2.5"
+                        >
                             <NuxtLink
                                 :to="`/exercises/${item.ex.exerciseId}`"
-                                class="wk-ex-name wk-ex-name--link"
+                                class="text-[16px] font-semibold text-inherit no-underline capitalize hover:text-accent-ink"
                             >
                                 <span class="mono text-label text-ink-3">
                                     {{ pad(item.n) }}
@@ -832,14 +846,14 @@ async function changeDate() {
                         <div
                             v-for="(set, si) in item.ex.sets"
                             :key="si"
-                            class="logline"
+                            class="grid grid-cols-[30px_1fr] items-center gap-3 border-t border-t-line py-[9px] first-of-type:border-t-0"
                         >
                             <span class="font-mono text-micro text-ink-3">{{
                                 si + 1
                             }}</span>
-                            <span class="logline-load">
+                            <span class="font-mono text-body text-ink">
                                 {{ weightLabel(set.weight) }}
-                                <span class="x">×</span>
+                                <span class="mx-1.5 text-ink-3">×</span>
                                 {{ set.reps ?? '?' }}
                             </span>
                         </div>
