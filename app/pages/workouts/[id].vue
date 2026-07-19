@@ -518,13 +518,15 @@ async function changeDate() {
                     @update:model-value="changeDate"
                 />
                 <div class="wk-stat">
-                    <span class="stat-num mono">{{
+                    <span class="stat-num mono text-[22px]">{{
                         fmtVolume(totals.volume)
                     }}</span>
                     <span class="stat-lab">VOLUME · KG</span>
                 </div>
                 <div class="wk-stat">
-                    <span class="stat-num mono">{{ totals.sets }}</span>
+                    <span class="stat-num mono text-[22px]">{{
+                        totals.sets
+                    }}</span>
                     <span class="stat-lab">SETS</span>
                 </div>
             </div>

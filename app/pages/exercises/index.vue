@@ -333,7 +333,11 @@ async function mergeExercise() {
                     :class="{ on: sort?.key === 'name' }"
                     @click="toggleSort('name')"
                 >
-                    <span class="kicker">Name</span>
+                    <span
+                        class="kicker"
+                        :class="{ 'text-accent-ink': sort?.key === 'name' }"
+                        >Name</span
+                    >
                     <Icon
                         :name="sortIcon('name')"
                         :size="13"
@@ -346,7 +350,13 @@ async function mergeExercise() {
                     :class="{ on: sort?.key === 'equipment' }"
                     @click="toggleSort('equipment')"
                 >
-                    <span class="kicker">Equipment</span>
+                    <span
+                        class="kicker"
+                        :class="{
+                            'text-accent-ink': sort?.key === 'equipment',
+                        }"
+                        >Equipment</span
+                    >
                     <Icon
                         :name="sortIcon('equipment')"
                         :size="13"
@@ -359,7 +369,11 @@ async function mergeExercise() {
                     :class="{ on: sort?.key === 'type' }"
                     @click="toggleSort('type')"
                 >
-                    <span class="kicker">Type</span>
+                    <span
+                        class="kicker"
+                        :class="{ 'text-accent-ink': sort?.key === 'type' }"
+                        >Type</span
+                    >
                     <Icon
                         :name="sortIcon('type')"
                         :size="13"

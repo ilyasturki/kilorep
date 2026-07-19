@@ -70,8 +70,10 @@ const weightPoints = computed(() =>
                 :key="m.key"
                 class="dash-stat"
             >
-                <span class="stat-lab">{{ m.label }} · 7D</span>
-                <span class="stat-num mono">
+                <span class="stat-lab max-sm:tracking-[0.06em]">
+                    {{ m.label }} · 7D
+                </span>
+                <span class="stat-num mono text-[26px] max-sm:text-[18px]">
                     {{ fmtVolume(data.summary.current[m.key]) }}
                     <span
                         v-if="m.unit"
@@ -123,7 +125,7 @@ const weightPoints = computed(() =>
                 <template v-if="data.bodyweight.points.length">
                     <div class="dash-bw-stats">
                         <div class="dash-bw-stat">
-                            <span class="stat-num mono">{{
+                            <span class="stat-num mono text-[22px]">{{
                                 data.bodyweight.current != null ?
                                     fmtFixed2(data.bodyweight.current)
                                 :   '—'
@@ -131,7 +133,7 @@ const weightPoints = computed(() =>
                             <span class="stat-lab">Current · kg</span>
                         </div>
                         <div class="dash-bw-stat">
-                            <span class="stat-num mono">{{
+                            <span class="stat-num mono text-[22px]">{{
                                 data.bodyweight.change == null ?
                                     '—'
                                 :   fmtSigned2(data.bodyweight.change)

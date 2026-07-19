@@ -547,10 +547,6 @@
         opacity: 0.8;
     }
 
-    .xsort.on .kicker {
-        color: var(--accent-ink);
-    }
-
     .xsort.on .xsort-icon {
         color: var(--accent-ink);
         opacity: 1;
@@ -1293,10 +1289,6 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
-    }
-
-    .wk-stat .stat-num {
-        font-size: 22px;
     }
 
     /* Pins flush under the header so Finish/Reopen stay reachable on a long set
@@ -2074,10 +2066,6 @@
         padding: 16px;
     }
 
-    .dash-stat .stat-num {
-        font-size: 26px;
-    }
-
     .dash-unit {
         font-size: 13px;
         font-weight: 500;
@@ -2118,14 +2106,6 @@
 
         .dash-stat {
             padding: 14px 12px;
-        }
-
-        .dash-stat .stat-lab {
-            letter-spacing: 0.06em;
-        }
-
-        .dash-stat .stat-num {
-            font-size: 18px;
         }
 
         .dash-unit {
@@ -2173,10 +2153,6 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
-    }
-
-    .dash-bw-stat .stat-num {
-        font-size: 22px;
     }
 
     .dash-list {

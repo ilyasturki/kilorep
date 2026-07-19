@@ -188,13 +188,13 @@ async function confirmDelete() {
         <div class="wk-stats mb-5">
             <template v-if="entries?.length">
                 <div class="wk-stat">
-                    <span class="stat-num mono">
+                    <span class="stat-num mono text-[22px]">
                         {{ latest ? fmtFixed2(latest.weight) : '—' }}
                     </span>
                     <span class="stat-lab">CURRENT · KG</span>
                 </div>
                 <div class="wk-stat">
-                    <span class="stat-num mono">
+                    <span class="stat-num mono text-[22px]">
                         {{
                             rangeChange == null ? '—' : fmtSigned2(rangeChange)
                         }}
@@ -205,7 +205,7 @@ async function confirmDelete() {
                     v-if="minMax"
                     class="wk-stat"
                 >
-                    <span class="stat-num mono">{{
+                    <span class="stat-num mono text-[22px]">{{
                         fmtFixed2(minMax.min)
                     }}</span>
                     <span class="stat-lab">LOWEST · KG</span>
@@ -214,7 +214,7 @@ async function confirmDelete() {
                     v-if="minMax"
                     class="wk-stat"
                 >
-                    <span class="stat-num mono">{{
+                    <span class="stat-num mono text-[22px]">{{
                         fmtFixed2(minMax.max)
                     }}</span>
                     <span class="stat-lab">HIGHEST · KG</span>

@@ -153,7 +153,7 @@ const videoUrl = computed(
                     <span class="kicker">History</span>
                     <div class="wk-stats mb-5">
                         <div class="wk-stat">
-                            <span class="stat-num mono">
+                            <span class="stat-num mono text-[22px]">
                                 {{
                                     detail.best ?
                                         `${fmtWeight(detail.best.weight)}×${detail.best.reps}`
@@ -163,7 +163,7 @@ const videoUrl = computed(
                             <span class="stat-lab">BEST SET · KG</span>
                         </div>
                         <div class="wk-stat">
-                            <span class="stat-num mono">{{
+                            <span class="stat-num mono text-[22px]">{{
                                 detail.history.length
                             }}</span>
                             <span class="stat-lab">WORKOUTS</span>
@@ -172,7 +172,7 @@ const videoUrl = computed(
                             v-if="detail.history.length"
                             class="wk-stat"
                         >
-                            <span class="stat-num mono">
+                            <span class="stat-num mono text-[22px]">
                                 {{ fmtDateShort(detail.history[0]!.startedAt) }}
                             </span>
                             <span class="stat-lab">LAST DONE</span>
