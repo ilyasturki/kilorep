@@ -236,7 +236,9 @@ async function mergeExercise() {
 
 <template>
     <div>
-        <div class="toolbar">
+        <!-- Filter, search and Add share one row; search flexes to fill the gap
+             and shrinks (min-w-0) so the row never overflows. -->
+        <div class="mb-5 flex items-center gap-3">
             <div class="relative min-w-0 max-w-[280px] flex-1">
                 <Icon
                     name="tabler:search"
@@ -253,43 +255,56 @@ async function mergeExercise() {
             </div>
 
             <PopoverRoot>
+                <!-- self-stretch takes the search input's height. -->
                 <PopoverTrigger
-                    class="filter-trigger"
-                    :class="{ active: hasFilters }"
+                    class="relative inline-flex flex-none items-center justify-center self-stretch border border-line-2 bg-surface px-3.5 transition-[color,border-color] duration-[120ms] [&>svg]:text-inherit hover:border-accent hover:text-ink data-[state=open]:border-accent data-[state=open]:text-ink"
+                    :class="hasFilters ? 'text-ink' : 'text-ink-2'"
                     aria-label="Filter exercises"
                 >
                     <Icon
                         name="tabler:filter"
                         :size="17"
                     />
+                    <!-- Notification-style badge over the icon's corner; the
+                         canvas-colored ring lifts it off the button edge. -->
                     <span
                         v-if="activeCount"
-                        class="filter-count"
+                        class="absolute -top-[7px] -right-[7px] inline-flex h-[17px] min-w-[17px] items-center justify-center border-2 border-canvas bg-accent px-1 text-[10.5px] font-bold text-on-accent"
                     >
                         {{ activeCount }}
                     </span>
                 </PopoverTrigger>
                 <PopoverPortal>
+                    <!-- Every facet as a labelled section of toggle chips.
+                         Borrows .select-content for the surface; the width is
+                         fixed (the trigger is narrow) and capped to the
+                         viewport so it fits on a phone. -->
                     <PopoverContent
-                        class="select-content filter-panel"
+                        class="flex w-[280px] max-w-[calc(100vw-32px)] flex-col gap-3.5 p-3.5 select-content"
                         align="end"
                         :side-offset="6"
                     >
                         <div
                             v-for="facet in FACETS"
                             :key="facet.key"
-                            class="filter-section"
+                            class="flex flex-col gap-2"
                         >
-                            <span class="filter-section-label">
+                            <span
+                                class="text-[10px] font-bold tracking-[0.12em] text-ink-3 uppercase"
+                            >
                                 {{ facet.label }}
                             </span>
-                            <div class="filter-options">
+                            <div class="flex flex-wrap gap-[7px]">
                                 <button
                                     v-for="item in facet.items"
                                     :key="item"
                                     type="button"
-                                    class="filter-chip"
-                                    :class="{ on: isActive(facet.key, item) }"
+                                    class="border px-3 py-1.5 text-body-sm font-semibold capitalize transition-[color,border-color,background] duration-[120ms]"
+                                    :class="
+                                        isActive(facet.key, item) ?
+                                            'border-accent bg-accent text-on-accent'
+                                        :   'border-line-2 bg-surface text-ink-2 hover:border-accent hover:text-ink'
+                                    "
                                     @click="toggleFilter(facet.key, item)"
                                 >
                                     {{ item }}
@@ -300,7 +315,7 @@ async function mergeExercise() {
                             v-if="hasFilters"
                             type="button"
                             tone="link"
-                            class="filter-clear"
+                            class="self-start"
                             @click="clearFilters"
                         >
                             <Icon
