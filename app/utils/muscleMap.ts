@@ -141,5 +141,16 @@ export function mapRegionClass(
             best = intensity
         }
     }
-    return ['mm-region', best ? `mm-${best}` : 'mm-off']
+    return [REGION_BASE, REGION_FILL[best ?? 'off']]
+}
+
+const REGION_BASE = '[stroke-width:0.8] transition-[fill] duration-150'
+
+// Region fill encodes how hard the muscle works: full accent = prime mover,
+// mixed = secondary, faint = assists, surface = untouched.
+const REGION_FILL: Record<MuscleIntensity | 'off', string> = {
+    off: 'fill-surface-2 stroke-line-2',
+    low: 'fill-muscle-low stroke-muscle-low-edge',
+    medium: 'fill-muscle-med stroke-muscle-med-edge',
+    high: 'fill-accent stroke-accent',
 }

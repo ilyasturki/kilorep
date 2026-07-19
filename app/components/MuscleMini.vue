@@ -13,7 +13,7 @@ const shapes = computed(() =>
 
 <template>
     <svg
-        class="mm-mini"
+        class="h-[30px] w-auto flex-none"
         :viewBox="MUSCLE_MAP_VIEWBOX"
         role="img"
         :aria-label="top ? `Targets ${top}` : undefined"

@@ -79,16 +79,30 @@ const videoUrl = computed(
                 <section class="mt-[30px] lg:first:mt-0">
                     <span class="kicker mb-3 block">Muscles worked</span>
                     <MuscleMap :muscles="detail.muscles" />
-                    <div class="mm-legend">
-                        <span class="mm-legend-item">
-                            <span class="mm-swatch mm-swatch--high" /> Prime
-                            mover
+                    <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+                        <span
+                            class="inline-flex items-center gap-[7px] text-[12.5px] text-ink-2"
+                        >
+                            <span
+                                class="size-3 flex-none border border-transparent bg-accent"
+                            />
+                            Prime mover
                         </span>
-                        <span class="mm-legend-item">
-                            <span class="mm-swatch mm-swatch--med" /> Secondary
+                        <span
+                            class="inline-flex items-center gap-[7px] text-[12.5px] text-ink-2"
+                        >
+                            <span
+                                class="size-3 flex-none border border-muscle-med-edge bg-muscle-med"
+                            />
+                            Secondary
                         </span>
-                        <span class="mm-legend-item">
-                            <span class="mm-swatch mm-swatch--low" /> Assists
+                        <span
+                            class="inline-flex items-center gap-[7px] text-[12.5px] text-ink-2"
+                        >
+                            <span
+                                class="size-3 flex-none border border-line-2 bg-muscle-low"
+                            />
+                            Assists
                         </span>
                     </div>
                     <div class="mt-4 flex flex-wrap gap-1.5">

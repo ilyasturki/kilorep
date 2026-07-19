@@ -5,9 +5,10 @@ defineProps<{ muscles: MuscleTarget[] }>()
 </script>
 
 <template>
-    <div class="musclemap">
-        <div class="mm-view">
+    <div class="flex flex-wrap items-start gap-x-7 gap-y-2">
+        <div class="flex flex-col items-center gap-[9px]">
             <svg
+                class="h-auto w-[130px]"
                 :viewBox="MUSCLE_MAP_VIEWBOX"
                 role="img"
                 aria-label="Muscles worked, front view"
@@ -20,8 +21,9 @@ defineProps<{ muscles: MuscleTarget[] }>()
             <span class="kicker">Front</span>
         </div>
 
-        <div class="mm-view">
+        <div class="flex flex-col items-center gap-[9px]">
             <svg
+                class="h-auto w-[130px]"
                 :viewBox="MUSCLE_MAP_VIEWBOX"
                 role="img"
                 aria-label="Muscles worked, back view"
