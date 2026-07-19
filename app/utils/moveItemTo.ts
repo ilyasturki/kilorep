@@ -17,7 +17,6 @@ export function moveItemTo<T>(list: T[], from: number, to: number): T[] {
     ) {
         return next
     }
-    const [item] = next.splice(from, 1)
-    next.splice(to, 0, item as T)
+    next.splice(to, 0, ...next.splice(from, 1))
     return next
 }

@@ -37,4 +37,6 @@ export default defineEventHandler(async (event) => {
         event.node.res,
         await readBody(event),
     )
+    // The transport writes the raw response itself; there is no body to hand back.
+    return undefined
 })

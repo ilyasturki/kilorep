@@ -51,6 +51,6 @@ export default defineEventHandler(async (event) => {
         badRequest('Unsupported locale')
     }
 
-    setUserLocale(userId, locale as string | null)
+    setUserLocale(userId, locale)
     return { locale }
 })

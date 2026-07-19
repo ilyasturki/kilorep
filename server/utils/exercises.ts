@@ -81,7 +81,7 @@ export function createExercise(
             .returning()
             .get()
     } catch (error) {
-        asDuplicateNameError(error)
+        return asDuplicateNameError(error)
     }
 }
 
@@ -251,7 +251,7 @@ export function getExerciseDetail(id: number, userId: number): ExerciseDetail {
             })
         }
     }
-    const history = [...byWorkout.values()].sort(
+    const history = [...byWorkout.values()].toSorted(
         (a, b) =>
             new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
     )

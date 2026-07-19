@@ -96,7 +96,7 @@ function matchField(
         score += m.score
         for (const p of m.positions) positions.add(p)
     }
-    return { score, positions: [...positions].sort((a, b) => a - b) }
+    return { score, positions: [...positions].toSorted((a, b) => a - b) }
 }
 
 // Name hits should beat keyword hits of equal quality, so the label gets a small

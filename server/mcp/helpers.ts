@@ -64,7 +64,7 @@ function resolveByName<T extends { name: string }>(
     if (partial.length > 1) {
         badRequest(`"${name}" is ambiguous — matches ${candidates}`)
     }
-    badRequest(
+    return badRequest(
         `No ${kind} named "${name}". Known: ${candidates || 'none'}.${hint}`,
     )
 }
@@ -139,7 +139,7 @@ export function resolveWorkout(userId: number, id?: number): Workout {
             'No workout is in progress — start one with start_workout, or log a finished one with log_workout',
         )
     }
-    badRequest(
+    return badRequest(
         `Several workouts are in progress (${active
             .map((w) => `#${w.id} ${w.name}`)
             .join(', ')}) — pass "workout" explicitly`,

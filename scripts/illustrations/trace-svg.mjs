@@ -26,7 +26,7 @@ const options = {
 const slugs = readdirSync(rawDir)
     .filter((f) => f.endsWith('.png'))
     .map((f) => f.replace(/\.png$/, ''))
-    .sort()
+    .toSorted()
 
 let bytes = 0
 for (const slug of slugs) {

@@ -36,7 +36,7 @@ export function buildDocument(rawSpec, components, version) {
                 ([path]) =>
                     path.startsWith('/api/') && !path.startsWith('/api/_'),
             )
-            .sort(([a], [b]) => a.localeCompare(b)),
+            .toSorted(([a], [b]) => a.localeCompare(b)),
     )
 
     const incomplete = []

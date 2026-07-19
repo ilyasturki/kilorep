@@ -239,9 +239,9 @@ function ungroupEntry(entryIndex: number) {
     ungroupWorkoutEntry(draft.value, entryIndex)
 }
 
-function buildBody(completed: boolean) {
+function buildBody(isCompleted: boolean) {
     return workoutDraftToBody(draft.value, {
-        completed,
+        completed: isCompleted,
         startedAt: composedStartedAt(),
     })
 }
@@ -371,9 +371,9 @@ const diffOpen = ref(false)
 // list is keyed by id), so a removed exercise no longer in the draft still
 // resolves; an open rep target (null) reads as "open" rather than a blank.
 type DiffRow = { sign: string; tone: 'add' | 'remove' | 'edit'; text: string }
+const reps = (r: number | null) => (r == null ? 'open' : String(r))
 const diffItems = computed<DiffRow[]>(() => {
     const name = (exId: number) => exerciseById(exId)?.name ?? 'Exercise'
-    const reps = (r: number | null) => (r == null ? 'open' : String(r))
     return (template.value?.changes ?? []).map((change): DiffRow => {
         switch (change.kind) {
             case 'added':

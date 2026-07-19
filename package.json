@@ -14,7 +14,7 @@
         "typecheck": "nuxt prepare && vue-tsc -b --noEmit",
         "format": "prettier --ignore-unknown --check .",
         "format:write": "prettier --ignore-unknown --write .",
-        "lint": "oxlint",
+        "lint": "oxlint --deny-warnings",
         "lint:fix": "oxlint --fix",
         "openapi:export": "node scripts/export-openapi.mjs && prettier --write --log-level warn openapi/kilorep.json",
         "version": "node scripts/sync-spec-version.mjs && prettier --write --log-level warn openapi/kilorep.json && git add openapi/kilorep.json",
@@ -63,6 +63,7 @@
         "potrace": "^2.1.8",
         "prettier": "^3.9.5",
         "prettier-plugin-tailwindcss": "^0.8.1",
+        "typescript": "^6.0.3",
         "vitest": "^4.1.10",
         "vue-tsc": "^3.3.7"
     },

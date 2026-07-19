@@ -15,5 +15,47 @@
         "browser": true,
         "es2024": true,
         "node": true
-    }
+    },
+    "rules": {
+        // Sequential awaits here are nearly always deliberate: migration steps,
+        // the MCP tool loop, and per-row writes inside a transaction.
+        "no-await-in-loop": "off",
+        // Its fix is in-place mutation, which is wrong at most of our sites:
+        // the spread is a deliberate defensive copy (the exercise form's
+        // muscle rows, the weigh-in delta list) or the source is the shared
+        // EXERCISE_CATALOG constant, which every signup reads.
+        "oxc/no-map-spread": "off",
+        // Bug-class gates.
+        "eqeqeq": ["error", "always", { "null": "ignore" }],
+        "typescript/no-explicit-any": "error",
+        "typescript/no-deprecated": "error",
+        "typescript/no-misused-promises": "error",
+        "typescript/switch-exhaustiveness-check": "error",
+        // Convention locks (all clean at adoption; --deny-warnings gates them too).
+        "typescript/consistent-type-imports": "warn",
+        "unicorn/prefer-node-protocol": "warn",
+        "vue/define-emits-declaration": "warn",
+        "vue/define-props-declaration": "warn",
+        "vue/no-required-prop-with-default": "warn",
+        "vue/prop-name-casing": "warn",
+        "vue/require-typed-ref": "warn"
+    },
+    "overrides": [
+        {
+            // `export {}` is the module marker that makes `declare module` an
+            // augmentation rather than an ambient redeclaration; removing it
+            // (as the rule's fix does) silently changes what the file means.
+            "files": ["**/*.d.ts"],
+            "rules": { "unicorn/require-module-specifiers": "off" }
+        },
+        {
+            // Tests legitimately assert partial mock shapes, and bun/vitest
+            // test()/describe() return promises by design.
+            "files": ["tests/**", "**/*.test.ts", "**/*.test.mjs"],
+            "rules": {
+                "typescript/no-floating-promises": "off",
+                "typescript/no-unsafe-type-assertion": "off"
+            }
+        }
+    ]
 }

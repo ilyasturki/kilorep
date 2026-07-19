@@ -70,7 +70,9 @@ export const MUSCLE_GROUPS = {
 } as const
 
 export type MuscleGroup = keyof typeof MUSCLE_GROUPS
-export const MUSCLE_GROUP_NAMES = Object.keys(MUSCLE_GROUPS) as MuscleGroup[]
+export const MUSCLE_GROUP_NAMES = Object.keys(MUSCLE_GROUPS).filter(
+    (key): key is MuscleGroup => key in MUSCLE_GROUPS,
+)
 
 // The muscle vocabulary the exercise form offers and the table renders.
 export const muscleOptions = Object.values(MUSCLE_GROUPS).flat()

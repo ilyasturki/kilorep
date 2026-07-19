@@ -147,8 +147,8 @@ export function createSessionTree(
     parsed: ParsedSession,
     tx?: DbTransaction,
 ) {
-    const create = (tx: DbTransaction) => {
-        const minPosition = tx
+    const create = (txn: DbTransaction) => {
+        const minPosition = txn
             .select({
                 value: sql<number | null>`min(${tables.sessions.position})`,
             })
@@ -156,7 +156,7 @@ export function createSessionTree(
             .where(eq(tables.sessions.userId, userId))
             .get()?.value
 
-        const session = tx
+        const session = txn
             .insert(tables.sessions)
             .values({
                 name: parsed.name,
@@ -166,7 +166,7 @@ export function createSessionTree(
             .returning()
             .get()
 
-        writeSessionEntries(tx, userId, session.id, parsed.entries)
+        writeSessionEntries(txn, userId, session.id, parsed.entries)
         return session
     }
     return tx ? create(tx) : useDrizzle().transaction(create)

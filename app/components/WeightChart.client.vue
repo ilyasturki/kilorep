@@ -11,6 +11,9 @@ import {
     Tooltip,
 } from 'chart.js'
 
+// Registers the date-fns adapter on Chart.js's global registry, which the time
+// scale below resolves at construction time; there is nothing to bind.
+// oxlint-disable-next-line import/no-unassigned-import
 import 'chartjs-adapter-date-fns'
 
 import { Line } from 'vue-chartjs'

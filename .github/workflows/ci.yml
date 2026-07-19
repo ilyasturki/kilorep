@@ -13,6 +13,17 @@ jobs:
             - uses: oven-sh/setup-bun@v2
             - run: bun install --frozen-lockfile
 
+            # Gates first: a lint or type error should read as itself, not as a
+            # confusing failure three suites deep.
+            - name: Lint (warnings are errors)
+              run: bun run lint
+
+            - name: Formatting
+              run: bun run format
+
+            - name: Typecheck
+              run: bun run typecheck
+
             - name: Unit tests
               run: bun run test:unit
 

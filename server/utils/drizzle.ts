@@ -41,6 +41,9 @@ function createDatabase(): DrizzleDB {
     const sqlite = new Database(DB_FILE_NAME)
     sqlite.pragma('journal_mode = WAL')
     sqlite.pragma('foreign_keys = ON')
+    // WAL already survives process crashes; NORMAL trades the per-commit fsync
+    // (only lost on OS/host failure) for a large write-throughput win.
+    sqlite.pragma('synchronous = NORMAL')
     return drizzle(sqlite, { schema })
 }
 

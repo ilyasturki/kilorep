@@ -40,12 +40,15 @@ export function usePointerReorder(options: ReorderOptions) {
         if (!event.isPrimary || event.button > 0) return
         if (dragIndex.value !== null || armed) return
 
-        const handle = event.currentTarget as HTMLElement
+        const handle = event.currentTarget
+        if (!(handle instanceof HTMLElement)) return
         const row = handle.closest<HTMLElement>('[data-reorder-row]')
         const container = row?.parentElement
         if (!row || !container) return
 
-        const rows = Array.from(container.children) as HTMLElement[]
+        const rows = Array.from(container.children).filter(
+            (child): child is HTMLElement => child instanceof HTMLElement,
+        )
         if (rows.length < 2) return
         // Uniform rows: the top-to-top pitch is exactly one slot's worth of
         // travel, which lets a move map to a slot count without hit-testing

@@ -232,7 +232,7 @@ await call('/api/sessions/{id}', {
 const allSessions = await call('/api/sessions')
 await call('/api/sessions/reorder', {
     method: 'patch',
-    body: { ids: allSessions.map((s) => s.id).reverse() },
+    body: { ids: allSessions.map((s) => s.id).toReversed() },
 })
 
 // ── The gym loop over HTTP: start → log → finish → sync-back ───────────────

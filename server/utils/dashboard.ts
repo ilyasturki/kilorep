@@ -12,6 +12,9 @@ const DAY_MS = 86_400_000
 const WEEK_MS = 7 * DAY_MS
 const TREND_WEEKS = 8
 
+const at = (d: Workout['startedAt']) => new Date(d).getTime()
+const round2 = (n: number) => Math.round(n * 100) / 100
+
 /**
  * Assembles the dashboard payload from the user's full workout history plus
  * weigh-ins. Loads the workout trees once (per-user data stays small) and
@@ -31,7 +34,6 @@ export function loadDashboard(userId: number): DashboardData {
     const workouts = loadWorkoutTrees(userId, ids)
 
     const now = Date.now()
-    const at = (d: Workout['startedAt']) => new Date(d).getTime()
 
     // --- 7-day summary vs the previous 7 days ---
     const since7 = now - WEEK_MS
@@ -77,7 +79,6 @@ export function loadDashboard(userId: number): DashboardData {
         .all()
     const cutoff30 = toDateInput(new Date(now - 30 * DAY_MS))
     const recentWeights = weighIns.filter((e) => e.date >= cutoff30)
-    const round2 = (n: number) => Math.round(n * 100) / 100
     const bodyweight = {
         points: recentWeights.map((e) => ({ date: e.date, weight: e.weight })),
         current: weighIns.length ? weighIns[weighIns.length - 1]!.weight : null,
@@ -147,7 +148,7 @@ export function loadDashboard(userId: number): DashboardData {
                     })
                 }
     const prs = [...best.values()]
-        .sort((a, b) => at(b.startedAt) - at(a.startedAt))
+        .toSorted((a, b) => at(b.startedAt) - at(a.startedAt))
         .slice(0, 5)
 
     return {
