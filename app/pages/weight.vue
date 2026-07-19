@@ -220,9 +220,9 @@ async function confirmDelete() {
                     <span class="stat-lab">HIGHEST · KG</span>
                 </div>
             </template>
-            <button
+            <UiButton
                 type="button"
-                class="btn-primary wk-stats-action"
+                class="wk-stats-action"
                 @click="openAdd"
             >
                 <Icon
@@ -230,7 +230,7 @@ async function confirmDelete() {
                     :size="16"
                 />
                 Log weight
-            </button>
+            </UiButton>
         </div>
 
         <!-- Chart -->
@@ -304,9 +304,9 @@ async function confirmDelete() {
                     {{ row.delta == null ? '' : fmtSigned2(row.delta) }}
                 </span>
                 <div class="wlog-actions">
-                    <button
+                    <UiIconButton
                         type="button"
-                        class="icon-btn sm"
+                        size="sm"
                         :aria-label="`Edit ${fmtDate(parseLocalDay(row.date))}`"
                         @click="openEdit(row)"
                     >
@@ -314,10 +314,11 @@ async function confirmDelete() {
                             name="tabler:pencil"
                             :size="15"
                         />
-                    </button>
-                    <button
+                    </UiIconButton>
+                    <UiIconButton
                         type="button"
-                        class="icon-btn sm icon-btn--danger"
+                        size="sm"
+                        tone="danger"
                         :aria-label="`Delete ${fmtDate(parseLocalDay(row.date))}`"
                         @click="deleteTarget = row"
                     >
@@ -325,7 +326,7 @@ async function confirmDelete() {
                             name="tabler:trash"
                             :size="15"
                         />
-                    </button>
+                    </UiIconButton>
                 </div>
             </div>
         </div>
@@ -368,16 +369,15 @@ async function confirmDelete() {
             </form>
 
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="formOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="!canSave || saving"
                     @click="save"
                 >
@@ -390,7 +390,7 @@ async function confirmDelete() {
                         : editingId ? 'Save changes'
                         : 'Log weight'
                     }}
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -406,16 +406,16 @@ async function confirmDelete() {
             @update:open="(open) => !open && (deleteTarget = null)"
         >
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="deleteTarget = null"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-danger"
+                    tone="danger"
                     :disabled="deleting"
                     @click="confirmDelete"
                 >
@@ -424,7 +424,7 @@ async function confirmDelete() {
                         :size="15"
                     />
                     {{ deleting ? 'Deleting…' : 'Delete' }}
-                </button>
+                </UiButton>
             </template>
         </UiModal>
     </div>

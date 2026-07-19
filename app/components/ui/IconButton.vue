@@ -18,9 +18,11 @@ const iconButton = tv({
             default: '',
             danger: 'hover:border-red hover:text-red',
         },
+        // Separate w-/h- rather than size-*, so a caller overriding just one
+        // axis (the settings copy buttons pass h-auto) wins the merge cleanly.
         size: {
-            default: 'size-[38px]',
-            sm: 'size-8',
+            default: 'h-[38px] w-[38px]',
+            sm: 'h-8 w-8',
         },
     },
     defaultVariants: { tone: 'default', size: 'default' },

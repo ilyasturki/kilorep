@@ -8,8 +8,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{ move: [dir: -1 | 1] }>()
 
-const upBtn = ref<HTMLButtonElement>()
-const downBtn = ref<HTMLButtonElement>()
+// UiIconButton is a component, so a template ref holds its instance rather than
+// the DOM node — focus() has to go through $el.
+const upBtn = ref<ComponentPublicInstance | null>(null)
+const downBtn = ref<ComponentPublicInstance | null>(null)
+
+function focusBtn(btn: typeof upBtn) {
+    ;(btn.value?.$el as HTMLElement | undefined)?.focus()
+}
 
 // Keep focus on the arrows of the item that just moved, so repeated taps walk it
 // several rows without reaching for the mouse again. Stable v-for keys already
@@ -28,10 +34,10 @@ function onMove(dir: -1 | 1) {
 function applyFocus() {
     if (pending === null) return
     const preferUp = pending === -1
-    if (preferUp && props.canUp) upBtn.value?.focus()
-    else if (!preferUp && props.canDown) downBtn.value?.focus()
-    else if (props.canUp) upBtn.value?.focus()
-    else if (props.canDown) downBtn.value?.focus()
+    if (preferUp && props.canUp) focusBtn(upBtn)
+    else if (!preferUp && props.canDown) focusBtn(downBtn)
+    else if (props.canUp) focusBtn(upBtn)
+    else if (props.canDown) focusBtn(downBtn)
     else return // both disabled (save in flight) — the watcher retries on settle
     pending = null
 }
@@ -49,10 +55,10 @@ watch(
 </script>
 
 <template>
-    <button
+    <UiIconButton
         ref="upBtn"
         type="button"
-        class="icon-btn sm"
+        size="sm"
         :aria-label="`Move ${label} up`"
         :disabled="!canUp"
         @click="onMove(-1)"
@@ -61,11 +67,11 @@ watch(
             name="tabler:arrow-up"
             :size="15"
         />
-    </button>
-    <button
+    </UiIconButton>
+    <UiIconButton
         ref="downBtn"
         type="button"
-        class="icon-btn sm"
+        size="sm"
         :aria-label="`Move ${label} down`"
         :disabled="!canDown"
         @click="onMove(1)"
@@ -74,5 +80,5 @@ watch(
             name="tabler:arrow-down"
             :size="15"
         />
-    </button>
+    </UiIconButton>
 </template>

@@ -265,9 +265,9 @@ function planBlocks(session: SessionWithEntries) {
                     Condensed
                 </button>
             </div>
-            <button
+            <UiButton
                 type="button"
-                class="btn-primary ml-auto"
+                class="ml-auto"
                 @click="openBuilder"
             >
                 <Icon
@@ -275,7 +275,7 @@ function planBlocks(session: SessionWithEntries) {
                     :size="16"
                 />
                 New session
-            </button>
+            </UiButton>
         </div>
 
         <!-- Builder -->
@@ -330,9 +330,10 @@ function planBlocks(session: SessionWithEntries) {
                                             )
                                     "
                                 />
-                                <button
+                                <UiIconButton
                                     type="button"
-                                    class="icon-btn sm icon-btn--danger"
+                                    size="sm"
+                                    tone="danger"
                                     aria-label="Remove block"
                                     @click="removeEntry(entryIndex)"
                                 >
@@ -340,7 +341,7 @@ function planBlocks(session: SessionWithEntries) {
                                         name="tabler:trash"
                                         :size="15"
                                     />
-                                </button>
+                                </UiIconButton>
                             </div>
                         </div>
 
@@ -360,10 +361,9 @@ function planBlocks(session: SessionWithEntries) {
                                             @created="onExerciseCreated"
                                         />
                                     </div>
-                                    <button
+                                    <UiIconButton
                                         v-if="entry.exercises.length > 1"
                                         type="button"
-                                        class="icon-btn"
                                         aria-label="Remove exercise"
                                         @click="
                                             removeExerciseFromEntry(
@@ -376,7 +376,7 @@ function planBlocks(session: SessionWithEntries) {
                                             name="tabler:x"
                                             :size="16"
                                         />
-                                    </button>
+                                    </UiIconButton>
                                     <div
                                         v-else
                                         class="flex items-center gap-1"
@@ -397,9 +397,10 @@ function planBlocks(session: SessionWithEntries) {
                                                     )
                                             "
                                         />
-                                        <button
+                                        <UiIconButton
                                             type="button"
-                                            class="icon-btn sm icon-btn--danger"
+                                            size="sm"
+                                            tone="danger"
                                             aria-label="Remove block"
                                             @click="removeEntry(entryIndex)"
                                         >
@@ -407,7 +408,7 @@ function planBlocks(session: SessionWithEntries) {
                                                 name="tabler:trash"
                                                 :size="15"
                                             />
-                                        </button>
+                                        </UiIconButton>
                                     </div>
                                 </div>
 
@@ -425,10 +426,10 @@ function planBlocks(session: SessionWithEntries) {
                                             :min="1"
                                         />
                                         <span class="set-lab">reps</span>
-                                        <button
+                                        <UiIconButton
                                             v-if="exercise.sets.length > 1"
                                             type="button"
-                                            class="icon-btn sm"
+                                            size="sm"
                                             aria-label="Remove set"
                                             @click="
                                                 removeSet(exercise, setIndex)
@@ -438,11 +439,11 @@ function planBlocks(session: SessionWithEntries) {
                                                 name="tabler:minus"
                                                 :size="15"
                                             />
-                                        </button>
+                                        </UiIconButton>
                                     </div>
-                                    <button
+                                    <UiButton
                                         type="button"
-                                        class="btn-link"
+                                        tone="link"
                                         @click="addSet(exercise)"
                                     >
                                         <Icon
@@ -450,14 +451,15 @@ function planBlocks(session: SessionWithEntries) {
                                             :size="14"
                                         />
                                         Add set
-                                    </button>
+                                    </UiButton>
                                 </div>
                             </div>
                         </div>
 
-                        <button
+                        <UiButton
                             type="button"
-                            class="btn-link mt-3"
+                            tone="link"
+                            class="mt-3"
                             @click="addExerciseToEntry(entry)"
                         >
                             <Icon
@@ -465,14 +467,15 @@ function planBlocks(session: SessionWithEntries) {
                                 :size="14"
                             />
                             Add exercise to superset
-                        </button>
+                        </UiButton>
                     </div>
                 </TransitionGroup>
 
                 <div class="flex flex-wrap gap-2">
-                    <button
+                    <UiButton
                         type="button"
-                        class="btn-ghost sm"
+                        tone="ghost"
+                        size="sm"
                         @click="addExercise"
                     >
                         <Icon
@@ -480,10 +483,11 @@ function planBlocks(session: SessionWithEntries) {
                             :size="15"
                         />
                         Add exercise
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton
                         type="button"
-                        class="btn-ghost sm"
+                        tone="ghost"
+                        size="sm"
                         @click="addSuperset"
                     >
                         <Icon
@@ -491,21 +495,20 @@ function planBlocks(session: SessionWithEntries) {
                             :size="15"
                         />
                         Add superset
-                    </button>
+                    </UiButton>
                 </div>
             </div>
 
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="closeBuilder"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="saving"
                     @click="save"
                 >
@@ -518,7 +521,7 @@ function planBlocks(session: SessionWithEntries) {
                         : editingId ? 'Save changes'
                         : 'Save session'
                     }}
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -606,9 +609,9 @@ function planBlocks(session: SessionWithEntries) {
                                 "
                                 @move="(dir) => moveSession(sessionIndex, dir)"
                             />
-                            <button
+                            <UiIconButton
                                 type="button"
-                                class="icon-btn sm"
+                                size="sm"
                                 aria-label="Edit session"
                                 @click="editSession(session)"
                             >
@@ -616,10 +619,11 @@ function planBlocks(session: SessionWithEntries) {
                                     name="tabler:pencil"
                                     :size="15"
                                 />
-                            </button>
-                            <button
+                            </UiIconButton>
+                            <UiIconButton
                                 type="button"
-                                class="icon-btn sm icon-btn--danger"
+                                size="sm"
+                                tone="danger"
                                 aria-label="Delete session"
                                 @click="deleteTarget = session"
                             >
@@ -627,7 +631,7 @@ function planBlocks(session: SessionWithEntries) {
                                     name="tabler:trash"
                                     :size="15"
                                 />
-                            </button>
+                            </UiIconButton>
                         </div>
                     </template>
 
@@ -665,9 +669,9 @@ function planBlocks(session: SessionWithEntries) {
                                         (dir) => moveSession(sessionIndex, dir)
                                     "
                                 />
-                                <button
+                                <UiIconButton
                                     type="button"
-                                    class="icon-btn sm"
+                                    size="sm"
                                     aria-label="Edit session"
                                     @click="editSession(session)"
                                 >
@@ -675,10 +679,11 @@ function planBlocks(session: SessionWithEntries) {
                                         name="tabler:pencil"
                                         :size="15"
                                     />
-                                </button>
-                                <button
+                                </UiIconButton>
+                                <UiIconButton
                                     type="button"
-                                    class="icon-btn sm icon-btn--danger"
+                                    size="sm"
+                                    tone="danger"
                                     aria-label="Delete session"
                                     @click="deleteTarget = session"
                                 >
@@ -686,7 +691,7 @@ function planBlocks(session: SessionWithEntries) {
                                         name="tabler:trash"
                                         :size="15"
                                     />
-                                </button>
+                                </UiIconButton>
                             </div>
                         </div>
 
@@ -739,16 +744,16 @@ function planBlocks(session: SessionWithEntries) {
             @update:open="(open) => !open && (deleteTarget = null)"
         >
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="deleteTarget = null"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-danger"
+                    tone="danger"
                     :disabled="deleting"
                     @click="confirmDelete"
                 >
@@ -757,7 +762,7 @@ function planBlocks(session: SessionWithEntries) {
                         :size="15"
                     />
                     {{ deleting ? 'Deleting…' : 'Delete' }}
-                </button>
+                </UiButton>
             </template>
         </UiModal>
     </div>

@@ -23,16 +23,19 @@ useHead({ title: 'Sign in · Kilorep' })
                 Minimalist strength training — sessions, supersets and weight
                 tracking.
             </p>
-            <a
-                class="btn-primary btn-lg login-cta"
-                href="/auth/google"
+            <UiButton
+                as-child
+                size="lg"
+                class="login-cta"
             >
-                <Icon
-                    name="tabler:brand-google-filled"
-                    :size="18"
-                />
-                Continue with Google
-            </a>
+                <a href="/auth/google">
+                    <Icon
+                        name="tabler:brand-google-filled"
+                        :size="18"
+                    />
+                    Continue with Google
+                </a>
+            </UiButton>
             <p
                 v-if="failed"
                 class="login-error"

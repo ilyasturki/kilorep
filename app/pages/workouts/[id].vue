@@ -555,23 +555,23 @@ async function changeDate() {
                 >
                     Not saved as a session
                 </span>
-                <button
+                <UiButton
                     v-if="template"
                     type="button"
-                    class="btn-link"
+                    tone="link"
                     :disabled="saving"
                     @click="updateOpen = true"
                 >
                     Update
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-link"
+                    tone="link"
                     :disabled="saving"
                     @click="openCreate"
                 >
                     {{ template ? 'Save as new' : 'Save as session' }}
-                </button>
+                </UiButton>
             </div>
         </div>
 
@@ -603,9 +603,9 @@ async function changeDate() {
                     >
                         <span class="tag tag--accent">Superset</span>
                         <div class="flex items-center gap-1">
-                            <button
+                            <UiIconButton
                                 type="button"
-                                class="icon-btn sm"
+                                size="sm"
                                 aria-label="Ungroup superset"
                                 @click="ungroupEntry(block.entryIndex)"
                             >
@@ -613,7 +613,7 @@ async function changeDate() {
                                     name="tabler:unlink"
                                     :size="15"
                                 />
-                            </button>
+                            </UiIconButton>
                             <MoveButtons
                                 label="superset"
                                 :can-up="block.entryIndex > 0"
@@ -658,9 +658,9 @@ async function changeDate() {
                                                 )
                                         "
                                     />
-                                    <button
+                                    <UiIconButton
                                         type="button"
-                                        class="icon-btn sm"
+                                        size="sm"
                                         aria-label="Swap exercise"
                                         @click="
                                             promptSwap(
@@ -673,10 +673,11 @@ async function changeDate() {
                                             name="tabler:switch-horizontal"
                                             :size="15"
                                         />
-                                    </button>
-                                    <button
+                                    </UiIconButton>
+                                    <UiIconButton
                                         type="button"
-                                        class="icon-btn sm icon-btn--danger"
+                                        size="sm"
+                                        tone="danger"
                                         aria-label="Remove exercise"
                                         @click="
                                             promptRemove(
@@ -690,7 +691,7 @@ async function changeDate() {
                                             name="tabler:x"
                                             :size="15"
                                         />
-                                    </button>
+                                    </UiIconButton>
                                 </div>
                             </div>
 
@@ -716,10 +717,10 @@ async function changeDate() {
                                     v-model="set.reps"
                                     :min="1"
                                 />
-                                <button
+                                <UiIconButton
                                     type="button"
-                                    class="icon-btn"
                                     aria-label="Remove set"
+                                    class="h-auto self-stretch"
                                     :disabled="item.ex.sets.length <= 1"
                                     @click="removeSet(item.ex, si)"
                                 >
@@ -727,12 +728,13 @@ async function changeDate() {
                                         name="tabler:minus"
                                         :size="15"
                                     />
-                                </button>
+                                </UiIconButton>
                             </div>
 
-                            <button
+                            <UiButton
                                 type="button"
-                                class="btn-link mt-2"
+                                tone="link"
+                                class="mt-2"
                                 @click="addSet(item.ex)"
                             >
                                 <Icon
@@ -740,13 +742,14 @@ async function changeDate() {
                                     :size="14"
                                 />
                                 Add set
-                            </button>
+                            </UiButton>
                         </div>
                     </div>
 
-                    <button
+                    <UiButton
                         type="button"
-                        class="btn-link mt-3"
+                        tone="link"
+                        class="mt-3"
                         @click="promptAddTo(block.entryIndex)"
                     >
                         <Icon
@@ -758,14 +761,15 @@ async function changeDate() {
                                 'Add exercise to superset'
                             :   'Superset with another exercise'
                         }}
-                    </button>
+                    </UiButton>
                 </div>
             </TransitionGroup>
 
             <div class="mt-3 flex flex-wrap gap-2">
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost sm"
+                    tone="ghost"
+                    size="sm"
                     @click="addOpen = true"
                 >
                     <Icon
@@ -773,10 +777,11 @@ async function changeDate() {
                         :size="15"
                     />
                     Add exercise
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-ghost sm"
+                    tone="ghost"
+                    size="sm"
                     @click="openAddSuperset"
                 >
                     <Icon
@@ -784,7 +789,7 @@ async function changeDate() {
                         :size="15"
                     />
                     Add superset
-                </button>
+                </UiButton>
             </div>
         </template>
 
@@ -863,16 +868,15 @@ async function changeDate() {
                 @created="onExerciseCreated"
             />
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="addOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="!addExerciseId"
                     @click="confirmAdd"
                 >
@@ -881,7 +885,7 @@ async function changeDate() {
                         :size="16"
                     />
                     Add
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -901,9 +905,9 @@ async function changeDate() {
                     creatable
                     @created="onExerciseCreated"
                 />
-                <button
+                <UiButton
                     type="button"
-                    class="btn-link"
+                    tone="link"
                     @click="supersetIds.push(undefined)"
                 >
                     <Icon
@@ -911,19 +915,18 @@ async function changeDate() {
                         :size="14"
                     />
                     Add another exercise
-                </button>
+                </UiButton>
             </div>
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="supersetOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="supersetPicked.length < 2"
                     @click="confirmAddSuperset"
                 >
@@ -932,7 +935,7 @@ async function changeDate() {
                         :size="16"
                     />
                     Add
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -955,16 +958,15 @@ async function changeDate() {
                 @created="onExerciseCreated"
             />
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="addToTarget = undefined"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="!addToExerciseId"
                     @click="confirmAddTo"
                 >
@@ -973,7 +975,7 @@ async function changeDate() {
                         :size="16"
                     />
                     Add
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -992,16 +994,15 @@ async function changeDate() {
                 @created="onExerciseCreated"
             />
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="swapTarget = undefined"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="
                         !swapExerciseId
                         || swapExerciseId === swapSource?.exerciseId
@@ -1013,7 +1014,7 @@ async function changeDate() {
                         :size="16"
                     />
                     Swap
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -1025,16 +1026,16 @@ async function changeDate() {
             @update:open="(open) => !open && (removeTarget = undefined)"
         >
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="removeTarget = undefined"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-danger"
+                    tone="danger"
                     @click="confirmRemove"
                 >
                     <Icon
@@ -1042,7 +1043,7 @@ async function changeDate() {
                         :size="16"
                     />
                     Remove
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -1071,13 +1072,13 @@ async function changeDate() {
                 prescribed reps and syncs the structure only.
             </p>
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="diffOpen = false"
                 >
                     Close
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -1088,16 +1089,15 @@ async function changeDate() {
             :description="`Make ${template?.name} match this workout? Sets it already prescribes keep their reps; only the structure changes.`"
         >
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="updateOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="saving"
                     @click="syncToSession('update')"
                 >
@@ -1106,7 +1106,7 @@ async function changeDate() {
                         :size="16"
                     />
                     Update
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -1127,16 +1127,15 @@ async function changeDate() {
                 aria-label="Session name"
             />
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="createOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="saving || !createName.trim()"
                     @click="syncToSession('create')"
                 >
@@ -1145,7 +1144,7 @@ async function changeDate() {
                         :size="16"
                     />
                     Create
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -1156,16 +1155,15 @@ async function changeDate() {
             description="This marks the workout in progress again and makes it your active workout. Editing the sets here doesn't need this."
         >
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="resumeOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="saving"
                     @click="resume"
                 >
@@ -1174,7 +1172,7 @@ async function changeDate() {
                         :size="16"
                     />
                     Resume training
-                </button>
+                </UiButton>
             </template>
         </UiModal>
     </div>

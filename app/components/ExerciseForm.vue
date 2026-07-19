@@ -180,9 +180,8 @@ defineExpose({ submit, canSubmit, submitting })
                             :items="[...MUSCLE_INTENSITIES]"
                         />
                     </div>
-                    <button
+                    <UiIconButton
                         type="button"
-                        class="icon-btn"
                         :disabled="form.muscles.length === 1"
                         aria-label="Remove muscle"
                         @click="removeMuscle(index)"
@@ -191,11 +190,11 @@ defineExpose({ submit, canSubmit, submitting })
                             name="tabler:x"
                             :size="16"
                         />
-                    </button>
+                    </UiIconButton>
                 </div>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-link"
+                    tone="link"
                     @click="addMuscle"
                 >
                     <Icon
@@ -203,7 +202,7 @@ defineExpose({ submit, canSubmit, submitting })
                         :size="14"
                     />
                     Add muscle
-                </button>
+                </UiButton>
             </div>
         </div>
     </form>

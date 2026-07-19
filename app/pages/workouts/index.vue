@@ -182,9 +182,11 @@ async function confirmDelete() {
                             countLabel(w)
                         }}</span>
                     </div>
-                    <button
+                    <UiIconButton
                         type="button"
-                        class="icon-btn sm icon-btn--danger shrink-0"
+                        size="sm"
+                        tone="danger"
+                        class="shrink-0"
                         aria-label="Delete workout"
                         @click="deleteTarget = w"
                     >
@@ -192,7 +194,7 @@ async function confirmDelete() {
                             name="tabler:trash"
                             :size="15"
                         />
-                    </button>
+                    </UiIconButton>
                 </template>
 
                 <template v-else>
@@ -210,9 +212,10 @@ async function confirmDelete() {
                             >
                                 {{ w.completed ? dayLabel(w) : 'In progress' }}
                             </span>
-                            <button
+                            <UiIconButton
                                 type="button"
-                                class="icon-btn sm icon-btn--danger"
+                                size="sm"
+                                tone="danger"
                                 aria-label="Delete workout"
                                 @click="deleteTarget = w"
                             >
@@ -220,7 +223,7 @@ async function confirmDelete() {
                                     name="tabler:trash"
                                     :size="15"
                                 />
-                            </button>
+                            </UiIconButton>
                         </div>
                     </div>
 
@@ -263,28 +266,33 @@ async function confirmDelete() {
                     </div>
 
                     <div class="card-actions">
-                        <NuxtLink
+                        <UiButton
                             v-if="!w.completed"
-                            :to="`/workouts/${w.id}`"
-                            class="btn-primary"
+                            as-child
+                            class="flex-1"
                         >
-                            <Icon
-                                name="tabler:player-play-filled"
-                                :size="16"
-                            />
-                            Resume
-                        </NuxtLink>
-                        <NuxtLink
+                            <NuxtLink :to="`/workouts/${w.id}`">
+                                <Icon
+                                    name="tabler:player-play-filled"
+                                    :size="16"
+                                />
+                                Resume
+                            </NuxtLink>
+                        </UiButton>
+                        <UiButton
                             v-else
-                            :to="`/workouts/${w.id}`"
-                            class="btn-ghost"
+                            tone="ghost"
+                            as-child
+                            class="flex-1"
                         >
-                            Review
-                            <Icon
-                                name="tabler:chevron-right"
-                                :size="16"
-                            />
-                        </NuxtLink>
+                            <NuxtLink :to="`/workouts/${w.id}`">
+                                Review
+                                <Icon
+                                    name="tabler:chevron-right"
+                                    :size="16"
+                                />
+                            </NuxtLink>
+                        </UiButton>
                     </div>
                 </template>
             </div>
@@ -298,16 +306,16 @@ async function confirmDelete() {
             @update:open="(open) => !open && (deleteTarget = null)"
         >
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="deleteTarget = null"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-danger"
+                    tone="danger"
                     :disabled="deleting"
                     @click="confirmDelete"
                 >
@@ -316,7 +324,7 @@ async function confirmDelete() {
                         :size="15"
                     />
                     {{ deleting ? 'Deleting…' : 'Delete' }}
-                </button>
+                </UiButton>
             </template>
         </UiModal>
     </div>

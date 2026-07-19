@@ -35,15 +35,17 @@ const open = defineModel<boolean>('open', { default: false })
                                 {{ description }}
                             </DialogDescription>
                         </div>
-                        <DialogClose
-                            class="icon-btn sm"
-                            aria-label="Close"
+                        <UiIconButton
+                            as-child
+                            size="sm"
                         >
-                            <Icon
-                                name="tabler:x"
-                                :size="18"
-                            />
-                        </DialogClose>
+                            <DialogClose aria-label="Close">
+                                <Icon
+                                    name="tabler:x"
+                                    :size="18"
+                                />
+                            </DialogClose>
+                        </UiIconButton>
                     </div>
 
                     <slot />

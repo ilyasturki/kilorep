@@ -296,10 +296,11 @@ async function mergeExercise() {
                                 </button>
                             </div>
                         </div>
-                        <button
+                        <UiButton
                             v-if="hasFilters"
                             type="button"
-                            class="btn-link filter-clear"
+                            tone="link"
+                            class="filter-clear"
                             @click="clearFilters"
                         >
                             <Icon
@@ -307,14 +308,13 @@ async function mergeExercise() {
                                 :size="14"
                             />
                             Clear all
-                        </button>
+                        </UiButton>
                     </PopoverContent>
                 </PopoverPortal>
             </PopoverRoot>
 
-            <button
+            <UiButton
                 type="button"
-                class="btn-primary"
                 @click="openAdd"
             >
                 <Icon
@@ -322,7 +322,7 @@ async function mergeExercise() {
                     :size="16"
                 />
                 Add
-            </button>
+            </UiButton>
         </div>
 
         <div class="xtable">
@@ -448,9 +448,9 @@ async function mergeExercise() {
                     </span>
                 </div>
                 <div class="xcell-actions">
-                    <button
+                    <UiIconButton
                         type="button"
-                        class="icon-btn sm"
+                        size="sm"
                         :aria-label="`Edit ${exercise.name}`"
                         @click="openEdit(exercise)"
                     >
@@ -458,10 +458,10 @@ async function mergeExercise() {
                             name="tabler:pencil"
                             :size="16"
                         />
-                    </button>
-                    <button
+                    </UiIconButton>
+                    <UiIconButton
                         type="button"
-                        class="icon-btn sm"
+                        size="sm"
                         :aria-label="`Merge ${exercise.name} into another exercise`"
                         @click="openMerge(exercise)"
                     >
@@ -469,10 +469,11 @@ async function mergeExercise() {
                             name="tabler:arrow-merge"
                             :size="16"
                         />
-                    </button>
-                    <button
+                    </UiIconButton>
+                    <UiIconButton
                         type="button"
-                        class="icon-btn sm icon-btn--danger"
+                        size="sm"
+                        tone="danger"
                         :aria-label="`Delete ${exercise.name}`"
                         @click="exerciseToDelete = exercise"
                     >
@@ -480,7 +481,7 @@ async function mergeExercise() {
                             name="tabler:trash"
                             :size="16"
                         />
-                    </button>
+                    </UiIconButton>
                 </div>
             </div>
         </div>
@@ -503,16 +504,15 @@ async function mergeExercise() {
             />
 
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="isFormOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="
                         !exerciseForm?.canSubmit || exerciseForm?.submitting
                     "
@@ -532,7 +532,7 @@ async function mergeExercise() {
                             )
                         }}
                     </template>
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -544,16 +544,16 @@ async function mergeExercise() {
             @update:open="(open) => !open && (exerciseToDelete = null)"
         >
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="exerciseToDelete = null"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-danger"
+                    tone="danger"
                     :disabled="deleting"
                     @click="deleteExercise"
                 >
@@ -562,7 +562,7 @@ async function mergeExercise() {
                         :size="15"
                     />
                     {{ deleting ? 'Deleting…' : 'Delete' }}
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -583,16 +583,16 @@ async function mergeExercise() {
             </div>
 
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="exerciseToMerge = null"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-danger"
+                    tone="danger"
                     :disabled="mergeTargetId === undefined || merging"
                     @click="mergeExercise"
                 >
@@ -601,7 +601,7 @@ async function mergeExercise() {
                         :size="15"
                     />
                     {{ merging ? 'Merging…' : 'Merge' }}
-                </button>
+                </UiButton>
             </template>
         </UiModal>
     </div>

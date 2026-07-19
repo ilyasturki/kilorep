@@ -270,9 +270,10 @@ async function deleteAccount() {
         <div class="card">
             <div class="card-head mb-4">
                 <span class="kicker kicker--accent">Account</span>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost sm"
+                    tone="ghost"
+                    size="sm"
                     @click="signOut"
                 >
                     <Icon
@@ -280,7 +281,7 @@ async function deleteAccount() {
                         :size="15"
                     />
                     Sign out
-                </button>
+                </UiButton>
             </div>
             <div class="acct">
                 <img
@@ -300,9 +301,11 @@ async function deleteAccount() {
                 session and keeps this one. Devices signed in with a token are
                 listed under MCP access, and stay connected.
             </p>
-            <button
+            <UiButton
                 type="button"
-                class="btn-ghost sm mt-2"
+                tone="ghost"
+                size="sm"
+                class="mt-2"
                 :disabled="revoking"
                 @click="revokeSessions"
             >
@@ -311,7 +314,7 @@ async function deleteAccount() {
                     :size="15"
                 />
                 Sign out other browsers
-            </button>
+            </UiButton>
         </div>
 
         <div class="card">
@@ -337,9 +340,10 @@ async function deleteAccount() {
         <div class="card">
             <div class="card-head mb-4">
                 <span class="kicker kicker--accent">MCP access</span>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost sm"
+                    tone="ghost"
+                    size="sm"
                     @click="createOpen = true"
                 >
                     <Icon
@@ -347,7 +351,7 @@ async function deleteAccount() {
                         :size="15"
                     />
                     New token
-                </button>
+                </UiButton>
             </div>
             <p class="settings-hint">
                 Tokens let MCP clients like Claude Code log workouts and
@@ -373,9 +377,9 @@ async function deleteAccount() {
                             @keydown.esc="editingId = null"
                         />
                         <div class="token-actions">
-                            <button
+                            <UiIconButton
                                 type="button"
-                                class="icon-btn sm"
+                                size="sm"
                                 aria-label="Save name"
                                 @click="saveRename"
                             >
@@ -383,10 +387,10 @@ async function deleteAccount() {
                                     name="tabler:check"
                                     :size="15"
                                 />
-                            </button>
-                            <button
+                            </UiIconButton>
+                            <UiIconButton
                                 type="button"
-                                class="icon-btn sm"
+                                size="sm"
                                 aria-label="Cancel rename"
                                 @click="editingId = null"
                             >
@@ -394,7 +398,7 @@ async function deleteAccount() {
                                     name="tabler:x"
                                     :size="15"
                                 />
-                            </button>
+                            </UiIconButton>
                         </div>
                     </template>
                     <template v-else>
@@ -407,9 +411,9 @@ async function deleteAccount() {
                             </span>
                         </div>
                         <div class="token-actions">
-                            <button
+                            <UiIconButton
                                 type="button"
-                                class="icon-btn sm"
+                                size="sm"
                                 aria-label="Rename token"
                                 @click="startRename(t.id, t.label)"
                             >
@@ -417,19 +421,21 @@ async function deleteAccount() {
                                     name="tabler:pencil"
                                     :size="15"
                                 />
-                            </button>
-                            <button
+                            </UiIconButton>
+                            <UiButton
                                 v-if="confirmingId === t.id"
                                 type="button"
-                                class="btn-danger sm"
+                                tone="danger"
+                                size="sm"
                                 @click="removeToken(t.id)"
                             >
                                 Confirm?
-                            </button>
-                            <button
+                            </UiButton>
+                            <UiIconButton
                                 v-else
                                 type="button"
-                                class="icon-btn sm icon-btn--danger"
+                                size="sm"
+                                tone="danger"
                                 aria-label="Delete token"
                                 @click="askDelete(t.id)"
                             >
@@ -437,7 +443,7 @@ async function deleteAccount() {
                                     name="tabler:trash"
                                     :size="15"
                                 />
-                            </button>
+                            </UiIconButton>
                         </div>
                     </template>
                 </li>
@@ -459,13 +465,13 @@ async function deleteAccount() {
         <div class="card">
             <div class="card-head mb-4">
                 <span class="kicker">Danger zone</span>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-danger"
+                    tone="danger"
                     @click="confirmOpen = true"
                 >
                     Delete account
-                </button>
+                </UiButton>
             </div>
             <p class="settings-hint">
                 Permanently deletes your account with every workout, session,
@@ -496,9 +502,9 @@ async function deleteAccount() {
             <template v-else>
                 <div class="token-row">
                     <code class="token mono">{{ minted }}</code>
-                    <button
+                    <UiIconButton
                         type="button"
-                        class="icon-btn copy-btn"
+                        class="h-auto"
                         aria-label="Copy token"
                         @click="copy(minted, 'Token')"
                     >
@@ -506,7 +512,7 @@ async function deleteAccount() {
                             name="tabler:copy"
                             :size="15"
                         />
-                    </button>
+                    </UiIconButton>
                 </div>
                 <p class="settings-hint">Claude Code — pick a scope and run:</p>
                 <div class="scope-row">
@@ -518,9 +524,9 @@ async function deleteAccount() {
                 </div>
                 <div class="cmd-row">
                     <code class="token-cmd mono">{{ mcpCommand }}</code>
-                    <button
+                    <UiIconButton
                         type="button"
-                        class="icon-btn copy-btn"
+                        class="h-auto"
                         aria-label="Copy command"
                         @click="copy(mcpCommand, 'Command')"
                     >
@@ -528,16 +534,16 @@ async function deleteAccount() {
                             name="tabler:copy"
                             :size="15"
                         />
-                    </button>
+                    </UiIconButton>
                 </div>
                 <p class="settings-hint">
                     Any other MCP client — drop this into its config:
                 </p>
                 <div class="cmd-row">
                     <code class="token-cmd token-json mono">{{ mcpJson }}</code>
-                    <button
+                    <UiIconButton
                         type="button"
-                        class="icon-btn copy-btn"
+                        class="h-auto"
                         aria-label="Copy JSON config"
                         @click="copy(mcpJson, 'Config')"
                     >
@@ -545,35 +551,33 @@ async function deleteAccount() {
                             name="tabler:copy"
                             :size="15"
                         />
-                    </button>
+                    </UiIconButton>
                 </div>
             </template>
             <template #footer>
                 <template v-if="!minted">
-                    <button
+                    <UiButton
                         type="button"
-                        class="btn-ghost"
+                        tone="ghost"
                         @click="createOpen = false"
                     >
                         Cancel
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton
                         type="button"
-                        class="btn-primary"
                         :disabled="minting"
                         @click="createToken"
                     >
                         Create
-                    </button>
+                    </UiButton>
                 </template>
-                <button
+                <UiButton
                     v-else
                     type="button"
-                    class="btn-primary"
                     @click="createOpen = false"
                 >
                     Done
-                </button>
+                </UiButton>
             </template>
         </UiModal>
 
@@ -583,21 +587,21 @@ async function deleteAccount() {
             description="Everything you logged is permanently removed. This cannot be undone."
         >
             <template #footer>
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="confirmOpen = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-danger"
+                    tone="danger"
                     :disabled="deleting"
                     @click="deleteAccount"
                 >
                     Delete everything
-                </button>
+                </UiButton>
             </template>
         </UiModal>
     </div>

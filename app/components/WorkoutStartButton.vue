@@ -129,17 +129,18 @@ async function startWorkout(sessionId: number) {
             v-else
             class="space-y-2"
         >
-            <button
+            <UiButton
                 v-for="s in sessions"
                 :key="s.id"
                 type="button"
-                class="btn-ghost w-full justify-between"
+                tone="ghost"
+                class="w-full justify-between"
                 :disabled="starting"
                 @click="startWorkout(s.id)"
             >
                 <span class="font-semibold">{{ s.name }}</span>
                 <span class="kicker">{{ sessionSummary(s) }}</span>
-            </button>
+            </UiButton>
         </div>
     </UiModal>
 </template>

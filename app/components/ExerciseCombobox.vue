@@ -153,16 +153,15 @@ function onCreated(exercise: Exercise) {
             />
 
             <div class="flex justify-end gap-2 pt-1">
-                <button
+                <UiButton
                     type="button"
-                    class="btn-ghost"
+                    tone="ghost"
                     @click="creating = false"
                 >
                     Cancel
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                     type="button"
-                    class="btn-primary"
                     :disabled="!createForm?.canSubmit || createForm?.submitting"
                     @click="createForm?.submit()"
                 >
@@ -171,7 +170,7 @@ function onCreated(exercise: Exercise) {
                         :size="16"
                     />
                     {{ createForm?.submitting ? 'Adding…' : 'Create & select' }}
-                </button>
+                </UiButton>
             </div>
         </div>
     </div>

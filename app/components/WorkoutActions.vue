@@ -26,10 +26,10 @@ const editing = defineModel<boolean>('editing', { required: true })
         :class="{ 'wk-actions--foot': foot }"
     >
         <!-- In-progress: the one button that completes the workout. -->
-        <button
+        <UiButton
             v-if="editing && !completed"
             type="button"
-            class="btn-primary"
+            class="flex-1"
             :disabled="saving"
             @click="$emit('finish')"
         >
@@ -38,13 +38,13 @@ const editing = defineModel<boolean>('editing', { required: true })
                 :size="16"
             />
             Finish workout
-        </button>
+        </UiButton>
 
         <!-- Editing a finished workout: leave edit mode; it stays completed. -->
-        <button
+        <UiButton
             v-else-if="editing"
             type="button"
-            class="btn-primary"
+            class="flex-1"
             :disabled="saving"
             @click="editing = false"
         >
@@ -53,13 +53,14 @@ const editing = defineModel<boolean>('editing', { required: true })
                 :size="16"
             />
             Done
-        </button>
+        </UiButton>
 
         <!-- Reviewing a finished workout: edit in place, or resume training. -->
         <template v-else>
-            <button
+            <UiButton
                 type="button"
-                class="btn-ghost"
+                tone="ghost"
+                class="flex-1"
                 :disabled="saving"
                 @click="editing = true"
             >
@@ -68,10 +69,11 @@ const editing = defineModel<boolean>('editing', { required: true })
                     :size="15"
                 />
                 Edit
-            </button>
-            <button
+            </UiButton>
+            <UiButton
                 type="button"
-                class="btn-ghost"
+                tone="ghost"
+                class="flex-1"
                 :disabled="saving || resumeBlocked"
                 :title="
                     resumeBlocked ?
@@ -85,7 +87,7 @@ const editing = defineModel<boolean>('editing', { required: true })
                     :size="15"
                 />
                 Resume training
-            </button>
+            </UiButton>
             <p
                 v-if="resumeBlocked"
                 class="wk-actions-hint"
