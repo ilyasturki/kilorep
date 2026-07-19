@@ -67,14 +67,22 @@ const isToday = (d: Date) => (today.value ? isSameDay(d, today.value) : false)
 function open(workout: WorkoutWithEntries | null) {
     if (workout) navigateTo(`/workouts/${workout.id}`)
 }
+
+const DAY_CELL =
+    'flex min-h-[52px] flex-col items-center justify-center gap-[5px] border-none bg-transparent font-mono text-body-sm select-none'
+
+// Days with a workout are the only interactive cells — a tap opens that day's
+// most recent workout, so only they carry the hover treatment.
+const DAY_HAS =
+    'transition-[background,color] duration-[120ms] hover:bg-surface-2 hover:text-accent-ink'
 </script>
 
 <template>
-    <div class="wk-cal">
-        <div class="wk-cal-head">
+    <div class="border border-line-2 bg-surface p-4">
+        <div class="mb-3.5 flex items-center justify-between">
             <button
                 type="button"
-                class="wk-cal-nav"
+                class="inline-flex size-[30px] items-center justify-center border border-line bg-surface text-ink-2 transition-[border-color,color] duration-[120ms] hover:border-accent hover:text-ink"
                 aria-label="Previous month"
                 @click="cursor = addMonths(cursor, -1)"
             >
@@ -83,10 +91,13 @@ function open(workout: WorkoutWithEntries | null) {
                     :size="16"
                 />
             </button>
-            <span class="wk-cal-heading">{{ heading }}</span>
+            <span
+                class="font-mono text-body-sm font-semibold tracking-[0.02em] text-ink uppercase"
+                >{{ heading }}</span
+            >
             <button
                 type="button"
-                class="wk-cal-nav"
+                class="inline-flex size-[30px] items-center justify-center border border-line bg-surface text-ink-2 transition-[border-color,color] duration-[120ms] hover:border-accent hover:text-ink"
                 aria-label="Next month"
                 @click="cursor = addMonths(cursor, 1)"
             >
@@ -97,27 +108,28 @@ function open(workout: WorkoutWithEntries | null) {
             </button>
         </div>
 
-        <div class="wk-cal-weekrow">
+        <div class="grid grid-cols-7">
             <span
                 v-for="d in weekdays"
                 :key="d"
-                class="wk-cal-weekday"
+                class="pb-2 text-center text-micro font-medium text-ink-3 uppercase"
             >
                 {{ d }}
             </span>
         </div>
 
-        <div class="wk-cal-days">
+        <div class="grid grid-cols-7 gap-0.5">
             <component
                 :is="day.workout ? 'button' : 'div'"
                 v-for="day in days"
                 :key="day.key"
-                class="wk-cal-day"
-                :class="{
-                    'wk-cal-day--has': day.workout,
-                    'wk-cal-day--outside': day.outside,
-                    'wk-cal-day--today': isToday(day.date),
-                }"
+                :class="[
+                    DAY_CELL,
+                    day.workout && DAY_HAS,
+                    day.outside ? 'text-ink-3' : 'text-ink',
+                    isToday(day.date)
+                        && 'shadow-[inset_0_0_0_1px_var(--line-2)]',
+                ]"
                 :type="day.workout ? 'button' : undefined"
                 :aria-label="
                     day.workout ?
@@ -129,7 +141,8 @@ function open(workout: WorkoutWithEntries | null) {
                 <span>{{ day.num }}</span>
                 <span
                     v-if="day.workout"
-                    class="wk-cal-dot"
+                    class="size-[5px] bg-accent"
+                    :class="day.outside && 'opacity-50'"
                 />
             </component>
         </div>
