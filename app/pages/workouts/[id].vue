@@ -501,7 +501,7 @@ async function changeDate() {
             Workout not found.
             <NuxtLink
                 to="/workouts"
-                class="kicker--accent"
+                class="text-accent-ink"
             >
                 Back to workouts
             </NuxtLink>

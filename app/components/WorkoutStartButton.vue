@@ -111,7 +111,7 @@ async function startWorkout(sessionId: number) {
             No templates yet.
             <NuxtLink
                 to="/sessions"
-                class="kicker--accent"
+                class="text-accent-ink"
             >
                 Create a session
             </NuxtLink>

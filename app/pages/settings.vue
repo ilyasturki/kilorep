@@ -269,7 +269,7 @@ async function deleteAccount() {
     <div class="space-y-4">
         <UiCard>
             <UiCardHead class="mb-4">
-                <span class="kicker kicker--accent">Account</span>
+                <span class="kicker text-accent-ink">Account</span>
                 <UiButton
                     type="button"
                     tone="ghost"
@@ -319,7 +319,7 @@ async function deleteAccount() {
 
         <UiCard>
             <UiCardHead class="mb-4">
-                <span class="kicker kicker--accent"
+                <span class="kicker text-accent-ink"
                     >Number &amp; date format</span
                 >
             </UiCardHead>
@@ -339,7 +339,7 @@ async function deleteAccount() {
 
         <UiCard>
             <UiCardHead class="mb-4">
-                <span class="kicker kicker--accent">MCP access</span>
+                <span class="kicker text-accent-ink">MCP access</span>
                 <UiButton
                     type="button"
                     tone="ghost"

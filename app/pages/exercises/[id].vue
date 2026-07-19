@@ -36,7 +36,7 @@ const videoUrl = computed(
             Exercise not found.
             <NuxtLink
                 to="/exercises"
-                class="kicker--accent"
+                class="text-accent-ink"
             >
                 Back to exercises
             </NuxtLink>

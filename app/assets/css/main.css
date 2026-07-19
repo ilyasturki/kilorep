@@ -123,6 +123,36 @@
     --text-body-lg: 15px;
 }
 
+/* Tabular figures so digits in stats, weights and dates keep a fixed advance
+   width and never jitter as values change. Tailwind's tabular-nums utility
+   does not survive here, so the OpenType feature is set directly. */
+@utility mono {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum' 1;
+}
+
+@utility kicker {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+@utility stat-num {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+@utility stat-lab {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+}
+
 @layer base {
     *,
     *::before,
@@ -168,11 +198,6 @@
 }
 
 @layer components {
-    .mono {
-        font-family: 'JetBrains Mono', ui-monospace, monospace;
-        font-feature-settings: 'tnum' 1;
-    }
-
     /* ===== App shell ===================================== */
     .shell {
         min-height: 100vh;
@@ -802,20 +827,6 @@
         flex: none;
     }
 
-    /* ===== Primitives ==================================== */
-    .kicker {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10.5px;
-        font-weight: 600;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: var(--ink-3);
-    }
-
-    .kicker--accent {
-        color: var(--accent-ink);
-    }
-
     .dotsep {
         color: var(--ink-3);
     }
@@ -877,20 +888,6 @@
     .xname-cell .custom-mark {
         margin-left: 6px;
         vertical-align: middle;
-    }
-
-    /* ----- Stats ----- */
-    .stat-num {
-        font-size: 30px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-    }
-
-    .stat-lab {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9.5px;
-        letter-spacing: 0.16em;
-        color: var(--ink-3);
     }
 
     /* ===== Exercise toolbar + filter popover =========== */
