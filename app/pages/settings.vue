@@ -283,20 +283,23 @@ async function deleteAccount() {
                     Sign out
                 </UiButton>
             </UiCardHead>
-            <div class="acct">
+            <div class="flex items-center gap-3.5">
                 <img
                     v-if="user?.avatarUrl"
                     :src="user.avatarUrl"
-                    class="acct-avatar"
+                    class="size-10 flex-none rounded-full"
                     alt=""
                     referrerpolicy="no-referrer"
                 />
-                <div class="acct-id">
+                <div class="flex min-w-0 flex-col gap-0.5">
                     <strong>{{ user?.name ?? '—' }}</strong>
-                    <span class="acct-email">{{ user?.email }}</span>
+                    <span
+                        class="overflow-hidden text-body-sm text-ellipsis text-ink-2"
+                        >{{ user?.email }}</span
+                    >
                 </div>
             </div>
-            <p class="settings-hint mt-3">
+            <p class="mt-3 text-[13.5px] leading-[1.55] text-ink-2">
                 Left yourself signed in somewhere? This ends every other browser
                 session and keeps this one. Devices signed in with a token are
                 listed under MCP access, and stay connected.
@@ -323,7 +326,7 @@ async function deleteAccount() {
                     >Number &amp; date format</span
                 >
             </UiCardHead>
-            <p class="settings-hint">
+            <p class="text-[13.5px] leading-[1.55] text-ink-2">
                 How weights, volumes and dates are written. "Automatic" follows
                 this device; pick a region to keep it the same on every browser.
             </p>
@@ -332,7 +335,7 @@ async function deleteAccount() {
                 :items="localeItems"
                 @update:model-value="saveLocale"
             />
-            <p class="settings-hint mt-2">
+            <p class="mt-2 text-[13.5px] leading-[1.55] text-ink-2">
                 Preview: <span class="mono">{{ samplePreview }}</span>
             </p>
         </UiCard>
@@ -353,19 +356,19 @@ async function deleteAccount() {
                     New token
                 </UiButton>
             </UiCardHead>
-            <p class="settings-hint">
+            <p class="text-[13.5px] leading-[1.55] text-ink-2">
                 Tokens let MCP clients like Claude Code log workouts and
                 weigh-ins via the <span class="mono">/mcp</span> endpoint. Each
                 token is shown in full exactly once, at creation.
             </p>
             <ul
                 v-if="tokens?.length"
-                class="token-list"
+                class="mt-3.5 border border-line"
             >
                 <li
                     v-for="t in tokens"
                     :key="t.id"
-                    class="token-item"
+                    class="flex min-w-0 items-center justify-between gap-2.5 px-3 py-2.5 not-first:border-t not-first:border-t-line"
                 >
                     <template v-if="editingId === t.id">
                         <UiInput
@@ -377,7 +380,7 @@ async function deleteAccount() {
                             @keydown.enter="saveRename"
                             @keydown.esc="editingId = null"
                         />
-                        <div class="token-actions">
+                        <div class="flex flex-none gap-2">
                             <UiIconButton
                                 type="button"
                                 size="sm"
@@ -403,15 +406,19 @@ async function deleteAccount() {
                         </div>
                     </template>
                     <template v-else>
-                        <div class="token-info">
-                            <span class="token-label">{{ t.label }}</span>
-                            <span class="token-meta mono">
+                        <div class="flex min-w-0 flex-col gap-0.5">
+                            <span class="text-body font-semibold">{{
+                                t.label
+                            }}</span>
+                            <span
+                                class="mono truncate text-[11.5px] text-ink-2"
+                            >
                                 {{ t.tokenPrefix }}… ·
                                 {{ fmtDate(t.createdAt) }} ·
                                 {{ lastUsed(t.lastUsedAt) }}
                             </span>
                         </div>
-                        <div class="token-actions">
+                        <div class="flex flex-none gap-2">
                             <UiIconButton
                                 type="button"
                                 size="sm"
@@ -451,13 +458,13 @@ async function deleteAccount() {
             </ul>
             <p
                 v-else-if="tokensError"
-                class="settings-hint mt-3"
+                class="mt-3 text-[13.5px] leading-[1.55] text-ink-2"
             >
                 Couldn't load your tokens — reload the page to retry.
             </p>
             <p
                 v-else
-                class="settings-hint mt-3"
+                class="mt-3 text-[13.5px] leading-[1.55] text-ink-2"
             >
                 No tokens yet — create one to connect a client.
             </p>
@@ -474,7 +481,7 @@ async function deleteAccount() {
                     Delete account
                 </UiButton>
             </UiCardHead>
-            <p class="settings-hint">
+            <p class="text-[13.5px] leading-[1.55] text-ink-2">
                 Permanently deletes your account with every workout, session,
                 exercise and weigh-in. There is no undo.
             </p>
@@ -502,8 +509,11 @@ async function deleteAccount() {
                 />
             </template>
             <template v-else>
-                <div class="token-row">
-                    <code class="token mono">{{ minted }}</code>
+                <div class="mt-3.5 flex min-w-0 items-stretch gap-2.5">
+                    <code
+                        class="mono min-w-0 flex-1 overflow-x-auto border border-line bg-surface-2 px-3 py-2.5 text-body-sm leading-[1.6] whitespace-nowrap"
+                        >{{ minted }}</code
+                    >
                     <UiIconButton
                         type="button"
                         class="h-auto"
@@ -516,16 +526,26 @@ async function deleteAccount() {
                         />
                     </UiIconButton>
                 </div>
-                <p class="settings-hint">Claude Code — pick a scope and run:</p>
-                <div class="scope-row">
-                    <span class="scope-label">Scope</span>
-                    <UiSelect
-                        v-model="scope"
-                        :items="scopeItems"
-                    />
+                <p class="mt-3 text-[13.5px] leading-[1.55] text-ink-2">
+                    Claude Code — pick a scope and run:
+                </p>
+                <div class="mt-2.5 flex items-center gap-2.5">
+                    <span class="font-mono text-micro text-ink-2">Scope</span>
+                    <!-- Wrapper rather than a class on UiSelect: SelectRoot
+                         renders no element, so an inherited class is dropped.
+                         The trigger is width:100%, so this sizes it. -->
+                    <div class="flex-1">
+                        <UiSelect
+                            v-model="scope"
+                            :items="scopeItems"
+                        />
+                    </div>
                 </div>
-                <div class="cmd-row">
-                    <code class="token-cmd mono">{{ mcpCommand }}</code>
+                <div class="mt-2.5 flex min-w-0 items-stretch gap-2.5">
+                    <code
+                        class="mono flex-1 overflow-x-auto border border-line bg-surface-2 px-3 py-2.5 text-[12.5px] leading-[1.6] whitespace-nowrap text-ink-2"
+                        >{{ mcpCommand }}</code
+                    >
                     <UiIconButton
                         type="button"
                         class="h-auto"
@@ -538,11 +558,14 @@ async function deleteAccount() {
                         />
                     </UiIconButton>
                 </div>
-                <p class="settings-hint">
+                <p class="mt-3.5 text-[13.5px] leading-[1.55] text-ink-2">
                     Any other MCP client — drop this into its config:
                 </p>
-                <div class="cmd-row">
-                    <code class="token-cmd token-json mono">{{ mcpJson }}</code>
+                <div class="mt-2.5 flex min-w-0 items-stretch gap-2.5">
+                    <code
+                        class="mono flex-1 overflow-x-auto border border-line bg-surface-2 px-3 py-2.5 text-[12.5px] leading-[1.6] whitespace-pre text-ink-2"
+                        >{{ mcpJson }}</code
+                    >
                     <UiIconButton
                         type="button"
                         class="h-auto"
