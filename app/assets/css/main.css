@@ -658,16 +658,6 @@
         }
     }
 
-    /* Lets a stretched Segmented drop onto its own line instead of pushing the
-       row past a phone-width viewport (which would unseat the fixed tabbar).
-       The stretching itself lives on UiSegmented's `stretch` variant; UiCardHead
-       carries its own wrap. */
-    @media (max-width: 560px) {
-        .view-bar {
-            flex-wrap: wrap;
-        }
-    }
-
     /* ===== reka-ui Select =============================== */
     .select-trigger {
         width: 100%;
@@ -1057,27 +1047,6 @@
         color: var(--ink-2);
         margin-top: 2px;
         line-height: 1.45;
-    }
-
-    /* ===== Empty / loading =============================== */
-    /* ===== Workout log card ============================== */
-    /* Compact totals line under the card title (exercises · sets · volume ·
-       duration) — natural-reading mono, not the wide-tracked kicker. */
-    .wk-meta {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
-        letter-spacing: 0.02em;
-        color: var(--ink-2);
-        margin-top: 10px;
-    }
-
-    /* At-a-glance exercise list on a workout card: reuses the session plan
-       readout (UiPlanBlock/UiPlanExercise) so a logged workout and its template
-       look the same. Divider sets it off from the meta line above. */
-    .wk-glance {
-        margin-top: 14px;
-        padding-top: 4px;
-        border-top: 1px solid var(--line);
     }
 
     /* ===== Workout tracking ============================== */

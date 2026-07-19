@@ -117,7 +117,9 @@ async function confirmDelete() {
 
 <template>
     <div>
-        <div class="mb-5 flex items-center gap-4 view-bar">
+        <!-- Wraps on phones so a stretched Segmented drops onto its own line
+             instead of pushing the row past the viewport. -->
+        <div class="mb-5 flex items-center gap-4 max-md:flex-wrap">
             <UiSegmented
                 v-if="ordered.length"
                 stretch
@@ -225,11 +227,18 @@ async function confirmDelete() {
                         class="mt-3"
                     />
 
-                    <p class="wk-meta">{{ metaLine(w) }}</p>
+                    <!-- Totals line: natural-reading mono, not the wide-tracked kicker. -->
+                    <p
+                        class="mt-2.5 font-mono text-label tracking-[0.02em] text-ink-2"
+                    >
+                        {{ metaLine(w) }}
+                    </p>
 
+                    <!-- At-a-glance exercise list, reusing the session plan readout so a
+                         logged workout and its template look the same. -->
                     <div
                         v-if="w.blocks.length"
-                        class="wk-glance"
+                        class="mt-3.5 border-t border-t-line pt-1"
                     >
                         <UiPlanBlock
                             v-for="(block, bi) in w.blocks"
