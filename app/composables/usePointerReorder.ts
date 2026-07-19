@@ -124,7 +124,7 @@ export function usePointerReorder(options: ReorderOptions) {
             // they belong on screen) don't animate the swap or trip FLIP.
             noTransition.value = true
             options.onCommit(from, to)
-            nextTick(() => {
+            void nextTick(() => {
                 requestAnimationFrame(() => {
                     noTransition.value = false
                 })
