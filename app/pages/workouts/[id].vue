@@ -594,8 +594,8 @@ async function changeDate() {
                 <div
                     v-for="block in blocks"
                     :key="block.entryId"
-                    class="builder-block"
-                    :class="{ 'builder-block--ss': block.isSuperset }"
+                    class="border border-line bg-surface-2 p-3.5"
+                    :class="{ 'border-l-2 border-l-line-2': block.isSuperset }"
                 >
                     <div
                         v-if="block.isSuperset"
@@ -697,8 +697,14 @@ async function changeDate() {
 
                             <div class="logset logset-head">
                                 <span />
-                                <span class="set-lab">KG</span>
-                                <span class="set-lab">REPS</span>
+                                <span
+                                    class="text-center font-mono text-micro text-ink-3"
+                                    >KG</span
+                                >
+                                <span
+                                    class="text-center font-mono text-micro text-ink-3"
+                                    >REPS</span
+                                >
                                 <span />
                             </div>
                             <div
@@ -706,7 +712,10 @@ async function changeDate() {
                                 :key="si"
                                 class="logset"
                             >
-                                <span class="set-lab">{{ si + 1 }}</span>
+                                <span
+                                    class="text-center font-mono text-micro text-ink-3"
+                                    >{{ si + 1 }}</span
+                                >
                                 <UiNumberField
                                     v-model="set.weight"
                                     :min="0"
@@ -825,7 +834,9 @@ async function changeDate() {
                             :key="si"
                             class="logline"
                         >
-                            <span class="set-lab">{{ si + 1 }}</span>
+                            <span class="font-mono text-micro text-ink-3">{{
+                                si + 1
+                            }}</span>
                             <span class="logline-load">
                                 {{ weightLabel(set.weight) }}
                                 <span class="x">×</span>

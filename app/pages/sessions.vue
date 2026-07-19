@@ -298,9 +298,10 @@ function planBlocks(session: SessionWithEntries) {
                     <div
                         v-for="(entry, entryIndex) in draft.entries"
                         :key="entry.id"
-                        class="builder-block"
+                        class="border border-line bg-surface-2 p-3.5"
                         :class="{
-                            'builder-block--ss': entry.exercises.length > 1,
+                            'border-l-2 border-l-line-2':
+                                entry.exercises.length > 1,
                         }"
                     >
                         <div
@@ -410,16 +411,21 @@ function planBlocks(session: SessionWithEntries) {
                                     <div
                                         v-for="(set, setIndex) in exercise.sets"
                                         :key="setIndex"
-                                        class="set-row"
+                                        class="flex items-center gap-2.5"
                                     >
-                                        <span class="set-lab">
+                                        <span
+                                            class="w-[42px] flex-none font-mono text-micro text-ink-3"
+                                        >
                                             SET {{ setIndex + 1 }}
                                         </span>
                                         <UiNumberField
                                             v-model="set.reps"
                                             :min="1"
                                         />
-                                        <span class="set-lab">reps</span>
+                                        <span
+                                            class="w-[42px] flex-none font-mono text-micro text-ink-3"
+                                            >reps</span
+                                        >
                                         <UiIconButton
                                             v-if="exercise.sets.length > 1"
                                             type="button"

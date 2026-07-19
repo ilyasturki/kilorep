@@ -658,31 +658,6 @@
         }
     }
 
-    /* ===== Builder ======================================= */
-    .builder-block {
-        border: 1px solid var(--line);
-        padding: 14px;
-        background: var(--surface-2);
-    }
-
-    .builder-block--ss {
-        border-left: 2px solid var(--line-2);
-    }
-
-    .set-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .set-lab {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 11px;
-        color: var(--ink-3);
-        width: 42px;
-        flex: none;
-    }
-
     /* Lets a stretched Segmented drop onto its own line instead of pushing the
        row past a phone-width viewport (which would unseat the fixed tabbar).
        The stretching itself lives on UiSegmented's `stretch` variant; UiCardHead
@@ -1553,12 +1528,6 @@
         .logset > :first-child {
             display: none;
         }
-    }
-
-    .logset-head .set-lab,
-    .logset .set-lab {
-        width: auto;
-        text-align: center;
     }
 
     /* Review mode: one read-only "weight × reps" line per logged set */
