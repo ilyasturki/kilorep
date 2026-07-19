@@ -122,7 +122,12 @@
 
     /* Lift's own five breakpoints, none of which match Tailwind's defaults. The
        stock scale is cleared rather than extended so a stray `sm:` can't resolve
-       to a 640px edge this design has no rule at. */
+       to a 640px edge this design has no rule at.
+
+       `max-*` here is exclusive (`width < 360px`) where the hand-written CSS it
+       replaces used inclusive `max-width: 360px`. Deliberate: the values stay
+       round and the min/max pair stays complementary, at the cost of the
+       boundary pixel itself behaving as the wider layout. */
     --breakpoint-*: initial;
     --breakpoint-xs: 360px;
     --breakpoint-sm: 480px;
@@ -765,105 +770,6 @@
         color: var(--ink-2);
         margin-top: 2px;
         line-height: 1.45;
-    }
-
-    /* ===== Workout tracking ============================== */
-    /* Pins flush under the header so Finish/Reopen stay reachable on a long set
-       list. No top padding: the button docks straight onto the topbar instead
-       of floating in a dark band. Opaque bg + bottom border so rows scroll
-       behind it cleanly. */
-    .wk-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        padding-bottom: 14px;
-        margin-bottom: 18px;
-        border-bottom: 1px solid var(--line);
-    }
-
-    /* Full-width row under the buttons explaining why Resume is disabled. */
-    .wk-actions-hint {
-        flex-basis: 100%;
-        margin: 0;
-        color: var(--ink-3);
-        font-size: 12px;
-    }
-
-    .wk-actions--foot {
-        padding-bottom: 0;
-        margin-bottom: 0;
-        padding-top: 14px;
-        margin-top: 18px;
-        border-bottom: none;
-        border-top: 1px solid var(--line);
-    }
-
-    /* Quiet sync-back strip — offers saving structural edits to the template
-       without interrupting logging. Dashed border keeps it visually softer
-       than the cards around it. */
-    .wk-sync {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 14px;
-        border: 1px dashed var(--line-2);
-        color: var(--ink-3);
-        font-size: 13px;
-    }
-
-    .wk-sync-text {
-        margin-right: auto;
-        color: var(--ink-2);
-    }
-
-    .wk-sync-text--btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-        text-align: left;
-    }
-
-    .wk-sync-text--btn:hover {
-        color: var(--ink);
-        text-decoration: underline;
-        text-underline-offset: 2px;
-    }
-
-    /* Itemised workout-vs-template diff inside its modal */
-    .wk-diff {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        font-size: 14px;
-    }
-
-    .wk-diff-row {
-        display: flex;
-        align-items: baseline;
-        gap: 10px;
-        color: var(--ink);
-    }
-
-    .wk-diff-sign {
-        flex: none;
-        width: 1ch;
-        font-weight: 800;
-        color: var(--ink-3);
-    }
-
-    .wk-diff-row--add .wk-diff-sign {
-        color: var(--accent-ink);
-    }
-
-    .wk-diff-row--remove .wk-diff-sign {
-        color: #e5484d;
-    }
-
-    .wk-diff-note {
-        margin-top: 14px;
-        color: var(--ink-3);
-        font-size: 12px;
-        line-height: 1.5;
     }
 
     /* ===== reka-ui DatePicker =========================== */

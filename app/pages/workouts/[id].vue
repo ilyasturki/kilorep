@@ -389,6 +389,12 @@ const diffOpen = ref(false)
 // list is keyed by id), so a removed exercise no longer in the draft still
 // resolves; an open rep target (null) reads as "open" rather than a blank.
 type DiffRow = { sign: string; tone: 'add' | 'remove' | 'edit'; text: string }
+
+const DIFF_SIGN_TONE: Record<DiffRow['tone'], string> = {
+    add: 'text-accent-ink',
+    remove: 'text-red',
+    edit: 'text-ink-3',
+}
 const reps = (r: number | null) => (r == null ? 'open' : String(r))
 const diffItems = computed<DiffRow[]>(() => {
     const name = (exId: number) => exerciseById(exId)?.name ?? 'Exercise'
@@ -542,9 +548,12 @@ async function changeDate() {
                 </UiStat>
             </div>
             <TopMuscles :muscles="topTargets" />
+            <!-- Quiet sync-back strip: offers saving structural edits to the
+                 template without interrupting logging. The dashed border keeps
+                 it visually softer than the cards around it. -->
             <div
                 v-if="syncOffer"
-                class="wk-sync"
+                class="flex items-center gap-2.5 border border-dashed border-line-2 px-3.5 py-2.5 text-body-sm text-ink-3"
             >
                 <Icon
                     name="tabler:git-fork"
@@ -553,7 +562,7 @@ async function changeDate() {
                 <button
                     v-if="template"
                     type="button"
-                    class="wk-sync-text wk-sync-text--btn"
+                    class="mr-auto inline-flex items-center gap-0.5 text-left text-ink-2 hover:text-ink hover:underline hover:underline-offset-2"
                     @click="diffOpen = true"
                 >
                     Differs from {{ template.name }}
@@ -564,7 +573,7 @@ async function changeDate() {
                 </button>
                 <span
                     v-else
-                    class="wk-sync-text"
+                    class="mr-auto text-ink-2"
                 >
                     Not saved as a session
                 </span>
@@ -1071,20 +1080,23 @@ async function changeDate() {
             :title="`Differs from ${template?.name ?? 'session'}`"
             description="How this workout differs from the session."
         >
-            <ul class="wk-diff">
+            <ul class="flex flex-col gap-2 text-body">
                 <li
                     v-for="(row, i) in diffItems"
                     :key="i"
-                    class="wk-diff-row"
-                    :class="`wk-diff-row--${row.tone}`"
+                    class="flex items-baseline gap-2.5 text-ink"
                 >
-                    <span class="wk-diff-sign mono">{{ row.sign }}</span>
+                    <span
+                        class="mono w-[1ch] flex-none font-extrabold"
+                        :class="DIFF_SIGN_TONE[row.tone]"
+                        >{{ row.sign }}</span
+                    >
                     <span>{{ row.text }}</span>
                 </li>
             </ul>
             <p
                 v-if="hasRepDiff"
-                class="wk-diff-note"
+                class="mt-3.5 text-label leading-[1.5] text-ink-3"
             >
                 Reps shown are this workout's. Updating the session keeps its
                 prescribed reps and syncs the structure only.

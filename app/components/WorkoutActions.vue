@@ -21,9 +21,15 @@ const editing = defineModel<boolean>('editing', { required: true })
 </script>
 
 <template>
+    <!-- Pins flush under the header so Finish/Reopen stay reachable on a long
+         set list; `foot` moves the divider to the upper edge instead. -->
     <div
-        class="wk-actions"
-        :class="{ 'wk-actions--foot': foot }"
+        class="flex flex-wrap gap-2.5"
+        :class="
+            foot ?
+                'mt-[18px] border-t border-t-line pt-3.5'
+            :   'mb-[18px] border-b border-b-line pb-3.5'
+        "
     >
         <!-- In-progress: the one button that completes the workout. -->
         <UiButton
@@ -88,9 +94,10 @@ const editing = defineModel<boolean>('editing', { required: true })
                 />
                 Resume training
             </UiButton>
+            <!-- Full-width row under the buttons explaining why Resume is off. -->
             <p
                 v-if="resumeBlocked"
-                class="wk-actions-hint"
+                class="basis-full text-label text-ink-3"
             >
                 Finish your in-progress workout first to resume this one.
             </p>
