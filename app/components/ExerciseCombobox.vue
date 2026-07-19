@@ -105,7 +105,7 @@ function onCreated(exercise: Exercise) {
                     <button
                         v-if="query.trim()"
                         type="button"
-                        class="combobox-create"
+                        class="flex w-full items-center gap-2 border-0 bg-transparent px-[11px] py-[9px] text-left text-body text-accent-ink hover:bg-surface-2 [&>svg]:flex-none"
                         @click="startCreate(query)"
                     >
                         <Icon
@@ -116,7 +116,7 @@ function onCreated(exercise: Exercise) {
                     </button>
                     <span
                         v-else
-                        class="combobox-empty-text"
+                        class="block px-[11px] py-[9px] text-body text-ink-3"
                     >
                         No exercises yet
                     </span>
@@ -128,7 +128,7 @@ function onCreated(exercise: Exercise) {
                 >
                     <button
                         type="button"
-                        class="combobox-create"
+                        class="flex w-full items-center gap-2 border-0 bg-transparent px-[11px] py-[9px] text-left text-body text-accent-ink hover:bg-surface-2 [&>svg]:flex-none"
                         @click="startCreate()"
                     >
                         <Icon

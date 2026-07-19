@@ -11,8 +11,30 @@ import {
     ComboboxTrigger,
     ComboboxViewport,
 } from 'reka-ui'
+import { tv } from 'tailwind-variants'
 
 import type { FuzzyMatch } from '~/utils/fuzzy'
+
+const combobox = tv({
+    slots: {
+        anchor: 'inline-flex w-full items-center gap-2 border border-line-2 bg-surface px-[13px] py-[11px] transition-[border-color] duration-[120ms] hover:border-accent focus-within:border-accent',
+        input: 'min-w-0 flex-1 border-0 bg-transparent text-body-lg text-ink capitalize outline-none placeholder:text-ink-3 placeholder:normal-case',
+        trigger: 'flex border-0 bg-transparent p-0 text-ink-3',
+        // Capped to the viewport: rich rows (silhouette + alias + badge) can be
+        // wider than the trigger and would otherwise clip off-screen on mobile.
+        content:
+            'z-[60] max-h-[var(--reka-combobox-content-available-height)] max-w-[var(--reka-combobox-content-available-width)] min-w-[var(--reka-combobox-trigger-width)] overflow-x-hidden overflow-y-auto border border-line-2 bg-canvas shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]',
+        viewport: 'p-[5px]',
+        // Padding lives on the inner text/actions so a full-width create row
+        // isn't double-inset.
+        empty: 'p-0',
+        // Mirrors UiSelect's listbox row.
+        item: 'flex items-center justify-between gap-2.5 px-[11px] py-[9px] text-body text-ink-2 capitalize outline-none select-none data-highlighted:bg-surface-2 data-highlighted:text-ink data-[state=checked]:text-accent-ink',
+        footer: 'sticky bottom-0 border-t border-t-line-2 bg-canvas p-[5px]',
+    },
+})
+
+const ui = combobox()
 
 type Option = {
     label: string
@@ -73,15 +95,15 @@ function selectAll(event: FocusEvent) {
         open-on-focus
         open-on-click
     >
-        <ComboboxAnchor class="combobox-anchor">
+        <ComboboxAnchor :class="ui.anchor()">
             <ComboboxInput
                 v-model="searchTerm"
-                class="combobox-input"
+                :class="ui.input()"
                 :display-value="displayValue"
                 :placeholder="placeholder ?? 'Select…'"
                 @focus="selectAll"
             />
-            <ComboboxTrigger class="combobox-trigger">
+            <ComboboxTrigger :class="ui.trigger()">
                 <Icon
                     name="tabler:chevron-down"
                     :size="16"
@@ -90,17 +112,19 @@ function selectAll(event: FocusEvent) {
         </ComboboxAnchor>
         <ComboboxPortal>
             <ComboboxContent
-                class="combobox-content"
+                :class="ui.content()"
                 position="popper"
                 :side-offset="6"
             >
-                <ComboboxViewport class="select-viewport">
-                    <ComboboxEmpty class="combobox-empty">
+                <ComboboxViewport :class="ui.viewport()">
+                    <ComboboxEmpty :class="ui.empty()">
                         <slot
                             name="empty"
                             :query="searchTerm"
                         >
-                            <span class="combobox-empty-text">
+                            <span
+                                class="block px-[11px] py-[9px] text-body text-ink-3"
+                            >
                                 No matching option
                             </span>
                         </slot>
@@ -110,7 +134,7 @@ function selectAll(event: FocusEvent) {
                         :key="String(option.value)"
                         :value="option.value"
                         :disabled="option.disabled"
-                        class="select-item"
+                        :class="ui.item()"
                     >
                         <slot
                             name="item"
@@ -133,7 +157,7 @@ function selectAll(event: FocusEvent) {
                 </ComboboxViewport>
                 <div
                     v-if="$slots.footer"
-                    class="combobox-footer"
+                    :class="ui.footer()"
                 >
                     <slot
                         name="footer"

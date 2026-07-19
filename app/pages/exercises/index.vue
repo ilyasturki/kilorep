@@ -280,12 +280,12 @@ async function mergeExercise() {
                     </span>
                 </PopoverTrigger>
                 <PopoverPortal>
-                    <!-- Every facet as a labelled section of toggle chips.
-                         Borrows .select-content for the surface; the width is
-                         fixed (the trigger is narrow) and capped to the
-                         viewport so it fits on a phone. -->
+                    <!-- Every facet as a labelled section of toggle chips. Same
+                         surface as the Select panel; the width is fixed (the
+                         trigger is narrow) and capped to the viewport so it fits
+                         on a phone. -->
                     <PopoverContent
-                        class="flex w-[280px] max-w-[calc(100vw-32px)] flex-col gap-3.5 p-3.5 select-content"
+                        class="z-[60] flex w-[280px] max-w-[calc(100vw-32px)] flex-col gap-3.5 overflow-hidden border border-line-2 bg-canvas p-3.5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.7)]"
                         align="end"
                         :side-offset="6"
                     >
