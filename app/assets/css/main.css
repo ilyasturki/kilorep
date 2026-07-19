@@ -385,64 +385,6 @@
         flex: none;
     }
 
-    /* ===== reka-ui NumberField ========================== */
-    .numfield {
-        display: inline-flex;
-        align-items: center;
-        border: 1px solid var(--line-2);
-        background: var(--surface);
-        width: 120px;
-    }
-
-    .numfield input {
-        width: 100%;
-        min-width: 0;
-        background: none;
-        border: none;
-        outline: none;
-        color: var(--ink);
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 15px;
-        text-align: center;
-        padding: 9px 4px;
-        -moz-appearance: textfield;
-    }
-
-    .numfield input::-webkit-outer-spin-button,
-    .numfield input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    .numfield button {
-        width: 36px;
-        height: 38px;
-        flex: none;
-        background: none;
-        border: none;
-        color: var(--ink-2);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        touch-action: manipulation;
-        transition:
-            background 0.12s,
-            color 0.12s;
-    }
-
-    .numfield button:hover {
-        background: var(--surface-2);
-        color: var(--ink);
-    }
-
-    .numfield button:first-child {
-        border-right: 1px solid var(--line);
-    }
-
-    .numfield button:last-child {
-        border-left: 1px solid var(--line);
-    }
-
     /* ===== reka-ui Dialog =============================== */
     .modal-scrim {
         position: fixed;
