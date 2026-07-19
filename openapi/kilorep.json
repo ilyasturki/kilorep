@@ -94,6 +94,36 @@
                 }
             }
         },
+        "/api/account/sessions": {
+            "delete": {
+                "tags": ["account"],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Other sessions revoked; the calling browser stays signed in.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Ok"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Single-user instance: there are no sessions to revoke.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "operationId": "revokeSessions",
+                "summary": "Sign out every other browser session"
+            }
+        },
         "/api/account/tokens": {
             "get": {
                 "tags": ["account"],

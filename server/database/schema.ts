@@ -33,6 +33,10 @@ export const users = sqliteTable(
         // BCP-47 tag the UI formats numbers/dates with (Settings); null follows
         // the device. Validated against SUPPORTED_LOCALES (shared/locales.ts).
         locale: text('locale'),
+        // Session kill switch: any sealed cookie whose `loggedInAt` predates
+        // this instant is dead (enforced in middleware/1.session-revocation).
+        // ISO string so it compares with loggedInAt by plain string ordering.
+        sessionsRevokedAt: text('sessions_revoked_at'),
     },
     (table) => [
         uniqueIndex('users_provider_account_unique').on(

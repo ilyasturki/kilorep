@@ -1,14 +1,7 @@
 const google = defineOAuthGoogleEventHandler({
     async onSuccess(event, { user: profile }) {
         const user = findOrCreateGoogleUser(profile)
-        await setUserSession(event, {
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                avatarUrl: user.avatarUrl,
-            },
-        })
+        await startSession(event, user)
         return sendRedirect(event, '/')
     },
     onError(event, error) {

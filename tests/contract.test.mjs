@@ -353,6 +353,8 @@ await call('/api/sessions', { method: 'post', body: { name: '' }, expect: 400 })
 const coverageExclusions = {
     'post /api/auth/device': 'auth mode only (404s here); isolation suite',
     'delete /api/account': 'auth mode only (404s here); isolation suite',
+    'delete /api/account/sessions':
+        'auth mode only (404s here); isolation suite',
     'get /api/account/tokens': 'auth mode only (404s here); isolation suite',
     'post /api/account/tokens': 'auth mode only (404s here); isolation suite',
     'delete /api/account/tokens/{id}':

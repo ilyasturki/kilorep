@@ -230,6 +230,23 @@ async function removeToken(id: number) {
     }
 }
 
+const revoking = ref(false)
+
+async function revokeSessions() {
+    revoking.value = true
+    try {
+        await $fetch('/api/account/sessions', { method: 'DELETE' })
+        toast.add({ title: 'Other browsers signed out', color: 'success' })
+    } catch (error) {
+        toast.add({
+            title: errorMessage(error, 'Could not sign out the other browsers'),
+            color: 'error',
+        })
+    } finally {
+        revoking.value = false
+    }
+}
+
 const confirmOpen = ref(false)
 const deleting = ref(false)
 
@@ -278,6 +295,23 @@ async function deleteAccount() {
                     <span class="acct-email">{{ user?.email }}</span>
                 </div>
             </div>
+            <p class="settings-hint mt-3">
+                Left yourself signed in somewhere? This ends every other browser
+                session and keeps this one. Devices signed in with a token are
+                listed under MCP access, and stay connected.
+            </p>
+            <button
+                type="button"
+                class="btn-ghost sm mt-2"
+                :disabled="revoking"
+                @click="revokeSessions"
+            >
+                <Icon
+                    name="tabler:devices-off"
+                    :size="15"
+                />
+                Sign out other browsers
+            </button>
         </div>
 
         <div class="card">

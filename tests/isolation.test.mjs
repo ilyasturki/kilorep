@@ -195,10 +195,15 @@ const insertUser = db.prepare(
 )
 const userA = insertUser.get(`iso-a-${suffix}`, 'a@iso.test', 'Iso A')
 const userB = insertUser.get(`iso-b-${suffix}`, 'b@iso.test', 'Iso B')
+// C exists only to exercise the session kill switch, which ends its own
+// cookies — keeping that away from A and B, whose cookies the rest of the
+// suite depends on.
+const userC = insertUser.get(`iso-c-${suffix}`, 'c@iso.test', 'Iso C')
 db.close()
 
 const cookieA = await mintCookie({ id: userA.id, name: 'Iso A' })
 const cookieB = await mintCookie({ id: userB.id, name: 'Iso B' })
+const cookieC = await mintCookie({ id: userC.id, name: 'Iso C' })
 
 let failures = 0
 function check(label, fn) {
@@ -574,6 +579,44 @@ check("A's other token survives the revocation", () =>
     assert.equal(otherTokenStillWorks.status, 200),
 )
 
+// ── Session kill switch ─────────────────────────────────────────────────────
+// C signs its other browsers out: every cookie issued before the cut-off dies,
+// the caller is re-issued a live one, and nobody else's session is touched.
+console.log('\nSession revocation')
+const beforeRevoke = await api(cookieC, '/api/workouts')
+check("C's session works before revoking", () =>
+    assert.equal(beforeRevoke.status, 200),
+)
+
+const revokeRes = await fetch(`${BASE}/api/account/sessions`, {
+    method: 'DELETE',
+    headers: cookieC,
+})
+check('C revokes its other sessions', () => assert.equal(revokeRes.status, 200))
+
+const reissued = revokeRes.headers
+    .getSetCookie()
+    .find((c) => c.startsWith('nuxt-session='))
+check('the revoking browser is re-issued a session', () =>
+    assert.ok(reissued, 'no nuxt-session cookie on the revoke response'),
+)
+
+const oldCookie = await api(cookieC, '/api/workouts')
+check("C's pre-revocation cookie is rejected", () =>
+    assert.equal(oldCookie.status, 401),
+)
+
+const cookieCLive = { cookie: reissued?.split(';')[0] ?? '' }
+const newCookie = await api(cookieCLive, '/api/workouts')
+check('the re-issued cookie still works', () =>
+    assert.equal(newCookie.status, 200),
+)
+
+const bearerSurvives = await mcp(tokenA, 'list_workouts')
+check("C's revocation leaves device tokens alone", () =>
+    assert.equal(bearerSurvives.status, 200),
+)
+
 // ── A's data is intact ──────────────────────────────────────────────────────
 console.log("\nA's data intact")
 const finalA = await api(cookieA, '/api/workouts')
@@ -609,19 +652,24 @@ if (soloMode) {
 
 // ── Cleanup via account deletion (also exercises that path) ────────────────
 console.log('\nCleanup')
-for (const [label, cookie] of Object.entries({ A: cookieA, B: cookieB })) {
+// C deletes with its re-issued cookie; the pre-revocation one is dead by design.
+for (const [label, cookie] of Object.entries({
+    A: cookieA,
+    B: cookieB,
+    C: cookieCLive,
+})) {
     const res = await api(cookie, '/api/account', { method: 'DELETE' })
     check(`delete account ${label}`, () => assert.equal(res.status, 200))
 }
 const dbCheck = new Database(DB_FILE, { readonly: true })
 const remaining = dbCheck
     .prepare(
-        'SELECT COUNT(*) AS n FROM users WHERE provider_account_id IN (?, ?)',
+        'SELECT COUNT(*) AS n FROM users WHERE provider_account_id IN (?, ?, ?)',
     )
-    .get(`iso-a-${suffix}`, `iso-b-${suffix}`)
+    .get(`iso-a-${suffix}`, `iso-b-${suffix}`, `iso-c-${suffix}`)
 const remainingTokens = dbCheck
-    .prepare('SELECT COUNT(*) AS n FROM api_tokens WHERE user_id IN (?, ?)')
-    .get(userA.id, userB.id)
+    .prepare('SELECT COUNT(*) AS n FROM api_tokens WHERE user_id IN (?, ?, ?)')
+    .get(userA.id, userB.id, userC.id)
 dbCheck.close()
 check('accounts fully removed', () => assert.equal(remaining.n, 0))
 check('tokens removed with accounts', () => assert.equal(remainingTokens.n, 0))
