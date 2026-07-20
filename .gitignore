@@ -44,3 +44,12 @@ android/local.properties
 # GOAL.md) and large (~240 MB). Only the traced public/illustrations/*.svg ship.
 scripts/illustrations/raw/
 scripts/illustrations/model-sources/
+
+# design-sync: staged converter scripts, generated bundle, and machine state.
+# The durable inputs (.design-sync/config.json, NOTES.md, conventions.md,
+# previews/) are committed; everything below is regenerated per run.
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

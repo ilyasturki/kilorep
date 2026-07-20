@@ -1,0 +1,18 @@
+/* Tailwind entry for the React mirror. `main.css` is a byte-identical copy of
+   app/assets/css/main.css (`npm run drift` asserts it) and is never edited here. */
+@import './main.css';
+
+/* The mirror's own components — supplies every utility their tv() blocks name. */
+@source '../**/*.{ts,tsx}';
+
+/* Also scan the real Vue app. The bundle ships a STATIC stylesheet, so any
+   utility absent at compile time simply does not exist for the design agent
+   downstream. Scanning app/ makes the emitted vocabulary a superset of what
+   kilorep genuinely uses, so a design composed from real Lift patterns resolves
+   instead of silently dropping classes the mirror happens not to exercise. */
+@source '../../../app/**/*.{vue,ts}';
+
+/* The authored preview cards. Without this, a class a preview uses that the app
+   happens not to use is absent from the static stylesheet and the card renders
+   subtly wrong, with nothing to flag it. */
+@source '../../../.design-sync/previews/**/*.tsx';

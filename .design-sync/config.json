@@ -1,0 +1,17 @@
+{
+    "pkg": "@kilorep/lift-react",
+    "globalName": "Lift",
+    "projectId": "954ed021-3cc2-4359-99bb-f1c9852225f5",
+    "shape": "package",
+    "buildCmd": "npm run build",
+    "srcDir": "src",
+    "tsconfig": "tsconfig.json",
+    "cssEntry": "dist/lift.css",
+    "readmeHeader": ".design-sync/conventions.md",
+    "overrides": {
+        "Modal": { "cardMode": "single", "viewport": "900x560" },
+        "Card": { "cardMode": "column" },
+        "SegmentedOption": { "cardMode": "column" },
+        "Toaster": { "cardMode": "single", "primaryStory": "Colors" }
+    }
+}

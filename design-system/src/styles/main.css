@@ -1,0 +1,330 @@
+@import 'tailwindcss';
+
+/* Self-hosted variable fonts (single woff2 each, full weight axis), so the
+   build needs no network — required for the sandboxed Nix package build. */
+@font-face {
+    font-family: 'Archivo';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/archivo-variable.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 100 800;
+    font-display: swap;
+    src: url('/fonts/jetbrains-mono-variable.woff2') format('woff2');
+}
+
+/* ============================================================
+   Lift — brutalist-sharp design system
+   Dark-first, near-square corners, hairline borders, one volt
+   accent. Tokens follow the system color scheme via
+   prefers-color-scheme; dark is the default.
+
+   Raw CSS vars flip per theme; @theme inline below exposes them
+   as Tailwind utilities (bg-canvas, text-ink-2, border-line, …)
+   that stay theme-reactive because the utility references
+   var(--…) rather than a resolved value.
+   ============================================================ */
+
+:root {
+    --accent: #c5f53a;
+    --on-accent: #0b0b0c;
+
+    --canvas: #0b0b0c;
+    --surface: #141416;
+    --surface-2: #1a1a1d;
+    --line: rgba(255, 255, 255, 0.1);
+    --line-2: rgba(255, 255, 255, 0.18);
+    --ink: #f4f4f5;
+    --ink-2: #9a9aa0;
+    --ink-3: #5e5e66;
+    --accent-tint: color-mix(in oklab, var(--accent) 14%, transparent);
+    --accent-ink: var(--accent);
+
+    /* Translucent canvas behind the blurred mobile tab bar. Derived from
+       --canvas, so it follows the theme without a light-mode override. */
+    --canvas-veil: color-mix(in oklab, var(--canvas) 92%, transparent);
+
+    /* Accent-derived edges. These reference --line, so they follow the theme on
+       their own and only need declaring once. --accent-edge is deliberately
+       darker: without a rim the bright fill optically blooms past its box and a
+       solid badge reads taller than the bordered ones. */
+    --accent-line: color-mix(in oklab, var(--accent) 40%, var(--line));
+    --accent-line-soft: color-mix(in oklab, var(--accent) 35%, transparent);
+    --accent-edge: color-mix(in oklab, var(--accent) 62%, #000);
+
+    /* Muscle-map intensity ramp: how hard a region works. Accent mixed against
+       the base surface/line, so the ramp follows the theme on its own.
+       "off" and "high" need no token — they are plain surface-2 and accent. */
+    --muscle-low: color-mix(in oklab, var(--accent) 30%, var(--surface-2));
+    --muscle-low-edge: color-mix(in oklab, var(--accent) 42%, var(--line-2));
+    --muscle-med: color-mix(in oklab, var(--accent) 62%, var(--surface-2));
+    --muscle-med-edge: color-mix(in oklab, var(--accent) 70%, var(--line-2));
+
+    /* Destructive actions only — one red, same in both themes. */
+    --red: #e5484d;
+    --on-red: #fff;
+    color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --canvas: #ecebe6;
+        --surface: #ffffff;
+        --surface-2: #f4f3ef;
+        --line: rgba(0, 0, 0, 0.12);
+        --line-2: rgba(0, 0, 0, 0.22);
+        --ink: #17171a;
+        --ink-2: #5c5c62;
+        --ink-3: #9a9a9f;
+        --accent-tint: color-mix(in oklab, var(--accent) 18%, transparent);
+        --accent-ink: color-mix(in oklab, var(--accent) 58%, #000);
+        color-scheme: light;
+    }
+}
+
+@theme inline {
+    --color-canvas: var(--canvas);
+    --color-canvas-veil: var(--canvas-veil);
+    --color-surface: var(--surface);
+    --color-surface-2: var(--surface-2);
+    --color-line: var(--line);
+    --color-line-2: var(--line-2);
+    --color-ink: var(--ink);
+    --color-ink-2: var(--ink-2);
+    --color-ink-3: var(--ink-3);
+    --color-accent: var(--accent);
+    --color-accent-tint: var(--accent-tint);
+    /* accent-ink is accent-colored text (contrast-tuned on light);
+       on-accent is the near-black that sits on an accent fill. */
+    --color-accent-ink: var(--accent-ink);
+    --color-accent-line: var(--accent-line);
+    --color-accent-line-soft: var(--accent-line-soft);
+    --color-accent-edge: var(--accent-edge);
+    --color-on-accent: var(--on-accent);
+    --color-red: var(--red);
+    --color-on-red: var(--on-red);
+    --color-muscle-low: var(--muscle-low);
+    --color-muscle-low-edge: var(--muscle-low-edge);
+    --color-muscle-med: var(--muscle-med);
+    --color-muscle-med-edge: var(--muscle-med-edge);
+
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    /* The hand-written CSS this replaces never named a curve, so it got the CSS
+       default. Match it, or every converted transition subtly changes easing. */
+    --default-transition-timing-function: ease;
+
+    /* Lift's own five breakpoints, none of which match Tailwind's defaults. The
+       stock scale is cleared rather than extended so a stray `sm:` can't resolve
+       to a 640px edge this design has no rule at.
+
+       `max-*` here is exclusive (`width < 360px`) where the hand-written CSS it
+       replaces used inclusive `max-width: 360px`. Deliberate: the values stay
+       round and the min/max pair stays complementary, at the cost of the
+       boundary pixel itself behaving as the wider layout. */
+    --breakpoint-*: initial;
+    --breakpoint-xs: 360px;
+    --breakpoint-sm: 480px;
+    --breakpoint-md: 560px;
+    --breakpoint-lg: 760px;
+    --breakpoint-xl: 860px;
+
+    /* The sizes that actually recur. One-offs (10.5px, 22px, 30px …)
+       stay as arbitrary values at their single call site rather than
+       inventing names for them. */
+    --text-micro: 11px;
+    --text-label: 12px;
+    --text-body-sm: 13px;
+    --text-body: 14px;
+    --text-body-lg: 15px;
+}
+
+/* Entrance/exit motion for the overlays. Kept in a plain @theme (not the inline
+   one above) so Tailwind emits the keyframes alongside the --animate-* names. */
+@theme {
+    --animate-fade: fade 0.15s ease;
+    --animate-fadeout: fadeout 0.12s ease;
+    --animate-pop: pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    --animate-slideup: slideup 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    --animate-slidein: slidein 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    @keyframes fade {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes fadeout {
+        from {
+            opacity: 1;
+        }
+        to {
+            opacity: 0;
+        }
+    }
+
+    @keyframes pop {
+        from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @keyframes slideup {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slidein {
+        from {
+            transform: translateX(110%);
+        }
+        to {
+            transform: translateX(0);
+        }
+    }
+}
+
+/* Tabular figures so digits in stats, weights and dates keep a fixed advance
+   width and never jitter as values change. Tailwind's tabular-nums utility
+   does not survive here, so the OpenType feature is set directly. */
+@utility mono {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum' 1;
+}
+
+@utility kicker {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+@layer base {
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        height: 100%;
+    }
+
+    body {
+        margin: 0;
+        font-family: var(--font-body);
+        background: var(--canvas);
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    p {
+        margin: 0;
+    }
+
+    button {
+        font-family: inherit;
+    }
+
+    /* The pointer cursor signals navigation, so it's reserved for anchors;
+       buttons keep the default arrow (Tailwind v4 Preflight's button default). */
+    a {
+        cursor: pointer;
+    }
+
+    ::selection {
+        background: var(--accent);
+        color: var(--on-accent);
+    }
+}
+
+/* ============================================================
+   Reorder machinery — the only rules left outside the utility
+   system. These are hooks toggled by Vue's <TransitionGroup> and
+   usePointerReorder, and they describe relationships between
+   elements (a dragged row and its siblings) rather than the look
+   of one element, so there is no class to put in a template.
+
+   Deliberately unlayered: a drag is transient state that must win
+   over whatever utilities the row carries. Nothing competes today,
+   but the ordering should not depend on that staying true.
+   ============================================================ */
+
+/* FLIP slide for the move up/down reorder buttons. Only -move is styled, so
+   adding or removing an item stays instant while a reorder glides. */
+.reorder-move {
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Drag-to-reorder (condensed rows). The lifted row sets its transform inline
+   and tracks the pointer with its own transition:none, so it isn't here;
+   these rules glide the siblings aside to open the drop slot. */
+.is-reordering .reorder-row {
+    transition: transform 0.16s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reorder-move,
+    .is-reordering .reorder-row {
+        transition: none;
+    }
+}
+
+/* The lift splits across the two elements: z-index sits on the static slot
+   (TransitionGroup's child, which never moves) so stacking stays put, while
+   the shadow and grab cursor ride the inner row that tracks the pointer. */
+.reorder-lift {
+    position: relative;
+    z-index: 30;
+}
+
+.reorder-dragging {
+    cursor: grabbing;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Hold the grabbing cursor across the whole page for the duration of a drag
+   and suppress text selection: without this the handle's own cursor: grab
+   wins under the pointer and dragging over a name selects its text. The
+   class is toggled on <body> by usePointerReorder. */
+body.reorder-grabbing,
+body.reorder-grabbing * {
+    cursor: grabbing !important;
+}
+
+body.reorder-grabbing {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+/* The drop commits in one frame: live transforms come off as the real array
+   order takes over. Freezing every row's transition on that frame stops the
+   already-correct rows from animating the swap, and stops FLIP from firing. */
+.reorder-frozen > * {
+    transition: none !important;
+}
