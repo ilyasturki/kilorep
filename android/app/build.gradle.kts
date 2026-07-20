@@ -13,8 +13,9 @@ android {
         applicationId = "dev.kilorep.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // Synced from package.json by scripts/sync-versions.mjs — don't edit by hand.
+        versionCode = 9
+        versionName = "0.0.9"
     }
 
     signingConfigs {

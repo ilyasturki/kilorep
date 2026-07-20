@@ -1,11 +1,12 @@
 name: Android release
 
-# Tag `android-vX.Y.Z` → signed APK on a GitHub Release, which Obtainium
-# watches for updates. Bump versionCode/versionName in
-# android/app/build.gradle.kts alongside the tag.
+# Tag `vX.Y.Z` → signed APK on a GitHub Release, which Obtainium watches
+# for updates. The npm `version` lifecycle script syncs versionCode and
+# versionName in android/app/build.gradle.kts, so the tagged commit
+# already carries the matching Android version.
 on:
     push:
-        tags: ['android-v*']
+        tags: ['v*']
 
 permissions:
     contents: write
@@ -17,16 +18,24 @@ jobs:
             run:
                 working-directory: android
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-java@v4
+            # Full history so the changelog step can diff against the previous tag.
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-java@v5
               with:
                   distribution: temurin
                   java-version: '17'
-            - uses: gradle/actions/setup-gradle@v4
+            - uses: gradle/actions/setup-gradle@v6
+
+            - name: JVM unit tests (sync engine, drafts, ViewModels)
+              run: ./gradlew :app:testDebugUnitTest
 
             - name: Decode signing keystore
               run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/kilorep.keystore
 
+            # Compiling the generated API client is part of this build, so a
+            # contract that drifted from the app fails here, not on a phone.
             - name: Build signed release APK
               env:
                   KILOREP_KEYSTORE: /tmp/kilorep.keystore
@@ -38,8 +47,26 @@ jobs:
             - name: Name the artifact after the tag
               run: cp app/build/outputs/apk/release/app-release.apk "kilorep-${GITHUB_REF_NAME}.apk"
 
+            # GitHub's auto-generated notes are built from merged PRs, which a
+            # direct-push history doesn't have — use commit subjects instead.
+            - name: Changelog from commit subjects
+              run: |
+                  prev=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+                  {
+                      if [ -n "$prev" ]; then
+                          # The npm-version bump commit's subject is just the bare
+                          # version — drop it, it says nothing the tag doesn't.
+                          git log --format='- %s' "${prev}..${GITHUB_REF_NAME}" |
+                              grep -vx "- ${GITHUB_REF_NAME#v}" || true
+                          echo ""
+                          echo "**Full changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${prev}...${GITHUB_REF_NAME}"
+                      else
+                          git log --format='- %s' "${GITHUB_REF_NAME}"
+                      fi
+                  } > /tmp/release-notes.md
+
             - name: Publish GitHub Release
               uses: softprops/action-gh-release@v2
               with:
                   files: android/kilorep-*.apk
-                  generate_release_notes: true
+                  body_path: /tmp/release-notes.md
