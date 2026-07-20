@@ -16,6 +16,10 @@
         "es2024": true,
         "node": true
     },
+    // Claude Code worktrees are full repo checkouts, so each carries its own
+    // .oxlintrc.json; without this oxlint treats them as nested configs and
+    // aborts on the root-only `typeAware` option.
+    "ignorePatterns": [".claude/worktrees"],
     "rules": {
         // Sequential awaits here are nearly always deliberate: migration steps,
         // the MCP tool loop, and per-row writes inside a transaction.

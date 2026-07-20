@@ -49,7 +49,7 @@ export function Select({
         typeof item === 'object' ?
             { ...item, authored: true }
         :   {
-                label: String(item),
+                label: item,
                 value: item,
                 disabled: undefined,
                 authored: false,

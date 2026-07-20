@@ -23,7 +23,7 @@ export interface PrimitiveProps {
  * agent reads out of each `<Name>.d.ts`. Here it only permits whatever element
  * `as` resolves to (an `<a>` needs `href`, a `<button>` needs `type`).
  */
-type PrimitiveAllProps = PrimitiveProps & Record<string, any>
+type PrimitiveAllProps = PrimitiveProps & Record<string, unknown>
 
 export function Primitive({
     as: As = 'div',
