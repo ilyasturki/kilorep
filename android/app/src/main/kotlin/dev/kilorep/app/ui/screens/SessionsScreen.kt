@@ -1,5 +1,7 @@
 package dev.kilorep.app.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,13 +20,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import dev.kilorep.api.models.SessionWithEntries
 import dev.kilorep.app.data.Repo
 import dev.kilorep.app.ui.components.ConfirmDialog
+import dev.kilorep.app.ui.components.DragHandle
 import dev.kilorep.app.ui.components.EmptyState
 import dev.kilorep.app.ui.components.GhostButton
-import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftIconButton
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.PrimaryButton
@@ -33,10 +38,12 @@ import dev.kilorep.app.ui.theme.LiftType
 import dev.kilorep.app.ui.theme.Text
 import dev.kilorep.app.ui.watch
 import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * Session templates: create, edit, reorder (most-used on top), delete.
- * Reordering is explicit up/down — reliable with a thumb, no drag handles.
+ * Reordering is handle drag; explicit up/down survives as TalkBack actions.
  */
 @Composable
 fun SessionsScreen(
@@ -51,6 +58,34 @@ fun SessionsScreen(
     // Keyed on offline so coming online mid-screen still refreshes.
     LaunchedEffect(offline) {
         if (!offline) repo.refreshSessions()
+    }
+
+    // Drag moves this local order; the API call lands once, on drop. The
+    // remember key resets it whenever the repo emits (refresh, other device).
+    var order by remember(sessions) { mutableStateOf(sessions) }
+    val listState = rememberLazyListState()
+    val haptics = LocalHapticFeedback.current
+    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+        order = order.toMutableList().apply {
+            val f = indexOfFirst { it.id == from.key }
+            val t = indexOfFirst { it.id == to.key }
+            if (f >= 0 && t >= 0) add(t, removeAt(f))
+        }
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
+
+    fun commitOrder() {
+        val ids = order.map { it.id }
+        if (ids != sessions.map { it.id }) scope.launch { repo.reorderSessions(ids) }
+    }
+
+    // TalkBack path: one explicit step is one immediate reorder call.
+    fun moveByOne(index: Int, delta: Int) {
+        val ids = order.map { it.id }.toMutableList()
+        val to = index + delta
+        if (to !in ids.indices) return
+        ids[index] = ids.set(to, ids[index])
+        scope.launch { repo.reorderSessions(ids) }
     }
 
     LiftScreen(
@@ -69,27 +104,41 @@ fun SessionsScreen(
             return@LiftScreen
         }
         LazyColumn(
-            Modifier
+            state = listState,
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            itemsIndexed(sessions, key = { _, it -> it.id }) { index, session ->
-                SessionCard(
-                    session = session,
-                    canMoveUp = index > 0,
-                    canMoveDown = index < sessions.lastIndex,
-                    onMove = { delta ->
-                        val ids = sessions.map { it.id }.toMutableList()
-                        val to = index + delta
-                        if (to in ids.indices) {
-                            ids[index] = ids.set(to, ids[index])
-                            scope.launch { repo.reorderSessions(ids) }
-                        }
-                    },
-                    onEdit = { onEdit(session.id) },
-                    onDelete = { confirmDelete = session },
-                )
+            itemsIndexed(order, key = { _, it -> it.id }) { index, session ->
+                ReorderableItem(reorderState, key = session.id) { isDragging ->
+                    SessionCard(
+                        session = session,
+                        dragging = isDragging,
+                        handle = if (order.size > 1) {
+                            {
+                                DragHandle(
+                                    modifier = Modifier.draggableHandle(
+                                        onDragStarted = {
+                                            haptics.performHapticFeedback(
+                                                HapticFeedbackType.LongPress,
+                                            )
+                                        },
+                                        onDragStopped = { commitOrder() },
+                                    ),
+                                    onMoveUp = { moveByOne(index, -1) }
+                                        .takeIf { index > 0 },
+                                    onMoveDown = { moveByOne(index, 1) }
+                                        .takeIf { index < order.lastIndex },
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                        onEdit = { onEdit(session.id) },
+                        onDelete = { confirmDelete = session },
+                    )
+                }
             }
         }
     }
@@ -112,15 +161,20 @@ fun SessionsScreen(
 @Composable
 private fun SessionCard(
     session: SessionWithEntries,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onMove: (Int) -> Unit,
+    dragging: Boolean,
+    handle: (@Composable () -> Unit)?,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val colors = Lift.colors
     val supersets = session.entries.count { it.exercises.size > 1 }
-    LiftCard(padding = 14.dp) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .border(1.dp, if (dragging) colors.accent else colors.line2)
+            .padding(14.dp),
+    ) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -138,20 +192,7 @@ private fun SessionCard(
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
-            LiftIconButton(
-                LiftIcons.ArrowUp,
-                onClick = { onMove(-1) },
-                enabled = canMoveUp,
-                size = 38.dp,
-                iconSize = 16.dp,
-            )
-            LiftIconButton(
-                LiftIcons.ArrowDown,
-                onClick = { onMove(1) },
-                enabled = canMoveDown,
-                size = 38.dp,
-                iconSize = 16.dp,
-            )
+            handle?.invoke()
         }
         Row(
             Modifier.fillMaxWidth().padding(top = 10.dp),

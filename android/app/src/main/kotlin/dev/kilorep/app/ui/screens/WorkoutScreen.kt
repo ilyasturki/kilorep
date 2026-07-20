@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kilorep.api.models.ToSessionInput
@@ -30,6 +33,7 @@ import dev.kilorep.app.store.DraftEntry
 import dev.kilorep.app.store.DraftExercise
 import dev.kilorep.app.store.WorkoutDraft
 import dev.kilorep.app.ui.components.ConfirmDialog
+import dev.kilorep.app.ui.components.DragHandle
 import dev.kilorep.app.ui.components.ExercisePicker
 import dev.kilorep.app.ui.components.GhostButton
 import dev.kilorep.app.ui.components.Kicker
@@ -56,6 +60,8 @@ import dev.kilorep.app.ui.theme.Text
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import kotlin.math.roundToLong
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * The gym loop and the workout's whole lifecycle (web's /workouts/[id]):
@@ -69,6 +75,7 @@ fun WorkoutScreen(
     exercises: List<dev.kilorep.api.models.Exercise>,
     offline: Boolean,
     onBack: () -> Unit,
+    onOpenExercise: (Int) -> Unit,
 ) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
@@ -97,6 +104,16 @@ fun WorkoutScreen(
         if (!current.dirty && current.serverId != null) viewModel.refreshTemplate()
     }
 
+    val listState = rememberLazyListState()
+    val haptics = LocalHapticFeedback.current
+    // While a drag is live every entry collapses to a compact row, so far
+    // more drop targets fit on screen than the full cards would allow.
+    var reordering by remember { mutableStateOf(false) }
+    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+        viewModel.moveEntry(from.key as String, to.key as String)
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
+
     LiftScreen(
         title = current.name,
         onBack = onBack,
@@ -113,6 +130,7 @@ fun WorkoutScreen(
     ) {
         Column(Modifier.fillMaxSize()) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 14.dp),
@@ -123,17 +141,48 @@ fun WorkoutScreen(
                 item { StatsRow(current, onEditDate = { editingDate = true }) }
 
                 itemsIndexed(current.entries, key = { _, entry -> entry.id }) { entryIndex, entry ->
-                    if (editing) {
-                        EditableEntryCard(
-                            entryIndex = entryIndex,
-                            entry = entry,
-                            entryCount = current.entries.size,
-                            viewModel = viewModel,
-                            onPicker = { picker = it },
-                            onConfirmRemove = { confirmRemove = it },
-                        )
-                    } else {
-                        LiftCard(padding = 14.dp) { ReviewBlock(entry) }
+                    ReorderableItem(reorderState, key = entry.id) { isDragging ->
+                        val handle: (@Composable () -> Unit)? =
+                            if (current.entries.size > 1) {
+                                {
+                                    DragHandle(
+                                        modifier = Modifier.draggableHandle(
+                                            onDragStarted = {
+                                                reordering = true
+                                                haptics.performHapticFeedback(
+                                                    HapticFeedbackType.LongPress,
+                                                )
+                                            },
+                                            onDragStopped = { reordering = false },
+                                        ),
+                                        onMoveUp = { viewModel.moveEntryUp(entryIndex) }
+                                            .takeIf { entryIndex > 0 },
+                                        onMoveDown = { viewModel.moveEntryDown(entryIndex) }
+                                            .takeIf { entryIndex < current.entries.lastIndex },
+                                    )
+                                }
+                            } else {
+                                null
+                            }
+                        when {
+                            !editing -> LiftCard(padding = 14.dp) {
+                                ReviewBlock(entry, onOpenExercise)
+                            }
+                            reordering && handle != null -> CompactEntryCard(
+                                entry = entry,
+                                dragging = isDragging,
+                                handle = handle,
+                            )
+                            else -> EditableEntryCard(
+                                entryIndex = entryIndex,
+                                entry = entry,
+                                viewModel = viewModel,
+                                onPicker = { picker = it },
+                                onConfirmRemove = { confirmRemove = it },
+                                onOpenExercise = onOpenExercise,
+                                handle = handle,
+                            )
+                        }
                     }
                 }
 
@@ -225,15 +274,21 @@ fun WorkoutScreen(
     }
 
     when (val target = picker) {
-        is PickerTarget.Swap -> ExercisePicker(
-            exercises = exercises,
-            title = "Swap exercise",
-            onPick = {
-                viewModel.swapExercise(target.entry, target.exercise, it.id, it.name)
-                picker = null
-            },
-            onDismiss = { picker = null },
-        )
+        is PickerTarget.Swap -> {
+            val replacedId = current.entries.getOrNull(target.entry)
+                ?.exercises?.getOrNull(target.exercise)?.exerciseId
+            ExercisePicker(
+                exercises = exercises,
+                title = "Swap exercise",
+                similarTo = exercises.firstOrNull { it.id == replacedId },
+                excludeIds = setOfNotNull(replacedId),
+                onPick = {
+                    viewModel.swapExercise(target.entry, target.exercise, it.id, it.name)
+                    picker = null
+                },
+                onDismiss = { picker = null },
+            )
+        }
         PickerTarget.Add -> ExercisePicker(
             exercises = exercises,
             title = "Add exercise",
@@ -379,19 +434,20 @@ private fun StatsRow(draft: WorkoutDraft, onEditDate: () -> Unit) {
     }
 }
 
-/** One entry in edit mode: optional superset header + reorder, then its blocks. */
+/** One entry in edit mode: optional superset header + drag handle, then its blocks. */
 @Composable
 private fun EditableEntryCard(
     entryIndex: Int,
     entry: DraftEntry,
-    entryCount: Int,
     viewModel: WorkoutViewModel,
     onPicker: (PickerTarget) -> Unit,
     onConfirmRemove: (Triple<Int, Int, Int?>) -> Unit,
+    onOpenExercise: (Int) -> Unit,
+    handle: (@Composable () -> Unit)?,
 ) {
     LiftCard(padding = 12.dp) {
         val superset = entry.exercises.size > 1
-        if (superset || entryCount > 1) {
+        if (superset || handle != null) {
             Row(
                 Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -400,14 +456,7 @@ private fun EditableEntryCard(
                     Kicker("Superset · ${entry.exercises.size} rotated", accent = true)
                 }
                 Spacer(Modifier.weight(1f))
-                if (entryCount > 1) {
-                    MoveButtons(
-                        canUp = entryIndex > 0,
-                        canDown = entryIndex < entryCount - 1,
-                        onUp = { viewModel.moveEntryUp(entryIndex) },
-                        onDown = { viewModel.moveEntryDown(entryIndex) },
-                    )
-                }
+                handle?.invoke()
             }
         }
         entry.exercises.forEachIndexed { exerciseIndex, exercise ->
@@ -420,27 +469,46 @@ private fun EditableEntryCard(
                 onSwap = { onPicker(PickerTarget.Swap(entryIndex, exerciseIndex)) },
                 onRemove = { onConfirmRemove(Triple(entryIndex, exerciseIndex, null)) },
                 onRemoveSet = { setIndex -> onConfirmRemove(Triple(entryIndex, exerciseIndex, setIndex)) },
+                onOpen = { onOpenExercise(exercise.exerciseId) },
             )
         }
     }
 }
 
+/** What an entry collapses to while a drag is live: names + grip only. */
 @Composable
-private fun MoveButtons(
-    canUp: Boolean,
-    canDown: Boolean,
-    onUp: () -> Unit,
-    onDown: () -> Unit,
+private fun CompactEntryCard(
+    entry: DraftEntry,
+    dragging: Boolean,
+    handle: @Composable () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        LiftIconButton(LiftIcons.ArrowUp, onClick = onUp, size = 34.dp, iconSize = 16.dp, enabled = canUp)
-        LiftIconButton(LiftIcons.ArrowDown, onClick = onDown, size = 34.dp, iconSize = 16.dp, enabled = canDown)
+    val colors = Lift.colors
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .border(1.dp, if (dragging) colors.accent else colors.line2)
+            .padding(12.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                if (entry.exercises.size > 1) Kicker("Superset", accent = true)
+                entry.exercises.forEach {
+                    Text(it.name, style = LiftType.rowTitle, maxLines = 1)
+                }
+            }
+            handle()
+        }
     }
 }
 
 /** Read-only readout of one entry: load × reps per set. */
 @Composable
-private fun ReviewBlock(entry: DraftEntry) {
+private fun ReviewBlock(entry: DraftEntry, onOpenExercise: (Int) -> Unit) {
     val colors = Lift.colors
     if (entry.exercises.size > 1) {
         Kicker("Superset", accent = true, modifier = Modifier.padding(bottom = 8.dp))
@@ -453,7 +521,14 @@ private fun ReviewBlock(entry: DraftEntry) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(exercise.name, style = LiftType.rowTitle, modifier = Modifier.weight(1f), maxLines = 2)
+                Text(
+                    exercise.name,
+                    style = LiftType.rowTitle,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onOpenExercise(exercise.exerciseId) },
+                    maxLines = 2,
+                )
                 Text("${formatVolume(volume)} kg", style = LiftType.kicker, color = colors.ink3)
             }
             exercise.sets.forEachIndexed { si, set ->
@@ -484,6 +559,7 @@ private fun ExerciseBlock(
     onSwap: () -> Unit,
     onRemove: () -> Unit,
     onRemoveSet: (Int) -> Unit,
+    onOpen: () -> Unit,
 ) {
     val colors = Lift.colors
     Column(Modifier.padding(top = if (exerciseIndex == 0) 0.dp else 14.dp)) {
@@ -496,7 +572,9 @@ private fun ExerciseBlock(
             Text(
                 exercise.name,
                 style = LiftType.rowTitle,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onOpen),
                 maxLines = 2,
             )
             LiftIconButton(LiftIcons.Swap, onClick = onSwap, size = 38.dp, iconSize = 17.dp)

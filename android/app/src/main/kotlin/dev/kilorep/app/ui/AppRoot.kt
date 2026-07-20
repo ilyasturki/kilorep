@@ -1,5 +1,9 @@
 package dev.kilorep.app.ui
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -54,6 +59,18 @@ private val TABS = listOf(
     BottomTab("sessions", "Sessions", LiftIcons.ListDetails),
     BottomTab("exercises", "Exercises", LiftIcons.Search),
 )
+
+private val TAB_ROUTES = TABS.map { it.route }.toSet()
+
+private const val NAV_ANIM_MS = 300
+
+/**
+ * Sliding between sibling tabs would imply a hierarchy that doesn't exist,
+ * so tab switches swap instantly; only push/pop gets the directional slide.
+ */
+private val AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch: Boolean
+    get() = initialState.destination.route in TAB_ROUTES &&
+        targetState.destination.route in TAB_ROUTES
 
 @Composable
 fun AppRoot(container: AppContainer) {
@@ -99,6 +116,46 @@ private fun MainNav(container: AppContainer) {
             NavHost(
                 navController = navController,
                 startDestination = "dashboard",
+                enterTransition = {
+                    if (isTabSwitch) {
+                        EnterTransition.None
+                    } else {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            tween(NAV_ANIM_MS),
+                        )
+                    }
+                },
+                exitTransition = {
+                    if (isTabSwitch) {
+                        ExitTransition.None
+                    } else {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            tween(NAV_ANIM_MS),
+                        )
+                    }
+                },
+                popEnterTransition = {
+                    if (isTabSwitch) {
+                        EnterTransition.None
+                    } else {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            tween(NAV_ANIM_MS),
+                        )
+                    }
+                },
+                popExitTransition = {
+                    if (isTabSwitch) {
+                        ExitTransition.None
+                    } else {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            tween(NAV_ANIM_MS),
+                        )
+                    }
+                },
             ) {
                 composable("dashboard") {
                     DashboardScreen(
@@ -158,6 +215,7 @@ private fun MainNav(container: AppContainer) {
                         exercises = repo.exercises.watch(),
                         offline = offline,
                         onBack = { navController.popBackStack() },
+                        onOpenExercise = { navController.navigate("exercise/$it") },
                     )
                 }
                 composable(
@@ -177,6 +235,7 @@ private fun MainNav(container: AppContainer) {
                         },
                         exercises = repo.exercises.watch(),
                         onBack = { navController.popBackStack() },
+                        onOpenExercise = { navController.navigate("exercise/$it") },
                     )
                 }
                 composable("session-editor") {
@@ -186,6 +245,7 @@ private fun MainNav(container: AppContainer) {
                         },
                         exercises = repo.exercises.watch(),
                         onBack = { navController.popBackStack() },
+                        onOpenExercise = { navController.navigate("exercise/$it") },
                     )
                 }
                 composable(

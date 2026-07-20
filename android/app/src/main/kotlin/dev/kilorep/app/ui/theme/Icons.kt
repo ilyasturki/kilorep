@@ -69,14 +69,6 @@ object LiftIcons {
     val ChevronRight = strokeIcon("chevron-right") {
         moveTo(9f, 6f); lineTo(15f, 12f); lineTo(9f, 18f)
     }
-    val ArrowUp = strokeIcon("arrow-up") {
-        moveTo(12f, 19f); lineTo(12f, 5f)
-        moveTo(6f, 11f); lineTo(12f, 5f); lineTo(18f, 11f)
-    }
-    val ArrowDown = strokeIcon("arrow-down") {
-        moveTo(12f, 5f); lineTo(12f, 19f)
-        moveTo(6f, 13f); lineTo(12f, 19f); lineTo(18f, 13f)
-    }
     val Trash = strokeIcon("trash") {
         moveTo(4f, 7f); lineTo(20f, 7f)
         moveTo(10f, 11f); lineTo(10f, 17f)
@@ -194,6 +186,14 @@ object LiftIcons {
         circle(5f, 12f, 1f)
         circle(12f, 12f, 1f)
         circle(19f, 12f, 1f)
+    }
+    val GripVertical = strokeIcon("grip-vertical") {
+        circle(9f, 5f, 1f)
+        circle(9f, 12f, 1f)
+        circle(9f, 19f, 1f)
+        circle(15f, 5f, 1f)
+        circle(15f, 12f, 1f)
+        circle(15f, 19f, 1f)
     }
     val Play = strokeIcon("play") {
         moveTo(8f, 5f); lineTo(8f, 19f); lineTo(19f, 12f); close()

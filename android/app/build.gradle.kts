@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.reorderable)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)

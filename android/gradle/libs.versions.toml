@@ -14,6 +14,7 @@ securityCrypto = "1.1.0-alpha06"
 okhttp = "4.12.0"
 moshi = "1.15.1"
 openapiGenerator = "7.10.0"
+reorderable = "3.1.0"
 junit = "4.13.2"
 
 [libraries]
@@ -33,6 +34,7 @@ compose-foundation = { group = "androidx.compose.foundation", name = "foundation
 compose-ui = { group = "androidx.compose.ui", name = "ui" }
 compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
 
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

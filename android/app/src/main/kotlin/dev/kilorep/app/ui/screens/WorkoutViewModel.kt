@@ -99,6 +99,17 @@ class WorkoutViewModel(
 
     fun moveEntryDown(entry: Int) = update { it.moveEntry(entry, entry + 1) }
 
+    /**
+     * Drag reorder reports item keys, not indexes — resolve against the
+     * draft at apply time so a stale UI capture can't misplace an entry.
+     */
+    fun moveEntry(fromId: String, toId: String) = update { draft ->
+        draft.moveEntry(
+            draft.entries.indexOfFirst { it.id == fromId },
+            draft.entries.indexOfFirst { it.id == toId },
+        )
+    }
+
     /** Re-dates the workout (calendar day only; the time-of-day is kept). */
     fun setDay(day: java.time.LocalDate) = update { it.withDay(day) }
 
