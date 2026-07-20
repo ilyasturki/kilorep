@@ -18,12 +18,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.kilorep.api.models.Exercise
 import dev.kilorep.app.data.Repo
+import dev.kilorep.app.ui.FuzzyMatch
 import dev.kilorep.app.ui.components.EmptyState
+import dev.kilorep.app.ui.components.HighlightedText
 import dev.kilorep.app.ui.components.LiftIconButton
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.SearchBox
 import dev.kilorep.app.ui.components.Tag
+import dev.kilorep.app.ui.fuzzyMatch
+import dev.kilorep.app.ui.fuzzyTokens
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcons
 import dev.kilorep.app.ui.theme.LiftType
@@ -61,14 +66,20 @@ fun ExercisesScreen(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = "Search name or alias",
             )
-            val needle = query.trim().lowercase()
-            val matches = exercises
-                .filter {
-                    needle.isEmpty()
-                        || it.name.lowercase().contains(needle)
-                        || it.aliases.any { alias -> alias.lowercase().contains(needle) }
-                }
-                .sortedBy { it.name.lowercase() }
+            // Fuzzy like the web: score-ranked while typing, A→Z when empty
+            // (every exercise scores 0 then, so the name tiebreak decides).
+            val matches = remember(exercises, query) {
+                val tokens = fuzzyTokens(query)
+                exercises
+                    .mapNotNull { exercise ->
+                        fuzzyMatch(exercise.name, exercise.aliases, tokens)
+                            ?.let { exercise to it }
+                    }
+                    .sortedWith(
+                        compareByDescending<Pair<Exercise, FuzzyMatch>> { it.second.score }
+                            .thenBy { it.first.name.lowercase() },
+                    )
+            }
 
             if (matches.isEmpty()) {
                 EmptyState(
@@ -80,7 +91,7 @@ fun ExercisesScreen(
                 Modifier.weight(1f).padding(top = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
-                items(matches, key = { it.id }) { exercise ->
+                items(matches, key = { it.first.id }) { (exercise, match) ->
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -90,17 +101,27 @@ fun ExercisesScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(exercise.name, style = LiftType.rowTitle)
-                            val alias = exercise.aliases.firstOrNull {
-                                needle.isNotEmpty() && it.lowercase().contains(needle)
-                            }
-                            Text(
-                                alias?.let { "($it)" }
-                                    ?: exercise.muscles.joinToString(", ") { it.muscle },
-                                style = LiftType.secondary,
-                                color = colors.ink3,
-                                maxLines = 1,
+                            HighlightedText(
+                                exercise.name,
+                                match.labelPositions,
+                                style = LiftType.rowTitle,
                             )
+                            if (match.matchedKeyword != null) {
+                                HighlightedText(
+                                    "(${match.matchedKeyword})",
+                                    match.keywordPositions.map { it + 1 },
+                                    style = LiftType.secondary,
+                                    color = colors.ink3,
+                                    maxLines = 1,
+                                )
+                            } else {
+                                Text(
+                                    exercise.muscles.joinToString(", ") { it.muscle },
+                                    style = LiftType.secondary,
+                                    color = colors.ink3,
+                                    maxLines = 1,
+                                )
+                            }
                         }
                         Tag(exercise.equipment.value)
                         Tag(exercise.type.value)

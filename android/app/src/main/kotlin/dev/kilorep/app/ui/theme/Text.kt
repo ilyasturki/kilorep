@@ -4,6 +4,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -105,6 +106,26 @@ fun Text(
             fontSize = if (fontSize == TextUnit.Unspecified) style.fontSize else fontSize,
             fontWeight = fontWeight ?: style.fontWeight,
         ),
+        maxLines = maxLines,
+        overflow = overflow,
+    )
+}
+
+/** Styled-span variant, for search-match highlighting. */
+@Composable
+fun Text(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LiftType.body,
+    color: Color = Color.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Ellipsis,
+) {
+    val resolved = LocalLiftColors.current.ink
+    BasicText(
+        text = text,
+        modifier = modifier,
+        style = style.merge(color = if (color == Color.Unspecified) resolved else color),
         maxLines = maxLines,
         overflow = overflow,
     )
