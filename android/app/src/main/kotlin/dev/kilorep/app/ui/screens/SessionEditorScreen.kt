@@ -32,7 +32,6 @@ import dev.kilorep.app.ui.components.DragHandle
 import dev.kilorep.app.ui.components.ExercisePicker
 import dev.kilorep.app.ui.components.GhostButton
 import dev.kilorep.app.ui.components.Kicker
-import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftIconButton
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.LiftTextField
@@ -126,24 +125,37 @@ fun SessionEditorScreen(
                             } else {
                                 null
                             }
-                        if (reordering && handle != null) {
-                            CompactEntryRow(entry = entry, dragging = isDragging, handle = handle)
-                        } else {
-                            LiftCard(padding = 12.dp) {
+                        // Collapsing while dragging must keep the handle's node
+                        // in place — swapping it out would cancel the live drag.
+                        val compact = reordering && handle != null
+                        val colors = Lift.colors
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .background(colors.surface)
+                                .border(1.dp, if (isDragging) colors.accent else colors.line2)
+                                .padding(12.dp),
+                        ) {
                                 Row(
                                     Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Kicker(
-                                        if (superset) "Superset" else "Exercise",
-                                        accent = superset,
-                                        modifier = Modifier.weight(1f),
-                                    )
+                                    Column(Modifier.weight(1f)) {
+                                        Kicker(
+                                            if (superset) "Superset" else "Exercise",
+                                            accent = superset,
+                                        )
+                                        if (compact) {
+                                            entry.exercises.forEach {
+                                                Text(it.name, style = LiftType.rowTitle, maxLines = 1)
+                                            }
+                                        }
+                                    }
                                     handle?.invoke()
                                 }
 
-                                if (superset) {
+                                if (!compact && superset) {
                                     ReorderableColumn(
                                         list = entry.exercises,
                                         onSettle = { from, to ->
@@ -181,7 +193,7 @@ fun SessionEditorScreen(
                                             }
                                         }
                                     }
-                                } else {
+                                } else if (!compact) {
                                     entry.exercises.forEachIndexed { exerciseIndex, exercise ->
                                         EditorExerciseBlock(
                                             entryIndex = entryIndex,
@@ -195,14 +207,15 @@ fun SessionEditorScreen(
                                     }
                                 }
 
-                                GhostButton(
-                                    if (superset) "Add to superset" else "Make superset",
-                                    onClick = { pickerFor = entryIndex },
-                                    icon = LiftIcons.Plus,
-                                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                                    height = 38.dp,
-                                )
-                            }
+                                if (!compact) {
+                                    GhostButton(
+                                        if (superset) "Add to superset" else "Make superset",
+                                        onClick = { pickerFor = entryIndex },
+                                        icon = LiftIcons.Plus,
+                                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                                        height = 38.dp,
+                                    )
+                                }
                         }
                     }
                 }
@@ -255,37 +268,6 @@ fun SessionEditorScreen(
             },
             onDismiss = { pickerFor = null },
         )
-    }
-}
-
-/** What an entry collapses to while a drag is live: names + grip only. */
-@Composable
-private fun CompactEntryRow(
-    entry: EditEntry,
-    dragging: Boolean,
-    handle: @Composable () -> Unit,
-) {
-    val colors = Lift.colors
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .border(1.dp, if (dragging) colors.accent else colors.line2)
-            .padding(12.dp),
-    ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                if (entry.exercises.size > 1) Kicker("Superset", accent = true)
-                entry.exercises.forEach {
-                    Text(it.name, style = LiftType.rowTitle, maxLines = 1)
-                }
-            }
-            handle()
-        }
     }
 }
 

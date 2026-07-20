@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -164,16 +163,12 @@ fun WorkoutScreen(
                             } else {
                                 null
                             }
-                        when {
-                            !editing -> LiftCard(padding = 14.dp) {
+                        if (!editing) {
+                            LiftCard(padding = 14.dp) {
                                 ReviewBlock(entry, onOpenExercise)
                             }
-                            reordering && handle != null -> CompactEntryCard(
-                                entry = entry,
-                                dragging = isDragging,
-                                handle = handle,
-                            )
-                            else -> EditableEntryCard(
+                        } else {
+                            EditableEntryCard(
                                 entryIndex = entryIndex,
                                 entry = entry,
                                 viewModel = viewModel,
@@ -181,6 +176,10 @@ fun WorkoutScreen(
                                 onConfirmRemove = { confirmRemove = it },
                                 onOpenExercise = onOpenExercise,
                                 handle = handle,
+                                // Collapsing must not swap the handle's node out
+                                // of the tree — that would cancel the live drag.
+                                compact = reordering && handle != null,
+                                dragging = isDragging,
                             )
                         }
                     }
@@ -434,7 +433,12 @@ private fun StatsRow(draft: WorkoutDraft, onEditDate: () -> Unit) {
     }
 }
 
-/** One entry in edit mode: optional superset header + drag handle, then its blocks. */
+/**
+ * One entry in edit mode: optional superset header + drag handle, then its
+ * blocks. `compact` (live drag) hides the blocks and shows the names beside
+ * the handle instead — same tree shape either way, because swapping the
+ * handle's node out mid-gesture would cancel the drag.
+ */
 @Composable
 private fun EditableEntryCard(
     entryIndex: Int,
@@ -444,43 +448,8 @@ private fun EditableEntryCard(
     onConfirmRemove: (Triple<Int, Int, Int?>) -> Unit,
     onOpenExercise: (Int) -> Unit,
     handle: (@Composable () -> Unit)?,
-) {
-    LiftCard(padding = 12.dp) {
-        val superset = entry.exercises.size > 1
-        if (superset || handle != null) {
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (superset) {
-                    Kicker("Superset · ${entry.exercises.size} rotated", accent = true)
-                }
-                Spacer(Modifier.weight(1f))
-                handle?.invoke()
-            }
-        }
-        entry.exercises.forEachIndexed { exerciseIndex, exercise ->
-            ExerciseBlock(
-                entryIndex = entryIndex,
-                exerciseIndex = exerciseIndex,
-                exercise = exercise,
-                rotationTag = if (superset) ('A' + exerciseIndex).toString() else null,
-                viewModel = viewModel,
-                onSwap = { onPicker(PickerTarget.Swap(entryIndex, exerciseIndex)) },
-                onRemove = { onConfirmRemove(Triple(entryIndex, exerciseIndex, null)) },
-                onRemoveSet = { setIndex -> onConfirmRemove(Triple(entryIndex, exerciseIndex, setIndex)) },
-                onOpen = { onOpenExercise(exercise.exerciseId) },
-            )
-        }
-    }
-}
-
-/** What an entry collapses to while a drag is live: names + grip only. */
-@Composable
-private fun CompactEntryCard(
-    entry: DraftEntry,
+    compact: Boolean,
     dragging: Boolean,
-    handle: @Composable () -> Unit,
 ) {
     val colors = Lift.colors
     Column(
@@ -490,18 +459,40 @@ private fun CompactEntryCard(
             .border(1.dp, if (dragging) colors.accent else colors.line2)
             .padding(12.dp),
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                if (entry.exercises.size > 1) Kicker("Superset", accent = true)
-                entry.exercises.forEach {
-                    Text(it.name, style = LiftType.rowTitle, maxLines = 1)
+        val superset = entry.exercises.size > 1
+        if (superset || handle != null) {
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = if (compact) 0.dp else 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    if (superset) {
+                        Kicker("Superset · ${entry.exercises.size} rotated", accent = true)
+                    }
+                    if (compact) {
+                        entry.exercises.forEach {
+                            Text(it.name, style = LiftType.rowTitle, maxLines = 1)
+                        }
+                    }
                 }
+                handle?.invoke()
             }
-            handle()
+        }
+        if (!compact) {
+            entry.exercises.forEachIndexed { exerciseIndex, exercise ->
+                ExerciseBlock(
+                    entryIndex = entryIndex,
+                    exerciseIndex = exerciseIndex,
+                    exercise = exercise,
+                    rotationTag = if (superset) ('A' + exerciseIndex).toString() else null,
+                    viewModel = viewModel,
+                    onSwap = { onPicker(PickerTarget.Swap(entryIndex, exerciseIndex)) },
+                    onRemove = { onConfirmRemove(Triple(entryIndex, exerciseIndex, null)) },
+                    onRemoveSet = { setIndex -> onConfirmRemove(Triple(entryIndex, exerciseIndex, setIndex)) },
+                    onOpen = { onOpenExercise(exercise.exerciseId) },
+                )
+            }
         }
     }
 }
