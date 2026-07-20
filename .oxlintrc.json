@@ -16,10 +16,16 @@
         "es2024": true,
         "node": true
     },
-    // Claude Code worktrees are full repo checkouts, so each carries its own
-    // .oxlintrc.json; without this oxlint treats them as nested configs and
-    // aborts on the root-only `typeAware` option.
-    "ignorePatterns": [".claude/worktrees"],
+    "ignorePatterns": [
+        // Claude Code worktrees are full repo checkouts, so each carries its own
+        // .oxlintrc.json; without this oxlint treats them as nested configs and
+        // aborts on the root-only `typeAware` option.
+        ".claude/worktrees",
+        // Separate npm package with its own lockfile and node_modules, which CI's
+        // root-only `bun install` never populates. Type-aware rules then resolve
+        // React's types to `any` and fire on every SVGProps intersection.
+        "design-system"
+    ],
     "rules": {
         // Sequential awaits here are nearly always deliberate: migration steps,
         // the MCP tool loop, and per-row writes inside a transaction.
