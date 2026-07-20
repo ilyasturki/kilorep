@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -29,22 +27,24 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kilorep.api.models.Exercise
 import dev.kilorep.app.ui.components.DragHandle
+import dev.kilorep.app.ui.components.EntryDragHandle
 import dev.kilorep.app.ui.components.ExercisePicker
 import dev.kilorep.app.ui.components.GhostButton
-import dev.kilorep.app.ui.components.Kicker
+import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftIconButton
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.LiftTextField
 import dev.kilorep.app.ui.components.PrimaryButton
+import dev.kilorep.app.ui.components.ReorderableEntryHeader
 import dev.kilorep.app.ui.components.StepperField
 import dev.kilorep.app.ui.components.Tag
+import dev.kilorep.app.ui.components.rememberLiftReorder
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcons
 import dev.kilorep.app.ui.theme.LiftType
 import dev.kilorep.app.ui.theme.Text
 import sh.calvin.reorderable.ReorderableColumn
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * Build or rework a session template: ordered entries, supersets (several
@@ -76,9 +76,8 @@ fun SessionEditorScreen(
     // While an entry drag is live every entry collapses to a compact row —
     // more drop targets on screen than the full cards would allow.
     var reordering by remember { mutableStateOf(false) }
-    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
-        viewModel.moveEntry(from.key as String, to.key as String)
-        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    val reorderState = rememberLiftReorder(listState) { from, to ->
+        viewModel.moveEntry(from as String, to as String)
     }
 
     LiftScreen(title = if (name.isEmpty()) "New session" else name, onBack = onBack) {
@@ -105,117 +104,94 @@ fun SessionEditorScreen(
                         val handle: (@Composable () -> Unit)? =
                             if (entries.size > 1) {
                                 {
-                                    DragHandle(
-                                        modifier = Modifier.draggableHandle(
-                                            onDragStarted = {
-                                                reordering = true
-                                                haptics.performHapticFeedback(
-                                                    HapticFeedbackType.LongPress,
-                                                )
-                                            },
-                                            onDragStopped = { reordering = false },
-                                        ),
+                                    EntryDragHandle(
+                                        index = entryIndex,
+                                        lastIndex = entries.lastIndex,
+                                        onStep = { viewModel.moveEntry(entryIndex, it) },
                                         size = 36.dp,
-                                        onMoveUp = { viewModel.moveEntry(entryIndex, -1) }
-                                            .takeIf { entryIndex > 0 },
-                                        onMoveDown = { viewModel.moveEntry(entryIndex, 1) }
-                                            .takeIf { entryIndex < entries.lastIndex },
+                                        onDraggingChange = { reordering = it },
                                     )
                                 }
                             } else {
                                 null
                             }
-                        // Collapsing while dragging must keep the handle's node
-                        // in place — swapping it out would cancel the live drag.
                         val compact = reordering && handle != null
-                        val colors = Lift.colors
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .background(colors.surface)
-                                .border(1.dp, if (isDragging) colors.accent else colors.line2)
-                                .padding(12.dp),
+                        LiftCard(
+                            padding = 12.dp,
+                            borderColor = if (isDragging) Lift.colors.accent else null,
                         ) {
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(Modifier.weight(1f)) {
-                                        Kicker(
-                                            if (superset) "Superset" else "Exercise",
-                                            accent = superset,
-                                        )
-                                        if (compact) {
-                                            entry.exercises.forEach {
-                                                Text(it.name, style = LiftType.rowTitle, maxLines = 1)
-                                            }
+                            ReorderableEntryHeader(
+                                kicker = if (superset) "Superset" else "Exercise",
+                                accentKicker = superset,
+                                compactNames = if (compact) entry.exercises.map { it.name } else null,
+                                handle = handle,
+                            )
+
+                            if (!compact && superset) {
+                                ReorderableColumn(
+                                    list = entry.exercises,
+                                    onSettle = { from, to ->
+                                        viewModel.moveExerciseTo(entryIndex, from, to)
+                                    },
+                                ) { exerciseIndex, exercise, _ ->
+                                    key(exercise.exerciseId) {
+                                        ReorderableItem {
+                                            EditorExerciseBlock(
+                                                entryIndex = entryIndex,
+                                                exerciseIndex = exerciseIndex,
+                                                exercise = exercise,
+                                                inSuperset = true,
+                                                viewModel = viewModel,
+                                                onOpen = { onOpenExercise(exercise.exerciseId) },
+                                                handle = {
+                                                    DragHandle(
+                                                        modifier = Modifier.draggableHandle(
+                                                            onDragStarted = {
+                                                                haptics.performHapticFeedback(
+                                                                    HapticFeedbackType.LongPress,
+                                                                )
+                                                            },
+                                                        ),
+                                                        size = 32.dp,
+                                                        onMoveUp = if (exerciseIndex > 0) {
+                                                            { viewModel.moveExercise(entryIndex, exerciseIndex, -1) }
+                                                        } else {
+                                                            null
+                                                        },
+                                                        onMoveDown = if (exerciseIndex < entry.exercises.lastIndex) {
+                                                            { viewModel.moveExercise(entryIndex, exerciseIndex, 1) }
+                                                        } else {
+                                                            null
+                                                        },
+                                                    )
+                                                },
+                                            )
                                         }
                                     }
-                                    handle?.invoke()
                                 }
-
-                                if (!compact && superset) {
-                                    ReorderableColumn(
-                                        list = entry.exercises,
-                                        onSettle = { from, to ->
-                                            viewModel.moveExerciseTo(entryIndex, from, to)
-                                        },
-                                    ) { exerciseIndex, exercise, _ ->
-                                        key(exercise.exerciseId) {
-                                            ReorderableItem {
-                                                EditorExerciseBlock(
-                                                    entryIndex = entryIndex,
-                                                    exerciseIndex = exerciseIndex,
-                                                    exercise = exercise,
-                                                    inSuperset = true,
-                                                    viewModel = viewModel,
-                                                    onOpen = { onOpenExercise(exercise.exerciseId) },
-                                                    handle = {
-                                                        DragHandle(
-                                                            modifier = Modifier.draggableHandle(
-                                                                onDragStarted = {
-                                                                    haptics.performHapticFeedback(
-                                                                        HapticFeedbackType.LongPress,
-                                                                    )
-                                                                },
-                                                            ),
-                                                            size = 32.dp,
-                                                            onMoveUp = {
-                                                                viewModel.moveExercise(entryIndex, exerciseIndex, -1)
-                                                            }.takeIf { exerciseIndex > 0 },
-                                                            onMoveDown = {
-                                                                viewModel.moveExercise(entryIndex, exerciseIndex, 1)
-                                                            }.takeIf { exerciseIndex < entry.exercises.lastIndex },
-                                                        )
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    }
-                                } else if (!compact) {
-                                    entry.exercises.forEachIndexed { exerciseIndex, exercise ->
-                                        EditorExerciseBlock(
-                                            entryIndex = entryIndex,
-                                            exerciseIndex = exerciseIndex,
-                                            exercise = exercise,
-                                            inSuperset = false,
-                                            viewModel = viewModel,
-                                            onOpen = { onOpenExercise(exercise.exerciseId) },
-                                            handle = null,
-                                        )
-                                    }
-                                }
-
-                                if (!compact) {
-                                    GhostButton(
-                                        if (superset) "Add to superset" else "Make superset",
-                                        onClick = { pickerFor = entryIndex },
-                                        icon = LiftIcons.Plus,
-                                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                                        height = 38.dp,
+                            } else if (!compact) {
+                                entry.exercises.forEachIndexed { exerciseIndex, exercise ->
+                                    EditorExerciseBlock(
+                                        entryIndex = entryIndex,
+                                        exerciseIndex = exerciseIndex,
+                                        exercise = exercise,
+                                        inSuperset = false,
+                                        viewModel = viewModel,
+                                        onOpen = { onOpenExercise(exercise.exerciseId) },
+                                        handle = null,
                                     )
                                 }
+                            }
+
+                            if (!compact) {
+                                GhostButton(
+                                    if (superset) "Add to superset" else "Make superset",
+                                    onClick = { pickerFor = entryIndex },
+                                    icon = LiftIcons.Plus,
+                                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                                    height = 38.dp,
+                                )
+                            }
                         }
                     }
                 }

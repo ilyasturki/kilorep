@@ -30,24 +30,26 @@ data class FuzzyMatch(
  * to highlight it.
  */
 private fun foldChar(ch: Char): Char {
+    // Names are overwhelmingly ASCII; skip the Normalizer machinery for them.
+    if (ch.code < 128) return ch.lowercaseChar()
     val folded = Normalizer.normalize(ch.toString(), Normalizer.Form.NFD)
         .replace(DIACRITICS, "")
-        .ifEmpty { ch.toString() }
         .lowercase()
     return folded.firstOrNull() ?: ch
 }
 
 private val DIACRITICS = Regex("\\p{Mn}")
 
+private fun fold(s: String): String =
+    buildString(s.length) { s.forEach { append(foldChar(it)) } }
+
 // Item labels and keywords are static while the query changes on every
 // keystroke, so memoize the fold: each distinct string is normalized once and
-// reused across keystrokes (the cache stays small — a catalog of names plus
-// the short queries typed this session). Main-thread only, like composition.
+// reused across keystrokes (the cache stays bounded by the catalog's names).
+// Main-thread only, like composition.
 private val normCache = HashMap<String, String>()
 
-private fun normalize(s: String): String = normCache.getOrPut(s) {
-    buildString(s.length) { s.forEach { append(foldChar(it)) } }
-}
+private fun normalize(s: String): String = normCache.getOrPut(s) { fold(s) }
 
 // A new "word" starts at the string start and after any of these separators,
 // so matching there (e.g. the B and P of "Bench Press" for "bp") scores
@@ -111,9 +113,12 @@ private fun matchField(raw: String, tokens: List<String>): FieldMatch? {
 // small edge. A clearly stronger keyword match can still win.
 private const val LABEL_BOOST = 3
 
-/** Split a query into normalized, whitespace-delimited tokens. */
+/**
+ * Split a query into normalized, whitespace-delimited tokens. Queries are
+ * one-shot strings, so they fold uncached — only labels earn a cache slot.
+ */
 fun fuzzyTokens(query: String): List<String> =
-    normalize(query).trim().split(WHITESPACE).filter { it.isNotEmpty() }
+    fold(query).trim().split(WHITESPACE).filter { it.isNotEmpty() }
 
 private val WHITESPACE = Regex("\\s+")
 

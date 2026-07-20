@@ -25,13 +25,15 @@ import dev.kilorep.app.ui.theme.Text
 fun LiftCard(
     modifier: Modifier = Modifier,
     padding: Dp = 16.dp,
+    /** Overrides the hairline, e.g. accent while the card is being dragged. */
+    borderColor: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = Lift.colors
     Column(
         modifier = modifier
             .background(colors.surface)
-            .border(1.dp, colors.line2)
+            .border(1.dp, borderColor ?: colors.line2)
             .padding(padding),
         content = content,
     )

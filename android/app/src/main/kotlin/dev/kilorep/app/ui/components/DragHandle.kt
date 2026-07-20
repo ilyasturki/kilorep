@@ -1,11 +1,18 @@
 package dev.kilorep.app.ui.components
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
@@ -14,6 +21,11 @@ import androidx.compose.ui.unit.dp
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcon
 import dev.kilorep.app.ui.theme.LiftIcons
+import dev.kilorep.app.ui.theme.LiftType
+import dev.kilorep.app.ui.theme.Text
+import sh.calvin.reorderable.ReorderableCollectionItemScope
+import sh.calvin.reorderable.ReorderableLazyListState
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * ≡ grip that starts a drag the moment it's touched (no long-press) — the
@@ -42,5 +54,84 @@ fun DragHandle(
         contentAlignment = Alignment.Center,
     ) {
         LiftIcon(LiftIcons.GripVertical, tint = colors.ink2, size = 17.dp)
+    }
+}
+
+/**
+ * Reorderable-list state with the Lift haptic convention baked in: a small
+ * tick every time the dragged item crosses another. `onMove` receives the
+ * two items' lazy keys — resolve them against current state, not captures.
+ */
+@Composable
+fun rememberLiftReorder(
+    listState: LazyListState,
+    onMove: (fromKey: Any, toKey: Any) -> Unit,
+): ReorderableLazyListState {
+    val haptics = LocalHapticFeedback.current
+    return rememberReorderableLazyListState(listState) { from, to ->
+        onMove(from.key, to.key)
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
+}
+
+/**
+ * A DragHandle wired for one lazy-list entry: immediate drag with the lift
+ * haptic, and Move up/down accessibility actions gated to the entry's
+ * position. `onDraggingChange` drives collapse-while-dragging; `onDrop`
+ * carries commit-on-drop policies (the sessions list's one API call).
+ */
+@Composable
+fun ReorderableCollectionItemScope.EntryDragHandle(
+    index: Int,
+    lastIndex: Int,
+    onStep: (Int) -> Unit,
+    size: Dp = 38.dp,
+    onDraggingChange: ((Boolean) -> Unit)? = null,
+    onDrop: (() -> Unit)? = null,
+) {
+    val haptics = LocalHapticFeedback.current
+    DragHandle(
+        modifier = Modifier.draggableHandle(
+            onDragStarted = {
+                onDraggingChange?.invoke(true)
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            },
+            onDragStopped = {
+                onDraggingChange?.invoke(false)
+                onDrop?.invoke()
+            },
+        ),
+        size = size,
+        onMoveUp = if (index > 0) ({ onStep(-1) }) else null,
+        onMoveDown = if (index < lastIndex) ({ onStep(1) }) else null,
+    )
+}
+
+/**
+ * Entry-card header that stays structurally identical between the full and
+ * collapsed (drag-live) states: the card body may unmount while dragging,
+ * but this row — and with it the handle's node — must survive, or the very
+ * gesture that collapsed everything would cancel itself.
+ */
+@Composable
+fun ReorderableEntryHeader(
+    kicker: String?,
+    accentKicker: Boolean,
+    compactNames: List<String>?,
+    handle: (@Composable () -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            if (kicker != null) Kicker(kicker, accent = accentKicker)
+            compactNames?.forEach {
+                Text(it, style = LiftType.rowTitle, maxLines = 1)
+            }
+        }
+        handle?.invoke()
     }
 }

@@ -18,13 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.kilorep.api.models.Exercise
-import dev.kilorep.app.ui.FuzzyMatch
 import dev.kilorep.app.ui.exerciseSimilarity
-import dev.kilorep.app.ui.fuzzyMatch
 import dev.kilorep.app.ui.fuzzyTokens
-import dev.kilorep.app.ui.theme.Lift
-import dev.kilorep.app.ui.theme.LiftType
-import dev.kilorep.app.ui.theme.Text
+import dev.kilorep.app.ui.searchExercises
 import dev.kilorep.app.ui.topMuscle
 
 /**
@@ -46,7 +42,6 @@ fun ExercisePicker(
     similarTo: Exercise? = null,
 ) {
     var query by remember { mutableStateOf("") }
-    val colors = Lift.colors
 
     FullScreenDialog(title = title, onDismiss = onDismiss) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -57,24 +52,19 @@ fun ExercisePicker(
                 placeholder = "Search exercises",
             )
             val matches = remember(exercises, query, excludeIds, similarTo) {
-                val tokens = fuzzyTokens(query)
-                val hits = exercises
-                    .filter { it.id !in excludeIds && it.id != similarTo?.id }
-                    .mapNotNull { exercise ->
-                        fuzzyMatch(exercise.name, exercise.aliases, tokens)
-                            ?.let { exercise to it }
-                    }
-                val comparator = if (tokens.isEmpty() && similarTo != null) {
+                val hits = searchExercises(
+                    exercises.filter { it.id !in excludeIds && it.id != similarTo?.id },
+                    query,
+                )
+                if (similarTo != null && fuzzyTokens(query).isEmpty()) {
                     val similarity = hits.associate {
-                        it.first.id to exerciseSimilarity(similarTo, it.first)
+                        it.exercise.id to exerciseSimilarity(similarTo, it.exercise)
                     }
-                    compareByDescending<Pair<Exercise, FuzzyMatch>> { similarity[it.first.id] }
-                        .thenBy { it.first.name.lowercase() }
+                    // The sort is stable, so equal similarity keeps the A→Z order.
+                    hits.sortedByDescending { similarity.getValue(it.exercise.id) }
                 } else {
-                    compareByDescending<Pair<Exercise, FuzzyMatch>> { it.second.score }
-                        .thenBy { it.first.name.lowercase() }
+                    hits
                 }
-                hits.sortedWith(comparator)
             }
 
             if (matches.isEmpty()) {
@@ -88,7 +78,7 @@ fun ExercisePicker(
                 verticalArrangement = Arrangement.spacedBy(1.dp),
                 modifier = Modifier.weight(1f).padding(top = 12.dp),
             ) {
-                items(matches, key = { it.first.id }) { (exercise, match) ->
+                items(matches, key = { it.exercise.id }) { (exercise, match) ->
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -97,31 +87,12 @@ fun ExercisePicker(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(Modifier.weight(1f)) {
-                            HighlightedText(
-                                exercise.name,
-                                match.labelPositions,
-                                style = LiftType.rowTitle,
-                            )
-                            if (match.matchedKeyword != null) {
-                                HighlightedText(
-                                    "(${match.matchedKeyword})",
-                                    match.keywordPositions.map { it + 1 },
-                                    style = LiftType.secondary,
-                                    color = colors.ink3,
-                                    maxLines = 1,
-                                )
-                            } else {
-                                topMuscle(exercise)?.let { muscle ->
-                                    Text(
-                                        muscle,
-                                        style = LiftType.secondary,
-                                        color = colors.ink3,
-                                        maxLines = 1,
-                                    )
-                                }
-                            }
-                        }
+                        MatchedLabel(
+                            name = exercise.name,
+                            match = match,
+                            fallback = topMuscle(exercise),
+                            modifier = Modifier.weight(1f),
+                        )
                         Tag(exercise.equipment.value)
                     }
                 }

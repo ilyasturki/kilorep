@@ -22,8 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.kilorep.api.models.ToSessionInput
@@ -32,7 +30,7 @@ import dev.kilorep.app.store.DraftEntry
 import dev.kilorep.app.store.DraftExercise
 import dev.kilorep.app.store.WorkoutDraft
 import dev.kilorep.app.ui.components.ConfirmDialog
-import dev.kilorep.app.ui.components.DragHandle
+import dev.kilorep.app.ui.components.EntryDragHandle
 import dev.kilorep.app.ui.components.ExercisePicker
 import dev.kilorep.app.ui.components.GhostButton
 import dev.kilorep.app.ui.components.Kicker
@@ -56,11 +54,12 @@ import dev.kilorep.app.ui.theme.LiftIcon
 import dev.kilorep.app.ui.theme.LiftIcons
 import dev.kilorep.app.ui.theme.LiftType
 import dev.kilorep.app.ui.theme.Text
+import dev.kilorep.app.ui.components.ReorderableEntryHeader
+import dev.kilorep.app.ui.components.rememberLiftReorder
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import kotlin.math.roundToLong
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * The gym loop and the workout's whole lifecycle (web's /workouts/[id]):
@@ -104,13 +103,11 @@ fun WorkoutScreen(
     }
 
     val listState = rememberLazyListState()
-    val haptics = LocalHapticFeedback.current
     // While a drag is live every entry collapses to a compact row, so far
     // more drop targets fit on screen than the full cards would allow.
     var reordering by remember { mutableStateOf(false) }
-    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
-        viewModel.moveEntry(from.key as String, to.key as String)
-        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    val reorderState = rememberLiftReorder(listState) { from, to ->
+        viewModel.moveEntry(from as String, to as String)
     }
 
     LiftScreen(
@@ -141,33 +138,30 @@ fun WorkoutScreen(
 
                 itemsIndexed(current.entries, key = { _, entry -> entry.id }) { entryIndex, entry ->
                     ReorderableItem(reorderState, key = entry.id) { isDragging ->
-                        val handle: (@Composable () -> Unit)? =
-                            if (current.entries.size > 1) {
-                                {
-                                    DragHandle(
-                                        modifier = Modifier.draggableHandle(
-                                            onDragStarted = {
-                                                reordering = true
-                                                haptics.performHapticFeedback(
-                                                    HapticFeedbackType.LongPress,
-                                                )
-                                            },
-                                            onDragStopped = { reordering = false },
-                                        ),
-                                        onMoveUp = { viewModel.moveEntryUp(entryIndex) }
-                                            .takeIf { entryIndex > 0 },
-                                        onMoveDown = { viewModel.moveEntryDown(entryIndex) }
-                                            .takeIf { entryIndex < current.entries.lastIndex },
-                                    )
-                                }
-                            } else {
-                                null
-                            }
                         if (!editing) {
                             LiftCard(padding = 14.dp) {
                                 ReviewBlock(entry, onOpenExercise)
                             }
                         } else {
+                            val handle: (@Composable () -> Unit)? =
+                                if (current.entries.size > 1) {
+                                    {
+                                        EntryDragHandle(
+                                            index = entryIndex,
+                                            lastIndex = current.entries.lastIndex,
+                                            onStep = { delta ->
+                                                if (delta < 0) {
+                                                    viewModel.moveEntryUp(entryIndex)
+                                                } else {
+                                                    viewModel.moveEntryDown(entryIndex)
+                                                }
+                                            },
+                                            onDraggingChange = { reordering = it },
+                                        )
+                                    }
+                                } else {
+                                    null
+                                }
                             EditableEntryCard(
                                 entryIndex = entryIndex,
                                 entry = entry,
@@ -176,8 +170,6 @@ fun WorkoutScreen(
                                 onConfirmRemove = { confirmRemove = it },
                                 onOpenExercise = onOpenExercise,
                                 handle = handle,
-                                // Collapsing must not swap the handle's node out
-                                // of the tree — that would cancel the live drag.
                                 compact = reordering && handle != null,
                                 dragging = isDragging,
                             )
@@ -436,8 +428,7 @@ private fun StatsRow(draft: WorkoutDraft, onEditDate: () -> Unit) {
 /**
  * One entry in edit mode: optional superset header + drag handle, then its
  * blocks. `compact` (live drag) hides the blocks and shows the names beside
- * the handle instead — same tree shape either way, because swapping the
- * handle's node out mid-gesture would cancel the drag.
+ * the handle instead — see ReorderableEntryHeader for why the header stays.
  */
 @Composable
 private fun EditableEntryCard(
@@ -451,33 +442,19 @@ private fun EditableEntryCard(
     compact: Boolean,
     dragging: Boolean,
 ) {
-    val colors = Lift.colors
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .border(1.dp, if (dragging) colors.accent else colors.line2)
-            .padding(12.dp),
+    LiftCard(
+        padding = 12.dp,
+        borderColor = if (dragging) Lift.colors.accent else null,
     ) {
         val superset = entry.exercises.size > 1
         if (superset || handle != null) {
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = if (compact) 0.dp else 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    if (superset) {
-                        Kicker("Superset · ${entry.exercises.size} rotated", accent = true)
-                    }
-                    if (compact) {
-                        entry.exercises.forEach {
-                            Text(it.name, style = LiftType.rowTitle, maxLines = 1)
-                        }
-                    }
-                }
-                handle?.invoke()
-            }
+            ReorderableEntryHeader(
+                kicker = if (superset) "Superset · ${entry.exercises.size} rotated" else null,
+                accentKicker = true,
+                compactNames = if (compact) entry.exercises.map { it.name } else null,
+                handle = handle,
+                modifier = Modifier.padding(bottom = if (compact) 0.dp else 8.dp),
+            )
         }
         if (!compact) {
             entry.exercises.forEachIndexed { exerciseIndex, exercise ->

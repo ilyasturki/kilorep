@@ -1,7 +1,5 @@
 package dev.kilorep.app.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,18 +18,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import dev.kilorep.api.models.SessionWithEntries
 import dev.kilorep.app.data.Repo
 import dev.kilorep.app.ui.components.ConfirmDialog
-import dev.kilorep.app.ui.components.DragHandle
 import dev.kilorep.app.ui.components.EmptyState
+import dev.kilorep.app.ui.components.EntryDragHandle
 import dev.kilorep.app.ui.components.GhostButton
+import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftIconButton
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.PrimaryButton
+import dev.kilorep.app.ui.components.rememberLiftReorder
+import dev.kilorep.app.ui.movedByKey
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcons
 import dev.kilorep.app.ui.theme.LiftType
@@ -39,7 +38,6 @@ import dev.kilorep.app.ui.theme.Text
 import dev.kilorep.app.ui.watch
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * Session templates: create, edit, reorder (most-used on top), delete.
@@ -64,14 +62,8 @@ fun SessionsScreen(
     // remember key resets it whenever the repo emits (refresh, other device).
     var order by remember(sessions) { mutableStateOf(sessions) }
     val listState = rememberLazyListState()
-    val haptics = LocalHapticFeedback.current
-    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
-        order = order.toMutableList().apply {
-            val f = indexOfFirst { it.id == from.key }
-            val t = indexOfFirst { it.id == to.key }
-            if (f >= 0 && t >= 0) add(t, removeAt(f))
-        }
-        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    val reorderState = rememberLiftReorder(listState) { from, to ->
+        order = order.movedByKey(from, to) { it.id }
     }
 
     fun commitOrder() {
@@ -117,19 +109,11 @@ fun SessionsScreen(
                         dragging = isDragging,
                         handle = if (order.size > 1) {
                             {
-                                DragHandle(
-                                    modifier = Modifier.draggableHandle(
-                                        onDragStarted = {
-                                            haptics.performHapticFeedback(
-                                                HapticFeedbackType.LongPress,
-                                            )
-                                        },
-                                        onDragStopped = { commitOrder() },
-                                    ),
-                                    onMoveUp = { moveByOne(index, -1) }
-                                        .takeIf { index > 0 },
-                                    onMoveDown = { moveByOne(index, 1) }
-                                        .takeIf { index < order.lastIndex },
+                                EntryDragHandle(
+                                    index = index,
+                                    lastIndex = order.lastIndex,
+                                    onStep = { moveByOne(index, it) },
+                                    onDrop = ::commitOrder,
                                 )
                             }
                         } else {
@@ -168,12 +152,9 @@ private fun SessionCard(
 ) {
     val colors = Lift.colors
     val supersets = session.entries.count { it.exercises.size > 1 }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .border(1.dp, if (dragging) colors.accent else colors.line2)
-            .padding(14.dp),
+    LiftCard(
+        padding = 14.dp,
+        borderColor = if (dragging) colors.accent else null,
     ) {
         Row(
             Modifier.fillMaxWidth(),

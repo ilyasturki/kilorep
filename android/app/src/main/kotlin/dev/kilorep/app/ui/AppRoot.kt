@@ -72,6 +72,24 @@ private val AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch: Boole
     get() = initialState.destination.route in TAB_ROUTES &&
         targetState.destination.route in TAB_ROUTES
 
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.navSlideIn(
+    direction: AnimatedContentTransitionScope.SlideDirection,
+): EnterTransition =
+    if (isTabSwitch) {
+        EnterTransition.None
+    } else {
+        slideIntoContainer(direction, tween(NAV_ANIM_MS))
+    }
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.navSlideOut(
+    direction: AnimatedContentTransitionScope.SlideDirection,
+): ExitTransition =
+    if (isTabSwitch) {
+        ExitTransition.None
+    } else {
+        slideOutOfContainer(direction, tween(NAV_ANIM_MS))
+    }
+
 @Composable
 fun AppRoot(container: AppContainer) {
     LiftTheme {
@@ -116,46 +134,10 @@ private fun MainNav(container: AppContainer) {
             NavHost(
                 navController = navController,
                 startDestination = "dashboard",
-                enterTransition = {
-                    if (isTabSwitch) {
-                        EnterTransition.None
-                    } else {
-                        slideIntoContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Left,
-                            tween(NAV_ANIM_MS),
-                        )
-                    }
-                },
-                exitTransition = {
-                    if (isTabSwitch) {
-                        ExitTransition.None
-                    } else {
-                        slideOutOfContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Left,
-                            tween(NAV_ANIM_MS),
-                        )
-                    }
-                },
-                popEnterTransition = {
-                    if (isTabSwitch) {
-                        EnterTransition.None
-                    } else {
-                        slideIntoContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Right,
-                            tween(NAV_ANIM_MS),
-                        )
-                    }
-                },
-                popExitTransition = {
-                    if (isTabSwitch) {
-                        ExitTransition.None
-                    } else {
-                        slideOutOfContainer(
-                            AnimatedContentTransitionScope.SlideDirection.Right,
-                            tween(NAV_ANIM_MS),
-                        )
-                    }
-                },
+                enterTransition = { navSlideIn(AnimatedContentTransitionScope.SlideDirection.Left) },
+                exitTransition = { navSlideOut(AnimatedContentTransitionScope.SlideDirection.Left) },
+                popEnterTransition = { navSlideIn(AnimatedContentTransitionScope.SlideDirection.Right) },
+                popExitTransition = { navSlideOut(AnimatedContentTransitionScope.SlideDirection.Right) },
             ) {
                 composable("dashboard") {
                     DashboardScreen(

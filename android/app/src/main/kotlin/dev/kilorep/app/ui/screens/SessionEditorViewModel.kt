@@ -9,6 +9,8 @@ import dev.kilorep.api.models.SessionInput
 import dev.kilorep.api.models.SessionWithEntries
 import dev.kilorep.app.data.Repo
 import dev.kilorep.app.data.userMessage
+import dev.kilorep.app.ui.moved
+import dev.kilorep.app.ui.movedByKey
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -99,45 +101,21 @@ class SessionEditorViewModel(
     }
 
     fun moveEntry(index: Int, delta: Int) {
-        val list = entries.value.toMutableList()
-        val to = index + delta
-        if (index !in list.indices || to !in list.indices) return
-        list[index] = list.set(to, list[index])
-        entries.value = list
+        entries.value = entries.value.moved(index, index + delta)
     }
 
-    /**
-     * Drag reorder reports item keys, not indexes — resolve against current
-     * state at apply time so a stale UI capture can't misplace an entry.
-     */
+    /** Drag reorder lands here with item keys; resolved at apply time. */
     fun moveEntry(fromId: String, toId: String) {
-        val list = entries.value.toMutableList()
-        val from = list.indexOfFirst { it.id == fromId }
-        val to = list.indexOfFirst { it.id == toId }
-        if (from < 0 || to < 0 || from == to) return
-        list.add(to, list.removeAt(from))
-        entries.value = list
+        entries.value = entries.value.movedByKey(fromId, toId) { it.id }
     }
 
     /** Reorders a superset's rotation. */
-    fun moveExercise(entryIndex: Int, exerciseIndex: Int, delta: Int) {
-        mapEntry(entryIndex) { entry ->
-            val list = entry.exercises.toMutableList()
-            val to = exerciseIndex + delta
-            if (exerciseIndex !in list.indices || to !in list.indices) return@mapEntry entry
-            list[exerciseIndex] = list.set(to, list[exerciseIndex])
-            entry.copy(exercises = list)
-        }
-    }
+    fun moveExercise(entryIndex: Int, exerciseIndex: Int, delta: Int) =
+        moveExerciseTo(entryIndex, exerciseIndex, exerciseIndex + delta)
 
     /** Same, but with the from→to shape a settled drag reports. */
     fun moveExerciseTo(entryIndex: Int, from: Int, to: Int) {
-        mapEntry(entryIndex) { entry ->
-            val list = entry.exercises.toMutableList()
-            if (from !in list.indices || to !in list.indices || from == to) return@mapEntry entry
-            list.add(to, list.removeAt(from))
-            entry.copy(exercises = list)
-        }
+        mapEntry(entryIndex) { it.copy(exercises = it.exercises.moved(from, to)) }
     }
 
     fun addSet(entryIndex: Int, exerciseIndex: Int) {
