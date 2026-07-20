@@ -19,6 +19,10 @@ const select = tv({
     variants: {
         // The placeholder is not a value, so it keeps its own casing.
         placeholder: { true: { value: 'text-ink-3 normal-case' } },
+        // Only labels we derived from a bare value get title-cased. An explicit
+        // `label` is human-authored and must survive verbatim, or
+        // 'English (UK)' renders as 'English (Uk)'.
+        authored: { true: { value: 'normal-case', item: 'normal-case' } },
     },
 })
 
@@ -41,15 +45,26 @@ export function Select({
     onValueChange,
     placeholder,
 }: SelectProps) {
-    const options: SelectOption[] = items.map((item) =>
-        typeof item === 'object' ? item : { label: String(item), value: item },
+    const options = items.map((item) =>
+        typeof item === 'object' ?
+            { ...item, authored: true }
+        :   {
+                label: String(item),
+                value: item,
+                disabled: undefined,
+                authored: false,
+            },
     )
 
     // Render the label ourselves rather than relying on the headless component's
     // internal registry, which only resolves once the listbox has been opened.
-    const currentLabel = options.find((o) => o.value === value)?.label
+    const current = options.find((o) => o.value === value)
+    const currentLabel = current?.label
 
-    const slots = select({ placeholder: currentLabel == null })
+    const slots = select({
+        placeholder: currentLabel == null,
+        authored: current?.authored ?? false,
+    })
 
     return (
         <RadixSelect.Root
@@ -77,7 +92,11 @@ export function Select({
                                 key={option.value}
                                 value={option.value}
                                 disabled={option.disabled}
-                                className={slots.item()}
+                                // Casing is per-row: a list can mix derived and
+                                // authored labels.
+                                className={select({
+                                    authored: option.authored,
+                                }).item()}
                             >
                                 <RadixSelect.ItemText>
                                     {option.label}

@@ -7,6 +7,10 @@ const input = tv({
         'w-full border border-line-2 bg-surface px-[13px] py-[11px]',
         'font-[inherit] text-ink outline-none placeholder:text-ink-3',
         'transition-[border-color] duration-[120ms] focus:border-accent',
+        // Explicit `text-ink`/`bg-surface` above override the UA's own disabled
+        // greying, so without this a disabled input is indistinguishable from an
+        // editable one. Matches Button's disabled treatment.
+        'disabled:cursor-not-allowed disabled:opacity-45',
     ],
     variants: {
         size: {

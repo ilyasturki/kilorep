@@ -25,10 +25,15 @@ const select = tv({
     variants: {
         // The placeholder is not a value, so it keeps its own casing.
         placeholder: { true: { value: 'text-ink-3 normal-case' } },
+        // Only labels we derived from a bare value get title-cased. An explicit
+        // `label` is human-authored and must survive verbatim, or
+        // 'English (UK)' renders as 'English (Uk)'.
+        authored: { true: { value: 'normal-case', item: 'normal-case' } },
     },
 })
 
 type Option = { label: string; value: T; disabled?: boolean }
+type Row = Option & { authored: boolean }
 
 const props = defineProps<{
     items: readonly (T | Option)[]
@@ -37,22 +42,34 @@ const props = defineProps<{
 
 const model = defineModel<T>()
 
-const options = computed<Option[]>(() =>
+const options = computed<Row[]>(() =>
     props.items.map((item) =>
         typeof item === 'object' ?
-            (item as Option)
-        :   { label: String(item), value: item as T },
+            { ...(item as Option), authored: true }
+        :   { label: String(item), value: item as T, authored: false },
     ),
 )
 
 // Render the label ourselves rather than relying on the headless component's
 // internal registry, which only resolves once the listbox has been opened.
-const currentLabel = computed(
-    () => options.value.find((o) => o.value === model.value)?.label,
+const current = computed(() =>
+    options.value.find((o) => o.value === model.value),
 )
+const currentLabel = computed(() => current.value?.label)
 
 const slots = computed(() =>
-    select({ placeholder: currentLabel.value == null }),
+    select({
+        placeholder: currentLabel.value == null,
+        authored: current.value?.authored ?? false,
+    }),
+)
+
+// Casing is per-row: a list can mix derived and authored labels.
+const rows = computed(() =>
+    options.value.map((o) => ({
+        ...o,
+        class: select({ authored: o.authored }).item(),
+    })),
 )
 </script>
 
@@ -76,11 +93,11 @@ const slots = computed(() =>
             >
                 <SelectViewport :class="slots.viewport()">
                     <SelectItem
-                        v-for="option in options"
+                        v-for="option in rows"
                         :key="String(option.value)"
                         :value="option.value"
                         :disabled="option.disabled"
-                        :class="slots.item()"
+                        :class="option.class"
                     >
                         <SelectItemText>{{ option.label }}</SelectItemText>
                         <SelectItemIndicator>

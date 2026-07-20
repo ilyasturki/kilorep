@@ -132,24 +132,44 @@ manually before assuming the components are wrong.
 ## Findings about the Vue design system (surfaced by mirroring it)
 
 Porting Lift to React and rendering every component in isolation exposed things the app itself
-never shows. None were changed here (the Vue is the source of truth and out of this run's
-scope), but they are real:
+never shows. **Three were fixed in the Vue source on 2026-07-20** and ported to the mirror; the
+last is recorded as intentional.
 
-- **`Input` has no visual disabled state.** Its `tv()` base sets `text-ink` and `bg-surface`
-  explicitly, which override the UA's default disabled greying, and no variant reintroduces it.
-  A disabled Input is pixel-identical to an editable one. `Button` by contrast carries a
-  per-tone disabled treatment. Fix, if wanted: add `disabled:opacity-50
-disabled:cursor-not-allowed` to the base in `app/components/ui/Input.vue`, then port it.
-- **`Select`'s trigger `capitalize` title-cases every word**, so the locale picker in
-  `settings.vue` renders `Automatic (device)` as `Automatic (Device)`. The `placeholder` variant
-  already carves out `normal-case`, so the pattern for fixing it exists.
-- **`Button` applies `justify-center` only to the `primary` tone.** A `flex-1` ghost or danger
-  button renders its label left-aligned in a stretched box (live at
-  `app/pages/workouts/index.vue`, where Review carries `flex-1`).
-- **`CardActions` ships `mt-4.5` but `CardHead` ships no margin** — every real call site passes
-  `class="mb-4"` to CardHead itself. Asymmetric but consistent across the app.
+- **FIXED — `Input` had no visual disabled state.** Its `tv()` base sets `text-ink` and
+  `bg-surface` explicitly, which override the UA's default disabled greying, and no variant
+  reintroduced it, so a disabled Input was pixel-identical to an editable one. Added
+  `disabled:cursor-not-allowed disabled:opacity-45` to the base (matching Button's treatment).
+  Regression cell: `Input/Disabled`.
+- **FIXED — `Select`'s trigger `capitalize` title-cased every word.** Worse than first reported:
+  it hit `English (UK)` → `English (Uk)` and turned the whole MCP scope picker into
+  `Local — This Project, Just You`. The fix distinguishes **derived** labels (a bare enum value
+  like `'barbell'`, which genuinely needs title-casing) from **authored** ones (an explicit
+  `{label, value}` entry, which must survive verbatim) via a new `authored` tv variant, applied
+  per row since one list can mix both. Verified against every call site: `EQUIPMENT`,
+  `MUSCLE_INTENSITIES` and `muscleOptions` (`Object.values(MUSCLE_GROUPS).flat()`) are bare
+  strings and still capitalize; `SUPPORTED_LOCALES`, `localeItems` and `scopeItems` are authored
+  and now render untouched. Regression cell: `Select/InField`.
+- **FIXED — `Button` applied `justify-center` only to the `primary` tone**, so a `flex-1` ghost
+  or danger button left-aligned its label (live at `app/pages/workouts/index.vue`, where Review
+  carries `flex-1`). Moved to the base: inert at natural width, correct when stretched.
+  Regression cell: `Button/Stretched`.
+- **NOT a defect — `CardActions` ships `mt-4.5` but `CardHead` ships no margin.** Every real call
+  site passes `class="mb-4"` to CardHead itself. Asymmetric but consistent across the app.
+
+Two states remain unstyled by design and were deliberately left alone: `IconButton tone="danger"`
+is hover-only, and `SegmentedOption` disabled has no `tv()` treatment.
 
 ## Preview-authoring conventions (for future waves)
+
+- **`preview-rebuild.mjs` does NOT rebuild `_ds_bundle.js`.** It only recompiles the preview
+  `.tsx` files. After changing a _component's source_ under `design-system/src/`, a
+  preview-rebuild + capture will silently re-shoot the cards against the **old** bundle and look
+  like the change did nothing. Cost a full debugging cycle on the Select fix. Component source
+  changes need `package-build.mjs` or a full `resync.mjs` driver run.
+- Grades follow the authored `.tsx`, not the component implementation, so a component whose
+  _source_ changed reports `carried forward` and is not recaptured. Force a fresh sheet with
+  `package-capture.mjs --components <N> --spot-check-components <N>` when you need to _see_ an
+  implementation change.
 
 - Author `.design-sync/previews/<Name>.tsx`; each named export is one graded card cell. Budget
   2-4. Import from `'@kilorep/lift-react'`.

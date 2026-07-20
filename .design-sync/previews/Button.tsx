@@ -47,6 +47,25 @@ export function Sizes() {
     )
 }
 
+export function Stretched() {
+    return (
+        <div style={{ display: 'flex', gap: 12, maxWidth: 420 }}>
+            <Button
+                tone='ghost'
+                className='flex-1'
+            >
+                Review
+            </Button>
+            <Button
+                tone='danger'
+                className='flex-1'
+            >
+                Discard
+            </Button>
+        </div>
+    )
+}
+
 export function Disabled() {
     return (
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>

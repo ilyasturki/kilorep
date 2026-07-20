@@ -48,6 +48,28 @@ export function Placeholder() {
     )
 }
 
+export function Disabled() {
+    return (
+        <div
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                maxWidth: 380,
+            }}
+        >
+            <Input
+                value='Barbell bench press'
+                readOnly
+            />
+            <Input
+                value='Barbell bench press'
+                disabled
+            />
+        </div>
+    )
+}
+
 export function Focused() {
     return (
         <div style={{ maxWidth: 380 }}>

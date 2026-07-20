@@ -6,13 +6,17 @@ import type { PrimitiveProps } from '../lib/primitive'
 import { Primitive } from '../lib/primitive'
 
 const button = tv({
-    base: 'inline-flex items-center',
+    // `justify-center` is in the base rather than per-tone: it is inert at the
+    // natural width every tone normally renders at, and only bites when a caller
+    // stretches the button (`flex-1`, `w-full`), where a left-hugging label reads
+    // as a bug.
+    base: 'inline-flex items-center justify-center',
     variants: {
         // Disabled styling is per-tone rather than shared: only primary and
         // ghost ever render disabled, and the two use different opacities.
         tone: {
             primary: [
-                'justify-center gap-2 border-none bg-accent px-4.5 py-3',
+                'gap-2 border-none bg-accent px-4.5 py-3',
                 'text-body-lg font-extrabold tracking-[-0.01em] text-on-accent',
                 '[transition:filter_0.15s,transform_0.08s]',
                 'hover:brightness-[1.06] active:scale-[0.99]',
