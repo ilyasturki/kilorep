@@ -746,6 +746,11 @@ async function changeDate() {
                                     v-model="set.reps"
                                     :class="LOGSET_FIELD"
                                     :min="1"
+                                    :placeholder="
+                                        set.repHint != null ?
+                                            String(set.repHint)
+                                        :   undefined
+                                    "
                                 />
                                 <UiIconButton
                                     type="button"

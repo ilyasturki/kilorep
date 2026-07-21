@@ -31,7 +31,7 @@ test('add set starts blank, never copying the previous set', () => {
     addWorkoutSet(ex)
     expect(ex.sets).toEqual([{ reps: undefined, weight: undefined }])
 
-    ex.sets[0] = { reps: 8, weight: 60 }
+    ex.sets[0] = { reps: 8, weight: 60, repHint: 7 }
     addWorkoutSet(ex)
     expect(ex.sets[1]).toEqual({ reps: undefined, weight: undefined })
 })
@@ -67,7 +67,7 @@ test('ungrouping a superset splits it into one entry per exercise, reusing the o
     expect(entries[1].exercises[0]).toBe(b)
 })
 
-test('serialization rides undefined weight as null and preserves reps', () => {
+test('serialization rides undefined weight as null, preserves reps, echoes the hint', () => {
     const entries: WorkoutEntryDraft[] = [
         {
             id: 1,
@@ -75,7 +75,10 @@ test('serialization rides undefined weight as null and preserves reps', () => {
                 {
                     exerciseId: 7,
                     name: 'OHP',
-                    sets: [{ reps: 8, weight: undefined }],
+                    sets: [
+                        { reps: 8, weight: undefined },
+                        { reps: undefined, weight: undefined, repHint: 6 },
+                    ],
                 },
             ],
         },
@@ -92,7 +95,10 @@ test('serialization rides undefined weight as null and preserves reps', () => {
                 exercises: [
                     {
                         exerciseId: 7,
-                        sets: [{ reps: 8, weight: null }],
+                        sets: [
+                            { reps: 8, weight: null, repHint: null },
+                            { reps: undefined, weight: null, repHint: 6 },
+                        ],
                     },
                 ],
             },
@@ -100,14 +106,14 @@ test('serialization rides undefined weight as null and preserves reps', () => {
     })
 })
 
-test('hydration turns null reps/weight from the API into undefined for the inputs', () => {
+test('hydration turns null reps/weight from the API into undefined, keeping the hint', () => {
     const draft = workoutDraftFromEntries([
         {
             exercises: [
                 {
                     exerciseId: 3,
                     exercise: { name: 'Row' },
-                    sets: [{ reps: null, weight: null }],
+                    sets: [{ reps: null, weight: null, repHint: 6.5 }],
                 },
             ],
         },
@@ -116,6 +122,7 @@ test('hydration turns null reps/weight from the API into undefined for the input
     expect(draft[0].exercises[0].sets[0]).toEqual({
         reps: undefined,
         weight: undefined,
+        repHint: 6.5,
     })
 })
 

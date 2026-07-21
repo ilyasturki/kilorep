@@ -2,10 +2,14 @@ package dev.kilorep.app.store
 
 import dev.kilorep.api.infrastructure.Serializer
 import dev.kilorep.api.models.Exercise
+import dev.kilorep.api.models.LoggedSet
 import dev.kilorep.api.models.PrescribedSet
 import dev.kilorep.api.models.SessionEntry
 import dev.kilorep.api.models.SessionExercise
 import dev.kilorep.api.models.SessionWithEntries
+import dev.kilorep.api.models.WorkoutEntry
+import dev.kilorep.api.models.WorkoutExercise
+import dev.kilorep.api.models.WorkoutWithEntries
 import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -116,6 +120,25 @@ class WorkoutDraftTest {
     }
 
     @Test
+    fun `an open target stays blank and carries the last logged reps as its hint`() {
+        val draft = WorkoutDraft.fromSession(
+            session(),
+            "local-1",
+            "2026-06-12T18:00:00Z",
+            lastReps = mapOf(2 to listOf(7.0)),
+        )
+        val bench = draft.entries[0].exercises[0]
+
+        // The prescribed set keeps its target and gets no hint.
+        assertEquals(8.0, bench.sets[0].reps)
+        assertEquals(null, bench.sets[0].hint)
+        // The open set stays blank; its position is beyond the one-set
+        // history, so the last logged set covers the hint.
+        assertEquals(null, bench.sets[1].reps)
+        assertEquals(7.0, bench.sets[1].hint)
+    }
+
+    @Test
     fun `editing a set marks the draft dirty`() {
         val clean = started().copy(dirty = false)
         val edited = clean.updateSet(0, 0, 0) { it.copy(weight = 80.0) }
@@ -223,11 +246,13 @@ class WorkoutDraftTest {
     @Test
     fun `an added set never copies the previous effort`() {
         val draft = started()
-            .updateSet(0, 0, 1) { it.copy(reps = 8.0, weight = 80.0) }
+            .updateSet(0, 0, 1) { it.copy(reps = 8.0, weight = 80.0, hint = 7.0) }
             .addSet(0, 0)
         val added = draft.entries[0].exercises[0].sets.last()
         assertEquals(null, added.weight)
         assertEquals(null, added.reps)
+        assertEquals(null, added.target)
+        assertEquals(null, added.hint)
     }
 
     @Test
@@ -252,5 +277,56 @@ class WorkoutDraftTest {
             OffsetDateTime.parse(moved.startedAt),
         )
         assertTrue(moved.dirty)
+    }
+
+    @Test
+    fun `lastLoggedReps takes each exercise's newest logged workout, in tree order`() {
+        fun logged(exerciseId: Int, reps: List<Double?>) = WorkoutExercise(
+            id = exerciseId * 100,
+            entryId = exerciseId * 100 + 1,
+            exerciseId = exerciseId,
+            position = 0,
+            exercise = exercise(exerciseId, "Ex $exerciseId"),
+            sets = reps.mapIndexed { i, r ->
+                LoggedSet(
+                    id = exerciseId * 1000 + i,
+                    workoutExerciseId = exerciseId * 100,
+                    reps = r,
+                    weight = null,
+                    position = i,
+                )
+            },
+        )
+
+        fun workout(id: Int, startedAt: String, exercises: List<WorkoutExercise>) =
+            WorkoutWithEntries(
+                id = id,
+                userId = 1,
+                sessionId = null,
+                name = "W$id",
+                startedAt = OffsetDateTime.parse(startedAt),
+                completed = true,
+                entries = listOf(
+                    WorkoutEntry(id = id * 10, workoutId = id, position = 0, exercises = exercises),
+                ),
+            )
+
+        val history = listOf(
+            // Newest: bench logged 6 and 5; squat present but nothing logged.
+            workout(
+                2, "2026-06-10T18:00:00Z",
+                listOf(logged(2, listOf(6.0, 5.0)), logged(9, listOf(null))),
+            ),
+            // Older: bench at 10; squat's newest *logged* workout is this one.
+            workout(
+                1, "2026-06-03T18:00:00Z",
+                listOf(logged(2, listOf(10.0)), logged(9, listOf(12.0))),
+            ),
+        )
+
+        val last = WorkoutDraft.lastLoggedReps(history)
+        assertEquals(listOf(6.0, 5.0), last[2])
+        // A workout with only blank reps doesn't shadow the older logged one.
+        assertEquals(listOf(12.0), last[9])
     }
 }

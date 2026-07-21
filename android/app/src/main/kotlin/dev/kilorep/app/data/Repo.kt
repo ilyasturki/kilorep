@@ -143,6 +143,7 @@ class Repo(
             session,
             localId = UUID.randomUUID().toString(),
             startedAt = OffsetDateTime.now().toString(),
+            lastReps = WorkoutDraft.lastLoggedReps(workouts.value),
         )
         putDraft(draft)
         return draft

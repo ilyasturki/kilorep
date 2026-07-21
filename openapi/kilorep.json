@@ -1959,6 +1959,10 @@
                         "type": ["number", "null"],
                         "description": "Kilograms; null until entered."
                     },
+                    "repHint": {
+                        "type": ["number", "null"],
+                        "description": "The lifter's last logged reps for this slot, snapshotted at workout start for open-target sets only. A display hint, never a logged value."
+                    },
                     "position": {
                         "type": "integer"
                     }
@@ -2217,7 +2221,7 @@
                 "properties": {
                     "sessionId": {
                         "type": "integer",
-                        "description": "The session template to copy. Rep targets seed each set; open targets seed from the last logged reps."
+                        "description": "The session template to copy. Rep targets prefill each set; open targets stay blank and carry the last logged reps as repHint."
                     }
                 }
             },
@@ -2230,6 +2234,10 @@
                     "weight": {
                         "type": ["number", "null"],
                         "description": "Kilograms; negative or non-finite values normalise to null."
+                    },
+                    "repHint": {
+                        "type": ["number", "null"],
+                        "description": "Clients echo the hint snapshot back so it survives the whole-tree save; omitting it drops the hint."
                     }
                 }
             },

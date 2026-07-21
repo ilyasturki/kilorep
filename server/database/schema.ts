@@ -265,8 +265,8 @@ export const workoutExercises = sqliteTable('workout_exercises', {
 
 // A logged set: the reps actually performed and the load lifted, in kilograms.
 // `weight` stays null until entered; `reps` is null while not entered — cleared
-// mid-edit or seeded from an open-target template set with no history. Readers
-// render it as "?" and count it as 0 in volume.
+// mid-edit or copied from an open-target template set. Readers render it as "?"
+// and count it as 0 in volume.
 export const workoutSets = sqliteTable('workout_sets', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     workoutExerciseId: integer('workout_exercise_id')
@@ -274,6 +274,12 @@ export const workoutSets = sqliteTable('workout_sets', {
         .references(() => workoutExercises.id, { onDelete: 'cascade' }),
     reps: integer('reps'),
     weight: real('weight'),
+    // The lifter's last logged reps for this slot, snapshotted at workout start
+    // for open-target sets only — a display hint, never a value. Snapshotting
+    // (rather than joining the template at read time) keeps the hint stable
+    // when the template is edited or deleted mid-workout. Real, not integer:
+    // logged history can hold half-reps.
+    repHint: real('rep_hint'),
     position: integer('position').notNull().default(0),
 })
 

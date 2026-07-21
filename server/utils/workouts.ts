@@ -13,6 +13,7 @@ import { loadSchema } from '~~/shared/validation/primitives'
 type LoggedSetInput = {
     reps?: number | null
     weight?: number | null
+    repHint?: number | null
 }
 type WorkoutExerciseInput = { exerciseId?: number; sets?: LoggedSetInput[] }
 type WorkoutEntryInput = { exercises?: WorkoutExerciseInput[] }
@@ -26,6 +27,7 @@ export type WorkoutInput = {
 type ParsedLoggedSet = {
     reps: number | null
     weight: number | null
+    repHint: number | null
 }
 type ParsedExercise = { exerciseId: number; sets: ParsedLoggedSet[] }
 type ParsedEntry = { exercises: ParsedExercise[] }
@@ -39,8 +41,10 @@ export type ParsedWorkout = {
 /**
  * Validates and normalises a workout update payload. Mirrors `parseSessionInput`
  * but each set also carries the logged load: `weight` (kilograms, null until
- * entered). A set keeps its slot with null reps while its field is
- * cleared, so an autosave mid-edit can't silently drop the row. Exercises
+ * entered) and `repHint` — the client echoing back the hint snapshot so it
+ * survives the whole-tree rewrite in `saveWorkout`. A set keeps its slot with
+ * null reps while its field is cleared, so an autosave mid-edit can't silently
+ * drop the row. Exercises
  * without a valid catalog id are dropped; a 400 is thrown when nothing usable
  * remains. `name` is only returned when explicitly provided and non-empty,
  * so callers can leave the snapshot untouched.
@@ -56,6 +60,7 @@ export function parseWorkoutInput(body: WorkoutInput): ParsedWorkout {
                     sets: (ex?.sets ?? []).map((set) => ({
                         reps: parseLoggedReps(set?.reps),
                         weight: loadSchema.parse(set?.weight),
+                        repHint: parseLoggedReps(set?.repHint),
                     })),
                 }))
                 .filter(
@@ -130,6 +135,7 @@ function writeWorkoutEntries(
                         workoutExerciseId: exerciseRow.id,
                         reps: set.reps,
                         weight: set.weight,
+                        repHint: set.repHint,
                         position: setIndex,
                     })),
                 )
@@ -218,9 +224,10 @@ export function saveWorkout(
 
 /**
  * The reps of each exercise's most recent workout that logged any, in set
- * order — the seed for open-target sets when a template is copied. Ranking
- * by workout recency per exercise inside SQLite keeps the result at one
- * workout's sets per exercise instead of shipping the full history out.
+ * order — the `repHint` snapshot for open-target sets when a template is
+ * copied. Ranking by workout recency per exercise inside SQLite keeps the
+ * result at one workout's sets per exercise instead of shipping the full
+ * history out.
  */
 function lastLoggedReps(
     tx: DbTransaction,
@@ -290,12 +297,13 @@ function lastLoggedReps(
 
 /**
  * Creates a workout by copying a template's tree. The template's rep targets
- * seed each set's reps; the load is left blank (`weight` null) for the lifter to
- * fill in. An open target (null reps) seeds from the lifter's last logged reps
- * for that exercise instead, staying blank when there is no history. The copy
- * means later edits to the template never touch this history. Throws 404 when
- * the template is gone. Owns its transaction so the new workout and its whole
- * seeded tree commit together.
+ * prefill each set's reps; the load is left blank (`weight` null) for the
+ * lifter to fill in. An open target (null reps) stays blank — history never
+ * masquerades as a prescription — and instead snapshots the lifter's last
+ * logged reps for that exercise into `repHint`, for the UIs to show as a
+ * non-committing hint. The copy means later edits to the template never touch
+ * this history. Throws 404 when the template is gone. Owns its transaction so
+ * the new workout and its whole seeded tree commit together.
  */
 export function copySessionToWorkout(
     userId: number,
@@ -391,12 +399,14 @@ export function copySessionToWorkout(
                         .values(
                             sets.map((set, setIndex) => ({
                                 workoutExerciseId: exerciseRow.id,
-                                reps:
-                                    set.reps
-                                    ?? lastReps?.[setIndex]
-                                    ?? lastReps?.at(-1)
-                                    ?? null,
+                                reps: set.reps,
                                 weight: null,
+                                repHint:
+                                    set.reps == null ?
+                                        (lastReps?.[setIndex]
+                                        ?? lastReps?.at(-1)
+                                        ?? null)
+                                    :   null,
                                 position: setIndex,
                             })),
                         )

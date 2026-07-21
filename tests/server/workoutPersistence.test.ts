@@ -164,7 +164,7 @@ test('saveWorkout 404s on a workout another user owns, leaving it untouched', ()
     expect(loadWorkoutTrees(userId, [workout.id])[0]!.completed).toBe(true)
 })
 
-test('copySessionToWorkout seeds an open target from the last logged reps, load left open', () => {
+test('copySessionToWorkout leaves an open target blank, snapshotting the last logged reps as repHint', () => {
     const squat = createExercise(userId, {
         name: 'Squat',
         equipment: 'barbell',
@@ -190,7 +190,45 @@ test('copySessionToWorkout seeds an open target from the last logged reps, load 
         }),
     )
 
-    // A template prescribing Squat with an open rep target (null).
+    // A template prescribing one open set, one fixed target, and one open set
+    // beyond the history's length.
+    const session = createSessionTree(
+        userId,
+        parseSessionInput({
+            name: 'Leg Day',
+            entries: [
+                {
+                    exercises: [
+                        {
+                            exerciseId: squat.id,
+                            sets: [{ reps: null }, { reps: 8 }, { reps: null }],
+                        },
+                    ],
+                },
+            ],
+        }),
+    )
+
+    const workout = copySessionToWorkout(userId, session.id)
+    const tree = loadWorkoutTrees(userId, [workout.id])[0]!
+    const sets = tree.entries[0]!.exercises[0]!.sets
+
+    expect(workout.sessionId).toBe(session.id)
+    expect(sets.map((s) => [s.reps, s.repHint])).toEqual([
+        [null, 5], // open: blank reps, history rides as the hint
+        [8, null], // prescribed: the target prefills, no hint
+        [null, 5], // beyond the history, the last logged set covers the hint
+    ])
+    expect(sets.map((s) => s.weight)).toEqual([null, null, null])
+})
+
+test('copySessionToWorkout leaves an open target blank and hint-less without history', () => {
+    const squat = createExercise(userId, {
+        name: 'Squat',
+        equipment: 'barbell',
+        type: 'compound',
+        muscles: [{ muscle: 'quads', intensity: 'high' }],
+    })
     const session = createSessionTree(
         userId,
         parseSessionInput({
@@ -206,12 +244,45 @@ test('copySessionToWorkout seeds an open target from the last logged reps, load 
     )
 
     const workout = copySessionToWorkout(userId, session.id)
-    const tree = loadWorkoutTrees(userId, [workout.id])[0]!
-    const set = tree.entries[0]!.exercises[0]!.sets[0]!
+    const set = loadWorkoutTrees(userId, [workout.id])[0]!.entries[0]!
+        .exercises[0]!.sets[0]!
+    expect(set.reps).toBeNull()
+    expect(set.repHint).toBeNull()
+})
 
-    expect(workout.sessionId).toBe(session.id)
-    expect(set.reps).toBe(5) // seeded from the last logged reps
-    expect(set.weight).toBeNull() // load left blank for the lifter
+test('saveWorkout keeps an echoed repHint across the whole-tree rewrite', () => {
+    const ex = createExercise(userId, benchInput)
+    const workout = createWorkout(
+        userId,
+        parseWorkoutInput({
+            entries: [
+                { exercises: [{ exerciseId: ex.id, sets: [{ reps: 5 }] }] },
+            ],
+        }),
+    )
+
+    saveWorkout(
+        userId,
+        workout.id,
+        parseWorkoutInput({
+            completed: false,
+            entries: [
+                {
+                    exercises: [
+                        {
+                            exerciseId: ex.id,
+                            sets: [{ reps: null, repHint: 6.5 }],
+                        },
+                    ],
+                },
+            ],
+        }),
+    )
+
+    const set = loadWorkoutTrees(userId, [workout.id])[0]!.entries[0]!
+        .exercises[0]!.sets[0]!
+    expect(set.reps).toBeNull()
+    expect(set.repHint).toBe(6.5) // fractional history survives the echo
 })
 
 test('parseWorkoutInput rejects a payload with no usable exercise', () => {

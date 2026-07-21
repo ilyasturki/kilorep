@@ -6,7 +6,7 @@ const numberField = tv({
     slots: {
         root: 'inline-flex w-[120px] items-center border border-line-2 bg-surface',
         // Native spinners removed on both engines: the +/- steppers replace them.
-        input: 'w-full min-w-0 border-0 bg-transparent px-1 py-2.25 text-center font-mono text-body-lg text-ink outline-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none',
+        input: 'w-full min-w-0 border-0 bg-transparent px-1 py-2.25 text-center font-mono text-body-lg text-ink outline-none placeholder:text-ink-3 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none',
     },
 })
 
@@ -18,6 +18,7 @@ const props = defineProps<{
     max?: number
     step?: number
     stepSnapping?: boolean
+    placeholder?: string
     class?: unknown
 }>()
 
@@ -35,7 +36,10 @@ const { root, input } = numberField()
         :class="root({ class: props.class as string })"
     >
         <UiNumberStep dir="dec" />
-        <NumberFieldInput :class="input()" />
+        <NumberFieldInput
+            :placeholder="placeholder"
+            :class="input()"
+        />
         <UiNumberStep dir="inc" />
     </NumberFieldRoot>
 </template>

@@ -6,6 +6,7 @@ import dev.kilorep.api.models.WorkoutDetail
 import dev.kilorep.api.models.WorkoutEntryInput
 import dev.kilorep.api.models.WorkoutExerciseInput
 import dev.kilorep.api.models.WorkoutInput
+import dev.kilorep.api.models.WorkoutWithEntries
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -27,6 +28,13 @@ data class DraftSet(
     val weight: Double?,
     /** The prescribed rep target (a whole count), shown beside what's logged. */
     val target: Int?,
+    /**
+     * The lifter's last logged reps for this slot (the server's `repHint`),
+     * snapshotted at workout start for open-target sets only — shown as LAST
+     * where a target would sit, never written into [reps]. Defaulted so
+     * drafts persisted before this field existed still deserialize.
+     */
+    val hint: Double? = null,
 )
 
 data class DraftExercise(
@@ -85,6 +93,9 @@ data class WorkoutDraft(
                                     LoggedSetInput(
                                         reps = set.reps,
                                         weight = set.weight,
+                                        // Echoed so the hint survives the
+                                        // server's whole-tree rewrite.
+                                        repHint = set.hint,
                                     )
                                 },
                             )
@@ -219,13 +230,16 @@ data class WorkoutDraft(
         /**
          * Builds the draft locally from a cached session tree — the same
          * copy-on-start semantics as the server's, so offline and online
-         * starts produce the same workout. Prescribed reps seed each set's
-         * reps and stay visible as the target.
+         * starts produce the same workout. Prescribed reps prefill each set's
+         * reps and stay visible as the target; an open target stays blank and
+         * carries the exercise's last logged reps (from [lastReps], see
+         * [lastLoggedReps]) as its hint.
          */
         fun fromSession(
             session: SessionWithEntries,
             localId: String,
             startedAt: String,
+            lastReps: Map<Int, List<Double>> = emptyMap(),
         ): WorkoutDraft = WorkoutDraft(
             localId = localId,
             serverId = null,
@@ -241,16 +255,26 @@ data class WorkoutDraft(
                         exercises = entry.exercises
                             .sortedBy { it.position }
                             .map { exercise ->
+                                val history = lastReps[exercise.exerciseId]
                                 DraftExercise(
                                     exerciseId = exercise.exerciseId,
                                     name = exercise.exercise.name,
                                     sets = exercise.sets
                                         .sortedBy { it.position }
-                                        .map { set ->
+                                        .mapIndexed { setIndex, set ->
                                             DraftSet(
                                                 reps = set.reps?.toDouble(),
                                                 weight = null,
                                                 target = set.reps,
+                                                // The last set's reps cover
+                                                // positions beyond the history,
+                                                // mirroring the server.
+                                                hint = if (set.reps == null) {
+                                                    history?.getOrNull(setIndex)
+                                                        ?: history?.lastOrNull()
+                                                } else {
+                                                    null
+                                                },
                                             )
                                         },
                                 )
@@ -258,6 +282,35 @@ data class WorkoutDraft(
                     )
                 },
         )
+
+        /**
+         * The reps of each exercise's most recent cached workout that logged
+         * any, in tree order — the hint source for an offline start, mirroring
+         * the server's `lastLoggedReps` so both paths agree.
+         */
+        fun lastLoggedReps(workouts: List<WorkoutWithEntries>): Map<Int, List<Double>> {
+            val result = mutableMapOf<Int, List<Double>>()
+            val newestFirst = workouts.sortedWith(
+                compareByDescending<WorkoutWithEntries> { it.startedAt }
+                    .thenByDescending { it.id },
+            )
+            for (workout in newestFirst) {
+                val logged = mutableMapOf<Int, MutableList<Double>>()
+                for (entry in workout.entries.sortedBy { it.position }) {
+                    for (exercise in entry.exercises.sortedBy { it.position }) {
+                        for (set in exercise.sets.sortedBy { it.position }) {
+                            set.reps?.let {
+                                logged.getOrPut(exercise.exerciseId) { mutableListOf() }.add(it)
+                            }
+                        }
+                    }
+                }
+                for ((exerciseId, reps) in logged) {
+                    result.putIfAbsent(exerciseId, reps)
+                }
+            }
+            return result
+        }
 
         /** Reopens a server workout for editing through the same loop. */
         fun fromWorkout(detail: WorkoutDetail, localId: String): WorkoutDraft =
@@ -286,6 +339,7 @@ data class WorkoutDraft(
                                                     reps = set.reps,
                                                     weight = set.weight,
                                                     target = null,
+                                                    hint = set.repHint,
                                                 )
                                             },
                                     )

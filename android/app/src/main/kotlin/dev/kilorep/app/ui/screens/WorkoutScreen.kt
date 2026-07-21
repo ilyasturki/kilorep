@@ -613,7 +613,12 @@ private fun ExerciseBlock(
                     Text(
                         buildString {
                             append("SET ${setIndex + 1}")
-                            set.target?.let { append("  ·  TARGET $it") }
+                            // An open set shows the last logged reps where a
+                            // prescription would sit — a hint, never a value.
+                            when {
+                                set.target != null -> append("  ·  TARGET ${set.target}")
+                                set.hint != null -> append("  ·  LAST ${formatReps(set.hint)}")
+                            }
                         },
                         style = LiftType.tag,
                         color = colors.ink3,

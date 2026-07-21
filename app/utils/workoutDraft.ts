@@ -1,11 +1,14 @@
 import { uid } from './uid'
 
 // The in-progress edit tree the workout editor binds to. reps/weight are
-// undefined while their NumberField is cleared mid-edit, and reps also when an
-// open-target template set seeded with no history yet.
+// undefined while their NumberField is cleared mid-edit, and reps also when the
+// set came from an open-target template set. repHint is the last logged reps
+// snapshotted at workout start for open-target sets — shown as the empty reps
+// field's placeholder, never written to reps.
 export type WorkoutSetDraft = {
     reps: number | undefined
     weight: number | undefined
+    repHint?: number
 }
 export type WorkoutExerciseDraft = {
     exerciseId: number
@@ -40,7 +43,11 @@ type FetchedWorkoutEntry = {
     exercises: {
         exerciseId: number
         exercise: { name: string }
-        sets: { reps: number | null; weight: number | null }[]
+        sets: {
+            reps: number | null
+            weight: number | null
+            repHint?: number | null
+        }[]
     }[]
 }
 
@@ -57,6 +64,7 @@ export function workoutDraftFromEntries(
             sets: ex.sets.map((s) => ({
                 reps: s.reps ?? undefined,
                 weight: s.weight ?? undefined,
+                repHint: s.repHint ?? undefined,
             })),
         })),
     }))
@@ -103,7 +111,8 @@ export function ungroupWorkoutEntry(
 }
 
 // Serialize the draft to the PUT /api/workouts/:id body: undefined weight rides
-// as null, reps pass through as-is.
+// as null, reps pass through as-is. repHint is echoed back so the snapshot
+// survives the server's whole-tree rewrite.
 export function workoutDraftToBody(
     entries: WorkoutEntryDraft[],
     opts: { completed: boolean; startedAt: string | undefined },
@@ -117,6 +126,7 @@ export function workoutDraftToBody(
                 sets: ex.sets.map((s) => ({
                     reps: s.reps,
                     weight: s.weight ?? null,
+                    repHint: s.repHint ?? null,
                 })),
             })),
         })),

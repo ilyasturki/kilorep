@@ -1,0 +1,1 @@
+ALTER TABLE `workout_sets` ADD `rep_hint` real;
