@@ -1452,6 +1452,7 @@
                     "name",
                     "equipment",
                     "type",
+                    "loadMode",
                     "muscles",
                     "aliases"
                 ],
@@ -1478,6 +1479,11 @@
                     "type": {
                         "type": "string",
                         "enum": ["compound", "isolation"]
+                    },
+                    "loadMode": {
+                        "type": "string",
+                        "enum": ["total", "per-hand", "unilateral"],
+                        "description": "What logged kilograms mean for this exercise: the whole load (total), what one implement of a pair reads (per-hand), or a load moved by one side at a time (unilateral). Per-hand and unilateral sets count double in volume."
                     },
                     "muscles": {
                         "type": "array",
@@ -1522,6 +1528,11 @@
                         "items": {
                             "$ref": "#/components/schemas/MuscleTarget"
                         }
+                    },
+                    "loadMode": {
+                        "type": "string",
+                        "enum": ["total", "per-hand", "unilateral"],
+                        "description": "Optional; create derives a default from equipment (dumbbell is per-hand, everything else total) and update keeps the stored value when omitted."
                     }
                 }
             },
@@ -1608,6 +1619,7 @@
                     "name",
                     "equipment",
                     "type",
+                    "loadMode",
                     "muscles",
                     "aliases",
                     "sessions",
@@ -1637,6 +1649,10 @@
                     "type": {
                         "type": "string",
                         "enum": ["compound", "isolation"]
+                    },
+                    "loadMode": {
+                        "type": "string",
+                        "enum": ["total", "per-hand", "unilateral"]
                     },
                     "muscles": {
                         "type": "array",

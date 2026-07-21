@@ -22,7 +22,7 @@ class FractionalRepsTest {
               "entries":[{"id":1,"workoutId":1,"position":0,
                 "exercises":[{"id":1,"entryId":1,"exerciseId":2,"position":0,
                   "exercise":{"id":2,"userId":1,"name":"Incline Barbell Bench Press",
-                    "equipment":"barbell","type":"compound","muscles":[],"aliases":[]},
+                    "equipment":"barbell","type":"compound","loadMode":"total","muscles":[],"aliases":[]},
                   "sets":[{"id":1,"workoutExerciseId":1,"reps":6.5,"weight":50.0,"position":0}]}]}]}]
         """.trimIndent()
         val adapter = Serializer.moshi.adapter<List<WorkoutWithEntries>>(

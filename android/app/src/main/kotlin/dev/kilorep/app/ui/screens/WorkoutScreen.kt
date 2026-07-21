@@ -30,6 +30,7 @@ import dev.kilorep.app.data.SyncStatus
 import dev.kilorep.app.store.DraftEntry
 import dev.kilorep.app.store.DraftExercise
 import dev.kilorep.app.store.WorkoutDraft
+import dev.kilorep.app.store.loadFactor
 import dev.kilorep.app.ui.components.ConfirmDialog
 import dev.kilorep.app.ui.components.EntryDragHandle
 import dev.kilorep.app.ui.components.ExercisePicker
@@ -50,6 +51,7 @@ import dev.kilorep.app.ui.formatVolume
 import dev.kilorep.app.ui.formatWeight
 import dev.kilorep.app.ui.parseReps
 import dev.kilorep.app.ui.parseWeight
+import dev.kilorep.app.ui.weightUnit
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcon
 import dev.kilorep.app.ui.theme.LiftIcons
@@ -307,7 +309,13 @@ fun WorkoutScreen(
                 similarTo = exercises.firstOrNull { it.id == replacedId },
                 excludeIds = setOfNotNull(replacedId),
                 onPick = {
-                    viewModel.swapExercise(target.entry, target.exercise, it.id, it.name)
+                    viewModel.swapExercise(
+                        target.entry,
+                        target.exercise,
+                        it.id,
+                        it.name,
+                        it.loadMode.value,
+                    )
                     picker = null
                 },
                 onDismiss = { picker = null },
@@ -317,7 +325,7 @@ fun WorkoutScreen(
             exercises = exercises,
             title = "Add exercise",
             onPick = {
-                viewModel.addExercise(it.id, it.name)
+                viewModel.addExercise(it.id, it.name, it.loadMode.value)
                 picker = null
             },
             onDismiss = { picker = null },
@@ -439,7 +447,8 @@ private fun StatsRow(draft: WorkoutDraft, onEditDate: () -> Unit) {
         draft.entries.forEach { entry ->
             entry.exercises.forEach { ex ->
                 s += ex.sets.size
-                ex.sets.forEach { v += (it.weight ?: 0.0) * (it.reps ?: 0.0) }
+                val factor = loadFactor(ex.loadMode)
+                ex.sets.forEach { v += (it.weight ?: 0.0) * (it.reps ?: 0.0) * factor }
             }
         }
         v.roundToLong() to s
@@ -522,7 +531,9 @@ private fun ReviewBlock(entry: DraftEntry, onOpenExercise: (Int) -> Unit) {
         Kicker("Superset", accent = true, modifier = Modifier.padding(bottom = 8.dp))
     }
     entry.exercises.forEachIndexed { i, exercise ->
-        val volume = exercise.sets.sumOf { (it.weight ?: 0.0) * (it.reps ?: 0.0) }.roundToLong()
+        val volume = exercise.sets
+            .sumOf { (it.weight ?: 0.0) * (it.reps ?: 0.0) * loadFactor(exercise.loadMode) }
+            .roundToLong()
         Column(Modifier.padding(top = if (i == 0) 0.dp else 12.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -547,7 +558,7 @@ private fun ReviewBlock(entry: DraftEntry, onOpenExercise: (Int) -> Unit) {
                 ) {
                     Text("${si + 1}", style = LiftType.tag, color = colors.ink3)
                     Text(
-                        "${formatWeight(set.weight)} kg × ${formatReps(set.reps)}",
+                        "${formatWeight(set.weight)} ${weightUnit(exercise.loadMode)} × ${formatReps(set.reps)}",
                         style = LiftType.mono,
                         modifier = Modifier.weight(1f),
                     )
@@ -643,7 +654,7 @@ private fun ExerciseBlock(
                             viewModel.setWeight(entryIndex, exerciseIndex, setIndex, parseWeight(it))
                         },
                         onStep = { viewModel.stepWeight(entryIndex, exerciseIndex, setIndex, it) },
-                        suffix = "KG",
+                        suffix = weightUnit(exercise.loadMode).uppercase(),
                         decimal = true,
                         modifier = Modifier.weight(1.15f),
                     )

@@ -5,6 +5,7 @@ import type {
     WorkoutDetail,
     WorkoutTemplateStatus,
 } from '~~/server/database/schema'
+import type { LoadMode } from '~~/shared/utils/exercise'
 import type {
     WorkoutEntryDraft as EntryDraft,
     WorkoutExerciseDraft as ExerciseDraft,
@@ -110,9 +111,9 @@ const topTargets = computed(() =>
     topMuscles(draft.value, exerciseMuscles.value),
 )
 
-const weightLabel = (w: number | undefined | null) =>
-    w == null ? '—' : `${fmtWeight(w)} kg`
-const exVolume = (ex: ExerciseDraft) => setVolume(ex.sets)
+const weightLabel = (w: number | undefined | null, mode: LoadMode) =>
+    w == null ? '—' : `${fmtWeight(w)} ${weightUnit(mode)}`
+const exVolume = (ex: ExerciseDraft) => setVolume(ex.sets, ex.loadMode)
 
 // The workout's day is editable anytime (even once completed). Only the calendar
 // day moves: the original time-of-day is kept so same-day ordering is stable.
@@ -169,6 +170,7 @@ function confirmSwap() {
     if (!ex || !picked) return
     ex.exerciseId = picked.id
     ex.name = picked.name
+    ex.loadMode = picked.loadMode
     swapTarget.value = undefined
 }
 
@@ -724,7 +726,9 @@ async function changeDate() {
 
                             <div :class="LOGSET">
                                 <span />
-                                <span :class="SET_LABEL">KG</span>
+                                <span :class="SET_LABEL">{{
+                                    weightUnit(item.ex.loadMode).toUpperCase()
+                                }}</span>
                                 <span :class="SET_LABEL">REPS</span>
                                 <span />
                             </div>
@@ -866,7 +870,7 @@ async function changeDate() {
                                 si + 1
                             }}</span>
                             <span class="font-mono text-body text-ink">
-                                {{ weightLabel(set.weight) }}
+                                {{ weightLabel(set.weight, item.ex.loadMode) }}
                                 <span class="mx-1.5 text-ink-3">×</span>
                                 {{ set.reps ?? '?' }}
                             </span>

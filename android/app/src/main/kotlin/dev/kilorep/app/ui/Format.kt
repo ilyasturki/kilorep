@@ -26,6 +26,16 @@ fun formatWeight(weight: Double?): String = when {
     else -> weight.toString().trimEnd('0').trimEnd('.')
 }
 
+/**
+ * The unit that follows a weight, from the exercise's load mode (wire value —
+ * pass the generated enum's `.value`). Matches web's weightUnit().
+ */
+fun weightUnit(loadMode: String?): String = when (loadMode) {
+    "per-hand" -> "kg/hand"
+    "unilateral" -> "kg/side"
+    else -> "kg"
+}
+
 /** Reps render like loads: whole counts plain, a half-rep keeps its ".5". */
 fun formatReps(reps: Double?): String = when {
     reps == null -> "?"

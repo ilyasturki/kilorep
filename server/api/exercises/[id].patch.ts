@@ -76,11 +76,39 @@ export default defineEventHandler(async (event) => {
     const body = (await readBody<Record<string, unknown>>(event)) ?? {}
     const values = parseExerciseInput(body)
 
+    const db = useDrizzle()
+    const current = db
+        .select()
+        .from(tables.exercises)
+        .where(
+            and(
+                eq(tables.exercises.id, id),
+                eq(tables.exercises.userId, userId),
+            ),
+        )
+        .get()
+    if (!current) {
+        notFound('Exercise not found')
+    }
+
+    // The load mode is the user's logging convention, not a different
+    // movement — correcting it alone must not brand a catalog entry custom.
+    // Only a change to what the movement *is* reclassifies it.
+    const rebranded =
+        values.name !== current.name
+        || values.equipment !== current.equipment
+        || values.type !== current.type
+        || JSON.stringify(values.muscles) !== JSON.stringify(current.muscles)
+
     let updated
     try {
-        updated = useDrizzle()
+        updated = db
             .update(tables.exercises)
-            .set({ ...values, source: 'custom' })
+            .set({
+                ...values,
+                loadMode: values.loadMode ?? current.loadMode,
+                source: rebranded ? 'custom' : current.source,
+            })
             .where(
                 and(
                     eq(tables.exercises.id, id),

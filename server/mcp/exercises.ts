@@ -1,15 +1,24 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 
+import type { LoadMode } from '~~/server/database/schema'
 import {
     EQUIPMENT,
     EXERCISE_TYPES,
+    LOAD_MODES,
     MUSCLE_INTENSITIES,
 } from '~~/server/database/schema'
 import { eq, tables, useDrizzle } from '~~/server/utils/drizzle'
 import { createExercise, getExerciseDetail } from '~~/server/utils/exercises'
 import { toDateInput } from '~~/shared/utils/date'
+import { weightUnit } from '~~/shared/utils/exercise'
 import { formatSet, resolveExercise, run } from './helpers'
+
+// ", kg per hand" / ", kg one side" after a movement, silent for plain totals.
+const loadModeNote = (mode: LoadMode) =>
+    mode === 'total' ? '' : (
+        `, kg ${mode === 'per-hand' ? 'per hand' : 'one side'}`
+    )
 
 export function registerExerciseTools(server: McpServer, userId: number) {
     server.registerTool(
@@ -31,7 +40,7 @@ export function registerExerciseTools(server: McpServer, userId: number) {
                 return exercises
                     .map(
                         (ex) =>
-                            `${ex.name} — ${ex.equipment} ${ex.type} (${ex.muscles
+                            `${ex.name} — ${ex.equipment} ${ex.type}${loadModeNote(ex.loadMode)} (${ex.muscles
                                 .map((m) => `${m.muscle}: ${m.intensity}`)
                                 .join(', ')})`,
                     )
@@ -60,6 +69,12 @@ export function registerExerciseTools(server: McpServer, userId: number) {
                     )
                     .min(1)
                     .describe('Muscles worked, with relative intensity'),
+                loadMode: z
+                    .enum(LOAD_MODES)
+                    .optional()
+                    .describe(
+                        'What logged kg means: the whole load (total), one implement of a pair (per-hand), or a load moved one side at a time (unilateral). Defaults from equipment (dumbbell → per-hand).',
+                    ),
             },
             annotations: { destructiveHint: false },
         },
@@ -96,11 +111,11 @@ export function registerExerciseTools(server: McpServer, userId: number) {
                 const limit = input.limit ?? 10
 
                 const lines = [
-                    `${detail.name} — ${detail.equipment} ${detail.type}`,
+                    `${detail.name} — ${detail.equipment} ${detail.type}${loadModeNote(detail.loadMode)}`,
                 ]
                 lines.push(
                     detail.best ?
-                        `Best: ${detail.best.weight}kg×${detail.best.reps} (${toDateInput(detail.best.startedAt)}, ${detail.best.name} #${detail.best.workoutId})`
+                        `Best: ${detail.best.weight}${weightUnit(detail.loadMode)}×${detail.best.reps} (${toDateInput(detail.best.startedAt)}, ${detail.best.name} #${detail.best.workoutId})`
                     :   'Best: none logged yet',
                 )
                 if (detail.sessions.length > 0) {

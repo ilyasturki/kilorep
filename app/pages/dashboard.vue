@@ -272,7 +272,8 @@ const weightPoints = computed(() =>
                                 >{{ pr.name }}</span
                             >
                             <span class="font-mono text-micro text-ink-3">
-                                {{ fmtWeight(pr.weight) }} kg × {{ pr.reps }} ·
+                                {{ fmtWeight(pr.weight) }}
+                                {{ weightUnit(pr.loadMode) }} × {{ pr.reps }} ·
                                 {{ dayLabel(pr.startedAt) }}
                             </span>
                         </div>
@@ -282,7 +283,7 @@ const weightPoints = computed(() =>
                             {{ fmtWeight(pr.est1rm) }}
                             <span
                                 class="ml-0.5 text-[10px] font-medium text-ink-3"
-                                >kg est.</span
+                                >{{ weightUnit(pr.loadMode) }} est.</span
                             >
                         </span>
                     </NuxtLink>

@@ -112,13 +112,14 @@ test('hydration turns null reps/weight from the API into undefined, keeping the 
             exercises: [
                 {
                     exerciseId: 3,
-                    exercise: { name: 'Row' },
+                    exercise: { name: 'Row', loadMode: 'unilateral' as const },
                     sets: [{ reps: null, weight: null, repHint: 6.5 }],
                 },
             ],
         },
     ])
     expect(draft[0].exercises[0].name).toBe('Row')
+    expect(draft[0].exercises[0].loadMode).toBe('unilateral')
     expect(draft[0].exercises[0].sets[0]).toEqual({
         reps: undefined,
         weight: undefined,
@@ -126,10 +127,28 @@ test('hydration turns null reps/weight from the API into undefined, keeping the 
     })
 })
 
+test('hydration defaults a missing load mode to total', () => {
+    const draft = workoutDraftFromEntries([
+        {
+            exercises: [
+                {
+                    exerciseId: 3,
+                    exercise: { name: 'Row' },
+                    sets: [],
+                },
+            ],
+        },
+    ])
+    expect(draft[0].exercises[0].loadMode).toBe('total')
+})
+
 test('newWorkoutExercise seeds one blank set', () => {
-    expect(newWorkoutExercise({ id: 4, name: 'Curl' })).toEqual({
+    expect(
+        newWorkoutExercise({ id: 4, name: 'Curl', loadMode: 'per-hand' }),
+    ).toEqual({
         exerciseId: 4,
         name: 'Curl',
+        loadMode: 'per-hand',
         sets: [{ reps: undefined, weight: undefined }],
     })
 })

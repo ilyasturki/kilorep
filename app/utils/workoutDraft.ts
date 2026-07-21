@@ -1,3 +1,4 @@
+import type { LoadMode } from '~~/shared/utils/exercise'
 import { uid } from './uid'
 
 // The in-progress edit tree the workout editor binds to. reps/weight are
@@ -13,6 +14,9 @@ export type WorkoutSetDraft = {
 export type WorkoutExerciseDraft = {
     exerciseId: number
     name: string
+    // Carried on the draft so the set grid can label its kg column and the
+    // volume rollups can apply the ×2 factor without a catalog lookup.
+    loadMode: LoadMode
     sets: WorkoutSetDraft[]
 }
 // id is a client-only key for the reorder animation, never sent to the server.
@@ -28,10 +32,12 @@ export function newWorkoutSet(): WorkoutSetDraft {
 export function newWorkoutExercise(exercise: {
     id: number
     name: string
+    loadMode: LoadMode
 }): WorkoutExerciseDraft {
     return {
         exerciseId: exercise.id,
         name: exercise.name,
+        loadMode: exercise.loadMode,
         sets: [newWorkoutSet()],
     }
 }
@@ -42,7 +48,7 @@ export function newWorkoutExercise(exercise: {
 type FetchedWorkoutEntry = {
     exercises: {
         exerciseId: number
-        exercise: { name: string }
+        exercise: { name: string; loadMode?: LoadMode }
         sets: {
             reps: number | null
             weight: number | null
@@ -61,6 +67,7 @@ export function workoutDraftFromEntries(
         exercises: entry.exercises.map((ex) => ({
             exerciseId: ex.exerciseId,
             name: ex.exercise.name,
+            loadMode: ex.exercise.loadMode ?? 'total',
             sets: ex.sets.map((s) => ({
                 reps: s.reps ?? undefined,
                 weight: s.weight ?? undefined,

@@ -18,6 +18,7 @@ private fun exercise(
     name = name,
     equipment = equipment,
     type = type,
+    loadMode = Exercise.LoadMode.total,
     muscles = muscles.map { MuscleTarget(it.first, it.second) },
     aliases = emptyList(),
 )

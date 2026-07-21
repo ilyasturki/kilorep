@@ -143,6 +143,7 @@ export function loadDashboard(userId: number): DashboardData {
                         est1rm: Math.round(est1rm * 10) / 10,
                         weight: set.weight,
                         reps: set.reps,
+                        loadMode: ex.exercise.loadMode,
                         workoutId: w.id,
                         startedAt: w.startedAt,
                     })

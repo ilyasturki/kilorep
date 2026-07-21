@@ -23,6 +23,7 @@ private fun exercise(id: Int, name: String) = Exercise(
     name = name,
     equipment = Exercise.Equipment.barbell,
     type = Exercise.Type.compound,
+    loadMode = Exercise.LoadMode.total,
     muscles = emptyList(),
     aliases = emptyList(),
 )
@@ -166,11 +167,12 @@ class WorkoutDraftTest {
     fun `swapping an exercise keeps the logged sets`() {
         val draft = started()
             .updateSet(0, 0, 0) { it.copy(weight = 60.0) }
-            .swapExercise(0, 0, 99, "Dumbbell Press")
+            .swapExercise(0, 0, 99, "Dumbbell Press", "per-hand")
 
         val swapped = draft.entries[0].exercises[0]
         assertEquals(99, swapped.exerciseId)
         assertEquals("Dumbbell Press", swapped.name)
+        assertEquals("per-hand", swapped.loadMode)
         assertEquals(60.0, swapped.sets[0].weight)
     }
 

@@ -4,6 +4,7 @@ import type {
     ExerciseDetail,
     ExerciseHistoryWorkout,
 } from '../database/schema'
+import { defaultLoadMode } from '~~/shared/utils/exercise'
 import { exerciseInputSchema } from '~~/shared/validation/exercise'
 import { firstMessage } from '~~/shared/validation/primitives'
 
@@ -32,10 +33,13 @@ export function createExercise(
     input: Record<string, unknown>,
 ): Exercise {
     const values = parseExerciseInput(input)
+    // Pre-load-mode clients omit the field; give their exercises the same
+    // equipment-derived default the backfill gave existing rows.
+    const loadMode = values.loadMode ?? defaultLoadMode(values.equipment)
     try {
         return useDrizzle()
             .insert(tables.exercises)
-            .values({ ...values, userId })
+            .values({ ...values, loadMode, userId })
             .returning()
             .get()
     } catch (error) {

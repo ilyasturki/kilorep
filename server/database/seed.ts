@@ -659,8 +659,8 @@ const upsertFakeUser = db.prepare<
      returning id`,
 )
 const cloneCatalog = db.prepare(
-    `insert into exercises (user_id, name, equipment, type, source, muscles, aliases)
-     select @to, name, equipment, type, source, muscles, aliases
+    `insert into exercises (user_id, name, equipment, type, source, load_mode, muscles, aliases)
+     select @to, name, equipment, type, source, load_mode, muscles, aliases
      from exercises where user_id = @from and source = 'catalog'`,
 )
 

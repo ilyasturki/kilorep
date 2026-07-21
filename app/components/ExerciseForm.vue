@@ -6,8 +6,11 @@ import type {
     MuscleIntensity,
 } from '~~/shared/utils/exercise'
 import {
+    defaultLoadMode,
     EQUIPMENT,
     EXERCISE_TYPES,
+    LOAD_MODE_LABELS,
+    LOAD_MODES,
     MUSCLE_INTENSITIES,
 } from '~~/shared/utils/exercise'
 import { exerciseInputSchema } from '~~/shared/validation/exercise'
@@ -44,7 +47,19 @@ const form = reactive({
         ex?.muscles.length ?
             ex.muscles.map((m) => ({ ...m }))
         :   [blankMuscle()],
+    loadMode: ex?.loadMode ?? defaultLoadMode(ex?.equipment ?? 'barbell'),
 })
+
+// While creating, the mode tracks the equipment's default (picking dumbbell
+// flips to per-hand) until the user chooses one themselves; editing an
+// existing exercise never second-guesses the stored choice.
+let loadModeTouched = ex != null
+watch(
+    () => form.equipment,
+    (equipment) => {
+        if (!loadModeTouched) form.loadMode = defaultLoadMode(equipment)
+    },
+)
 
 const toast = useToast()
 const invalidate = usePayloadCache()
@@ -75,6 +90,7 @@ async function submit() {
                     equipment: form.equipment,
                     type: form.type,
                     muscles: form.muscles.filter((m) => m.muscle),
+                    loadMode: form.loadMode,
                 },
             },
         )
@@ -154,6 +170,22 @@ defineExpose({ submit, canSubmit, submitting })
                         @click="form.type = t"
                     >
                         {{ t }}
+                    </UiSegmentedOption>
+                </UiSegmented>
+            </UiField>
+            <UiField>
+                <UiFieldLabel>Kg is</UiFieldLabel>
+                <UiSegmented>
+                    <UiSegmentedOption
+                        v-for="mode in LOAD_MODES"
+                        :key="mode"
+                        type="button"
+                        :active="form.loadMode === mode"
+                        @click="
+                            ((form.loadMode = mode), (loadModeTouched = true))
+                        "
+                    >
+                        {{ LOAD_MODE_LABELS[mode] }}
                     </UiSegmentedOption>
                 </UiSegmented>
             </UiField>

@@ -53,6 +53,12 @@ const videoUrl = computed(
             <div class="flex min-w-0 flex-col">
                 <div class="flex flex-wrap gap-[7px]">
                     <UiTag>{{ detail.equipment }}</UiTag>
+                    <UiTag
+                        v-if="detail.loadMode !== 'total'"
+                        :title="`Logged kilograms are ${LOAD_MODE_LABELS[detail.loadMode]}`"
+                    >
+                        kg {{ LOAD_MODE_LABELS[detail.loadMode] }}
+                    </UiTag>
                     <span
                         v-if="detail.source === 'custom'"
                         class="inline-flex items-center text-ink-3"
@@ -186,7 +192,10 @@ const videoUrl = computed(
                                     :   '—'
                                 }}
                             </template>
-                            <template #label>BEST SET · KG</template>
+                            <template #label>
+                                BEST SET ·
+                                {{ weightUnit(detail.loadMode).toUpperCase() }}
+                            </template>
                         </UiStat>
                         <UiStat>
                             <template #value>

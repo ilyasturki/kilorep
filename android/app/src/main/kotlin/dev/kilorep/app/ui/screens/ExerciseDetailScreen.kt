@@ -37,6 +37,7 @@ import dev.kilorep.app.ui.components.Tag
 import dev.kilorep.app.ui.formatDay
 import dev.kilorep.app.ui.formatReps
 import dev.kilorep.app.ui.formatWeight
+import dev.kilorep.app.ui.weightUnit
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcons
 import dev.kilorep.app.ui.theme.LiftType
@@ -97,6 +98,12 @@ fun ExerciseDetailScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Tag(current.equipment.value)
                     Tag(current.type.value)
+                    if (current.loadMode.value != "total") {
+                        Tag(
+                            if (current.loadMode.value == "per-hand") "kg per hand"
+                            else "kg one side",
+                        )
+                    }
                 }
             }
             item {
@@ -138,7 +145,7 @@ fun ExerciseDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "${formatWeight(current.best?.weight)} kg × ${formatReps(current.best?.reps)}",
+                                "${formatWeight(current.best?.weight)} ${weightUnit(current.loadMode.value)} × ${formatReps(current.best?.reps)}",
                                 style = LiftType.statNum,
                             )
                             Text(

@@ -25,6 +25,7 @@ private fun ex(
     name: String,
     muscles: List<MuscleTarget>,
     sets: List<Pair<Double?, Int?>>,
+    loadMode: Exercise.LoadMode = Exercise.LoadMode.total,
 ) = WorkoutExercise(
     id = exerciseId * 100,
     entryId = exerciseId * 100 + 1,
@@ -36,6 +37,7 @@ private fun ex(
         name = name,
         equipment = Exercise.Equipment.barbell,
         type = Exercise.Type.compound,
+        loadMode = loadMode,
         muscles = muscles,
         aliases = emptyList(),
     ),
@@ -135,5 +137,38 @@ class DashboardStatsTest {
         assertEquals(8.0, stats.prs[0].reps)
         assertEquals(OffsetDateTime.parse("2026-06-16T18:00:00Z"), stats.prs[0].startedAt)
         assertEquals(116.7, stats.prs[1].est1rm)
+    }
+
+    @Test
+    fun `per-hand and unilateral volume doubles, prs stay raw, matching web`() {
+        val doubled = DashboardStats.compute(
+            listOf(
+                workout(
+                    9, "Arms", "2026-06-16T18:00:00Z",
+                    listOf(
+                        // 22.5×10×2 = 450 …
+                        ex(
+                            30, "Dumbbell Curl", emptyList(),
+                            listOf(Pair(22.5, 10)),
+                            loadMode = Exercise.LoadMode.perMinusHand,
+                        ),
+                        // … + 40×10×2 = 800 …
+                        ex(
+                            31, "Dumbbell Row", emptyList(),
+                            listOf(Pair(40.0, 10)),
+                            loadMode = Exercise.LoadMode.unilateral,
+                        ),
+                        // … + 60×10 = 600.
+                        ex(32, "Barbell Curl", emptyList(), listOf(Pair(60.0, 10))),
+                    ),
+                ),
+            ),
+            emptyList(),
+            now,
+        )
+        assertEquals(1850L, doubled.summary.current.volume)
+        // The PR keeps the per-implement load: epley(22.5, 10) = 30.0, not 60.
+        assertEquals(30.0, doubled.prs.first { it.exerciseId == 30 }.est1rm)
+        assertEquals("per-hand", doubled.prs.first { it.exerciseId == 30 }.loadMode)
     }
 }

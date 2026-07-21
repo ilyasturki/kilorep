@@ -49,6 +49,7 @@ private fun session() = SessionWithEntries(
                         name = "Bench Press",
                         equipment = Exercise.Equipment.barbell,
                         type = Exercise.Type.compound,
+                        loadMode = Exercise.LoadMode.total,
                         muscles = emptyList(),
                         aliases = emptyList(),
                     ),

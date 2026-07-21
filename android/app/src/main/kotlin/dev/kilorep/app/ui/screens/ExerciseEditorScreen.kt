@@ -61,6 +61,10 @@ fun ExerciseEditorScreen(
         mutableStateOf(existing?.equipment?.value ?: "barbell")
     }
     var type by remember { mutableStateOf(existing?.type?.value ?: "compound") }
+    // While creating, the mode tracks the equipment's default (dumbbell flips
+    // to per-hand) until the lifter picks one; editing keeps the stored choice.
+    var loadMode by remember { mutableStateOf(existing?.loadMode?.value ?: "total") }
+    var loadModeTouched by remember { mutableStateOf(existing != null) }
     var muscles by remember {
         mutableStateOf<Map<String, String>>(
             existing?.muscles?.associate { it.muscle to it.intensity.value }
@@ -105,7 +109,12 @@ fun ExerciseEditorScreen(
                 ChoiceRow(
                     options = listOf("barbell", "dumbbell", "machine", "cable", "bodyweight"),
                     selected = equipment,
-                    onSelect = { equipment = it },
+                    onSelect = {
+                        equipment = it
+                        if (!loadModeTouched) {
+                            loadMode = if (it == "dumbbell") "per-hand" else "total"
+                        }
+                    },
                 )
             }
 
@@ -115,6 +124,25 @@ fun ExerciseEditorScreen(
                     options = listOf("compound", "isolation"),
                     selected = type,
                     onSelect = { type = it },
+                )
+            }
+
+            LiftCard(padding = 14.dp) {
+                Kicker("Kg is")
+                ChoiceRow(
+                    options = listOf("total", "per-hand", "unilateral"),
+                    selected = loadMode,
+                    onSelect = {
+                        loadMode = it
+                        loadModeTouched = true
+                    },
+                    label = { option ->
+                        when (option) {
+                            "per-hand" -> "per hand"
+                            "unilateral" -> "one side"
+                            else -> option
+                        }
+                    },
                 )
             }
 
@@ -162,6 +190,10 @@ fun ExerciseEditorScreen(
                                 intensity = MuscleTarget.Intensity.valueOf(intensity),
                             )
                         },
+                        // By wire value: "per-hand" generates a constant name
+                        // (perMinusHand) valueOf can't reach.
+                        loadMode = ExerciseInput.LoadMode.entries
+                            .first { it.value == loadMode },
                     )
                     scope.launch {
                         val result =
@@ -189,6 +221,7 @@ private fun ChoiceRow(
     options: List<String>,
     selected: String,
     onSelect: (String) -> Unit,
+    label: (String) -> String = { it },
 ) {
     Column(
         Modifier.padding(top = 8.dp),
@@ -200,7 +233,7 @@ private fun ChoiceRow(
                     val active = option == selected
                     val colors = Lift.colors
                     Text(
-                        option.uppercase(),
+                        label(option).uppercase(),
                         style = LiftType.tag,
                         color = if (active) colors.accentInk else colors.ink2,
                         modifier = Modifier

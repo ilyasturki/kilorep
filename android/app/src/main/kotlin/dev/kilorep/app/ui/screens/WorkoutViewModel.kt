@@ -86,11 +86,11 @@ class WorkoutViewModel(
     fun removeSet(entry: Int, exercise: Int, set: Int) =
         update { it.removeSet(entry, exercise, set) }
 
-    fun swapExercise(entry: Int, exercise: Int, exerciseId: Int, name: String) =
-        update { it.swapExercise(entry, exercise, exerciseId, name) }
+    fun swapExercise(entry: Int, exercise: Int, exerciseId: Int, name: String, loadMode: String) =
+        update { it.swapExercise(entry, exercise, exerciseId, name, loadMode) }
 
-    fun addExercise(exerciseId: Int, name: String) =
-        update { it.addExercise(exerciseId, name) }
+    fun addExercise(exerciseId: Int, name: String, loadMode: String) =
+        update { it.addExercise(exerciseId, name, loadMode) }
 
     fun removeExercise(entry: Int, exercise: Int) =
         update { it.removeExercise(entry, exercise) }

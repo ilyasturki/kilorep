@@ -11,6 +11,7 @@ import type {
     Equipment,
     ExerciseSource,
     ExerciseType,
+    LoadMode,
     MuscleTarget,
 } from '../../shared/utils/exercise'
 
@@ -94,12 +95,14 @@ export {
     EQUIPMENT,
     EXERCISE_SOURCES,
     EXERCISE_TYPES,
+    LOAD_MODES,
     MUSCLE_INTENSITIES,
 } from '../../shared/utils/exercise'
 export type {
     Equipment,
     ExerciseSource,
     ExerciseType,
+    LoadMode,
     MuscleIntensity,
     MuscleTarget,
 } from '../../shared/utils/exercise'
@@ -120,6 +123,13 @@ export const exercises = sqliteTable(
             .$type<ExerciseSource>()
             .notNull()
             .default('custom'),
+        // What the kilograms logged for this exercise mean — total load,
+        // per hand, or one working side at a time (see LOAD_MODES). Drives
+        // the ×2 volume factor and the kg/kg-hand/kg-side unit everywhere.
+        loadMode: text('load_mode')
+            .$type<LoadMode>()
+            .notNull()
+            .default('total'),
         // The muscles this exercise works, each tagged with its relative intensity.
         // Stored as JSON; a bench press and a pec fly both hit the chest, but only
         // the bench press also loads the triceps and front delts at medium effort.
@@ -444,13 +454,15 @@ export type DashboardData = {
         volume: number
     }[]
     // Up to five current best estimated-1RM PRs (one per exercise), newest
-    // achievement first.
+    // achievement first. `weight`/`est1rm` stay in the exercise's own unit —
+    // `loadMode` says which one, so the readout can label it.
     prs: {
         exerciseId: number
         name: string
         est1rm: number
         weight: number
         reps: number
+        loadMode: LoadMode
         workoutId: number
         startedAt: Workout['startedAt']
     }[]

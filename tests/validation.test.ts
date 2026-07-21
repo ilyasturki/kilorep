@@ -86,11 +86,20 @@ describe('exercise input', () => {
             [{ ...valid, equipment: 'telekinesis' }, 'Invalid equipment'],
             [{ ...valid, type: 'cardio' }, 'Invalid type'],
             [{ ...valid, muscles: [] }, 'At least one muscle is required'],
+            [{ ...valid, loadMode: 'both-hands' }, 'Invalid load mode'],
         ]
         for (const [body, message] of cases) {
             const result = exerciseInputSchema.safeParse(body)
             expect(result.error?.issues[0]?.message).toBe(message)
         }
+    })
+
+    test('the load mode is optional (pre-load-mode clients omit it)', () => {
+        expect(exerciseInputSchema.parse(valid).loadMode).toBeUndefined()
+        expect(
+            exerciseInputSchema.parse({ ...valid, loadMode: 'per-hand' })
+                .loadMode,
+        ).toBe('per-hand')
     })
 })
 

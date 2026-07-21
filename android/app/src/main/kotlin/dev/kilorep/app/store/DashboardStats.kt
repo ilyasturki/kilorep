@@ -41,8 +41,19 @@ data class Pr(
     val est1rm: Double,
     val weight: Double,
     val reps: Double,
+    /** The exercise's load mode (wire value), so the readout can label the unit. */
+    val loadMode: String,
     val startedAt: OffsetDateTime,
 )
+
+/**
+ * How many kilograms actually move per entered kilogram: per-hand and
+ * unilateral loads count double (two dumbbells; both sides get a turn).
+ * Takes the wire value so drafts (String) and generated models (`.value`)
+ * share it. Matches web's loadFactor().
+ */
+fun loadFactor(loadMode: String?): Int =
+    if (loadMode == "per-hand" || loadMode == "unilateral") 2 else 1
 
 data class DashboardStats(
     val summary: DashboardSummary,
@@ -86,8 +97,9 @@ data class DashboardStats(
 
         private data class Rollup(val exercises: Int, val sets: Int, val volume: Long)
 
-        // Volume is load × reps over every set (un-entered fields count 0),
-        // rounded per workout — matching shared/utils/stats.ts:workoutStats.
+        // Volume is load × reps × load-factor over every set (un-entered
+        // fields count 0), rounded per workout — matching
+        // shared/utils/stats.ts:workoutStats.
         private fun rollup(w: WorkoutWithEntries): Rollup {
             var exercises = 0
             var sets = 0
@@ -95,7 +107,8 @@ data class DashboardStats(
             for (entry in w.entries) for (ex in entry.exercises) {
                 exercises++
                 sets += ex.sets.size
-                for (s in ex.sets) volume += (s.weight ?: 0.0) * (s.reps ?: 0.0)
+                val factor = loadFactor(ex.exercise.loadMode.value)
+                for (s in ex.sets) volume += (s.weight ?: 0.0) * (s.reps ?: 0.0) * factor
             }
             return Rollup(exercises, sets, volume.roundToLong())
         }
@@ -180,6 +193,7 @@ data class DashboardStats(
                         est1rm = round1(est),
                         weight = weight,
                         reps = reps,
+                        loadMode = ex.exercise.loadMode.value,
                         startedAt = w.startedAt,
                     )
                 }

@@ -3,6 +3,7 @@ import * as z from 'zod/mini'
 import {
     EQUIPMENT,
     EXERCISE_TYPES,
+    LOAD_MODES,
     MUSCLE_INTENSITIES,
 } from '../utils/exercise'
 
@@ -56,6 +57,9 @@ export const exerciseInputSchema = z.object({
             .array(muscleTargetSchema)
             .check(z.minLength(1, 'At least one muscle is required')),
     ),
+    // Optional so pre-load-mode clients stay valid: create derives a default
+    // from equipment, update keeps the stored value.
+    loadMode: z.optional(z.enum(LOAD_MODES, { error: 'Invalid load mode' })),
 })
 
 export type ExerciseInput = z.output<typeof exerciseInputSchema>

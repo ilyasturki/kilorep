@@ -21,6 +21,11 @@ import type { NewExercise } from './schema'
  * picker searches them alongside `name`. Append-only applies here too:
  * editing aliases on an already-shipped entry only reaches NEW users' copies,
  * so pair such an edit with a name-matching backfill migration (see 0010).
+ *
+ * `loadMode` says what the logged kilograms mean and is only set where it
+ * isn't `total` (the column default): `per-hand` for paired implements (two
+ * dumbbells, two cable stacks), `unilateral` for one-side-at-a-time moves.
+ * Same shipped-entry caveat as aliases — pair edits with a backfill (see 0017).
  */
 export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     // ── Chest ────────────────────────────────────────────────────────────────
@@ -48,6 +53,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Dumbbell Bench Press',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'compound',
         muscles: [
             { muscle: 'chest', intensity: 'high' },
@@ -58,6 +64,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Incline Dumbbell Bench Press',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'compound',
         muscles: [
             { muscle: 'upper chest', intensity: 'high' },
@@ -99,6 +106,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
         name: 'Cable Fly',
         aliases: ['Cable Crossover'],
         equipment: 'cable',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [
             { muscle: 'chest', intensity: 'high' },
@@ -108,6 +116,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Incline Cable Fly',
         equipment: 'cable',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [
             { muscle: 'upper chest', intensity: 'high' },
@@ -117,6 +126,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Dumbbell Fly',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [
             { muscle: 'chest', intensity: 'high' },
@@ -160,6 +170,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Dumbbell Shoulder Press',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'compound',
         muscles: [
             { muscle: 'front delts', intensity: 'high' },
@@ -180,6 +191,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Arnold Press',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'compound',
         muscles: [
             { muscle: 'front delts', intensity: 'high' },
@@ -191,12 +203,14 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
         name: 'Dumbbell Lateral Raise',
         aliases: ['Side Raise'],
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [{ muscle: 'side delts', intensity: 'high' }],
     },
     {
         name: 'Cable Lateral Raise',
         equipment: 'cable',
+        loadMode: 'unilateral',
         type: 'isolation',
         muscles: [{ muscle: 'side delts', intensity: 'high' }],
     },
@@ -220,6 +234,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
         name: 'Dumbbell Rear Delt Fly',
         aliases: ['Reverse Fly', 'Bent-Over Lateral Raise'],
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [
             { muscle: 'rear delts', intensity: 'high' },
@@ -244,6 +259,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Dumbbell Shrug',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [{ muscle: 'traps', intensity: 'high' }],
     },
@@ -318,6 +334,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
         name: 'Dumbbell Row',
         aliases: ['One-Arm Dumbbell Row'],
         equipment: 'dumbbell',
+        loadMode: 'unilateral',
         type: 'compound',
         muscles: [
             { muscle: 'lats', intensity: 'high' },
@@ -377,6 +394,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Dumbbell Curl',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [
             { muscle: 'biceps', intensity: 'high' },
@@ -387,6 +405,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
         name: 'Hammer Curl',
         aliases: ['Neutral-Grip Curl'],
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [
             { muscle: 'brachialis', intensity: 'high' },
@@ -397,6 +416,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Incline Dumbbell Curl',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'isolation',
         muscles: [{ muscle: 'biceps', intensity: 'high' }],
     },
@@ -511,6 +531,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
         name: 'Bulgarian Split Squat',
         aliases: ['Rear-Foot-Elevated Split Squat'],
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'compound',
         muscles: [
             { muscle: 'quads', intensity: 'high' },
@@ -521,6 +542,7 @@ export const EXERCISE_CATALOG: Omit<NewExercise, 'userId'>[] = [
     {
         name: 'Walking Lunge',
         equipment: 'dumbbell',
+        loadMode: 'per-hand',
         type: 'compound',
         muscles: [
             { muscle: 'quads', intensity: 'high' },

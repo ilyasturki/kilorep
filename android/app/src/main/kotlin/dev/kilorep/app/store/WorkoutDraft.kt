@@ -42,6 +42,12 @@ data class DraftExercise(
     /** Denormalized so offline rendering never needs the catalog cache. */
     val name: String,
     val sets: List<DraftSet>,
+    /**
+     * The exercise's load mode (wire value), denormalized like `name` so the
+     * kg column label and volume factor work offline. Defaulted so drafts
+     * persisted before this field existed still deserialize.
+     */
+    val loadMode: String = "total",
 )
 
 /** One entry; several exercises means a superset in rotation order. */
@@ -149,12 +155,13 @@ data class WorkoutDraft(
         exerciseIndex: Int,
         exerciseId: Int,
         name: String,
+        loadMode: String,
     ): WorkoutDraft = mapExercise(entryIndex, exerciseIndex) {
-        it.copy(exerciseId = exerciseId, name = name)
+        it.copy(exerciseId = exerciseId, name = name, loadMode = loadMode)
     }
 
     /** Appends a plain-exercise entry with one open set. */
-    fun addExercise(exerciseId: Int, name: String): WorkoutDraft = copy(
+    fun addExercise(exerciseId: Int, name: String, loadMode: String): WorkoutDraft = copy(
         dirty = true,
         entries = entries + DraftEntry(
             exercises = listOf(
@@ -162,6 +169,7 @@ data class WorkoutDraft(
                     exerciseId = exerciseId,
                     name = name,
                     sets = listOf(DraftSet(reps = null, weight = null, target = null)),
+                    loadMode = loadMode,
                 ),
             ),
         ),
@@ -277,6 +285,7 @@ data class WorkoutDraft(
                                                 },
                                             )
                                         },
+                                    loadMode = exercise.exercise.loadMode.value,
                                 )
                             },
                     )
@@ -342,6 +351,7 @@ data class WorkoutDraft(
                                                     hint = set.repHint,
                                                 )
                                             },
+                                        loadMode = exercise.exercise.loadMode.value,
                                     )
                                 },
                         )
