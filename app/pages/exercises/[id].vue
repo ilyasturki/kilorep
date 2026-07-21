@@ -219,14 +219,15 @@ const videoUrl = computed(
                                     v-for="(s, si) in w.sets"
                                     :key="si"
                                     class="border border-line bg-surface-2 px-2 py-[3px] font-mono text-label text-ink"
-                                >
-                                    {{
+                                    ><span class="text-ink-3"
+                                        >{{ si + 1 }} · </span
+                                    >{{
                                         s.weight == null ?
                                             '—'
                                         :   fmtWeight(s.weight)
                                     }}<span class="mx-[3px] text-ink-3">×</span
-                                    >{{ s.reps ?? '?' }}
-                                </span>
+                                    >{{ s.reps ?? '?' }}</span
+                                >
                             </div>
                         </div>
                     </UiCard>

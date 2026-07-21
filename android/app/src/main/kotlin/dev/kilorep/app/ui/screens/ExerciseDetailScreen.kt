@@ -17,6 +17,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import dev.kilorep.api.models.ExerciseDetail
 import dev.kilorep.app.data.Repo
@@ -183,8 +186,15 @@ fun ExerciseDetailScreen(
                         )
                     }
                     Text(
-                        workout.sets.joinToString("   ") {
-                            "${formatWeight(it.weight)}×${formatReps(it.reps)}"
+                        buildAnnotatedString {
+                            val ordinal = SpanStyle(color = colors.ink3)
+                            workout.sets.forEachIndexed { position, set ->
+                                if (position > 0) append("   ")
+                                withStyle(ordinal) { append("${position + 1} · ") }
+                                append(
+                                    "${formatWeight(set.weight)}×${formatReps(set.reps)}",
+                                )
+                            }
                         },
                         style = LiftType.mono,
                         modifier = Modifier.padding(top = 6.dp),
