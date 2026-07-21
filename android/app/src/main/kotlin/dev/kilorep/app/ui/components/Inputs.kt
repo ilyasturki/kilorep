@@ -18,19 +18,23 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.kilorep.app.ui.theme.Lift
 import dev.kilorep.app.ui.theme.LiftIcon
 import dev.kilorep.app.ui.theme.LiftIcons
@@ -154,32 +158,52 @@ fun StepperField(
         ) {
             LiftIcon(LiftIcons.Minus, tint = colors.ink2, size = 18.dp)
         }
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                BasicTextField(
-                    value = fieldValue,
-                    onValueChange = {
-                        fieldValue = it
-                        onValueChange(it.text)
-                    },
-                    interactionSource = interaction,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number,
-                    ),
-                    singleLine = true,
-                    textStyle = LiftType.statNum.merge(
-                        color = if (value.isEmpty()) colors.ink3 else colors.ink,
-                        textAlign = TextAlign.Center,
-                    ),
-                    cursorBrush = SolidColor(colors.accent),
-                    modifier = Modifier.width(64.dp),
-                )
-                if (suffix != null) {
-                    Text(suffix, style = LiftType.tag, color = colors.ink3)
+        Row(
+            Modifier.weight(1f).padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            // The value takes whatever sits between − and + (a fixed width
+            // clipped long loads like 102.5 on narrow screens). A single-line
+            // field scrolls rather than wraps, so when even that is too
+            // narrow, step the font down until the whole number is visible.
+            val measurer = rememberTextMeasurer()
+            var slotWidth by remember { mutableIntStateOf(0) }
+            val fontSize = remember(fieldValue.text, slotWidth) {
+                var size = LiftType.statNum.fontSize
+                while (slotWidth > 0 && size > 13.sp &&
+                    measurer.measure(
+                        fieldValue.text,
+                        LiftType.statNum.copy(fontSize = size),
+                    ).size.width > slotWidth
+                ) {
+                    size *= 0.9f
                 }
+                size
+            }
+            BasicTextField(
+                value = fieldValue,
+                onValueChange = {
+                    fieldValue = it
+                    onValueChange(it.text)
+                },
+                interactionSource = interaction,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number,
+                ),
+                singleLine = true,
+                textStyle = LiftType.statNum.merge(
+                    color = if (value.isEmpty()) colors.ink3 else colors.ink,
+                    textAlign = TextAlign.Center,
+                    fontSize = fontSize,
+                ),
+                cursorBrush = SolidColor(colors.accent),
+                modifier = Modifier
+                    .weight(1f)
+                    .onSizeChanged { slotWidth = it.width },
+            )
+            if (suffix != null) {
+                Text(suffix, style = LiftType.tag, color = colors.ink3)
             }
         }
         Box(

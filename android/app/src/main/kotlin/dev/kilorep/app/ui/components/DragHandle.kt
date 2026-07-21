@@ -108,6 +108,30 @@ fun ReorderableCollectionItemScope.EntryDragHandle(
 }
 
 /**
+ * Long-press-to-drag for the card region around the handle (the header row),
+ * so grabbing a row does not demand hitting the 38.dp grip. Same haptics and
+ * drop wiring as [EntryDragHandle]; keep it on a node that stays mounted for
+ * the whole drag (see [ReorderableEntryHeader]).
+ */
+@Composable
+fun ReorderableCollectionItemScope.longPressDrag(
+    onDraggingChange: ((Boolean) -> Unit)? = null,
+    onDrop: (() -> Unit)? = null,
+): Modifier {
+    val haptics = LocalHapticFeedback.current
+    return Modifier.longPressDraggableHandle(
+        onDragStarted = {
+            onDraggingChange?.invoke(true)
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        },
+        onDragStopped = {
+            onDraggingChange?.invoke(false)
+            onDrop?.invoke()
+        },
+    )
+}
+
+/**
  * Entry-card header that stays structurally identical between the full and
  * collapsed (drag-live) states: the card body may unmount while dragging,
  * but this row — and with it the handle's node — must survive, or the very

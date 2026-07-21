@@ -29,6 +29,7 @@ import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftIconButton
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.PrimaryButton
+import dev.kilorep.app.ui.components.longPressDrag
 import dev.kilorep.app.ui.components.rememberLiftReorder
 import dev.kilorep.app.ui.movedByKey
 import dev.kilorep.app.ui.theme.Lift
@@ -41,7 +42,8 @@ import sh.calvin.reorderable.ReorderableItem
 
 /**
  * Session templates: create, edit, reorder (most-used on top), delete.
- * Reordering is handle drag; explicit up/down survives as TalkBack actions.
+ * Reordering is handle drag or a long-press on the title row; explicit
+ * up/down survives as TalkBack actions.
  */
 @Composable
 fun SessionsScreen(
@@ -119,6 +121,11 @@ fun SessionsScreen(
                         } else {
                             null
                         },
+                        headerDrag = if (order.size > 1) {
+                            longPressDrag(onDrop = ::commitOrder)
+                        } else {
+                            Modifier
+                        },
                         onEdit = { onEdit(session.id) },
                         onDelete = { confirmDelete = session },
                     )
@@ -147,6 +154,7 @@ private fun SessionCard(
     session: SessionWithEntries,
     dragging: Boolean,
     handle: (@Composable () -> Unit)?,
+    headerDrag: Modifier,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -157,7 +165,7 @@ private fun SessionCard(
         borderColor = if (dragging) colors.accent else null,
     ) {
         Row(
-            Modifier.fillMaxWidth(),
+            headerDrag.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

@@ -27,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.kilorep.app.AppContainer
+import dev.kilorep.app.data.SyncStatus
 import dev.kilorep.app.ui.components.BottomTab
 import dev.kilorep.app.ui.components.LiftBottomBar
 import dev.kilorep.app.ui.components.LiftCard
@@ -127,6 +128,22 @@ private fun MainNav(container: AppContainer) {
         popUpTo("dashboard") { saveState = true }
         launchSingleTop = true
         restoreState = true
+    }
+
+    // Sync runs invisibly in the background; a failure surfaces here as one
+    // app-level strip. Offline is excluded — the OFFLINE bar owns that story,
+    // and retryable failures self-heal once connectivity returns.
+    val syncStatus = repo.syncStatus.watch()
+    val drafts = repo.drafts.watch()
+    val failedId = if (online) {
+        drafts.firstOrNull { syncStatus[it.localId] is SyncStatus.Error }?.localId
+    } else {
+        null
+    }
+    // Pointless on the failed workout itself: its screen already shows the
+    // reason and a Retry.
+    val bannerId = failedId?.takeIf {
+        currentRoute != "workout/{localId}" || backStack?.arguments?.getString("localId") != it
     }
 
     Column(Modifier.fillMaxSize().background(Lift.colors.bg)) {
@@ -240,6 +257,7 @@ private fun MainNav(container: AppContainer) {
                         exerciseId = id,
                         offline = offline,
                         onEdit = { navController.navigate("exercise-editor?id=$id") },
+                        onOpenWorkout = { openServerWorkout(it) },
                         onBack = { navController.popBackStack() },
                     )
                 }
@@ -283,6 +301,9 @@ private fun MainNav(container: AppContainer) {
                 }
             }
         }
+        if (bannerId != null) {
+            SyncErrorBanner(onClick = { openDraft(bannerId) })
+        }
         // The gym loop is immersive: no tab bar competing with the finish bar.
         if (TABS.any { it.route == currentRoute }) {
             LiftBottomBar(
@@ -291,6 +312,26 @@ private fun MainNav(container: AppContainer) {
                 onSelect = { selectTab(it) },
             )
         }
+    }
+}
+
+/** App-level "a workout never reached the server" strip; tap opens it. */
+@Composable
+private fun SyncErrorBanner(onClick: () -> Unit) {
+    val colors = Lift.colors
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.surface2)
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "SYNC FAILED · TAP TO REVIEW",
+            style = LiftType.tag,
+            color = colors.danger,
+        )
     }
 }
 

@@ -1,5 +1,6 @@
 package dev.kilorep.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,6 +55,7 @@ fun ExerciseDetailScreen(
     exerciseId: Int,
     offline: Boolean,
     onEdit: () -> Unit,
+    onOpenWorkout: (Int) -> Unit,
     onBack: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -173,7 +175,10 @@ fun ExerciseDetailScreen(
             }
             items(current.history.size) { index ->
                 val workout = current.history[index]
-                LiftCard(padding = 12.dp) {
+                LiftCard(
+                    padding = 12.dp,
+                    modifier = Modifier.clickable { onOpenWorkout(workout.workoutId) },
+                ) {
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,

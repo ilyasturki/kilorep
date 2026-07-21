@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,7 @@ import dev.kilorep.app.ui.theme.LiftIcons
 import dev.kilorep.app.ui.theme.LiftType
 import dev.kilorep.app.ui.theme.Text
 import dev.kilorep.app.ui.components.ReorderableEntryHeader
+import dev.kilorep.app.ui.components.longPressDrag
 import dev.kilorep.app.ui.components.rememberLiftReorder
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -109,6 +111,21 @@ fun WorkoutScreen(
     val reorderState = rememberLiftReorder(listState) { from, to ->
         viewModel.moveEntry(from as String, to as String)
     }
+    // The dropped entry's (item index, viewport offset) at finger-up, read
+    // while the list is still compact. Re-expanding re-anchors the viewport
+    // on whatever item happens to be first, landing somewhere unrelated —
+    // this puts the dropped card back where the finger left it.
+    var dropAnchor by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    LaunchedEffect(reordering) {
+        if (!reordering) {
+            dropAnchor?.let { (index, offset) ->
+                dropAnchor = null
+                // One frame so the re-expanded heights are measured first.
+                withFrameNanos { }
+                listState.scrollToItem(index, -offset)
+            }
+        }
+    }
 
     LiftScreen(
         title = current.name,
@@ -132,7 +149,9 @@ fun WorkoutScreen(
                     .padding(horizontal = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item { SyncStateRow(current.dirty, current.completed, syncStatus, viewModel) }
+                if (current.completed || syncStatus is SyncStatus.Error) {
+                    item { SyncStateRow(current.completed, syncStatus, viewModel) }
+                }
 
                 item { StatsRow(current, onEditDate = { editingDate = true }) }
 
@@ -143,8 +162,17 @@ fun WorkoutScreen(
                                 ReviewBlock(entry, onOpenExercise)
                             }
                         } else {
+                            val draggable = current.entries.size > 1
+                            val onDraggingChange: (Boolean) -> Unit = { dragging ->
+                                if (!dragging) {
+                                    dropAnchor = listState.layoutInfo.visibleItemsInfo
+                                        .firstOrNull { it.key == entry.id }
+                                        ?.let { it.index to it.offset }
+                                }
+                                reordering = dragging
+                            }
                             val handle: (@Composable () -> Unit)? =
-                                if (current.entries.size > 1) {
+                                if (draggable) {
                                     {
                                         EntryDragHandle(
                                             index = entryIndex,
@@ -156,7 +184,7 @@ fun WorkoutScreen(
                                                     viewModel.moveEntryDown(entryIndex)
                                                 }
                                             },
-                                            onDraggingChange = { reordering = it },
+                                            onDraggingChange = onDraggingChange,
                                         )
                                     }
                                 } else {
@@ -170,6 +198,11 @@ fun WorkoutScreen(
                                 onConfirmRemove = { confirmRemove = it },
                                 onOpenExercise = onOpenExercise,
                                 handle = handle,
+                                headerDrag = if (draggable) {
+                                    longPressDrag(onDraggingChange = onDraggingChange)
+                                } else {
+                                    Modifier
+                                },
                                 compact = reordering && handle != null,
                                 dragging = isDragging,
                             )
@@ -365,9 +398,13 @@ private sealed interface PickerTarget {
     data object Add : PickerTarget
 }
 
+/**
+ * Sync is invisible while it works: this row only exists for the Completed
+ * tag and the failure state (reason + Retry). Happy-path syncing shows
+ * nothing at all.
+ */
 @Composable
 private fun SyncStateRow(
-    dirty: Boolean,
     completed: Boolean,
     status: SyncStatus?,
     viewModel: WorkoutViewModel,
@@ -379,14 +416,16 @@ private fun SyncStateRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (completed) Tag("Completed", accent = true)
-        when (val s = status) {
-            SyncStatus.Syncing -> Tag("Syncing…")
-            is SyncStatus.Error -> {
-                Tag("Sync failed")
-                Text(s.reason, style = LiftType.secondary, color = colors.danger, maxLines = 1)
-                GhostButton("Retry", onClick = viewModel::retrySync, height = 32.dp)
-            }
-            else -> if (dirty) Tag("Not synced") else Tag("Synced")
+        if (status is SyncStatus.Error) {
+            Tag("Sync failed")
+            Text(
+                status.reason,
+                style = LiftType.secondary,
+                color = colors.danger,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+            )
+            GhostButton("Retry", onClick = viewModel::retrySync, height = 32.dp)
         }
     }
 }
@@ -439,6 +478,7 @@ private fun EditableEntryCard(
     onConfirmRemove: (Triple<Int, Int, Int?>) -> Unit,
     onOpenExercise: (Int) -> Unit,
     handle: (@Composable () -> Unit)?,
+    headerDrag: Modifier,
     compact: Boolean,
     dragging: Boolean,
 ) {
@@ -453,7 +493,7 @@ private fun EditableEntryCard(
                 accentKicker = true,
                 compactNames = if (compact) entry.exercises.map { it.name } else null,
                 handle = handle,
-                modifier = Modifier.padding(bottom = if (compact) 0.dp else 8.dp),
+                modifier = headerDrag.padding(bottom = if (compact) 0.dp else 8.dp),
             )
         }
         if (!compact) {
