@@ -22,14 +22,6 @@ export function newWorkoutSet(): WorkoutSetDraft {
     return { reps: undefined, weight: undefined }
 }
 
-// The set produced by "add set": copy the last one verbatim — even blank
-// fields — so the new row mirrors whatever the lifter is mid-typing; an
-// exercise with no sets yet starts from a blank one.
-export function nextWorkoutSet(sets: WorkoutSetDraft[]): WorkoutSetDraft {
-    const last = sets.at(-1)
-    return last ? { ...last } : newWorkoutSet()
-}
-
 export function newWorkoutExercise(exercise: {
     id: number
     name: string
@@ -70,8 +62,10 @@ export function workoutDraftFromEntries(
     }))
 }
 
+// "Add set" starts blank: an extra effort is a decision, not a repeat of the
+// previous line, and a pre-filled row reads as already logged.
 export function addWorkoutSet(exercise: WorkoutExerciseDraft): void {
-    exercise.sets.push(nextWorkoutSet(exercise.sets))
+    exercise.sets.push(newWorkoutSet())
 }
 
 export function removeWorkoutSet(

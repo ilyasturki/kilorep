@@ -127,24 +127,16 @@ class WorkoutDraftTest {
     }
 
     @Test
-    fun `added set seeds from the previous one`() {
+    fun `added set starts blank`() {
         val draft = started()
             .updateSet(0, 0, 0) { it.copy(weight = 82.5) }
             .addSet(0, 0)
 
-        // Seeds from set index 1 (the last), which has no weight…
         assertEquals(3, draft.entries[0].exercises[0].sets.size)
         val added = draft.entries[0].exercises[0].sets[2]
         assertEquals(null, added.weight)
-
-        // …and after removing the open set, a new one seeds from the loaded one.
-        val reseeded = draft
-            .removeSet(0, 0, 2)
-            .removeSet(0, 0, 1)
-            .addSet(0, 0)
-        val set = reseeded.entries[0].exercises[0].sets[1]
-        assertEquals(82.5, set.weight)
-        assertEquals(8.0, set.reps)
+        assertEquals(null, added.reps)
+        assertEquals(null, added.target)
     }
 
     @Test
@@ -229,14 +221,13 @@ class WorkoutDraftTest {
     }
 
     @Test
-    fun `an added set carries the previous effort forward`() {
+    fun `an added set never copies the previous effort`() {
         val draft = started()
-            // Log the bench's last set fully, then carry it forward.
             .updateSet(0, 0, 1) { it.copy(reps = 8.0, weight = 80.0) }
             .addSet(0, 0)
         val added = draft.entries[0].exercises[0].sets.last()
-        assertEquals(80.0, added.weight)
-        assertEquals(8.0, added.reps)
+        assertEquals(null, added.weight)
+        assertEquals(null, added.reps)
     }
 
     @Test

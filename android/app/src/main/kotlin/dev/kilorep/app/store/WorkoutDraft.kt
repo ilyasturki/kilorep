@@ -112,17 +112,14 @@ data class WorkoutDraft(
         )
     }
 
-    /** A new set seeds from the previous one — the likeliest next effort. */
+    /**
+     * A new set starts blank (matches web): an extra effort is a decision,
+     * not a repeat, and a pre-filled row reads as already logged.
+     */
     fun addSet(entryIndex: Int, exerciseIndex: Int): WorkoutDraft =
         mapExercise(entryIndex, exerciseIndex) { exercise ->
-            val last = exercise.sets.lastOrNull()
             exercise.copy(
-                // Carry the previous set forward — the likeliest next effort.
-                sets = exercise.sets + DraftSet(
-                    reps = last?.reps,
-                    weight = last?.weight,
-                    target = last?.target,
-                ),
+                sets = exercise.sets + DraftSet(reps = null, weight = null, target = null),
             )
         }
 

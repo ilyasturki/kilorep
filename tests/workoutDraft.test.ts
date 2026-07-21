@@ -2,8 +2,8 @@
 //
 // These rules used to live inside the 700–1200 line editor pages, untestable
 // without mounting. They diverge on purpose between the workout log and the
-// session plan (copy-last vs blank, prune-on-remove vs not), so each is pinned
-// here against its own module.
+// session plan (prune-on-remove vs not), so each is pinned here against its
+// own module.
 import { expect, test } from 'bun:test'
 
 import type {
@@ -26,14 +26,14 @@ import {
 
 // ── workout draft ──────────────────────────────────────────────────────────
 
-test('add set copies the last set verbatim', () => {
+test('add set starts blank, never copying the previous set', () => {
     const ex: WorkoutExerciseDraft = { exerciseId: 1, name: 'Bench', sets: [] }
-    addWorkoutSet(ex) // first set: blank
+    addWorkoutSet(ex)
     expect(ex.sets).toEqual([{ reps: undefined, weight: undefined }])
 
     ex.sets[0] = { reps: 8, weight: 60 }
-    addWorkoutSet(ex) // copy the (mid-typed) last set
-    expect(ex.sets[1]).toEqual({ reps: 8, weight: 60 })
+    addWorkoutSet(ex)
+    expect(ex.sets[1]).toEqual({ reps: undefined, weight: undefined })
 })
 
 test('removing the last exercise of an entry drops the entry; otherwise keeps it', () => {
