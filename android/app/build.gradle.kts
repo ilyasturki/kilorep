@@ -14,8 +14,8 @@ android {
         minSdk = 26
         targetSdk = 35
         // Synced from package.json by scripts/sync-versions.mjs — don't edit by hand.
-        versionCode = 10
-        versionName = "0.0.10"
+        versionCode = 11
+        versionName = "0.0.11"
     }
 
     signingConfigs {
