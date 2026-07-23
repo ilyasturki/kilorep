@@ -90,6 +90,16 @@ export function removeWorkoutSet(
     exercise.sets.splice(index, 1)
 }
 
+// Splice a new single-exercise entry right below an existing one, so a
+// mid-workout addition lands where the lifter is; below the last index appends.
+export function insertWorkoutEntry(
+    entries: WorkoutEntryDraft[],
+    afterIndex: number,
+    exercise: WorkoutExerciseDraft,
+): void {
+    entries.splice(afterIndex + 1, 0, { id: uid(), exercises: [exercise] })
+}
+
 // Remove an exercise, dropping the entry when it leaves it empty.
 export function removeWorkoutExercise(
     entries: WorkoutEntryDraft[],

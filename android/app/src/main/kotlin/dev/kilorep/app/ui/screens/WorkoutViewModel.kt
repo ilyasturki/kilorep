@@ -92,6 +92,9 @@ class WorkoutViewModel(
     fun addExercise(exerciseId: Int, name: String, loadMode: String) =
         update { it.addExercise(exerciseId, name, loadMode) }
 
+    fun insertExercise(entry: Int, exerciseId: Int, name: String, loadMode: String) =
+        update { it.insertExerciseBelow(entry, exerciseId, name, loadMode) }
+
     fun removeExercise(entry: Int, exercise: Int) =
         update { it.removeExercise(entry, exercise) }
 

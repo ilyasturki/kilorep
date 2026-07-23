@@ -271,6 +271,26 @@ class WorkoutDraftTest {
     }
 
     @Test
+    fun `inserting an exercise splices a new entry right below and dirties`() {
+        val base = started().copy(dirty = false)
+        val draft = base.insertExerciseBelow(0, 9, "Incline Press", "total")
+
+        assertEquals(
+            listOf("Bench Press", "Incline Press", "Overhead Press"),
+            draft.entries.map { it.exercises[0].name },
+        )
+        // The spliced entry starts as one blank set, like an appended add.
+        val inserted = draft.entries[1].exercises[0]
+        assertEquals(listOf(DraftSet(reps = null, weight = null, target = null)), inserted.sets)
+        assertTrue(draft.dirty)
+        // Below the last entry lands at the end.
+        assertEquals(
+            "Incline Press",
+            base.insertExerciseBelow(1, 9, "Incline Press", "total").entries.last().exercises[0].name,
+        )
+    }
+
+    @Test
     fun `re-dating keeps the original time of day`() {
         val moved = started().withDay(java.time.LocalDate.of(2026, 1, 5))
 

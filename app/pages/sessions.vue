@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Exercise, SessionWithEntries } from '~~/server/database/schema'
+import type { MenuItem } from '~/components/ui/Menu.vue'
 import type {
     SessionEntryDraft as EntryDraft,
     SessionExerciseDraft as ExerciseDraft,
@@ -79,8 +80,44 @@ function addSuperset() {
 function removeEntry(index: number) {
     draft.value.entries.splice(index, 1)
 }
+function insertEntryBelow(index: number) {
+    draft.value.entries.splice(index + 1, 0, newSessionEntry())
+}
 function addExerciseToEntry(entry: EntryDraft) {
     entry.exercises.push(newSessionExercise())
+}
+
+// ⋯ menus for builder blocks and list cards. Superset members keep their
+// inline ✕: a one-item menu would only add a tap.
+function entryMenu(entryIndex: number): MenuItem[] {
+    return [
+        {
+            label: 'Insert exercise below',
+            icon: 'tabler:row-insert-bottom',
+            onSelect: () => insertEntryBelow(entryIndex),
+        },
+        {
+            label: 'Remove',
+            icon: 'tabler:trash',
+            tone: 'danger',
+            onSelect: () => removeEntry(entryIndex),
+        },
+    ]
+}
+function sessionMenu(session: SessionWithEntries): MenuItem[] {
+    return [
+        {
+            label: 'Edit',
+            icon: 'tabler:pencil',
+            onSelect: () => editSession(session),
+        },
+        {
+            label: 'Delete',
+            icon: 'tabler:trash',
+            tone: 'danger',
+            onSelect: () => (deleteTarget.value = session),
+        },
+    ]
 }
 function removeExerciseFromEntry(entry: EntryDraft, index: number) {
     entry.exercises.splice(index, 1)
@@ -325,18 +362,10 @@ function planBlocks(session: SessionWithEntries) {
                                             )
                                     "
                                 />
-                                <UiIconButton
-                                    type="button"
-                                    size="sm"
-                                    tone="danger"
-                                    aria-label="Remove block"
-                                    @click="removeEntry(entryIndex)"
-                                >
-                                    <Icon
-                                        name="tabler:trash"
-                                        :size="15"
-                                    />
-                                </UiIconButton>
+                                <UiMenu
+                                    label="Block actions"
+                                    :items="entryMenu(entryIndex)"
+                                />
                             </div>
                         </div>
 
@@ -392,18 +421,10 @@ function planBlocks(session: SessionWithEntries) {
                                                     )
                                             "
                                         />
-                                        <UiIconButton
-                                            type="button"
-                                            size="sm"
-                                            tone="danger"
-                                            aria-label="Remove block"
-                                            @click="removeEntry(entryIndex)"
-                                        >
-                                            <Icon
-                                                name="tabler:trash"
-                                                :size="15"
-                                            />
-                                        </UiIconButton>
+                                        <UiMenu
+                                            label="Block actions"
+                                            :items="entryMenu(entryIndex)"
+                                        />
                                     </div>
                                 </div>
 
@@ -611,29 +632,10 @@ function planBlocks(session: SessionWithEntries) {
                                 "
                                 @move="(dir) => moveSession(sessionIndex, dir)"
                             />
-                            <UiIconButton
-                                type="button"
-                                size="sm"
-                                aria-label="Edit session"
-                                @click="editSession(session)"
-                            >
-                                <Icon
-                                    name="tabler:pencil"
-                                    :size="15"
-                                />
-                            </UiIconButton>
-                            <UiIconButton
-                                type="button"
-                                size="sm"
-                                tone="danger"
-                                aria-label="Delete session"
-                                @click="deleteTarget = session"
-                            >
-                                <Icon
-                                    name="tabler:trash"
-                                    :size="15"
-                                />
-                            </UiIconButton>
+                            <UiMenu
+                                label="Session actions"
+                                :items="sessionMenu(session)"
+                            />
                         </div>
                     </template>
 
@@ -673,29 +675,10 @@ function planBlocks(session: SessionWithEntries) {
                                         (dir) => moveSession(sessionIndex, dir)
                                     "
                                 />
-                                <UiIconButton
-                                    type="button"
-                                    size="sm"
-                                    aria-label="Edit session"
-                                    @click="editSession(session)"
-                                >
-                                    <Icon
-                                        name="tabler:pencil"
-                                        :size="15"
-                                    />
-                                </UiIconButton>
-                                <UiIconButton
-                                    type="button"
-                                    size="sm"
-                                    tone="danger"
-                                    aria-label="Delete session"
-                                    @click="deleteTarget = session"
-                                >
-                                    <Icon
-                                        name="tabler:trash"
-                                        :size="15"
-                                    />
-                                </UiIconButton>
+                                <UiMenu
+                                    label="Session actions"
+                                    :items="sessionMenu(session)"
+                                />
                             </div>
                         </UiCardHead>
 

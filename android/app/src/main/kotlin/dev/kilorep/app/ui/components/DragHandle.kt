@@ -144,6 +144,8 @@ fun ReorderableEntryHeader(
     compactNames: List<String>?,
     handle: (@Composable () -> Unit)?,
     modifier: Modifier = Modifier,
+    /** Entry-level controls (the ⋯ menu) rendered after the handle. */
+    actions: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier.fillMaxWidth(),
@@ -157,5 +159,6 @@ fun ReorderableEntryHeader(
             }
         }
         handle?.invoke()
+        actions?.invoke()
     }
 }

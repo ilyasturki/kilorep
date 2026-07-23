@@ -17,6 +17,7 @@ import {
 } from '../app/utils/sessionDraft'
 import {
     addWorkoutSet,
+    insertWorkoutEntry,
     newWorkoutExercise,
     removeWorkoutExercise,
     ungroupWorkoutEntry,
@@ -51,6 +52,34 @@ test('removing the last exercise of an entry drops the entry; otherwise keeps it
     expect(entries).toHaveLength(1)
     removeWorkoutExercise(entries, 0, 0) // entry 1 still has B
     expect(entries[0].exercises.map((e) => e.exerciseId)).toEqual([2])
+})
+
+test('inserting an entry splices right below; below the last index appends', () => {
+    const entries: WorkoutEntryDraft[] = [
+        { id: 1, exercises: [{ exerciseId: 1, name: 'A', sets: [] }] },
+        { id: 2, exercises: [{ exerciseId: 2, name: 'B', sets: [] }] },
+    ]
+    insertWorkoutEntry(
+        entries,
+        0,
+        newWorkoutExercise({ id: 9, name: 'C', loadMode: 'total' }),
+    )
+    expect(entries.map((e) => e.exercises[0].name)).toEqual(['A', 'C', 'B'])
+    // The spliced entry starts with one blank set, like an appended add.
+    expect(entries[1].exercises[0].sets).toEqual([
+        { reps: undefined, weight: undefined },
+    ])
+    insertWorkoutEntry(
+        entries,
+        entries.length - 1,
+        newWorkoutExercise({ id: 10, name: 'D', loadMode: 'total' }),
+    )
+    expect(entries.map((e) => e.exercises[0].name)).toEqual([
+        'A',
+        'C',
+        'B',
+        'D',
+    ])
 })
 
 test('ungrouping a superset splits it into one entry per exercise, reusing the objects', () => {

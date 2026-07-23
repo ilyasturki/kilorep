@@ -79,9 +79,24 @@ class SessionEditorViewModel(
     }
 
     fun addEntry(exerciseId: Int, exerciseName: String) {
-        entries.value += EditEntry(
-            exercises = listOf(EditExercise(exerciseId, exerciseName, sets = listOf(null))),
-        )
+        insertEntry(entries.value.lastIndex, exerciseId, exerciseName)
+    }
+
+    /** Splices a new entry right below an existing one (web parity). */
+    fun insertEntry(afterIndex: Int, exerciseId: Int, exerciseName: String) {
+        entries.value = entries.value.toMutableList().apply {
+            add(
+                (afterIndex + 1).coerceIn(0, size),
+                EditEntry(
+                    exercises = listOf(EditExercise(exerciseId, exerciseName, sets = listOf(null))),
+                ),
+            )
+        }
+    }
+
+    /** Drops a whole entry — a superset goes with all its members. */
+    fun removeEntry(index: Int) {
+        entries.value = entries.value.filterIndexed { i, _ -> i != index }
     }
 
     /** Adds into an existing entry — this is what builds a superset. */

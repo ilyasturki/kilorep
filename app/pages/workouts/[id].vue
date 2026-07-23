@@ -6,12 +6,14 @@ import type {
     WorkoutTemplateStatus,
 } from '~~/server/database/schema'
 import type { LoadMode } from '~~/shared/utils/exercise'
+import type { MenuItem } from '~/components/ui/Menu.vue'
 import type {
     WorkoutEntryDraft as EntryDraft,
     WorkoutExerciseDraft as ExerciseDraft,
 } from '~/utils/workoutDraft'
 import {
     addWorkoutSet,
+    insertWorkoutEntry,
     newWorkoutExercise,
     removeWorkoutExercise,
     removeWorkoutSet,
@@ -196,17 +198,88 @@ function confirmRemove() {
     removeTarget.value = undefined
 }
 
-const addOpen = ref(false)
-const addExerciseId = ref<number>()
-
 const newExerciseDraft = newWorkoutExercise
 
-function confirmAdd() {
-    const picked = exerciseById(addExerciseId.value)
-    if (!picked) return
-    draft.value.push({ id: uid(), exercises: [newExerciseDraft(picked)] })
-    addExerciseId.value = undefined
-    addOpen.value = false
+// One placement flow serves both the Add button ('end' appends) and the row
+// menus (splice below that block) — only the modal copy differs.
+const insertAfter = ref<number | 'end'>()
+const insertExerciseId = ref<number>()
+const insertCopy = computed(() => {
+    if (insertAfter.value === 'end') {
+        return {
+            title: 'Add exercise',
+            description: 'Add an extra exercise to this workout.',
+            action: 'Add',
+            icon: 'tabler:plus',
+        }
+    }
+    const entry =
+        insertAfter.value == null ? undefined : draft.value[insertAfter.value]
+    const below =
+        !entry ? 'this block'
+        : entry.exercises.length > 1 ? 'the superset'
+        : (entry.exercises[0]?.name ?? 'this block')
+    return {
+        title: 'Insert exercise',
+        description: `Insert an exercise below ${below}.`,
+        action: 'Insert',
+        icon: 'tabler:row-insert-bottom',
+    }
+})
+function promptInsert(entryIndex: number | 'end') {
+    insertAfter.value = entryIndex
+    insertExerciseId.value = undefined
+}
+function confirmInsert() {
+    const picked = exerciseById(insertExerciseId.value)
+    if (insertAfter.value == null || !picked) return
+    insertWorkoutEntry(
+        draft.value,
+        insertAfter.value === 'end' ?
+            draft.value.length - 1
+        :   insertAfter.value,
+        newExerciseDraft(picked),
+    )
+    insertAfter.value = undefined
+}
+
+// Block-level actions live on a standalone exercise's row or a superset's
+// header; superset members only swap or leave — insert stays entry-level.
+const insertBelowItem = (entryIndex: number): MenuItem => ({
+    label: 'Insert exercise below',
+    icon: 'tabler:row-insert-bottom',
+    onSelect: () => promptInsert(entryIndex),
+})
+
+function exerciseMenu(
+    block: { entryIndex: number; isSuperset: boolean },
+    item: { exIndex: number; ex: ExerciseDraft },
+): MenuItem[] {
+    const swap: MenuItem = {
+        label: 'Swap exercise',
+        icon: 'tabler:switch-horizontal',
+        onSelect: () => promptSwap(block.entryIndex, item.exIndex),
+    }
+    const remove: MenuItem = {
+        label: 'Remove',
+        icon: 'tabler:trash',
+        tone: 'danger',
+        onSelect: () =>
+            promptRemove(block.entryIndex, item.exIndex, item.ex.name),
+    }
+    if (block.isSuperset) return [swap, remove]
+    return [swap, insertBelowItem(block.entryIndex), remove]
+}
+
+function supersetMenu(entryIndex: number): MenuItem[] {
+    return [
+        insertBelowItem(entryIndex),
+        {
+            label: 'Ungroup superset',
+            icon: 'tabler:unlink',
+            onSelect: () => ungroupEntry(entryIndex),
+        },
+    ]
 }
 
 // Blank picker rows are dropped on confirm, so an unused extra slot never
@@ -627,17 +700,6 @@ async function changeDate() {
                     >
                         <UiTag accent>Superset</UiTag>
                         <div class="flex items-center gap-1">
-                            <UiIconButton
-                                type="button"
-                                size="sm"
-                                aria-label="Ungroup superset"
-                                @click="ungroupEntry(block.entryIndex)"
-                            >
-                                <Icon
-                                    name="tabler:unlink"
-                                    :size="15"
-                                />
-                            </UiIconButton>
                             <MoveButtons
                                 label="superset"
                                 :can-up="block.entryIndex > 0"
@@ -646,6 +708,10 @@ async function changeDate() {
                                     (dir) =>
                                         moveItem(draft, block.entryIndex, dir)
                                 "
+                            />
+                            <UiMenu
+                                label="Superset actions"
+                                :items="supersetMenu(block.entryIndex)"
                             />
                         </div>
                     </div>
@@ -687,40 +753,10 @@ async function changeDate() {
                                                 )
                                         "
                                     />
-                                    <UiIconButton
-                                        type="button"
-                                        size="sm"
-                                        aria-label="Swap exercise"
-                                        @click="
-                                            promptSwap(
-                                                block.entryIndex,
-                                                item.exIndex,
-                                            )
-                                        "
-                                    >
-                                        <Icon
-                                            name="tabler:switch-horizontal"
-                                            :size="15"
-                                        />
-                                    </UiIconButton>
-                                    <UiIconButton
-                                        type="button"
-                                        size="sm"
-                                        tone="danger"
-                                        aria-label="Remove exercise"
-                                        @click="
-                                            promptRemove(
-                                                block.entryIndex,
-                                                item.exIndex,
-                                                item.ex.name,
-                                            )
-                                        "
-                                    >
-                                        <Icon
-                                            name="tabler:x"
-                                            :size="15"
-                                        />
-                                    </UiIconButton>
+                                    <UiMenu
+                                        label="Exercise actions"
+                                        :items="exerciseMenu(block, item)"
+                                    />
                                 </div>
                             </div>
 
@@ -809,7 +845,7 @@ async function changeDate() {
                     type="button"
                     tone="ghost"
                     size="sm"
-                    @click="addOpen = true"
+                    @click="promptInsert('end')"
                 >
                     <Icon
                         name="tabler:plus"
@@ -890,14 +926,15 @@ async function changeDate() {
             @resume="resumeOpen = true"
         />
 
-        <!-- Add exercise -->
+        <!-- Add / insert an exercise block -->
         <UiModal
-            v-model:open="addOpen"
-            title="Add exercise"
-            description="Add an extra exercise to this workout."
+            :open="insertAfter != null"
+            :title="insertCopy.title"
+            :description="insertCopy.description"
+            @update:open="(open) => !open && (insertAfter = undefined)"
         >
             <ExerciseCombobox
-                v-model="addExerciseId"
+                v-model="insertExerciseId"
                 :exercises="exercises ?? []"
                 placeholder="Pick an exercise"
                 creatable
@@ -907,20 +944,20 @@ async function changeDate() {
                 <UiButton
                     type="button"
                     tone="ghost"
-                    @click="addOpen = false"
+                    @click="insertAfter = undefined"
                 >
                     Cancel
                 </UiButton>
                 <UiButton
                     type="button"
-                    :disabled="!addExerciseId"
-                    @click="confirmAdd"
+                    :disabled="!insertExerciseId"
+                    @click="confirmInsert"
                 >
                     <Icon
-                        name="tabler:plus"
+                        :name="insertCopy.icon"
                         :size="16"
                     />
-                    Add
+                    {{ insertCopy.action }}
                 </UiButton>
             </template>
         </UiModal>

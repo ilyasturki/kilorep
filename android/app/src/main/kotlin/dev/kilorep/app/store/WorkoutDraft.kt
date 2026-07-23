@@ -161,18 +161,35 @@ data class WorkoutDraft(
     }
 
     /** Appends a plain-exercise entry with one open set. */
-    fun addExercise(exerciseId: Int, name: String, loadMode: String): WorkoutDraft = copy(
+    fun addExercise(exerciseId: Int, name: String, loadMode: String): WorkoutDraft =
+        insertExerciseBelow(entries.lastIndex, exerciseId, name, loadMode)
+
+    /**
+     * Splices a plain-exercise entry right below an existing one, so a
+     * mid-workout addition lands where the lifter is (web parity).
+     */
+    fun insertExerciseBelow(
+        entryIndex: Int,
+        exerciseId: Int,
+        name: String,
+        loadMode: String,
+    ): WorkoutDraft = copy(
         dirty = true,
-        entries = entries + DraftEntry(
-            exercises = listOf(
-                DraftExercise(
-                    exerciseId = exerciseId,
-                    name = name,
-                    sets = listOf(DraftSet(reps = null, weight = null, target = null)),
-                    loadMode = loadMode,
+        entries = entries.toMutableList().apply {
+            add(
+                (entryIndex + 1).coerceIn(0, size),
+                DraftEntry(
+                    exercises = listOf(
+                        DraftExercise(
+                            exerciseId = exerciseId,
+                            name = name,
+                            sets = listOf(DraftSet(reps = null, weight = null, target = null)),
+                            loadMode = loadMode,
+                        ),
+                    ),
                 ),
-            ),
-        ),
+            )
+        },
     )
 
     fun removeExercise(entryIndex: Int, exerciseIndex: Int): WorkoutDraft = copy(

@@ -187,6 +187,19 @@ object LiftIcons {
         circle(12f, 12f, 1f)
         circle(19f, 12f, 1f)
     }
+    val RowInsertBottom = strokeIcon("row-insert-bottom") {
+        moveTo(20f, 6f); lineTo(20f, 10f)
+        arcTo(1f, 1f, 0f, false, true, 19f, 11f)
+        lineTo(5f, 11f)
+        arcTo(1f, 1f, 0f, false, true, 4f, 10f)
+        lineTo(4f, 6f)
+        arcTo(1f, 1f, 0f, false, true, 5f, 5f)
+        lineTo(19f, 5f)
+        arcTo(1f, 1f, 0f, false, true, 20f, 6f)
+        close()
+        moveTo(12f, 15f); lineTo(12f, 19f)
+        moveTo(14f, 17f); lineTo(10f, 17f)
+    }
     val GripVertical = strokeIcon("grip-vertical") {
         circle(9f, 5f, 1f)
         circle(9f, 12f, 1f)

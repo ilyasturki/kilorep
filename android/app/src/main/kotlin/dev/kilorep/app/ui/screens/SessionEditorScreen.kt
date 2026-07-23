@@ -32,6 +32,8 @@ import dev.kilorep.app.ui.components.ExercisePicker
 import dev.kilorep.app.ui.components.GhostButton
 import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftIconButton
+import dev.kilorep.app.ui.components.LiftMenu
+import dev.kilorep.app.ui.components.LiftMenuItem
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.LiftTextField
 import dev.kilorep.app.ui.components.PrimaryButton
@@ -64,8 +66,7 @@ fun SessionEditorScreen(
     val saved by viewModel.saved.collectAsStateWithLifecycle()
     val colors = Lift.colors
 
-    // null = closed, -1 = new entry, otherwise add-into-entry (superset)
-    var pickerFor by remember { mutableStateOf<Int?>(null) }
+    var picker by remember { mutableStateOf<EditorPicker?>(null) }
 
     LaunchedEffect(saved) {
         if (saved) onBack()
@@ -125,6 +126,29 @@ fun SessionEditorScreen(
                                 accentKicker = superset,
                                 compactNames = if (compact) entry.exercises.map { it.name } else null,
                                 handle = handle,
+                                // Entry-level actions for a superset live on
+                                // its header; member rows keep their inline ✕.
+                                actions = if (superset && !compact) {
+                                    {
+                                        LiftMenu(
+                                            items = listOf(
+                                                LiftMenuItem(
+                                                    "Insert exercise below",
+                                                    LiftIcons.RowInsertBottom,
+                                                ) { picker = EditorPicker.InsertBelow(entryIndex) },
+                                                LiftMenuItem(
+                                                    "Remove",
+                                                    LiftIcons.Trash,
+                                                    danger = true,
+                                                ) { viewModel.removeEntry(entryIndex) },
+                                            ),
+                                            size = 36.dp,
+                                            iconSize = 15.dp,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
                             )
 
                             if (!compact && superset) {
@@ -179,6 +203,9 @@ fun SessionEditorScreen(
                                         viewModel = viewModel,
                                         onOpen = { onOpenExercise(exercise.exerciseId) },
                                         handle = null,
+                                        onInsertBelow = {
+                                            picker = EditorPicker.InsertBelow(entryIndex)
+                                        },
                                     )
                                 }
                             }
@@ -186,7 +213,7 @@ fun SessionEditorScreen(
                             if (!compact) {
                                 GhostButton(
                                     if (superset) "Add to superset" else "Make superset",
-                                    onClick = { pickerFor = entryIndex },
+                                    onClick = { picker = EditorPicker.AddTo(entryIndex) },
                                     icon = LiftIcons.Plus,
                                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                                     height = 38.dp,
@@ -199,7 +226,7 @@ fun SessionEditorScreen(
                 item {
                     GhostButton(
                         "Add exercise",
-                        onClick = { pickerFor = -1 },
+                        onClick = { picker = EditorPicker.Add },
                         icon = LiftIcons.Plus,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -230,21 +257,33 @@ fun SessionEditorScreen(
         }
     }
 
-    pickerFor?.let { target ->
+    picker?.let { target ->
         ExercisePicker(
             exercises = exercises,
-            title = if (target == -1) "Add exercise" else "Add to superset",
-            onPick = {
-                if (target == -1) {
-                    viewModel.addEntry(it.id, it.name)
-                } else {
-                    viewModel.addToEntry(target, it.id, it.name)
-                }
-                pickerFor = null
+            title = when (target) {
+                EditorPicker.Add -> "Add exercise"
+                is EditorPicker.AddTo -> "Add to superset"
+                is EditorPicker.InsertBelow -> "Insert exercise"
             },
-            onDismiss = { pickerFor = null },
+            onPick = {
+                when (target) {
+                    EditorPicker.Add -> viewModel.addEntry(it.id, it.name)
+                    is EditorPicker.AddTo -> viewModel.addToEntry(target.entry, it.id, it.name)
+                    is EditorPicker.InsertBelow -> viewModel.insertEntry(target.entry, it.id, it.name)
+                }
+                picker = null
+            },
+            onDismiss = { picker = null },
         )
     }
+}
+
+private sealed interface EditorPicker {
+    data object Add : EditorPicker
+    /** Add into an existing entry — this is what builds a superset. */
+    data class AddTo(val entry: Int) : EditorPicker
+    /** Splice a new entry right below this one. */
+    data class InsertBelow(val entry: Int) : EditorPicker
 }
 
 @Composable
@@ -256,6 +295,8 @@ private fun EditorExerciseBlock(
     viewModel: SessionEditorViewModel,
     onOpen: () -> Unit,
     handle: (@Composable () -> Unit)?,
+    /** Null inside a superset — insert is entry-level, on the header menu. */
+    onInsertBelow: (() -> Unit)? = null,
 ) {
     val colors = Lift.colors
     Column(Modifier.padding(top = 10.dp)) {
@@ -273,13 +314,30 @@ private fun EditorExerciseBlock(
                     .clickable(onClick = onOpen),
             )
             handle?.invoke()
-            LiftIconButton(
-                LiftIcons.Trash,
-                onClick = { viewModel.removeExercise(entryIndex, exerciseIndex) },
-                size = 32.dp,
-                iconSize = 14.dp,
-                danger = true,
-            )
+            if (onInsertBelow != null) {
+                LiftMenu(
+                    items = listOf(
+                        LiftMenuItem(
+                            "Insert exercise below",
+                            LiftIcons.RowInsertBottom,
+                            onClick = onInsertBelow,
+                        ),
+                        LiftMenuItem("Remove", LiftIcons.Trash, danger = true) {
+                            viewModel.removeExercise(entryIndex, exerciseIndex)
+                        },
+                    ),
+                    size = 32.dp,
+                    iconSize = 14.dp,
+                )
+            } else {
+                LiftIconButton(
+                    LiftIcons.Trash,
+                    onClick = { viewModel.removeExercise(entryIndex, exerciseIndex) },
+                    size = 32.dp,
+                    iconSize = 14.dp,
+                    danger = true,
+                )
+            }
         }
 
         exercise.sets.forEachIndexed { setIndex, reps ->

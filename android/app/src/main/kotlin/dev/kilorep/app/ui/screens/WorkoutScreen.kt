@@ -39,6 +39,8 @@ import dev.kilorep.app.ui.components.Kicker
 import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftDialogCard
 import dev.kilorep.app.ui.components.LiftIconButton
+import dev.kilorep.app.ui.components.LiftMenu
+import dev.kilorep.app.ui.components.LiftMenuItem
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.LiftTextField
 import dev.kilorep.app.ui.components.PrimaryButton
@@ -330,6 +332,15 @@ fun WorkoutScreen(
             },
             onDismiss = { picker = null },
         )
+        is PickerTarget.Insert -> ExercisePicker(
+            exercises = exercises,
+            title = "Insert exercise",
+            onPick = {
+                viewModel.insertExercise(target.entry, it.id, it.name, it.loadMode.value)
+                picker = null
+            },
+            onDismiss = { picker = null },
+        )
         null -> Unit
     }
 
@@ -404,6 +415,8 @@ fun WorkoutScreen(
 private sealed interface PickerTarget {
     data class Swap(val entry: Int, val exercise: Int) : PickerTarget
     data object Add : PickerTarget
+    /** Splice a new entry right below this one. */
+    data class Insert(val entry: Int) : PickerTarget
 }
 
 /**
@@ -503,6 +516,21 @@ private fun EditableEntryCard(
                 compactNames = if (compact) entry.exercises.map { it.name } else null,
                 handle = handle,
                 modifier = headerDrag.padding(bottom = if (compact) 0.dp else 8.dp),
+                // Entry-level insert for a superset lives on its header; the
+                // member rows' menus stay exercise-level. A single action gets
+                // a direct button — a one-item menu would only add a tap.
+                actions = if (superset && !compact) {
+                    {
+                        LiftIconButton(
+                            LiftIcons.RowInsertBottom,
+                            onClick = { onPicker(PickerTarget.Insert(entryIndex)) },
+                            size = 38.dp,
+                            iconSize = 17.dp,
+                        )
+                    }
+                } else {
+                    null
+                },
             )
         }
         if (!compact) {
@@ -514,6 +542,11 @@ private fun EditableEntryCard(
                     rotationTag = if (superset) ('A' + exerciseIndex).toString() else null,
                     viewModel = viewModel,
                     onSwap = { onPicker(PickerTarget.Swap(entryIndex, exerciseIndex)) },
+                    onInsertBelow = if (superset) {
+                        null
+                    } else {
+                        { onPicker(PickerTarget.Insert(entryIndex)) }
+                    },
                     onRemove = { onConfirmRemove(Triple(entryIndex, exerciseIndex, null)) },
                     onRemoveSet = { setIndex -> onConfirmRemove(Triple(entryIndex, exerciseIndex, setIndex)) },
                     onOpen = { onOpenExercise(exercise.exerciseId) },
@@ -576,6 +609,8 @@ private fun ExerciseBlock(
     rotationTag: String?,
     viewModel: WorkoutViewModel,
     onSwap: () -> Unit,
+    /** Null inside a superset — insert is entry-level, on the header menu. */
+    onInsertBelow: (() -> Unit)?,
     onRemove: () -> Unit,
     onRemoveSet: (Int) -> Unit,
     onOpen: () -> Unit,
@@ -596,13 +631,14 @@ private fun ExerciseBlock(
                     .clickable(onClick = onOpen),
                 maxLines = 2,
             )
-            LiftIconButton(LiftIcons.Swap, onClick = onSwap, size = 38.dp, iconSize = 17.dp)
-            LiftIconButton(
-                LiftIcons.Trash,
-                onClick = onRemove,
-                size = 38.dp,
-                iconSize = 17.dp,
-                danger = true,
+            LiftMenu(
+                items = buildList {
+                    add(LiftMenuItem("Swap exercise", LiftIcons.Swap, onClick = onSwap))
+                    onInsertBelow?.let {
+                        add(LiftMenuItem("Insert exercise below", LiftIcons.RowInsertBottom, onClick = it))
+                    }
+                    add(LiftMenuItem("Remove", LiftIcons.Trash, danger = true, onClick = onRemove))
+                },
             )
         }
 

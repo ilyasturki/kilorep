@@ -24,9 +24,10 @@ import dev.kilorep.app.data.Repo
 import dev.kilorep.app.ui.components.ConfirmDialog
 import dev.kilorep.app.ui.components.EmptyState
 import dev.kilorep.app.ui.components.EntryDragHandle
-import dev.kilorep.app.ui.components.GhostButton
 import dev.kilorep.app.ui.components.LiftCard
 import dev.kilorep.app.ui.components.LiftIconButton
+import dev.kilorep.app.ui.components.LiftMenu
+import dev.kilorep.app.ui.components.LiftMenuItem
 import dev.kilorep.app.ui.components.LiftScreen
 import dev.kilorep.app.ui.components.PrimaryButton
 import dev.kilorep.app.ui.components.longPressDrag
@@ -182,25 +183,11 @@ private fun SessionCard(
                 )
             }
             handle?.invoke()
-        }
-        Row(
-            Modifier.fillMaxWidth().padding(top = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            GhostButton(
-                "Edit",
-                onClick = onEdit,
-                icon = LiftIcons.Pencil,
-                modifier = Modifier.weight(1f),
-                height = 40.dp,
-            )
-            GhostButton(
-                "Delete",
-                onClick = onDelete,
-                icon = LiftIcons.Trash,
-                danger = true,
-                modifier = Modifier.weight(1f),
-                height = 40.dp,
+            LiftMenu(
+                items = listOf(
+                    LiftMenuItem("Edit", LiftIcons.Pencil, onClick = onEdit),
+                    LiftMenuItem("Delete", LiftIcons.Trash, danger = true, onClick = onDelete),
+                ),
             )
         }
     }
