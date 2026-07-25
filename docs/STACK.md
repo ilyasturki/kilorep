@@ -21,6 +21,10 @@ Notes:
 To narrow to two finalists. For each: dev loop, Claude testability, mobile ceiling, web story, offline story.
 
 - Web SPA + native shell (Capacitor or Tauri mobile):
+  - Existence proof for criterion 2. **Alpha Progression is this stack** — Capacitor + vanilla JS/jQuery + PouchDB, verified by APK teardown 2026-07-25 (full breakdown in [COMPETITORS.md](COMPETITORS.md#alpha-progression)). It is the one competitor mobile UI judged best-in-class in the whole audit, and it is a WebView. It clears that bar with jQuery 3.7.1, hand-written CSS and Chart.js 2.9.3 — no UI framework at all.
+  - What that implies: the mobile ceiling is set by craft, not by the renderer. Their polish comes from plugin work (safe-area, navigation-bar, haptics, keep-awake) and 52 hand-authored keyframes — both available to any web stack. "WebView therefore afterthought" is now disproven by the app on this phone.
+  - Offline: their local store is PouchDB on IndexedDB — a local-first document store with replication built in, worth evaluating for criterion 4. Sync target is not visible from the bundle (Firebase Functions present, so not necessarily stock CouchDB).
+  - Still unproven here: criteria 1 and 3. Alpha Progression says nothing about dev loop, and it ships no web surface despite being a web app — so the phone+web parity claim remains to be earned by prototype.
 - Flutter:
 - Expo / React Native:
 - Other:
