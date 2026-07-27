@@ -5,7 +5,10 @@ const config: Config = {
 	singleQuote: true,
 	trailingComma: 'none',
 	printWidth: 100,
-	plugins: ['prettier-plugin-svelte'],
+	// prettier-plugin-tailwindcss must come last — it wraps whichever parsers the
+	// preceding plugins register.
+	plugins: ['prettier-plugin-svelte', 'prettier-plugin-tailwindcss'],
+	tailwindStylesheet: './src/app.css',
 	overrides: [{ files: '*.svelte', options: { parser: 'svelte' } }]
 };
 

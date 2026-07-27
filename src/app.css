@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+
+/* Nunito, variable weight 200–1000, latin subset only (39 KB).
+   Committed rather than pulled from a CDN: the APK must render with no network.
+   `block` over `swap` — a rounded face swapping in over Roboto mid-workout is
+   exactly the flash this app does not accept. The file is local, so the block
+   period is never actually reached. */
+@font-face {
+	font-family: 'Nunito';
+	src: url('./lib/assets/fonts/nunito-latin-wght.woff2') format('woff2');
+	font-weight: 200 1000;
+	font-style: normal;
+	font-display: block;
+}
+
+/* Semantic tokens. Values are Tailwind swatches; components name intent only —
+   `bg-surface`, never `bg-neutral-950`. Dark reassigns which swatch each name
+   points at, so a component cannot be styled for one theme and not the other.
+
+   Theme follows the OS and nothing else: no toggle, no persistence, no JS.
+   Adding a Light/Dark/System setting later means moving this media query to
+   `:root:not([data-theme=light])` and stamping the attribute before paint. */
+:root {
+	color-scheme: light dark;
+
+	--surface: var(--color-white);
+	--surface-2: var(--color-neutral-100);
+	--ink: var(--color-neutral-900);
+	--ink-muted: var(--color-neutral-500);
+	--border: var(--color-neutral-200);
+	--accent: var(--color-lime-400);
+	--on-accent: var(--color-neutral-950);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--surface: var(--color-neutral-950);
+		--surface-2: var(--color-neutral-900);
+		--ink: var(--color-neutral-50);
+		--ink-muted: var(--color-neutral-400);
+		--border: var(--color-neutral-800);
+		--accent: var(--color-lime-400);
+		--on-accent: var(--color-neutral-950);
+	}
+}
+
+@theme inline {
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+	--color-ink: var(--ink);
+	--color-ink-muted: var(--ink-muted);
+	--color-border: var(--border);
+	--color-accent: var(--accent);
+	--color-on-accent: var(--on-accent);
+}
+
+@theme {
+	--font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
+
+	/* Safe-area insets as ordinary spacing values: `pb-safe-b`, `pt-safe-t`, … .
+	   Dead without `viewport-fit=cover` in app.html. */
+	--spacing-safe-t: env(safe-area-inset-top);
+	--spacing-safe-b: env(safe-area-inset-bottom);
+	--spacing-safe-l: env(safe-area-inset-left);
+	--spacing-safe-r: env(safe-area-inset-right);
+}
+
+@layer base {
+	html {
+		background-color: var(--color-surface);
+		color: var(--color-ink);
+	}
+
+	body {
+		/* DESIGN.md: 600 and 700 are the workhorses; 400 is the exception. */
+		font-weight: 600;
+		/* Nunito's digits are already uniform-width, so this is insurance for the
+		   day the face is swapped — not the thing making the timer stop twitching. */
+		font-variant-numeric: tabular-nums;
+	}
+}

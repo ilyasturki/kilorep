@@ -33,6 +33,7 @@ Notes:
 | Server | **SQLite + Drizzle**, `adapter-node`, one container. Multi-tenant: `userId` on every row, v1's shape carried forward. |
 | Auth | **Local credentials only.** Session cookie on web; a long-lived hashed device token for the APK, the REST API and MCP. No OAuth, no passkeys. |
 | Distribution | **Direct signed APK** (v1's keystore). Play and F-Droid deferred, both kept open. |
+| Styling | **Tailwind v4**, CSS-first `@theme`. Semantic tokens over Tailwind's palette; theme follows the OS only. Requires **Android System WebView 111+**. |
 | Design pipeline | **No bundle, no React mirror.** Design freeform in claude.ai/design, then author the system in Svelte. |
 
 Verified locally before committing to the app shape (svelte 5.56.8, kit 2.70.1, adapter-static 3.0.10): with `fallback` set, `adapter-static` compiles `+server.js` endpoints and silently omits them from the static output. The build succeeds. One tree, two adapters, no route juggling.
@@ -61,6 +62,20 @@ The same reasoning refuses ElectricSQL and PowerSync, and there the cost is docu
 Chosen over Vue on motion and weight. `transition:` / `animate:` / spring primitives are built into the language, and the polish tax is paid in motion; the runtime is the smallest of the candidates, which is real on a mid-range Android WebView. It is also the cheapest port target from design-tool output, because Svelte markup *is* HTML — no JSX, no `className`, no template dialect.
 
 Its one serious risk is criterion-1-shaped: training-data skew toward Svelte 4 idioms, since runes were a hard API break. That is mitigated by the standing rules below rather than hoped away.
+
+## Why Tailwind
+
+Not because utilities beat hand-written CSS on quality — the teardown proves the opposite, since Alpha Progression clears the bar with 169 KB of hand-written CSS and no framework at all. The argument is the pipeline. The design surface is fixed as claude.ai/design, and what comes back is Tailwind-shaped markup; hand-written CSS means hand-translating every design return, forever.
+
+The craft bar is unaffected, because utilities are not the design system — the token layer is:
+
+- **Components name intent, never a swatch.** `bg-surface`, `text-ink`, `bg-accent`. Semantic tokens live in `:root`, resolve to Tailwind's palette, and are exposed through `@theme inline`. Dark reassigns which swatch each name points at, so a component *cannot* be styled for one theme and not the other — "both first-class" is structural, not a review checklist.
+- **The accent is Tailwind `lime-400`.** v1's `#c5f53a` is retired; see [DESIGN.md](DESIGN.md).
+- **Theme follows the OS and nothing else.** No toggle, no persistence, no JS, no flash. Adding a Light/Dark/System setting later means moving the `prefers-color-scheme` block to `:root:not([data-theme=light])` and stamping the attribute before first paint — a known, small migration, accepted deliberately.
+- **Safe-area insets are spacing tokens** (`pt-safe-t`, `pb-safe-b`), so insets are ordinary utilities rather than `env()` scattered through style attributes. They are dead without `viewport-fit=cover` in `app.html`.
+- **`cn()` (clsx + tailwind-merge)** exists because Tailwind resolves conflicts by stylesheet order, not attribute order: without it, a `class` passed into a component overrides the component's own classes only by luck.
+
+The cost is a hard floor: Tailwind v4 depends on `@property`, `color-mix()` and `oklch()` in its core, so **Android System WebView 111+ (March 2023)** is required and cannot be polyfilled or feature-detected around. Below it the app still runs, but renders miscolored. Accepted: the APK is sideloaded, so there is no store gate enforcing this, and a device that has not updated its WebView in three years is out of scope.
 
 ## Standing rules
 
@@ -94,4 +109,4 @@ Written down so they cannot be discovered later as surprises.
 ## Open
 
 - Whether the Claude-in-Chrome tooling attaches to a remote WebView target over adb. Untested — no device connected at decision time. Fallback is driving CDP directly over `adb forward`, so the capability stands either way. First-week check.
-- Whether Bits UI's primitives earn their place: this app is mostly steppers and lists, and the component value is modest. Kept for now because it holds correct modern runes code in context.
+**Resolved — Bits UI stays**, on a better reason than the one first recorded. "It holds correct runes code in context" is a documentation argument, not an engineering one, and it does not survive contact. The real justification is [PRODUCT.md](PRODUCT.md)'s long-press sheet: focus trap, scroll lock and dismissible layers are the part that is miserable to hand-roll and easy to get subtly wrong on a touch device. Everything visible is still ours — the primitives ship unstyled and are styled with the token layer. Verified in Chrome under `ssr = false` and forced runes mode: opens, portals, locks scroll, sets `aria-modal` and `aria-labelledby`.
