@@ -190,6 +190,16 @@
 			}
 		},
 		{
+			// The root layout is the one file that owns the global stylesheet, and
+			// `src/app.css` sits above `src/routes/` by SvelteKit's layout. `$lib` cannot
+			// reach it and moving the file would break the framework contract, so the
+			// relative parent import is correct here and nowhere else.
+			"files": ["src/routes/+layout.svelte"],
+			"rules": {
+				"import/no-relative-parent-imports": "off"
+			}
+		},
+		{
 			// Build and tooling config: a default export is the contract.
 			"files": ["*.config.ts", "*.config.js", "svelte.config.js", "capacitor.config.ts"],
 			"env": { "node": true, "browser": false },
