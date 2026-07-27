@@ -8,6 +8,9 @@ node_modules
 /.svelte-kit
 /build
 
+# Database (the SQLite file, plus WAL and shared-memory sidecars)
+/.data
+
 # OS
 .DS_Store
 Thumbs.db

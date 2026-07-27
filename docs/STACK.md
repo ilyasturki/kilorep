@@ -30,7 +30,7 @@ Notes:
 | App shape | **One SvelteKit app.** `adapter-static` + `fallback` builds the Capacitor bundle; `adapter-node` builds the server, which also hosts the SPA. |
 | Local store | **In-memory domain, IndexedDB persistence.** Identical API in Chrome and the WebView. |
 | Sync | **Watermark with server-assigned `seq`.** Device-generated uuid, `updatedAt`, `deletedAt` tombstone. Last-write-wins per record. |
-| Server | **SQLite + Drizzle**, `adapter-node`, one container. Multi-tenant: `userId` on every row, v1's shape carried forward. |
+| Server | **SQLite + Drizzle** on the **`node:sqlite`** builtin — no compiled dependency, nothing to build in the container. `adapter-node`, one container. Multi-tenant: `userId` on every row. Ids are device-generated uuids throughout, which is where v1's integer rowids could not be carried forward. |
 | Auth | **Local credentials only.** Session cookie on web; a long-lived hashed device token for the APK, the REST API and MCP. No OAuth, no passkeys. |
 | Distribution | **Direct signed APK** (v1's keystore). Play and F-Droid deferred, both kept open. |
 | Styling | **Tailwind v4**, CSS-first `@theme`. Semantic tokens over Tailwind's palette; theme follows the OS only. Requires **Android System WebView 111+**. |
@@ -81,7 +81,7 @@ The cost is a hard floor: Tailwind v4 depends on `@property`, `color-mix()` and 
 
 Committed to `CLAUDE.md`; repeated here because they are stack decisions, not conventions.
 
-- **The domain, store and sync layer is plain TypeScript with zero framework imports.** This is what keeps a future migration cheap and what lets `bun test` cover the parts that matter.
+- **The domain, store and sync layer is plain TypeScript with zero framework imports.** This is what keeps a future migration cheap and what lets the test runner cover the parts that matter.
 - **Runes only.** No `export let`, no `$:`, no stores inside components, no slots.
 - **Never answer a Svelte or SvelteKit API question from memory** — query context7 `/llmstxt/svelte_dev_llms_txt` first.
 - **One `apiBase`**: `location.origin` on web, unconfigured in the shell until a server is connected. Never a bare relative `/api/…` — it works on web and 404s in the APK, where the origin is `capacitor://localhost` and the endpoint was omitted from the build.
@@ -96,7 +96,7 @@ Criterion 1, made operational.
 - **The phone is mandatory** — a change is not done until verified on device — for anything touching: a Capacitor plugin, scroll or gesture, safe-area insets, motion timing, or the workout screen's feel. That list is the polish tax, made non-optional.
 - **Mechanism.** `adb reverse` tunnels the Vite dev server to the phone, so the WebView hits `localhost` and HMR runs on the device with no LAN dependency. Carried from v1's `android/justfile`.
 - **Android SDK on NixOS.** `androidenv.composeAndroidPackages`, carried verbatim from v1's `android/nix/sdk.nix` — nixpkgs patches the prebuilt Google binaries (notably aapt2) that will not otherwise run.
-- **Tests.** `bun test` against the framework-free core: domain math, sync, store.
+- **Tests.** **Vitest**, one runner for everything: the framework-free core (domain math, sync, store) and the server's database layer. This replaces the `bun test` decided on 2026-07-25, and the reason is a measured constraint rather than a preference — the server's driver is `node:sqlite`, which does not exist under Bun (1.3.13: "No such built-in module"), so `bun test` cannot execute a line of server code. Two runners split by which builtin they can load is a worse boundary than one runner that runs under Node, where the tests touch real SQLite instead of a fake.
 
 ## Accepted costs
 
@@ -109,4 +109,6 @@ Written down so they cannot be discovered later as surprises.
 ## Open
 
 - Whether the Claude-in-Chrome tooling attaches to a remote WebView target over adb. Untested — no device connected at decision time. Fallback is driving CDP directly over `adb forward`, so the capability stands either way. First-week check.
+- **How a production instance creates its first account.** `db:seed` exists, is development-only, and hard-codes public credentials; a self-hoster currently has no way to sign in. Candidates weighed and not chosen: a first-run claim window (an exposed instance is claimable by a stranger) and env-seeded credentials (plaintext in the environment, `docker inspect` and shell history). Blocks the first real deployment, nothing before it.
+- **Drizzle is pinned to a prerelease, `1.0.0-rc.4`** (orm and kit both, exact — a mismatched pair fails with `SQLiteSyncDialect is not a constructor`). The `node:sqlite` driver exists only on the 1.0 line; stable 0.45.2 offers better-sqlite3 or bun:sqlite, both of which reintroduce what the driver choice removed. Revisit when 1.0 ships: the pin should become a normal range, not a permanent exception.
 **Resolved — Bits UI stays**, on a better reason than the one first recorded. "It holds correct runes code in context" is a documentation argument, not an engineering one, and it does not survive contact. The real justification is [PRODUCT.md](PRODUCT.md)'s long-press sheet: focus trap, scroll lock and dismissible layers are the part that is miserable to hand-roll and easy to get subtly wrong on a touch device. Everything visible is still ours — the primitives ship unstyled and are styled with the token layer. Verified in Chrome under `ssr = false` and forced runes mode: opens, portals, locks scroll, sets `aria-modal` and `aria-labelledby`.

@@ -5,21 +5,32 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build",
+		"build:server": "vite build",
+		"build:app": "BUILD_TARGET=app vite build",
+		"start": "node build/server/index.js",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"format": "prettier --check .",
 		"format:write": "prettier --write .",
 		"lint": "oxlint",
-		"lint:fix": "oxlint --fix"
+		"lint:fix": "oxlint --fix",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:studio": "drizzle-kit studio",
+		"db:seed": "node scripts/seed.ts"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/adapter-node": "^5.5.7",
+		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.3.3",
+		"@types/node": "^26.1.1",
+		"drizzle-kit": "1.0.0-rc.4",
 		"oxlint": "^1.75.0",
 		"oxlint-tsgolint": "^7.0.2001",
 		"prettier": "^3.8.3",
@@ -29,11 +40,13 @@
 		"svelte-check": "^4.6.0",
 		"tailwindcss": "^4.3.3",
 		"typescript": "^6.0.3",
-		"vite": "^8.0.16"
+		"vite": "^8.0.16",
+		"vitest": "^4.1.10"
 	},
 	"dependencies": {
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
+		"drizzle-orm": "1.0.0-rc.4",
 		"tailwind-merge": "^3.6.0"
 	}
 }

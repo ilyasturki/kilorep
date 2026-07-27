@@ -52,6 +52,11 @@
 		"import/prefer-default-export": "off",
 		"import/group-exports": "off", // `export const ssr` / `export const prerender` are separate by idiom
 		"import/exports-last": "off",
+		// `consistent-type-specifier-style` demands a separate top-level `import type`,
+		// which `no-duplicate-imports` then calls a duplicate of the value import from
+		// the same module. Only one can hold; the type-only import is the useful half,
+		// because it is the one a bundler can erase.
+		"no-duplicate-imports": "off",
 		// `import/no-default-export` stays ON for src/ — see the config-file override.
 
 		// --- Language features this project uses deliberately ---
@@ -189,7 +194,59 @@
 			"files": ["*.config.ts", "*.config.js", "svelte.config.js", "capacitor.config.ts"],
 			"env": { "node": true, "browser": false },
 			"rules": {
-				"import/no-default-export": "off"
+				"import/no-default-export": "off",
+				// `BUILD_TARGET` picks the adapter in vite.config.ts, and drizzle.config.ts
+				// resolves the same `DATABASE_PATH` the server does. Both are build-time
+				// Node, where the environment is the only channel available.
+				"node/no-process-env": "off",
+				// Config files run in Node before any bundle exists.
+				"import/no-nodejs-modules": "off"
+			}
+		},
+		{
+			// The server. Node by definition — it is the one place in this repo that is
+			// never bundled for a browser or a WebView, and `$lib/server` is a boundary
+			// SvelteKit enforces at build time.
+			"files": ["src/lib/server/**", "src/hooks.server.ts", "scripts/**"],
+			"env": { "node": true, "browser": false },
+			"rules": {
+				// node:sqlite, node:crypto, node:fs — the whole point of this layer.
+				"import/no-nodejs-modules": "off",
+				// `DatabaseSync` and `mkdirSync` are synchronous because SQLite and the
+				// boot path offer nothing else. Password hashing is the exception that
+				// proves it: `crypto.scrypt` *does* have an async form, so it uses it —
+				// see the note in `auth/password.ts`.
+				"node/no-sync": "off",
+				// Configuration reaches a container through its environment. Read in
+				// `db/config.ts` and nowhere else.
+				"node/no-process-env": "off",
+				// The server tree is `db/` and `auth/`, which reference each other. The
+				// alternative is flattening a layer that has a real internal structure.
+				"import/no-relative-parent-imports": "off"
+			}
+		},
+		{
+			// Endpoints. Node by the same argument as `src/lib/server`, and the process
+			// log is the only channel they have for detail a response deliberately
+			// withholds — `/api/health` answers 503 and logs why. A swallowed error on
+			// a self-hosted box is a support ticket with nothing in it.
+			"files": ["src/routes/api/**"],
+			"env": { "node": true, "browser": false },
+			"rules": {
+				"no-console": "off"
+			}
+		},
+		{
+			// One-shot command-line tools. Their stdout *is* the interface — `db:seed`
+			// prints the credentials it just created — and an exit code is how a shell
+			// learns the outcome. A thrown stack trace communicates neither.
+			"files": ["scripts/**"],
+			"rules": {
+				"no-console": "off",
+				"unicorn/no-process-exit": "off",
+				// The rule protects published modules from `require(esm)`. These are
+				// `node scripts/…` entry points, required by nothing.
+				"node/no-top-level-await": "off"
 			}
 		},
 		{
@@ -201,7 +258,7 @@
 			}
 		},
 		{
-			// `bun test` — jest-compatible API, so the jest rules apply.
+			// vitest — jest-compatible API, so the jest rules apply.
 			"files": ["**/*.test.ts", "**/*.spec.ts", "**/*.test.js", "**/*.spec.js"],
 			"plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "node", "jest"],
 			"rules": {
