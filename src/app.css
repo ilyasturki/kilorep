@@ -23,39 +23,164 @@
 :root {
 	color-scheme: light dark;
 
+	/* Four depths. `canvas` is the page, `surface` the card that sits on it,
+	   `surface-2` a step up inside that card, `sunken` a well pressed into it
+	   (numpad keys, stepper fields). `sunken` only ever appears inside a
+	   `surface` — it collapses onto `canvas` in dark and that is harmless. */
+	--canvas: var(--color-neutral-50);
 	--surface: var(--color-white);
 	--surface-2: var(--color-neutral-100);
+	--sunken: var(--color-neutral-200);
+
 	--ink: var(--color-neutral-900);
-	--ink-muted: var(--color-neutral-500);
-	--border: var(--color-neutral-200);
+	--ink-muted: var(--color-neutral-600);
+	--ink-faint: var(--color-neutral-500);
+
+	--line: var(--color-neutral-300);
+	--line-soft: var(--color-neutral-200);
+
+	/* The accent is a fill, and only a fill. `lime-400` is identical in both
+	   themes — the DESIGN.md promise — because it is only ever painted behind
+	   `on-accent`, which is dark in both. It cannot be used as text: on white
+	   it lands at 1.51:1.
+
+	   `accent-text` is the accent-coloured *string* — SKIP, NOW, the sub-15s
+	   countdown, the SUPERSET badge. It has to be a per-theme pair, and no
+	   choice of swatch avoids that: 4.5:1 against white needs luminance ≤0.183,
+	   against neutral-950 it needs ≥0.20. No single colour is both. */
 	--accent: var(--color-lime-400);
 	--on-accent: var(--color-neutral-950);
+	--accent-text: var(--color-lime-700);
+	--accent-soft: var(--color-lime-200);
+
+	--danger: var(--color-red-600);
+	--scrim: rgb(0 0 0 / 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--surface: var(--color-neutral-950);
-		--surface-2: var(--color-neutral-900);
-		--ink: var(--color-neutral-50);
+		--canvas: var(--color-neutral-950);
+		--surface: var(--color-neutral-900);
+		--surface-2: var(--color-neutral-800);
+		--sunken: var(--color-neutral-950);
+
+		--ink: var(--color-neutral-100);
 		--ink-muted: var(--color-neutral-400);
-		--border: var(--color-neutral-800);
+		--ink-faint: var(--color-neutral-500);
+
+		--line: var(--color-neutral-700);
+		--line-soft: var(--color-neutral-800);
+
 		--accent: var(--color-lime-400);
 		--on-accent: var(--color-neutral-950);
+		--accent-text: var(--color-lime-400);
+		--accent-soft: var(--color-lime-950);
+
+		--danger: var(--color-red-400);
+		--scrim: rgb(0 0 0 / 0.6);
+	}
+}
+
+/* Touch targets, named after the job rather than the number: 40 chrome,
+   52 chip, 62 key/row, 78 commit. They are `min-h-*`, never `h-*`, so a box
+   grows when the OS text size does — DESIGN.md requires the app honour
+   Dynamic Type and Android font scale, and a fixed px height silently
+   defeats that.
+
+   They shrink when the primary pointer is a mouse. The guard must be exactly
+   `(pointer: fine)` — the predicate behind Tailwind's own `pointer-fine:`
+   variant — because these tokens and those utilities style the same elements.
+   An `any-pointer` guard here was measured disagreeing with itself on a
+   touchscreen laptop: the variant fired and the tokens did not, so a row got
+   its mouse affordances at thumb size.
+
+   The consequence is deliberate: a hybrid device follows its primary input and
+   lands on 44px rows, still above the 44pt/48dp touch minimums. */
+:root {
+	--target-chrome: 2.5rem; /* 40 */
+	--target-chip: 3.25rem; /* 52 */
+	--target-row: 3.875rem; /* 62 */
+	--target-commit: 4.875rem; /* 78 */
+}
+
+@media (pointer: fine) {
+	:root {
+		--target-chip: 2.5rem; /* 40 */
+		--target-row: 2.75rem; /* 44 */
+		--target-commit: 3.25rem; /* 52 */
 	}
 }
 
 @theme inline {
+	--color-canvas: var(--canvas);
 	--color-surface: var(--surface);
 	--color-surface-2: var(--surface-2);
+	--color-sunken: var(--sunken);
+
 	--color-ink: var(--ink);
 	--color-ink-muted: var(--ink-muted);
-	--color-border: var(--border);
+	--color-ink-faint: var(--ink-faint);
+
+	--color-line: var(--line);
+	--color-line-soft: var(--line-soft);
+
 	--color-accent: var(--accent);
 	--color-on-accent: var(--on-accent);
+	--color-accent-text: var(--accent-text);
+	--color-accent-soft: var(--accent-soft);
+
+	--color-danger: var(--danger);
+	--color-scrim: var(--scrim);
+
+	/* `inline` matters here: the value stays a live `var()`, so `min-h-row`
+	   resolves through the pointer media query above instead of being frozen
+	   at build time. */
+	--spacing-chrome: var(--target-chrome);
+	--spacing-chip: var(--target-chip);
+	--spacing-row: var(--target-row);
+	--spacing-commit: var(--target-commit);
 }
 
 @theme {
 	--font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
+
+	/* The design's scale replaces Tailwind's rather than sitting beside it —
+	   `initial` clears the namespace first so a step we did not choose cannot
+	   be reached by accident. 11 and 13 carry the dense labels and have no
+	   Tailwind equivalent; 32 and 40 are the display numerals, which the
+	   design used raw and unnamed. */
+	--text-*: initial;
+	--text-xs: 0.6875rem; /* 11 */
+	--text-xs--line-height: 1.35;
+	--text-sm: 0.8125rem; /* 13 */
+	--text-sm--line-height: 1.4;
+	--text-md: 0.875rem; /* 14 */
+	--text-md--line-height: 1.4;
+	--text-base: 1rem; /* 16 */
+	--text-base--line-height: 1.45;
+	--text-lg: 1.125rem; /* 18 */
+	--text-lg--line-height: 1.3;
+	--text-xl: 1.375rem; /* 22 */
+	--text-xl--line-height: 1.2;
+	--text-2xl: 1.75rem; /* 28 */
+	--text-2xl--line-height: 1.1;
+	--text-3xl: 2rem; /* 32 */
+	--text-3xl--line-height: 1;
+	--text-4xl: 2.5rem; /* 40 */
+	--text-4xl--line-height: 1;
+
+	/* Display numerals are set tight; caps labels are set loose. Everything
+	   else uses Tailwind's own tracking steps.
+
+	   Two caps steps, not one: 0.12em is right for an 11px section label and
+	   far too loose inside a 13px button, where the word has to stay a word. */
+	--tracking-numeral: -0.035em;
+	--tracking-label: 0.12em;
+	--tracking-caps: 0.06em;
+
+	/* 8/12/16 are Tailwind's lg/xl/2xl already. 22 is the sheet's top corners
+	   and nothing else, so it is named for that. */
+	--radius-sheet: 1.375rem;
 
 	/* Safe-area insets as ordinary spacing values: `pb-safe-b`, `pt-safe-t`, … .
 	   Dead without `viewport-fit=cover` in app.html. */
@@ -65,9 +190,45 @@
 	--spacing-safe-r: env(safe-area-inset-right);
 }
 
+/* Two recipes that were being copied by hand into every control. Both take
+   `var(--accent-text)` and not `var(--color-accent-text)`: the `--color-*`
+   names live in `@theme inline`, which inlines its values into the utilities
+   that use them rather than promising a custom property at runtime. The
+   `--accent-text` on `:root` is an ordinary property and is always there.
+
+   `focus-ring` is the outward form and `focus-ring-inset` the one for a
+   control that fills its box — a key in the pad grid, a row in the set list —
+   where an outward ring would be clipped by the parent. Which of the two a
+   control wants is the only decision left at the call site. */
+@utility focus-ring {
+	&:focus-visible {
+		outline: 2px solid var(--accent-text);
+		outline-offset: 2px;
+	}
+}
+
+@utility focus-ring-inset {
+	&:focus-visible {
+		outline: 2px solid var(--accent-text);
+		outline-offset: -2px;
+	}
+}
+
+/* Every small caps label in the app — section headings, field names, the
+   pad's title. Five utilities that had drifted to four in one place before
+   this became a single name. */
+@utility label-caps {
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+	font-weight: 800;
+	letter-spacing: var(--tracking-label);
+	text-transform: uppercase;
+	color: var(--ink-faint);
+}
+
 @layer base {
 	html {
-		background-color: var(--color-surface);
+		background-color: var(--color-canvas);
 		color: var(--color-ink);
 	}
 
@@ -77,5 +238,20 @@
 		/* Nunito's digits are already uniform-width, so this is insurance for the
 		   day the face is swapped — not the thing making the timer stop twitching. */
 		font-variant-numeric: tabular-nums;
+	}
+
+	button {
+		-webkit-tap-highlight-color: transparent;
+		touch-action: manipulation;
+	}
+
+	/* Selection is disabled for fingers only. On touch it stops Android raising
+	   selection handles part-way through a long-press on a set row; on a mouse
+	   it would just prevent a user copying a weight, so it is not applied. */
+	@media (pointer: coarse) {
+		button {
+			user-select: none;
+			-webkit-user-select: none;
+		}
 	}
 }

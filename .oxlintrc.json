@@ -186,7 +186,21 @@
 				"import/unambiguous": "off",
 				// Component-local handlers infer `void` and have no consumer to protect.
 				// `explicit-module-boundary-types` still guards anything exported.
-				"typescript/explicit-function-return-type": "off"
+				"typescript/explicit-function-return-type": "off",
+				// Capitalisation is syntax in a Svelte template, not taste: `<SetRow />`
+				// compiles to a component and `<setrow />` to an unknown element. The file
+				// name is the import name, so components are PascalCase. Route files are
+				// named by SvelteKit (`+page.svelte`) and are not ours to case either.
+				"unicorn/filename-case": "off",
+				// Every callback prop in Svelte 5 is optional by construction —
+				// `onclick?.()`, `{@render children?.()}` — and the framework's own docs
+				// are written that way. Banning `?.` here bans the idiom, and the
+				// `if (x) x()` rewrite is the same nullability with more lines.
+				"oxc/no-optional-chaining": "off",
+				// `let { a, ...rest } = $props()` then `{...rest}` is how a component
+				// forwards the attributes it does not itself consume. There is no
+				// enumerable alternative: the set is every attribute the element accepts.
+				"oxc/no-rest-spread-properties": "off"
 			}
 		},
 		{
