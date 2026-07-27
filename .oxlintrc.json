@@ -1,0 +1,213 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+
+	// Hard config: every category is an error except `nursery`, so rules added by an
+	// oxlint upgrade arrive switched ON. Everything switched off below is switched off
+	// for a stated reason. Do not add a silent exception — if a rule has to go, say why.
+
+	"plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "node"],
+
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error",
+		"perf": "error",
+		"pedantic": "error",
+		"style": "error",
+		"restriction": "error",
+		"nursery": "off"
+	},
+
+	"env": { "browser": true, "es2024": true },
+
+	"options": {
+		// Type-aware rules (no-floating-promises, no-unnecessary-condition,
+		// switch-exhaustiveness-check, …) — this is where the real strictness is.
+		// Requires the `oxlint-tsgolint` dev dependency.
+		"typeAware": true,
+		// A suppression that no longer suppresses anything is a lie about the code.
+		"reportUnusedDisableDirectives": "error"
+	},
+
+	"ignorePatterns": [
+		".svelte-kit/",
+		"build/",
+		"dist/",
+		"static/",
+		"android/",
+		"ios/",
+		"src/lib/paraglide/"
+	],
+
+	"rules": {
+		// --- Formatting and ordering: prettier owns layout, and the rest is churn ---
+		"sort-keys": "off", // fights domain-meaningful field order
+		"sort-imports": "off",
+		"sort-vars": "off",
+		"capitalized-comments": "off", // this codebase writes lowercase comments
+		"no-inline-comments": "off",
+
+		// --- Contradictory pairs. `style` + `restriction` ship both halves; pick one. ---
+		// Named exports win: `export const ssr = false` is the SvelteKit contract.
+		"import/no-named-export": "off",
+		"import/prefer-default-export": "off",
+		"import/group-exports": "off", // `export const ssr` / `export const prerender` are separate by idiom
+		"import/exports-last": "off",
+		// `import/no-default-export` stays ON for src/ — see the config-file override.
+
+		// --- Language features this project uses deliberately ---
+		"no-ternary": "off", // reactive UI code is ternaries; `no-nested-ternary` stays on
+		"no-undefined": "off", // `undefined` vs `null` is load-bearing in the sync protocol
+		"unicorn/no-null": "off", // SQLite, JSON payloads and tombstones all carry null
+		"no-magic-numbers": "off", // domain math and UI constants
+		"no-plusplus": "off",
+		"id-length": "off", // `i`, `id`, `kg`, `rm`
+		"func-style": "off",
+		"no-continue": "off",
+		"no-negated-condition": "off",
+		"no-else-return": "off",
+		"init-declarations": "off",
+		"no-void": "off",
+		"prefer-destructuring": "off",
+		"no-await-in-loop": "off", // sequential IndexedDB and sync writes are intentional
+		"unicorn/no-array-reduce": "off", // volume totals are a reduce
+		"import/no-unassigned-import": "off", // `import './app.css'`
+		"no-warning-comments": "off", // banning the word TODO does not remove the work
+		"oxc/no-async-await": "off", // persistence and sync are async end to end
+		// Superseded by type-aware `switch-exhaustiveness-check`, which is strictly
+		// better: a dead `default` on an exhaustive union switch is worse than no default.
+		"default-case": "off",
+
+		// `type` over `interface`: the domain is discriminated unions and mapped types,
+		// which `interface` cannot express. One spelling, not two.
+		"typescript/consistent-type-definitions": ["error", "type"],
+
+		// --- Arbitrary numeric limits: taste, not defects. Splitting a function to
+		// --- satisfy a line count makes the code worse. `max-depth` stays on.
+		"max-lines": "off",
+		"max-lines-per-function": "off",
+		"max-statements": "off",
+		"max-params": "off",
+		"max-nested-callbacks": "off",
+		"import/max-dependencies": "off",
+
+		// --- Rules that are wrong here, not merely strict ---
+		"no-undef": "off", // TypeScript's job; false-positives on ambient globals
+		"typescript/prefer-readonly-parameter-types": "off", // demands deep-readonly on every DOM and third-party type
+
+		// --- Hard rule 6: no proprietary SDKs. Ever. See CLAUDE.md. ---
+		// Duplicated in the domain override below — an override replaces a rule's
+		// config rather than merging it, so both copies must carry these patterns.
+		"no-restricted-imports": [
+			"error",
+			{
+				"patterns": [
+					{
+						"group": [
+							"firebase",
+							"firebase/*",
+							"@firebase/*",
+							"@react-native-firebase/*",
+							"@revenuecat/*",
+							"purchases-*",
+							"posthog-js",
+							"mixpanel-browser",
+							"@amplitude/*",
+							"@segment/*",
+							"@sentry/*",
+							"@google-analytics/*",
+							"react-ga*"
+						],
+						"message": "No proprietary SDKs — no Firebase, no analytics, no RevenueCat. CLAUDE.md hard rule 6."
+					}
+				]
+			}
+		]
+	},
+
+	"overrides": [
+		{
+			// Hard rule 1: the domain, store and sync layer imports no framework.
+			// Plain TypeScript, testable with `bun test`, portable if the UI is rewritten.
+			"files": ["src/lib/domain/**", "src/lib/store/**", "src/lib/sync/**", "src/lib/db/**"],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": [
+									"svelte",
+									"svelte/*",
+									"@sveltejs/*",
+									"$app/*",
+									"$env/*",
+									"bits-ui",
+									"@capacitor/*",
+									"*.svelte"
+								],
+								"message": "The domain, store and sync layer imports no framework — plain TypeScript only. CLAUDE.md hard rule 1."
+							},
+							{
+								"group": [
+									"firebase",
+									"firebase/*",
+									"@firebase/*",
+									"@react-native-firebase/*",
+									"@revenuecat/*",
+									"purchases-*",
+									"posthog-js",
+									"mixpanel-browser",
+									"@amplitude/*",
+									"@segment/*",
+									"@sentry/*",
+									"@google-analytics/*",
+									"react-ga*"
+								],
+								"message": "No proprietary SDKs — no Firebase, no analytics, no RevenueCat. CLAUDE.md hard rule 6."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			// Runes are `let`, always: `let x = $state(0)`, `let { children } = $props()`.
+			// oxlint reads the script block without the compiler, so it cannot see that
+			// the compiler reassigns these — `prefer-const` is a guaranteed false positive.
+			"files": ["**/*.svelte", "**/*.svelte.ts", "**/*.svelte.js"],
+			"rules": {
+				"prefer-const": "off",
+				// A script block with no import and no export is an ordinary component.
+				"import/unambiguous": "off",
+				// Component-local handlers infer `void` and have no consumer to protect.
+				// `explicit-module-boundary-types` still guards anything exported.
+				"typescript/explicit-function-return-type": "off"
+			}
+		},
+		{
+			// Build and tooling config: a default export is the contract.
+			"files": ["*.config.ts", "*.config.js", "svelte.config.js", "capacitor.config.ts"],
+			"env": { "node": true, "browser": false },
+			"rules": {
+				"import/no-default-export": "off"
+			}
+		},
+		{
+			// `export {}` marks an ambient file as a module — it is meant to be empty.
+			"files": ["**/*.d.ts"],
+			"rules": {
+				"unicorn/require-module-specifiers": "off",
+				"typescript/consistent-type-definitions": "off"
+			}
+		},
+		{
+			// `bun test` — jest-compatible API, so the jest rules apply.
+			"files": ["**/*.test.ts", "**/*.spec.ts", "**/*.test.js", "**/*.spec.js"],
+			"plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "node", "jest"],
+			"rules": {
+				"typescript/no-non-null-assertion": "off",
+				"typescript/no-unsafe-type-assertion": "off"
+			}
+		}
+	]
+}
