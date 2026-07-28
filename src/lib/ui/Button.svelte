@@ -58,27 +58,51 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { HTMLButtonAttributes } from 'svelte/elements';
+	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 
-	type Props = HTMLButtonAttributes & {
-		variant?: Variant;
-		/** Caps label with letter-spacing — FINISH, SKIP, CLOSE. */
-		caps?: boolean;
-		children: Snippet;
-	};
+	/**
+	 * The anchor attributes are picked rather than intersected: `HTMLButtonAttributes`
+	 * and `HTMLAnchorAttributes` disagree on `type`, and intersecting them collapses
+	 * it to `never`. These three are the ones a link actually needs.
+	 */
+	type Props = HTMLButtonAttributes &
+		Pick<HTMLAnchorAttributes, 'href' | 'target' | 'rel'> & {
+			variant?: Variant;
+			/** Caps label with letter-spacing — FINISH, SKIP, CLOSE. */
+			caps?: boolean;
+			children: Snippet;
+		};
 
 	let {
 		variant = 'secondary',
 		caps = false,
 		disabled = false,
+		href,
 		class: klass,
 		children,
 		...rest
 	}: Props = $props();
 
 	const look = $derived(looks[disabled && variant === 'commit' ? 'inert' : variant]);
+	const klasses = $derived([base, look.shape, caps ? capsSize : look.size, klass]);
 </script>
 
-<button {disabled} class={[base, look.shape, caps ? capsSize : look.size, klass]} {...rest}>
+<!--
+	`<svelte:element>` rather than two branches. Two branches read better but do
+	not typecheck: `rest` is button-shaped down to its ~450 event handlers, and
+	spreading a `ClipboardEventHandler<HTMLButtonElement>` onto an `<a>` is an
+	error. The alternative was casting the spread, which hides the same looseness
+	somewhere less obvious.
+
+	`disabled` is forced to `undefined` on a link — an anchor has no such
+	attribute, and the inert look is a disabled *commit*, which a link never is.
+-->
+<svelte:element
+	this={href ? 'a' : 'button'}
+	{href}
+	disabled={href ? undefined : disabled}
+	class={klasses}
+	{...rest}
+>
 	{@render children()}
-</button>
+</svelte:element>
