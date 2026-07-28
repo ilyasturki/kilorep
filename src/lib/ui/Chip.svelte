@@ -16,19 +16,19 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { ClassValue } from 'svelte/elements';
 	import { ToggleGroup } from 'bits-ui';
-	import { cn } from '$lib/ui/cn';
 
 	type Props = {
 		value: string;
 		disabled?: boolean;
-		class?: string;
+		class?: ClassValue;
 		children: Snippet;
 	};
 
 	let { value, disabled = false, class: klass, children }: Props = $props();
 </script>
 
-<ToggleGroup.Item {value} {disabled} class={cn(chip, klass)}>
+<ToggleGroup.Item {value} {disabled} class={[chip, klass]}>
 	{@render children()}
 </ToggleGroup.Item>

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { ClassValue } from 'svelte/elements';
 	import { Dialog } from 'bits-ui';
 	import Button from '$lib/ui/Button.svelte';
-	import { cn } from '$lib/ui/cn';
 
 	/**
 	 * Session overview, set options, anything that slides up over the loop.
@@ -23,7 +23,7 @@
 		description?: string;
 		trigger?: Snippet;
 		children: Snippet;
-		class?: string;
+		class?: ClassValue;
 	};
 
 	let {
@@ -50,7 +50,7 @@
 		/>
 
 		<Dialog.Content
-			class={cn(
+			class={[
 				'fixed z-50 flex flex-col bg-surface text-ink',
 				// Bottom sheet: full width, rounded top corners, clear of the gesture bar.
 				'inset-x-0 bottom-0 rounded-t-sheet border-t border-line',
@@ -65,7 +65,7 @@
 				'sm:data-[ending-style]:translate-y-[-50%] sm:data-[starting-style]:translate-y-[-50%]',
 				'sm:data-[ending-style]:opacity-0 sm:data-[starting-style]:opacity-0',
 				klass
-			)}
+			]}
 		>
 			<div class="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
 				<div class="min-w-0">

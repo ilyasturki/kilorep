@@ -16,11 +16,11 @@
 </script>
 
 <script lang="ts">
+	import type { ClassValue } from 'svelte/elements';
 	import Button from '$lib/ui/Button.svelte';
 	import Backspace from '$lib/ui/icons/Backspace.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import { coarsePointer } from '$lib/ui/pointer';
-	import { cn } from '$lib/ui/cn';
 
 	/**
 	 * The pad replaces the dock rather than covering it, so the rest bar stays
@@ -42,7 +42,7 @@
 		onconfirm?: (value: string) => void;
 		onfieldswitch?: () => void;
 		onclose?: () => void;
-		class?: string;
+		class?: ClassValue;
 	};
 
 	let {
@@ -107,14 +107,14 @@
 	{onkeydown}
 	role="group"
 	aria-label={label}
-	class={cn('rounded-xl border border-line bg-surface p-3', klass)}
+	class={['rounded-xl border border-line bg-surface p-3', klass]}
 >
 	<div class="flex items-end justify-between gap-3 px-1 pb-3">
 		<div class="min-w-0">
 			<div class="label-caps">{label}</div>
 			{#if resolved === 'keys'}
 				<div
-					class={cn('text-4xl font-extrabold tracking-numeral', buffer === '' && 'text-ink-faint')}
+					class={['text-4xl font-extrabold tracking-numeral', buffer === '' && 'text-ink-faint']}
 				>
 					{display}
 				</div>

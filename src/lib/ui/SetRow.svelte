@@ -47,9 +47,9 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { ClassValue } from 'svelte/elements';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import More from '$lib/ui/icons/More.svelte';
-	import { cn } from '$lib/ui/cn';
 
 	type Props = {
 		status: SetStatus;
@@ -60,7 +60,7 @@
 		right?: Snippet;
 		onselect?: () => void;
 		onoptions?: () => void;
-		class?: string;
+		class?: ClassValue;
 	};
 
 	let { status, index, weight, reps, right, onselect, onoptions, class: klass }: Props = $props();
@@ -99,11 +99,11 @@
 </script>
 
 <div
-	class={cn(
+	class={[
 		'@container relative grid grid-cols-[1fr_auto] items-center overflow-hidden',
 		style.shell,
 		klass
-	)}
+	]}
 >
 	{#if status === 'active'}
 		<div class="absolute inset-y-0 left-0 w-1.5 bg-accent-text" aria-hidden="true"></div>

@@ -29,14 +29,14 @@
 </script>
 
 <script lang="ts">
+	import type { ClassValue } from 'svelte/elements';
 	import Check from '$lib/ui/icons/Check.svelte';
-	import { cn } from '$lib/ui/cn';
 
 	type Props = {
 		status: SetStatus;
 		/** Set number. Ignored for `done` (a check) and `warmup` (a W). */
 		index?: number;
-		class?: string;
+		class?: ClassValue;
 	};
 
 	let { status, index, class: klass }: Props = $props();
@@ -47,11 +47,11 @@
 <div
 	role="img"
 	aria-label={label}
-	class={cn(
+	class={[
 		'grid size-8 shrink-0 place-items-center rounded-full text-md font-extrabold',
 		shells[status],
 		klass
-	)}
+	]}
 >
 	{#if status === 'done'}
 		<Check size={17} />

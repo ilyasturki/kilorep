@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { ClassValue } from 'svelte/elements';
 	import { ToggleGroup } from 'bits-ui';
-	import { cn } from '$lib/ui/cn';
 
 	/**
 	 * Set type, RPE, and any other one-of-N pick. Built on Bits UI's ToggleGroup
@@ -14,7 +14,7 @@
 		/** `grid` for the fixed 4-up set-type row, `wrap` for the RPE scale. */
 		layout?: 'grid' | 'wrap';
 		label?: string;
-		class?: string;
+		class?: ClassValue;
 		children: Snippet;
 	};
 
@@ -25,7 +25,7 @@
 	type="single"
 	bind:value
 	aria-label={label}
-	class={cn('gap-2', layout === 'grid' ? 'grid grid-cols-4' : 'flex flex-wrap', klass)}
+	class={['gap-2', layout === 'grid' ? 'grid grid-cols-4' : 'flex flex-wrap', klass]}
 >
 	{@render children()}
 </ToggleGroup.Root>
