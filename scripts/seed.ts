@@ -13,7 +13,9 @@ import { users } from '../src/lib/server/db/schema.ts';
  */
 
 const EMAIL = 'dev@kilorep.local';
-const PASSWORD = 'dev';
+// Eight characters because `createUser` enforces a floor and this is a caller
+// like any other; there is nothing else to read into the value.
+const PASSWORD = 'devdevdev';
 
 if (process.env.NODE_ENV === 'production') {
 	console.error('refusing to seed: NODE_ENV is production, and these credentials are public');

@@ -30,6 +30,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	// Closed before the directory goes: unlinking the file out from under an open
+	// `DatabaseSync` is silent on Linux, an error on Windows, and a leaked
+	// descriptor per test either way.
+	db.$client.close();
 	rmSync(directory, { recursive: true, force: true });
 });
 
@@ -49,6 +53,7 @@ describe('migrations', () => {
 		// unmigrated, which is exactly what it is.
 		const fresh = createDatabase(path.join(directory, 'fresh.db'));
 		expect(appliedMigrationCount(fresh)).toBe(0);
+		fresh.$client.close();
 	});
 });
 
@@ -74,14 +79,14 @@ describe('accounts', () => {
 	});
 
 	test('reject a duplicate email', async () => {
-		await createUser(db, 'a@b.c', 'one');
-		await expect(createUser(db, 'a@b.c', 'two')).rejects.toThrow();
+		await createUser(db, 'a@b.c', 'first password');
+		await expect(createUser(db, 'a@b.c', 'second password')).rejects.toThrow();
 	});
 });
 
 describe('tokens', () => {
 	test('are stored only as a hash, and look up by it', async () => {
-		const user = await createUser(db, 'a@b.c', 'pw');
+		const user = await createUser(db, 'a@b.c', 'test password');
 		const { token, record } = issueToken(db, user.id, 'Pixel 8', 'device');
 
 		expect(token.startsWith('kr_')).toBe(true);
@@ -108,7 +113,7 @@ describe('tokens', () => {
 
 describe('seq', () => {
 	test('is monotonic and starts at 1', async () => {
-		const user = await createUser(db, 'a@b.c', 'pw');
+		const user = await createUser(db, 'a@b.c', 'test password');
 
 		expect(claimSeq(db, user.id)).toBe(1);
 		expect(claimSeq(db, user.id)).toBe(2);
@@ -116,8 +121,8 @@ describe('seq', () => {
 	});
 
 	test('is per user, so one account never advances another', async () => {
-		const first = await createUser(db, 'a@b.c', 'pw');
-		const second = await createUser(db, 'd@e.f', 'pw');
+		const first = await createUser(db, 'a@b.c', 'test password');
+		const second = await createUser(db, 'd@e.f', 'test password');
 
 		claimSeq(db, first.id);
 		claimSeq(db, first.id);
@@ -126,7 +131,7 @@ describe('seq', () => {
 	});
 
 	test('claims inside a transaction and rolls back with it', async () => {
-		const user = await createUser(db, 'a@b.c', 'pw');
+		const user = await createUser(db, 'a@b.c', 'test password');
 
 		expect(() =>
 			db.transaction((tx) => {
@@ -147,7 +152,7 @@ describe('seq', () => {
 
 describe('constraints', () => {
 	test('cascade to tokens and counters, proving foreign keys are enforced', async () => {
-		const user = await createUser(db, 'a@b.c', 'pw');
+		const user = await createUser(db, 'a@b.c', 'test password');
 		issueToken(db, user.id, 'Pixel 8', 'device');
 
 		db.delete(users).where(eq(users.id, user.id)).run();

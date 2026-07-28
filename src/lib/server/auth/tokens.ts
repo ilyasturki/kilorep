@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 /**
  * One credential type for every client: the browser stores it in an HttpOnly
@@ -36,15 +36,4 @@ export function mintToken(): MintedToken {
 		tokenHash: hashToken(token),
 		tokenPrefix: token.slice(0, PREFIX_LENGTH)
 	};
-}
-
-/**
- * Compares two token hashes without leaking their difference through timing.
- * The lookup itself is an indexed equality match on `token_hash`; this guards
- * the confirmation step.
- */
-export function tokenHashEquals(a: string, b: string): boolean {
-	const left = Buffer.from(a, 'utf8');
-	const right = Buffer.from(b, 'utf8');
-	return left.length === right.length && timingSafeEqual(left, right);
 }

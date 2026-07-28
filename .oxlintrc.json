@@ -244,6 +244,13 @@
 				// Configuration reaches a container through its environment. Read in
 				// `db/config.ts` and nowhere else.
 				"node/no-process-env": "off",
+				// The same argument as the endpoint override below, and the same
+				// process: this layer answers with a status and puts the detail in the
+				// log, because the detail is the internals and the caller is a stranger.
+				// The hook logs the database error behind its 503; `config.ts` names the
+				// `CORS_ORIGINS` entry it had to drop, which silence would turn into an
+				// app that reports a network error for no discoverable reason.
+				"no-console": "off",
 				// The server tree is `db/` and `auth/`, which reference each other. The
 				// alternative is flattening a layer that has a real internal structure.
 				"import/no-relative-parent-imports": "off"

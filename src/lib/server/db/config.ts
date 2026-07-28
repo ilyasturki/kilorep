@@ -1,28 +1,20 @@
 import path from 'node:path';
 
+import { envText } from '../env.ts';
+
 /**
- * Read in plain `process.env` rather than `$env/dynamic/private` on purpose:
- * `drizzle.config.ts` and `scripts/seed.ts` run outside SvelteKit entirely,
- * and they must resolve the same database as the server does.
- *
- * Which is also why `.env` is loaded here, in the one module all of them
- * import. `drizzle-kit` reads `.env` on its own and nothing else does, so
- * without this `bun run db:migrate` would happily migrate a file the server
- * never opens. A real environment variable wins — `loadEnvFile` fills gaps
- * rather than overwriting — so a container is unaffected.
+ * Where the database lives. Separate from `../config.ts` — which holds the
+ * settings the HTTP surface reads — because `drizzle.config.ts` imports this
+ * module and must not drag the server's request-time configuration along with
+ * it. Both read the environment through `../env.ts`, which is what loads `.env`.
  */
-try {
-	process.loadEnvFile('.env');
-} catch {
-	// No `.env`; the defaults below stand. This is the normal case in production.
-}
 
 /** The SQLite file. One per instance; `:memory:` is honoured, for tests. */
-export const databasePath = process.env.DATABASE_PATH ?? '.data/kilorep.db';
+export const databasePath = envText('DATABASE_PATH', '.data/kilorep.db');
 
 /**
  * Where the generated SQL migrations live, resolved against the working
  * directory. Top-level rather than under `src/` so the container can copy the
  * folder as-is — the migrator reads it from disk at boot, so it must ship.
  */
-export const migrationsFolder = path.resolve(process.env.MIGRATIONS_DIR ?? 'drizzle');
+export const migrationsFolder = path.resolve(envText('MIGRATIONS_DIR', 'drizzle'));

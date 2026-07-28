@@ -140,6 +140,49 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 /**
+ * A stored-hash-shaped string that no password verifies against, for the caller
+ * that has no real hash to check and must still spend the time as though it did.
+ *
+ * The key is random bytes rather than a hash of a random password, and that is
+ * the point: what costs the third of a second is the derivation `verifyPassword`
+ * runs against the salt and parameters in the string, not what it ends up
+ * comparing against. So this is free to produce, while hashing a throwaway
+ * password would itself cost a full scrypt run — and paying that on first need
+ * is what makes the very first unknown address slower than a known one, which is
+ * the timing tell the decoy exists to remove.
+ *
+ * The derived key matching these 64 random bytes is a 2**-512 event.
+ */
+export function decoyHash(): string {
+	const { N, r, p } = PARAMS;
+
+	return [
+		'scrypt',
+		N,
+		r,
+		p,
+		randomBytes(SALT_LENGTH).toString('base64'),
+		randomBytes(KEY_LENGTH).toString('base64')
+	].join('$');
+}
+
+/**
+ * A length floor and nothing else, per NIST SP 800-63B: composition rules
+ * ("one digit, one symbol") measurably push people toward `Password1!` and buy
+ * no entropy.
+ */
+export const MIN_PASSWORD_LENGTH = 8;
+
+/** The reason a password is unusable, or undefined if it is fine. */
+export function passwordProblem(password: string): string | undefined {
+	if (password.normalize('NFKC').length < MIN_PASSWORD_LENGTH) {
+		return `password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+	}
+
+	return undefined;
+}
+
+/**
  * Constant-time verification. Every malformed, truncated or unknown-scheme
  * hash returns false; none of them throws, because the caller is a login route
  * that owes the client a 401 rather than a 500.
