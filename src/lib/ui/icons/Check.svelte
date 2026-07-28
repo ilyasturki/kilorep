@@ -1,6 +1,5 @@
 <script lang="ts">
-	// One of two SVG glyphs in the app. The rest — × and ⌫ — are characters, and
-	// there is no icon library by design.
+	// Phosphor `check`, bold. Provenance and the rules for adding one: README.md.
 	type Props = {
 		size?: number;
 		class?: string;
@@ -10,19 +9,15 @@
 </script>
 
 <svg
-	viewBox="0 0 24 24"
+	viewBox="0 0 256 256"
 	width={size}
 	height={size}
-	fill="none"
+	fill="currentColor"
 	aria-hidden="true"
 	class={klass}
 	focusable="false"
 >
 	<path
-		d="M4.5 12.5 9.5 17.5 19.5 6.5"
-		stroke="currentColor"
-		stroke-width="3"
-		stroke-linecap="round"
-		stroke-linejoin="round"
+		d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"
 	/>
 </svg>

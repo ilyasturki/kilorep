@@ -268,9 +268,10 @@
 						</div>
 					</div>
 					<p class={note}>
-						Four SVG glyphs, no icon library. Delete and options are drawn rather than typed: the
-						design used ⌫ and ⋯ as characters, and neither is in the Nunito subset we ship — both
-						render as tofu. × − + · are in the font and stay characters.
+						Four SVG glyphs, Phosphor bold, vendored — no runtime icon dependency. Delete and
+						options are drawn rather than typed: the design used ⌫ and ⋯ as characters, and neither
+						is in the Nunito subset we ship — both render as tofu. × − + · are in the font and stay
+						characters. Overview is the one with no Phosphor original.
 					</p>
 				</article>
 			</div>
