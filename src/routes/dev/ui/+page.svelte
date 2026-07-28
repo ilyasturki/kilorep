@@ -14,8 +14,10 @@
 	import Stack from '$lib/ui/icons/Stack.svelte';
 
 	// An overview of the component library: one card per component, everything
-	// live. Tokens and the type scale are not here — src/app.css names them and
-	// docs/DESIGN.md holds the reasoning.
+	// live. A card is titled with the component it renders and every instance
+	// carries the prop that makes it that instance, so the page can be read as
+	// the API rather than as a mock screen. Tokens and the type scale are not
+	// here — src/app.css names them and docs/DESIGN.md holds the reasoning.
 
 	// The page's own furniture. Written out rather than composed at runtime:
 	// Tailwind scans source text, so an arbitrary property it has not seen
@@ -23,6 +25,15 @@
 	const card = 'flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-4';
 	const caption = 'text-xs font-extrabold text-ink-faint';
 	const tile = 'grid size-8 place-items-center text-ink-muted';
+	// One instance and the prop that names it.
+	const specimen = 'flex flex-col items-start gap-1.5';
+
+	// `as const` so each `variant` is the literal Button expects, not `string`.
+	const outlined = [
+		{ variant: 'secondary', label: 'Add note' },
+		{ variant: 'destructive', label: 'Clear' },
+		{ variant: 'chrome', label: 'Reopen' }
+	] as const;
 
 	// Typed, so a mistyped status is a compile error rather than a silent cast.
 	const marks: { status: SetStatus; index?: number }[] = [
@@ -30,6 +41,13 @@
 		{ status: 'active', index: 3 },
 		{ status: 'pending', index: 4 },
 		{ status: 'warmup' }
+	];
+
+	// `prop` is spelled out rather than derived from `step`, so the caption
+	// reads as the Svelte one would write at the call site, braces and all.
+	const steppers = [
+		{ prefill: 82.5, label: 'kg', step: 2.5, prop: 'step={2.5}' },
+		{ prefill: 7, label: 'reps', step: 1, prop: 'step={1}' }
 	];
 
 	const exercises = [
@@ -51,17 +69,24 @@
 
 <svelte:head><title>kilorep · components</title></svelte:head>
 
-<!-- Set type and RPE, the two pickers. Shown twice — standalone and inside the
-     options sheet — and the point of the page is that they are the same thing. -->
-{#snippet pickers()}
-	<h3 class="label-caps">Set type</h3>
+<!-- The two ChipGroups. Shown twice — standalone and inside the options sheet —
+     and the point of the page is that they are the same thing. `annotated` is
+     what differs: the card names the props, the sheet is the real screen. -->
+{#snippet pickers(annotated: boolean)}
+	<div class="flex items-baseline gap-2">
+		<h3 class="label-caps">Set type</h3>
+		{#if annotated}<span class={caption}>layout="grid"</span>{/if}
+	</div>
 	<ChipGroup bind:value={setType} layout="grid" label="Set type">
 		<Chip value="normal">Normal</Chip>
 		<Chip value="warmup">Warmup</Chip>
 		<Chip value="drop">Drop</Chip>
 		<Chip value="fail">Fail</Chip>
 	</ChipGroup>
-	<h3 class="label-caps">RPE</h3>
+	<div class="flex items-baseline gap-2">
+		<h3 class="label-caps">RPE</h3>
+		{#if annotated}<span class={caption}>layout="wrap"</span>{/if}
+	</div>
 	<ChipGroup bind:value={rpe} label="RPE">
 		{#each ['—', '7', '7.5', '8', '9', '10'] as value (value)}
 			<Chip {value}>{value}</Chip>
@@ -79,88 +104,120 @@
 			class="grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr))] items-start gap-4"
 		>
 			<article class={card}>
-				<h2 class="label-caps">Commit &amp; outlines</h2>
-				<Button variant="commit" class="w-full">82.5 × 7</Button>
-				<div class="flex flex-wrap gap-2">
-					<Button variant="secondary">Add note</Button>
-					<Button variant="destructive">Clear</Button>
-					<Button variant="chrome">Reopen</Button>
+				<h2 class="label-caps">Button</h2>
+				<div class={specimen}>
+					<Button variant="commit" class="w-full">82.5 × 7</Button>
+					<span class={caption}>variant="commit"</span>
 				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Set type &amp; RPE</h2>
-				{@render pickers()}
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Set marks</h2>
-				<div class="flex flex-wrap items-center gap-5">
-					{#each marks as mark (mark.status)}
-						<div class="flex flex-col items-center gap-1.5">
-							<SetMark status={mark.status} index={mark.index} />
-							<span class={caption}>{mark.status}</span>
+				<div class="flex flex-wrap gap-x-4 gap-y-3">
+					{#each outlined as button (button.variant)}
+						<div class={specimen}>
+							<Button variant={button.variant}>{button.label}</Button>
+							<span class={caption}>variant="{button.variant}"</span>
 						</div>
 					{/each}
 				</div>
 			</article>
 
 			<article class={card}>
-				<h2 class="label-caps">Set rows</h2>
-				<div class="flex flex-col gap-2.5 rounded-xl bg-canvas p-3">
-					<SetRow status="warmup" weight={20} reps={12} onoptions={() => (optionsOpen = true)}>
-						{#snippet right()}warmup{/snippet}
-					</SetRow>
-					<SetRow
-						status="done"
-						index={2}
-						weight={85}
-						reps={8}
-						onoptions={() => (optionsOpen = true)}
-					>
-						{#snippet right()}RPE 8{/snippet}
-					</SetRow>
-					<SetRow
-						status="active"
-						index={3}
-						weight={85}
-						reps={8}
-						onoptions={() => (optionsOpen = true)}
-					>
-						{#snippet right()}<span class="font-extrabold tracking-wider text-accent-text">NOW</span
-							>{/snippet}
-					</SetRow>
-					<SetRow status="pending" index={4} onoptions={() => (optionsOpen = true)}>
-						{#snippet right()}80 × 7{/snippet}
-					</SetRow>
+				<h2 class="label-caps">ChipGroup</h2>
+				{@render pickers(true)}
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">SetMark</h2>
+				<div class="flex flex-wrap items-center gap-5">
+					{#each marks as mark (mark.status)}
+						<div class="flex flex-col items-center gap-1.5">
+							<SetMark status={mark.status} index={mark.index} />
+							<span class={caption}>status="{mark.status}"</span>
+						</div>
+					{/each}
 				</div>
 			</article>
 
 			<article class={card}>
-				<h2 class="label-caps">Stepper fields</h2>
+				<h2 class="label-caps">SetRow</h2>
+				<div class="flex flex-col gap-2.5 rounded-xl bg-canvas p-3">
+					<div class="flex flex-col gap-1">
+						<span class={caption}>status="warmup"</span>
+						<SetRow status="warmup" weight={20} reps={12} onoptions={() => (optionsOpen = true)}>
+							{#snippet right()}warmup{/snippet}
+						</SetRow>
+					</div>
+					<div class="flex flex-col gap-1">
+						<span class={caption}>status="done"</span>
+						<SetRow
+							status="done"
+							index={2}
+							weight={85}
+							reps={8}
+							onoptions={() => (optionsOpen = true)}
+						>
+							{#snippet right()}RPE 8{/snippet}
+						</SetRow>
+					</div>
+					<div class="flex flex-col gap-1">
+						<span class={caption}>status="active"</span>
+						<SetRow
+							status="active"
+							index={3}
+							weight={85}
+							reps={8}
+							onoptions={() => (optionsOpen = true)}
+						>
+							{#snippet right()}<span class="font-extrabold tracking-wider text-accent-text"
+									>NOW</span
+								>{/snippet}
+						</SetRow>
+					</div>
+					<div class="flex flex-col gap-1">
+						<span class={caption}>status="pending"</span>
+						<SetRow status="pending" index={4} onoptions={() => (optionsOpen = true)}>
+							{#snippet right()}80 × 7{/snippet}
+						</SetRow>
+					</div>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">StepperField</h2>
 				<div class="flex gap-2">
-					<StepperField prefill={82.5} label="kg" step={2.5} class="flex-1" />
-					<StepperField prefill={7} label="reps" step={1} class="flex-1" />
+					{#each steppers as stepper (stepper.label)}
+						<div class="flex flex-1 flex-col gap-1.5">
+							<StepperField prefill={stepper.prefill} label={stepper.label} step={stepper.step} />
+							<span class={caption}>{stepper.prop}</span>
+						</div>
+					{/each}
 				</div>
 			</article>
 
 			<article class={card}>
 				<h2 class="label-caps">Numpad</h2>
-				<Numpad mode="keys" label="Weight · kg" placeholder="82.5" />
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Bottom sheet &amp; dialog</h2>
-				<div class="flex flex-wrap gap-2">
-					<Button variant="secondary" onclick={() => (overviewOpen = true)}>
-						<Stack size={20} /> Session overview
-					</Button>
-					<Button variant="secondary" onclick={() => (optionsOpen = true)}>Set options</Button>
+				<div class="flex flex-col gap-1.5">
+					<Numpad mode="keys" label="Weight · kg" placeholder="82.5" />
+					<span class={caption}>mode="keys"</span>
 				</div>
 			</article>
 
 			<article class={card}>
-				<h2 class="label-caps">Glyphs</h2>
+				<h2 class="label-caps">Sheet</h2>
+				<div class="flex flex-wrap gap-x-4 gap-y-3">
+					<div class={specimen}>
+						<Button variant="secondary" onclick={() => (overviewOpen = true)}>
+							<Stack size={20} /> Session overview
+						</Button>
+						<span class={caption}>title="Session"</span>
+					</div>
+					<div class={specimen}>
+						<Button variant="secondary" onclick={() => (optionsOpen = true)}>Set options</Button>
+						<span class={caption}>title="Set 3"</span>
+					</div>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">Icons</h2>
 				<div class="flex flex-wrap items-center gap-5">
 					<div class="flex flex-col items-center gap-1.5">
 						<div class={tile}><Backspace size={22} /></div>
@@ -205,7 +262,7 @@
 
 <Sheet bind:open={optionsOpen} title="Set 3" description="Bench Press (Barbell)">
 	<div class="flex flex-col gap-4">
-		{@render pickers()}
+		{@render pickers(false)}
 		<div class="flex gap-2">
 			<Button variant="secondary" class="flex-1 justify-start">left shoulder tight</Button>
 			<Button variant="destructive">Clear</Button>
