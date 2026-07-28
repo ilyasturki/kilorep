@@ -10,6 +10,13 @@
 	 * thing on screen that distinguishes a recalled hint from an affirmative
 	 * claim, so it appears the moment the value leaves its prefill and clears
 	 * again if you step back onto it.
+	 *
+	 * The number itself is a real input, on every pointer type rather than only
+	 * where `(pointer: fine)` holds. Stepping from 40 to 100 is twenty-four taps
+	 * on the arms, and the arms are the accelerator for the common case, not the
+	 * only way in. Typing is a distinct gesture from tapping ± — nothing is
+	 * swapped out underneath the user — so unlike the numpad's key grid this
+	 * needs no pointer read to decide what to render.
 	 */
 	type Props = {
 		prefill: number;
@@ -32,9 +39,58 @@
 	const touched = $derived(value !== prefill);
 	const display = $derived(String(Math.round(value * 100) / 100));
 
+	const settle = (n: number) => Math.max(min, Math.round(n * 100) / 100);
+
 	function nudge(direction: number) {
-		value = Math.max(min, Math.round((value + direction * step) * 100) / 100);
+		value = settle(value + direction * step);
 		onchange?.(value);
+	}
+
+	// Typing is held in `draft` and only lands in `value` on commit. Writing
+	// every keystroke through would fire `onchange` per digit and make the
+	// touched dot blink on the way from 8 to 82.5 — and a half-typed "8." is
+	// not a number the rest of the app should ever see.
+	let draft = $state('');
+	let editing = $state(false);
+
+	// A caret placed in "82.5" means editing the wrong two digits; the gesture
+	// is always "this weight, not that one". `select()` in `onfocus` is undone
+	// by the mouseup that follows a click, so that one mouseup is swallowed.
+	// Not `$state`: written and read inside handlers, nothing renders from it.
+	let selectPending = false;
+
+	function start(event: FocusEvent & { currentTarget: HTMLInputElement }) {
+		draft = display;
+		editing = true;
+		selectPending = true;
+		event.currentTarget.select();
+	}
+
+	// Blur commits, so tapping ± while typing steps from the typed number and
+	// not from the one it replaced. Anything unparseable — empty, a lone dot,
+	// a pasted word — is not an affirmative claim, so the field keeps what it
+	// had rather than guessing.
+	function commit() {
+		const parsed = Number(draft.replace(',', '.'));
+		editing = false;
+		if (draft.trim() === '' || !Number.isFinite(parsed)) {
+			return;
+		}
+		const next = settle(parsed);
+		if (next !== value) {
+			value = next;
+			onchange?.(next);
+		}
+	}
+
+	function onkeydown(event: KeyboardEvent & { currentTarget: HTMLInputElement }) {
+		if (event.key === 'Enter') {
+			event.currentTarget.blur();
+		} else if (event.key === 'Escape') {
+			draft = display;
+			editing = false;
+			event.currentTarget.blur();
+		}
 	}
 </script>
 
@@ -67,7 +123,24 @@
 	{@render arm(-1, 'decrease', 'rounded-l-2xl')}
 
 	<div class="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5">
-		<div class="text-2xl leading-none font-extrabold tracking-numeral">{display}</div>
+		<input
+			value={editing ? draft : display}
+			oninput={(event) => (draft = event.currentTarget.value)}
+			onfocus={start}
+			onblur={commit}
+			onmouseup={(event) => {
+				if (selectPending) {
+					selectPending = false;
+					event.preventDefault();
+				}
+			}}
+			{onkeydown}
+			inputmode="decimal"
+			autocomplete="off"
+			aria-label={label}
+			class="w-full bg-transparent p-0 text-center text-2xl leading-none font-extrabold
+				tracking-numeral focus-ring-inset"
+		/>
 		<div class="label-caps">{label}</div>
 	</div>
 
