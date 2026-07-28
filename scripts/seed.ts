@@ -7,9 +7,9 @@ import { runMigrations } from '../src/lib/server/db/migrate.ts';
 import { users } from '../src/lib/server/db/schema.ts';
 
 /**
- * Development bootstrap only. Production account creation is deliberately
- * unsolved — see docs/DECISIONS.md, Open — and this script is not the
- * answer: the credentials below are public, in the repository.
+ * Development bootstrap only: the credentials below are public, in the
+ * repository. A real instance makes its first account with
+ * `bun run account:create`, which never touches the network.
  */
 
 const EMAIL = 'dev@kilorep.local';
