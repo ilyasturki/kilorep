@@ -40,8 +40,9 @@ export const OFFLINE = 0;
  * `capacitor://localhost` and the server is wherever the user configured it —
  * which is why every caller goes through this instead of writing `/api/…`
  * relative. That path works on web and 404s on the phone, and it fails as a
- * network error rather than anything that names the cause. The phone's answer
- * is deferred with the rest of the shell; see STACK.md's open items.
+ * network error rather than anything that names the cause — CLAUDE.md hard rule
+ * 4. The phone's answer is deferred with the rest of the Capacitor shell, which
+ * is not installed yet: written today it would key off nothing and be rewritten.
  */
 export function apiBase(): string {
 	return location.origin;

@@ -129,11 +129,12 @@
 			</Button>
 		</form>
 
-		<!-- STACK.md still carries "how a production instance creates its first
-		     account" as open. Until it closes, the person staring at a login screen
-		     they cannot pass is the operator, and this is the command that helps
-		     them. Registration ships closed, so there is no sign-up link to offer
-		     instead — and no endpoint that would say whether one applied. -->
+		<!-- How a fresh instance gets its first account is still unsettled, and
+		     `account:create` is the whole of the answer today. Until that changes,
+		     the person staring at a login screen they cannot pass is the operator,
+		     and this is the command that helps them. Registration ships closed, so
+		     there is no sign-up link to offer instead — and no endpoint that would
+		     say whether one applied. -->
 		<p class="mt-4 px-1 text-sm text-ink-faint">
 			No account yet? The first one is created on the server with
 			<code class="font-bold">bun run account:create</code>.

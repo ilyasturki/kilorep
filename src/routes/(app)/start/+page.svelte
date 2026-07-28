@@ -10,9 +10,10 @@
 	/**
 	 * A placeholder on a settled address, not a design.
 	 *
-	 * `/start` is where PRODUCT.md says the app always opens and what STACK.md
-	 * names as the Capacitor entry, so the route is not in question — only what
-	 * fills it. The real screen is the active workout or the template list, and
+	 * `/start` is where PRODUCT.md says the app always opens, and the address the
+	 * Capacitor shell will boot into — the marketing page owns `/`, so the APK
+	 * cannot. The route is not in question, only what fills it: the real screen
+	 * is the active workout or the template list, and
 	 * it waits on the local store and the domain model. What is here is the
 	 * smallest thing that proves the credential is real and can be given back.
 	 */

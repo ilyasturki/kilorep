@@ -8,7 +8,7 @@ import type { LayoutLoad } from './$types';
 // The third tree that has to say this for itself, alongside `(app)` and `dev`.
 // There is no global net: a route outside all three gets SvelteKit's default
 // `ssr = true`, which compiles into the Capacitor bundle and breaks it quietly.
-// See CLAUDE.md / STACK.md.
+// See CLAUDE.md hard rule 5, which names the first two.
 export const ssr = false;
 export const prerender = false;
 
