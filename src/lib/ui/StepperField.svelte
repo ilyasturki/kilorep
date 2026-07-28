@@ -12,11 +12,11 @@
 	 * again if you step back onto it.
 	 *
 	 * The number itself is a real input, on every pointer type rather than only
-	 * where `(pointer: fine)` holds. Stepping from 40 to 100 is twenty-four taps
-	 * on the arms, and the arms are the accelerator for the common case, not the
-	 * only way in. Typing is a distinct gesture from tapping ± — nothing is
-	 * swapped out underneath the user — so unlike the numpad's key grid this
-	 * needs no pointer read to decide what to render.
+	 * where `(pointer: fine)` holds. The arms are the accelerator for the common
+	 * case, not the only way in: an arm held down repeats, and typing is there
+	 * for the value that is nowhere near the hint. Typing is a distinct gesture
+	 * from tapping ± — nothing is swapped out underneath the user — so unlike
+	 * the numpad's key grid this needs no pointer read to decide what to render.
 	 */
 	type Props = {
 		prefill: number;
@@ -41,9 +41,82 @@
 
 	const settle = (n: number) => Math.max(min, Math.round(n * 100) / 100);
 
+	// Reports whether it moved. At `min` a step down changes nothing, and a
+	// silent no-op is the honest answer — the same rule `commit` already keeps,
+	// and it is what stops a hold from firing twenty identical `onchange` a
+	// second into the floor.
 	function nudge(direction: number) {
-		value = settle(value + direction * step);
-		onchange?.(value);
+		const next = settle(value + direction * step);
+		if (next === value) {
+			return false;
+		}
+		value = next;
+		onchange?.(next);
+		return true;
+	}
+
+	// Hold to repeat. Stepping from 40 to 100 is twenty-four taps, which is the
+	// cost this field was apologising for; held down it is one gesture of about
+	// two and a half seconds. The first step lands on `pointerdown`, then a pause
+	// long enough to tell a tap from a hold, then an interval that ramps down to
+	// a floor — slow at the start so the value one step away is still reachable,
+	// fast by the end so the one twenty steps away is too.
+	//
+	// A `setTimeout` chain rather than `setInterval`: the delay changes on every
+	// tick. The ramp is driven by the tick count and not by a clock reading, so a
+	// busy frame shifts the schedule rather than skipping through it.
+	const HOLD_DELAY = 500;
+	const REPEAT_FROM = 180;
+	const REPEAT_FLOOR = 50;
+	const REPEAT_RAMP = 0.92;
+
+	// Neither is `$state`: both are written and read inside handlers, and nothing
+	// renders from either.
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let claimed = false;
+
+	function holdStart(direction: number) {
+		clearTimeout(timer);
+		// The click this pointer sequence ends with would step a second time.
+		claimed = true;
+		nudge(direction);
+
+		let delay = REPEAT_FROM;
+		const tick = () => {
+			if (!nudge(direction)) {
+				return;
+			}
+			delay = Math.max(REPEAT_FLOOR, delay * REPEAT_RAMP);
+			timer = setTimeout(tick, delay);
+		};
+		timer = setTimeout(tick, HOLD_DELAY);
+	}
+
+	function holdEnd() {
+		clearTimeout(timer);
+	}
+
+	// A set committed mid-hold takes the field down with it, and the chain would
+	// otherwise keep calling `onchange` from a component nobody is rendering.
+	// The body tracks nothing, so this is a teardown on destroy and nothing else.
+	$effect(() => () => clearTimeout(timer));
+
+	// A pointer that leaves the arm — or a scroll that swallows it — produces no
+	// click to swallow in turn, so the claim has to leave with it. Left standing,
+	// it would eat the next keyboard Enter instead.
+	function holdCancel() {
+		clearTimeout(timer);
+		claimed = false;
+	}
+
+	// Keyboard activation arrives here with no `pointerdown` before it, so it is
+	// the one path that still steps on click.
+	function activate(direction: number) {
+		if (claimed) {
+			claimed = false;
+			return;
+		}
+		nudge(direction);
 	}
 
 	// Typing is held in `draft` and only lands in `value` on commit. Writing
@@ -98,9 +171,18 @@
 	<button
 		type="button"
 		aria-label="{verb} {label}"
-		onclick={() => nudge(direction)}
+		onclick={() => activate(direction)}
+		onpointerdown={() => holdStart(direction)}
+		onpointerup={holdEnd}
+		onpointerleave={holdCancel}
+		onpointercancel={holdCancel}
 		class={[
 			'grid w-11 shrink-0 place-items-center text-2xl font-semibold focus-ring-inset',
+			// `manipulation`, not `none`: a scroll that starts on the arm still
+			// scrolls the page and arrives back here as a `pointercancel`. Taking
+			// the gesture outright would make a fat target in the logging loop a
+			// dead zone for the one thing every screen does.
+			'touch-manipulation select-none',
 			'text-ink-muted hover:bg-surface-2 active:bg-surface-2 active:text-ink',
 			corner
 		]}
