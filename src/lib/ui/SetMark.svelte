@@ -5,11 +5,11 @@
 	 * One vocabulary for one concept — `SetRow` imports this type rather than
 	 * keeping a second union and a table to translate between them.
 	 *
-	 * Note which token the active ring uses. `accent` is lime-400 and it is a
-	 * fill only — as a 2px ring on a light surface it measures 1.51:1, well
+	 * Note which token the active ring uses. `accent` is lime-500 and it is a
+	 * fill only — as a 2px ring on a light surface it measures 1.95:1, still
 	 * under the 3:1 that WCAG requires of a control boundary, and the active set
 	 * is exactly the status a user has to find at arm's length. `accent-text`
-	 * resolves to lime-700 in light and back to lime-400 in dark, so dark is
+	 * resolves to lime-700 in light and back to lime-500 in dark, so dark is
 	 * pixel-identical to the design and light is legible.
 	 */
 	export type SetStatus = 'done' | 'active' | 'pending' | 'warmup';

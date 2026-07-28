@@ -70,7 +70,7 @@ Not because utilities beat hand-written CSS on quality — the teardown proves t
 The craft bar is unaffected, because utilities are not the design system — the token layer is:
 
 - **Components name intent, never a swatch.** `bg-surface`, `text-ink`, `bg-accent`. Semantic tokens live in `:root`, resolve to Tailwind's palette, and are exposed through `@theme inline`. Dark reassigns which swatch each name points at, so a component *cannot* be styled for one theme and not the other — "both first-class" is structural, not a review checklist.
-- **The accent is Tailwind `lime-400`.** v1's `#c5f53a` is retired; see [DESIGN.md](DESIGN.md).
+- **The accent is Tailwind `lime-500`.** v1's `#c5f53a` is retired; see [DESIGN.md](DESIGN.md).
 - **Theme follows the OS and nothing else.** No toggle, no persistence, no JS, no flash. Adding a Light/Dark/System setting later means moving the `prefers-color-scheme` block to `:root:not([data-theme=light])` and stamping the attribute before first paint — a known, small migration, accepted deliberately.
 - **Safe-area insets are spacing tokens** (`pt-safe-t`, `pb-safe-b`), so insets are ordinary utilities rather than `env()` scattered through style attributes. They are dead without `viewport-fit=cover` in `app.html`.
 - **`cn()` (clsx + tailwind-merge)** exists because Tailwind resolves conflicts by stylesheet order, not attribute order: without it, a `class` passed into a component overrides the component's own classes only by luck.

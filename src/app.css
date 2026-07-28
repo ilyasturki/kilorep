@@ -39,16 +39,16 @@
 	--line: var(--color-neutral-300);
 	--line-soft: var(--color-neutral-200);
 
-	/* The accent is a fill, and only a fill. `lime-400` is identical in both
+	/* The accent is a fill, and only a fill. `lime-500` is identical in both
 	   themes — the DESIGN.md promise — because it is only ever painted behind
 	   `on-accent`, which is dark in both. It cannot be used as text: on white
-	   it lands at 1.51:1.
+	   it lands at 1.95:1.
 
 	   `accent-text` is the accent-coloured *string* — SKIP, NOW, the sub-15s
 	   countdown, the SUPERSET badge. It has to be a per-theme pair, and no
 	   choice of swatch avoids that: 4.5:1 against white needs luminance ≤0.183,
 	   against neutral-950 it needs ≥0.20. No single colour is both. */
-	--accent: var(--color-lime-400);
+	--accent: var(--color-lime-500);
 	--on-accent: var(--color-neutral-950);
 	--accent-text: var(--color-lime-700);
 	--accent-soft: var(--color-lime-200);
@@ -71,9 +71,9 @@
 		--line: var(--color-neutral-700);
 		--line-soft: var(--color-neutral-800);
 
-		--accent: var(--color-lime-400);
+		--accent: var(--color-lime-500);
 		--on-accent: var(--color-neutral-950);
-		--accent-text: var(--color-lime-400);
+		--accent-text: var(--color-lime-500);
 		--accent-soft: var(--color-lime-950);
 
 		--danger: var(--color-red-400);
