@@ -54,6 +54,10 @@
 	--accent-soft: var(--color-lime-200);
 
 	--danger: var(--color-red-600);
+	/* The soft danger fill, a per-theme pair for the same reason `accent-soft`
+	   is one: `--danger` is red-600 in light and red-400 in dark, so a single
+	   alpha over it reads as two different colours. */
+	--danger-soft: var(--color-red-100);
 	--scrim: rgb(0 0 0 / 0.4);
 }
 
@@ -77,6 +81,7 @@
 		--accent-soft: var(--color-lime-950);
 
 		--danger: var(--color-red-400);
+		--danger-soft: var(--color-red-950);
 		--scrim: rgb(0 0 0 / 0.6);
 	}
 }
@@ -130,6 +135,7 @@
 	--color-accent-soft: var(--accent-soft);
 
 	--color-danger: var(--danger);
+	--color-danger-soft: var(--danger-soft);
 	--color-scrim: var(--scrim);
 
 	/* `inline` matters here: the value stays a live `var()`, so `min-h-row`
@@ -182,6 +188,11 @@
 	   and nothing else, so it is named for that. */
 	--radius-sheet: 1.375rem;
 
+	/* The design's sheet curve. Named here rather than written inline in the
+	   overlay utilities so a panel and anything animating alongside it — a
+	   backdrop, a chip settling — cannot disagree about the easing. */
+	--ease-sheet: cubic-bezier(0.2, 0.8, 0.3, 1);
+
 	/* Safe-area insets as ordinary spacing values: `pb-safe-b`, `pt-safe-t`, … .
 	   Dead without `viewport-fit=cover` in app.html. */
 	--spacing-safe-t: env(safe-area-inset-top);
@@ -212,6 +223,182 @@
 		outline: 2px solid var(--accent-text);
 		outline-offset: -2px;
 	}
+}
+
+/* The one box every value is typed or picked into: Input, Textarea,
+   SearchField, and the triggers on Select and DatePicker. Outlined with a
+   transparent fill rather than the `sunken` well the numpad and stepper use,
+   for a reason the depth scale makes unavoidable — in dark, `--sunken` and
+   `--canvas` are the same swatch, so a sunken field sitting on the page rather
+   than inside a card disappears. Sign-in and Settings are exactly that page.
+   Outlined also makes a field and a secondary Button read as siblings in the
+   same form, which they are.
+
+   Border *colour* is deliberately absent: the call site passes `border-line`
+   or `border-danger`, so the valid and invalid cases never both land in the
+   class attribute and Tailwind is never asked to break a tie by stylesheet
+   order. Height is absent for the same reason — a Textarea is not `min-h-row`.
+
+   Nunito's own placeholder colour would inherit `--ink`; `--ink-faint` is what
+   the design uses for a value that is a suggestion rather than a claim, and
+   it is the same distinction the numpad draws before its first keypress. */
+@utility field-box {
+	width: 100%;
+	border-radius: var(--radius-xl);
+	border-style: solid;
+	border-width: 1px;
+	background-color: transparent;
+	padding-inline: 1rem;
+	font-size: var(--text-base);
+	line-height: var(--text-base--line-height);
+	font-weight: 700;
+	color: var(--ink);
+
+	&::placeholder {
+		color: var(--ink-faint);
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		pointer-events: none;
+	}
+}
+
+/* The `field-box` a value is *picked* into rather than typed into: the Select
+   and DatePicker triggers, which are buttons wearing a field's clothes. Named
+   because those two were otherwise the same sixty-character class string in two
+   files, which is the drift `field-box` itself was extracted to stop. */
+@utility field-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	text-align: left;
+}
+
+/* The layered surfaces: the scrim behind them, the skin they share, and the two
+   geometries laid over it. A panel is written `overlay-panel overlay-sheet` or
+   `overlay-panel overlay-centred` — the skin is named once so the confirm
+   dialog and the sheet cannot drift apart in surface, border or height.
+
+   Sheet, Select and DatePicker take `overlay-sheet` — a bottom sheet within
+   thumb reach on a phone, a centred dialog from `sm` up, because a sheet welded
+   to the bottom edge of a 1400px window is a phone habit rather than a layout.
+
+   AlertDialog takes `overlay-centred` and is deliberately the one overlay that
+   does not rise from the bottom. A confirm that looks like the set-options
+   sheet inherits the reflex to dismiss the set-options sheet, and "delete this
+   template" is not a thing to dismiss by muscle memory.
+
+   Utilities rather than four copied class lists, for the reason `label-caps`
+   is one: a recipe in four files drifts in three of them. The cost is paid
+   here — an `@utility` body takes real media queries and real attribute
+   selectors, not Tailwind's `sm:` and `data-[…]:` variants — so `theme()`
+   reads the breakpoint rather than 40rem being spelled out again.
+
+   `[data-starting-style]` and `[data-ending-style]` are Bits UI's enter and
+   exit hooks. Both states are identical in each utility, so a panel leaves
+   along the path it arrived on.
+
+   `max-height` is set here and was not set on the hand-rolled sheet: content
+   long enough to matter (a twenty-row Select, a six-week month) grows a
+   bottom-anchored panel straight off the top of the viewport, and the
+   scrolling region inside it never gets the chance to scroll. */
+@utility overlay-scrim {
+	position: fixed;
+	inset: 0;
+	z-index: 40;
+	background-color: var(--scrim);
+	/* The panel's own duration and curve: the backdrop is part of the same
+	   gesture, and a scrim still settling under a sheet that has arrived is the
+	   disagreement `--ease-sheet` exists to prevent. */
+	transition: opacity 180ms var(--ease-sheet);
+
+	&[data-starting-style],
+	&[data-ending-style] {
+		opacity: 0;
+	}
+}
+
+@utility overlay-panel {
+	position: fixed;
+	z-index: 50;
+	display: flex;
+	flex-direction: column;
+	max-height: 85dvh;
+	background-color: var(--surface);
+	color: var(--ink);
+}
+
+@utility overlay-sheet {
+	inset-inline: 0;
+	bottom: 0;
+	border-top: 1px solid var(--line);
+	border-start-start-radius: var(--radius-sheet);
+	border-start-end-radius: var(--radius-sheet);
+	/* Clear of the gesture bar, but never less than the design's own padding. */
+	padding-bottom: max(1.25rem, var(--spacing-safe-b));
+
+	/* The sheet rises. Its opacity is untouched below `sm` — a panel that fades
+	   while it travels reads as slower than one that simply arrives. */
+	transition:
+		translate 180ms var(--ease-sheet),
+		opacity 180ms var(--ease-sheet);
+
+	&[data-starting-style],
+	&[data-ending-style] {
+		translate: 0 100%;
+	}
+
+	@media (width >= theme(--breakpoint-sm)) {
+		inset-inline: auto;
+		top: 50%;
+		bottom: auto;
+		left: 50%;
+		width: 100%;
+		max-width: var(--container-lg);
+		translate: -50% -50%;
+		border: 1px solid var(--line);
+		border-radius: var(--radius-sheet);
+		padding-bottom: 1.25rem;
+
+		/* Centred, it only fades: a centred box sliding is noise. */
+		&[data-starting-style],
+		&[data-ending-style] {
+			translate: -50% -50%;
+			opacity: 0;
+		}
+	}
+}
+
+@utility overlay-centred {
+	top: 50%;
+	left: 50%;
+	translate: -50% -50%;
+	width: calc(100% - 2rem);
+	max-width: var(--container-sm);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sheet);
+
+	transition:
+		opacity 180ms var(--ease-sheet),
+		scale 180ms var(--ease-sheet);
+
+	&[data-starting-style],
+	&[data-ending-style] {
+		opacity: 0;
+		scale: 0.95;
+	}
+}
+
+/* The heading on a panel — a sheet, a confirm, an empty state. Same argument as
+   `label-caps` one step up the scale: the recipe was written out in six places
+   and the muted line under it had already drifted between two sizes. */
+@utility title-panel {
+	font-size: var(--text-lg);
+	line-height: var(--text-lg--line-height);
+	font-weight: 800;
+	letter-spacing: var(--tracking-tight);
 }
 
 /* Every small caps label in the app — section headings, field names, the

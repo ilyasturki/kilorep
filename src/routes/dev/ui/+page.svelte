@@ -1,15 +1,31 @@
 <script lang="ts">
+	import { getLocalTimeZone, today } from '@internationalized/date';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
+	import AlertDialog from '$lib/ui/AlertDialog.svelte';
+	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import ChipGroup from '$lib/ui/ChipGroup.svelte';
+	import DatePicker from '$lib/ui/DatePicker.svelte';
+	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import Input from '$lib/ui/Input.svelte';
+	import ListRow from '$lib/ui/ListRow.svelte';
 	import Numpad from '$lib/ui/Numpad.svelte';
+	import SearchField from '$lib/ui/SearchField.svelte';
+	import Select from '$lib/ui/Select.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
+	import Switch from '$lib/ui/Switch.svelte';
+	import Textarea from '$lib/ui/Textarea.svelte';
+	import Tooltip from '$lib/ui/Tooltip.svelte';
 	import Backspace from '$lib/ui/icons/Backspace.svelte';
+	import Calendar from '$lib/ui/icons/Calendar.svelte';
+	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
+	import Info from '$lib/ui/icons/Info.svelte';
+	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
 	import More from '$lib/ui/icons/More.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 
@@ -61,10 +77,53 @@
 		}
 	];
 
+	const equipmentItems = [
+		{ value: 'barbell', label: 'Barbell' },
+		{ value: 'dumbbell', label: 'Dumbbell' },
+		{ value: 'cable', label: 'Cable' },
+		{ value: 'machine', label: 'Machine' },
+		{ value: 'bodyweight', label: 'Bodyweight' },
+		{ value: 'kettlebell', label: 'Kettlebell' },
+		{ value: 'band', label: 'Resistance band', disabled: true }
+	];
+
+	const muscleItems = [
+		{ value: 'chest', label: 'Chest' },
+		{ value: 'back', label: 'Back' },
+		{ value: 'shoulders', label: 'Shoulders' },
+		{ value: 'biceps', label: 'Biceps' },
+		{ value: 'triceps', label: 'Triceps' },
+		{ value: 'quads', label: 'Quads' },
+		{ value: 'hamstrings', label: 'Hamstrings' },
+		{ value: 'glutes', label: 'Glutes' },
+		{ value: 'calves', label: 'Calves' },
+		{ value: 'core', label: 'Core' }
+	];
+
+	const badges = [
+		{ tone: 'neutral', label: 'Warmup' },
+		{ tone: 'accent', label: 'Superset' },
+		{ tone: 'danger', label: 'Failed' }
+	] as const;
+
 	let setType = $state('normal');
 	let rpe = $state('8');
 	let overviewOpen = $state(false);
 	let optionsOpen = $state(false);
+
+	let exerciseName = $state('Bench Press (Barbell)');
+	let note = $state('');
+	let query = $state('');
+	let equipment = $state('dumbbell');
+	let muscles = $state(['chest', 'triceps']);
+	let chipMuscles = $state(['chest']);
+	let date = $state(today(getLocalTimeZone()));
+	let keepAwake = $state(true);
+	let syncEnabled = $state(false);
+	let deleteOpen = $state(false);
+	// The card reports what the confirm actually did, so the dialog can be
+	// checked for the thing it is for rather than for opening prettily.
+	let deleted = $state(false);
 </script>
 
 <svelte:head><title>kilorep · components</title></svelte:head>
@@ -122,6 +181,15 @@
 			<article class={card}>
 				<h2 class="label-caps">ChipGroup</h2>
 				{@render pickers(true)}
+				<div class="flex items-baseline gap-2">
+					<h3 class="label-caps">Muscle targets</h3>
+					<span class={caption}>type="multiple"</span>
+				</div>
+				<ChipGroup type="multiple" bind:value={chipMuscles} label="Muscle targets">
+					{#each muscleItems.slice(0, 5) as muscle (muscle.value)}
+						<Chip value={muscle.value}>{muscle.label}</Chip>
+					{/each}
+				</ChipGroup>
 			</article>
 
 			<article class={card}>
@@ -217,6 +285,158 @@
 			</article>
 
 			<article class={card}>
+				<h2 class="label-caps">Input</h2>
+				<div class={specimen}>
+					<Input label="Exercise" bind:value={exerciseName} class="w-full" />
+					<span class={caption}>label="Exercise"</span>
+				</div>
+				<div class={specimen}>
+					<Input
+						label="Exercise"
+						value="Bench Press (Barbell)"
+						error="Already in your exercises"
+						class="w-full"
+					/>
+					<span class={caption}>error="…"</span>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">Textarea</h2>
+				<div class={specimen}>
+					<Textarea
+						label="Note"
+						bind:value={note}
+						placeholder="left shoulder tight"
+						class="w-full"
+					/>
+					<span class={caption}>rows={3}</span>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">SearchField</h2>
+				<div class={specimen}>
+					<SearchField label="Search exercises" bind:value={query} class="w-full" />
+					<span class={caption}>label is the accessible name, not a heading</span>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">Select</h2>
+				<div class={specimen}>
+					<Select label="Equipment" items={equipmentItems} bind:value={equipment} class="w-full" />
+					<span class={caption}>type="single"</span>
+				</div>
+				<div class={specimen}>
+					<Select
+						label="Muscle targets"
+						items={muscleItems}
+						bind:value={muscles}
+						type="multiple"
+						class="w-full"
+					/>
+					<span class={caption}>type="multiple"</span>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">DatePicker</h2>
+				<div class={specimen}>
+					<DatePicker label="Date" bind:value={date} maxToday class="w-full" />
+					<span class={caption}>maxToday</span>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">Switch</h2>
+				<div class="flex flex-col">
+					<Switch
+						label="Keep screen awake"
+						description="During an active workout"
+						bind:checked={keepAwake}
+					/>
+					<span class={caption}>description="…"</span>
+				</div>
+				<div class="flex flex-col">
+					<Switch label="Sync with server" bind:checked={syncEnabled} />
+					<span class={caption}>label only</span>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">Badge</h2>
+				<div class="flex flex-wrap items-center gap-5">
+					{#each badges as badge (badge.tone)}
+						<div class="flex flex-col items-center gap-1.5">
+							<Badge tone={badge.tone}>{badge.label}</Badge>
+							<span class={caption}>tone="{badge.tone}"</span>
+						</div>
+					{/each}
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">ListRow</h2>
+				<div class="flex flex-col gap-1 rounded-xl bg-canvas p-2">
+					<div class="flex flex-col">
+						<ListRow title="Push A" meta="6 exercises · 24 sets" onclick={() => {}} />
+						<span class={caption}>onclick</span>
+					</div>
+					<div class="flex flex-col">
+						<ListRow title="Incline Dumbbell Press" meta="Chest · dumbbell" href="#listrow">
+							{#snippet leading()}<Stack size={20} />{/snippet}
+							{#snippet trailing()}<Badge tone="accent">PR</Badge>{/snippet}
+						</ListRow>
+						<span class={caption}>href · leading · trailing</span>
+					</div>
+					<div class="flex flex-col">
+						<ListRow title="Export data" onclick={() => {}} chevron={false}>
+							{#snippet trailing()}CSV{/snippet}
+						</ListRow>
+						<span class={caption}>chevron={false}</span>
+					</div>
+					<div class="flex flex-col">
+						<ListRow title="Last synced" meta="Never" />
+						<span class={caption}>no href, no onclick — inert</span>
+					</div>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">EmptyState</h2>
+				<EmptyState
+					title="No templates yet"
+					description="Build one, or start an empty workout and log as you go."
+				>
+					{#snippet icon()}<Stack size={24} />{/snippet}
+					{#snippet action()}<Button variant="secondary">New template</Button>{/snippet}
+				</EmptyState>
+				<span class={caption}>icon · action</span>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">Tooltip</h2>
+				<div class={specimen}>
+					<Tooltip text="Epley estimate from your best set. Never the headline PR.">
+						<span class="text-md font-extrabold">Est. 1RM</span>
+					</Tooltip>
+					<span class={caption}>hover on a mouse, tap on a touchscreen</span>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">AlertDialog</h2>
+				<div class={specimen}>
+					<Button variant="destructive" onclick={() => (deleteOpen = true)}>Delete template</Button>
+					<span class={caption}>confirmLabel="Delete"</span>
+				</div>
+				<p class="text-sm font-bold text-ink-faint">
+					{deleted ? 'Push A was deleted.' : 'Nothing deleted yet.'}
+				</p>
+			</article>
+
+			<article class={card}>
 				<h2 class="label-caps">Icons</h2>
 				<div class="flex flex-wrap items-center gap-5">
 					<div class="flex flex-col items-center gap-1.5">
@@ -235,11 +455,46 @@
 						<div class={tile}><Stack size={22} /></div>
 						<span class={caption}>Stack</span>
 					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><MagnifyingGlass size={22} /></div>
+						<span class={caption}>MagnifyingGlass</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><CaretDown size={20} /></div>
+						<span class={caption}>CaretDown</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Calendar size={22} /></div>
+						<span class={caption}>Calendar</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Info size={22} /></div>
+						<span class={caption}>Info</span>
+					</div>
+				</div>
+				<!-- The marks the font already supplies, so nothing is drawn for them:
+				     the search field's clear, the calendar's month arrows, the row
+				     chevron. Measured against the vendored subset, not assumed. -->
+				<div class="flex flex-wrap items-center gap-5 border-t border-line-soft pt-3">
+					{#each ['×', '‹', '›', '·', '−'] as glyph (glyph)}
+						<div class="flex flex-col items-center gap-1.5">
+							<div class="{tile} text-xl leading-none">{glyph}</div>
+							<span class={caption}>character</span>
+						</div>
+					{/each}
 				</div>
 			</article>
 		</div>
 	</div>
 </div>
+
+<AlertDialog
+	bind:open={deleteOpen}
+	title="Delete template?"
+	description="Push A · 6 exercises. Workouts already logged from it are kept."
+	confirmLabel="Delete"
+	onconfirm={() => (deleted = true)}
+/>
 
 <Sheet bind:open={overviewOpen} title="Session" description="Push A · 9 of 25 sets">
 	<div class="flex flex-col gap-1">
