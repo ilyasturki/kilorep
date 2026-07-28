@@ -2,5 +2,9 @@
 # but reformatting them churns the diff on every regenerate.
 /drizzle/
 
+# Checkouts of this same repo. Formatting them edits another branch's working
+# tree, which is never this run's job.
+/.claude/worktrees/
+
 # Prose is hand-authored — see the docs/ set.
 *.md

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Button from '$lib/ui/Button.svelte';
 
-	// The three claims VISION.md commits to: data ownership (where data-out is
-	// named a top-3 marketed feature), the in-gym loop, and extreme offline.
-	// Nothing here may promise a feature the product does not have.
+	// The three claims the product is built on: data ownership, the in-gym
+	// loop, and extreme offline. Nothing here may promise a feature the
+	// product does not have.
 	const pillars = [
 		{
 			name: 'Yours',

@@ -4,7 +4,7 @@
 	/**
 	 * A weight or rep field with fat ± on either side of the number.
 	 *
-	 * The dot above the value is not decoration. PRODUCT.md: the check "commits
+	 * The dot above the value is not decoration. The check "commits
 	 * exactly what's on screen — the hint/target if untouched, your edits if
 	 * touched", and the hint is never silently written. The dot is the only
 	 * thing on screen that distinguishes a recalled hint from an affirmative

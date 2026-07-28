@@ -33,7 +33,7 @@
 	// live. A card is titled with the component it renders and every instance
 	// carries the prop that makes it that instance, so the page can be read as
 	// the API rather than as a mock screen. Tokens and the type scale are not
-	// here — src/app.css names them and docs/DESIGN.md holds the reasoning.
+	// here — src/app.css names them and holds the reasoning.
 
 	// The page's own furniture. Written out rather than composed at runtime:
 	// Tailwind scans source text, so an arbitrary property it has not seen

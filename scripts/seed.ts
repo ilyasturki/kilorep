@@ -8,7 +8,7 @@ import { users } from '../src/lib/server/db/schema.ts';
 
 /**
  * Development bootstrap only. Production account creation is deliberately
- * unsolved — see STACK.md's open questions — and this script is not the
+ * unsolved — see docs/DECISIONS.md, Open — and this script is not the
  * answer: the credentials below are public, in the repository.
  */
 

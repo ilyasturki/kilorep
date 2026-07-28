@@ -14,8 +14,8 @@ import { envFlag, envList, envText } from './env.ts';
  * which never touches the network — so a normal self-hosted install never opens
  * this at all. That is the point: with no local path to a first account, an
  * operator would have to enable registration, sign up, disable it and restart,
- * and that window is exactly the claimable-by-a-stranger failure STACK.md
- * rejected. This flag exists for the day the instance genuinely has more than
+ * and that window is exactly the claimable-by-a-stranger failure this design
+ * rejects. This flag exists for the day the instance genuinely has more than
  * one user.
  */
 export function registrationOpen(): boolean {

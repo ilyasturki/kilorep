@@ -10,7 +10,7 @@ import { databasePath } from './config.ts';
  * `node:sqlite` is a Node builtin, so the server carries no compiled dependency
  * and the container has nothing to build. It is unavailable under Bun (1.3.13
  * reports "No such built-in module"), which is why the tests run on vitest
- * rather than `bun test` — see STACK.md.
+ * rather than `bun test`.
  */
 
 export type Database = NodeSQLiteDatabase & { $client: DatabaseSync };

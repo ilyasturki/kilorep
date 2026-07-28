@@ -23,8 +23,8 @@ import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlit
 
 /**
  * An account. Multi-tenancy exists from day one for a user count of one, so a
- * hosted instance is a deploy rather than a migration (STACK.md, accepted
- * costs). Every domain row will hang off `id`.
+ * hosted instance is a deploy rather than a migration. Every domain row will
+ * hang off `id`.
  */
 export const users = sqliteTable(
 	'users',
