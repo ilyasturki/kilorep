@@ -46,7 +46,7 @@
 </script>
 
 <svelte:head>
-	<title>Start — Kilorep</title>
+	<title>Start | Kilorep</title>
 </svelte:head>
 
 <main class="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-8 px-4 py-10">

@@ -130,7 +130,7 @@
 	let deleted = $state(false);
 </script>
 
-<svelte:head><title>kilorep · components</title></svelte:head>
+<svelte:head><title>Components | Kilorep</title></svelte:head>
 
 <!-- The two ChipGroups. Shown twice — standalone and inside the options sheet —
      and the point of the page is that they are the same thing. `annotated` is

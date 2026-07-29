@@ -57,7 +57,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>Workout · kilorep</title>
+	<title>Workout | Kilorep</title>
 </svelte:head>
 
 <div class="flex h-dvh flex-col bg-canvas text-ink">
