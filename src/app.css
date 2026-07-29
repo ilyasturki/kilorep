@@ -401,6 +401,22 @@
 	letter-spacing: var(--tracking-tight);
 }
 
+/* The surround the active set wears, in the row and in the expanded editor it
+   becomes. Named because the two are the same card in two states and a user
+   scanning for "where am I" at arm's length has to read them as one thing.
+
+   `accent-text`, not `accent`: a lime-500 hairline on a light surface is
+   1.95:1, and this is the one border in the app that has to be found rather
+   than merely noticed. That reasoning is in `SetMark.svelte`; keeping the
+   recipe in two files is how it ends up applying to only one of them. */
+@utility card-active {
+	border-radius: var(--radius-2xl);
+	border-style: solid;
+	border-width: 2px;
+	border-color: var(--accent-text);
+	background-color: var(--surface);
+}
+
 /* Every small caps label in the app — section headings, field names, the
    pad's title. Five utilities that had drifted to four in one place before
    this became a single name. */

@@ -61,10 +61,14 @@
 
 	// `prop` is spelled out rather than derived from `step`, so the caption
 	// reads as the Svelte one would write at the call site, braces and all.
-	const steppers = [
-		{ prefill: 82.5, label: 'kg', step: 2.5, prop: 'step={2.5}' },
-		{ prefill: 7, label: 'reps', step: 1, prop: 'step={1}' }
-	];
+	//
+	// `value` is state and `recalled` is not: the field is controlled, so the
+	// specimen has to hold the value for the arms to move it, and the dot has to
+	// have a fixed thing to be measured against.
+	const steppers = $state([
+		{ value: 82.5 as number | null, recalled: 82.5, label: 'kg', step: 2.5, prop: 'step={2.5}' },
+		{ value: 7 as number | null, recalled: 7, label: 'reps', step: 1, prop: 'step={1}' }
+	]);
 
 	const exercises = [
 		{ name: 'Bench Press (Barbell)', meta: '4 sets · rest 3:00', count: '4/4', current: false },
@@ -253,7 +257,12 @@
 				<div class="flex gap-2">
 					{#each steppers as stepper (stepper.label)}
 						<div class="flex flex-1 flex-col gap-1.5">
-							<StepperField prefill={stepper.prefill} label={stepper.label} step={stepper.step} />
+							<StepperField
+								bind:value={stepper.value}
+								recalled={stepper.recalled}
+								label={stepper.label}
+								step={stepper.step}
+							/>
 							<span class={caption}>{stepper.prop}</span>
 						</div>
 					{/each}

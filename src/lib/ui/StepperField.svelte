@@ -1,52 +1,95 @@
+<script lang="ts" module>
+	// One string, two controls. The whole point of the fork below is that the
+	// number looks identical whether it is typed into or tapped through, and two
+	// copies of the class list is the one way for that to stop being true.
+	const numeral =
+		'w-full bg-transparent p-0 text-center text-2xl leading-none font-extrabold ' +
+		'tracking-numeral focus-ring-inset';
+</script>
+
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
+	import { parseEntry, settle } from '$lib/domain/workout';
 
 	/**
 	 * A weight or rep field with fat ± on either side of the number.
 	 *
-	 * The dot above the value is not decoration. The check "commits
+	 * The dot above the value is not decoration. PRODUCT.md: the check "commits
 	 * exactly what's on screen — the hint/target if untouched, your edits if
 	 * touched", and the hint is never silently written. The dot is the only
 	 * thing on screen that distinguishes a recalled hint from an affirmative
 	 * claim, so it appears the moment the value leaves its prefill and clears
 	 * again if you step back onto it.
 	 *
-	 * The number itself is a real input, on every pointer type rather than only
-	 * where `(pointer: fine)` holds. The arms are the accelerator for the common
-	 * case, not the only way in: an arm held down repeats, and typing is there
-	 * for the value that is nowhere near the hint. Typing is a distinct gesture
-	 * from tapping ± — nothing is swapped out underneath the user — so unlike
-	 * the numpad's key grid this needs no pointer read to decide what to render.
+	 * Stepping from 40 to 100 is twenty-four taps on the arms, so an arm held
+	 * down repeats and the arms stay the accelerator for the common case rather
+	 * than becoming the only way in. Typing is
+	 * either the field's own input or, where the caller hosts a numpad, whatever
+	 * `ontype` opens — see that prop.
+	 *
+	 * `value` is the caller's. The field renders it, proposes the next one, and
+	 * owns nothing: a nudge is `onchange`, and what comes back down is the
+	 * answer. `bind:value` is the shorthand for that round trip when the caller
+	 * has nothing more interesting to do with it.
 	 */
 	type Props = {
-		prefill: number;
+		/** Null is a field with nothing in it — no history to recall, nothing typed yet. */
+		value: number | null;
+		/**
+		 * What the field opened at, and the only thing the touched dot is measured
+		 * against.
+		 *
+		 * The dot is not decoration. PRODUCT.md: the check "commits exactly what's
+		 * on screen — the hint/target if untouched, your edits if touched", and the
+		 * hint is never silently written. The dot is the only thing on screen that
+		 * separates a recalled hint from an affirmative claim, so it has to answer
+		 * to the recalled value rather than to the live one — otherwise a caller
+		 * that feeds its own edits back in could never show it at all.
+		 */
+		recalled?: number | null;
 		label: string;
 		step?: number;
 		min?: number;
 		onchange?: (value: number) => void;
+		/**
+		 * Host the typing gesture instead of the field's own input.
+		 *
+		 * On touch, focusing an input raises the system keyboard, which is the one
+		 * thing PRODUCT.md and STACK.md deliberately design out of the logging loop
+		 * in favour of the custom pad. The pad has to belong to the caller and not
+		 * to this field, because its field-switch key spans two of them; passing
+		 * `ontype` is how the caller says so. Absent, the field's input stands.
+		 */
+		ontype?: () => void;
 		class?: ClassValue;
 	};
 
-	let { prefill, label, step = 2.5, min = 0, onchange, class: klass }: Props = $props();
+	let {
+		value = $bindable(null),
+		recalled = null,
+		label,
+		step = 2.5,
+		min = 0,
+		onchange,
+		ontype,
+		class: klass
+	}: Props = $props();
 
-	// A derived value can be reassigned, and the override is dropped the moment
-	// its dependency changes — which is exactly the rule this field needs: a nudge
-	// overrides the hint, and a new prefill (a new set) takes the field back with
-	// the touched dot. Written as an effect it needed a shadow copy of `prefill`
-	// to stop itself looping; derived, the reset is the framework's job.
-	let value = $derived(prefill);
+	const touched = $derived(value !== recalled);
 
-	const touched = $derived(value !== prefill);
-	const display = $derived(String(Math.round(value * 100) / 100));
+	// `–` for an empty field, the same glyph `SetRow` shows for a set with no
+	// numbers in it yet. Zero is a real weight, so it is never spelled this way.
+	const display = $derived(value === null ? '–' : String(settle(value, min)));
 
-	const settle = (n: number) => Math.max(min, Math.round(n * 100) / 100);
-
+	// An empty field steps from `min`, so the first + on a blank weight lands on
+	// one step rather than on nothing.
+	//
 	// Reports whether it moved. At `min` a step down changes nothing, and a
 	// silent no-op is the honest answer — the same rule `commit` already keeps,
 	// and it is what stops a hold from firing twenty identical `onchange` a
 	// second into the floor.
 	function nudge(direction: number) {
-		const next = settle(value + direction * step);
+		const next = settle((value ?? min) + direction * step, min);
 		if (next === value) {
 			return false;
 		}
@@ -133,23 +176,24 @@
 	let selectPending = false;
 
 	function start(event: FocusEvent & { currentTarget: HTMLInputElement }) {
-		draft = display;
+		// An empty field opens empty, not on the `–` that stands in for it.
+		draft = value === null ? '' : display;
 		editing = true;
 		selectPending = true;
 		event.currentTarget.select();
 	}
 
 	// Blur commits, so tapping ± while typing steps from the typed number and
-	// not from the one it replaced. Anything unparseable — empty, a lone dot,
-	// a pasted word — is not an affirmative claim, so the field keeps what it
-	// had rather than guessing.
+	// not from the one it replaced. Anything unparseable is not an affirmative
+	// claim, so the field keeps what it had rather than guessing — `parseEntry`
+	// owns that rule for the pad as well.
 	function commit() {
-		const parsed = Number(draft.replace(',', '.'));
+		const parsed = parseEntry(draft);
 		editing = false;
-		if (draft.trim() === '' || !Number.isFinite(parsed)) {
+		if (parsed === null) {
 			return;
 		}
-		const next = settle(parsed);
+		const next = settle(parsed, min);
 		if (next !== value) {
 			value = next;
 			onchange?.(next);
@@ -205,24 +249,29 @@
 	{@render arm(-1, 'decrease', 'rounded-l-2xl')}
 
 	<div class="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5">
-		<input
-			value={editing ? draft : display}
-			oninput={(event) => (draft = event.currentTarget.value)}
-			onfocus={start}
-			onblur={commit}
-			onmouseup={(event) => {
-				if (selectPending) {
-					selectPending = false;
-					event.preventDefault();
-				}
-			}}
-			{onkeydown}
-			inputmode="decimal"
-			autocomplete="off"
-			aria-label={label}
-			class="w-full bg-transparent p-0 text-center text-2xl leading-none font-extrabold
-				tracking-numeral focus-ring-inset"
-		/>
+		{#if ontype}
+			<button type="button" onclick={ontype} aria-label="{label}, tap to type" class={numeral}>
+				{display}
+			</button>
+		{:else}
+			<input
+				value={editing ? draft : display}
+				oninput={(event) => (draft = event.currentTarget.value)}
+				onfocus={start}
+				onblur={commit}
+				onmouseup={(event) => {
+					if (selectPending) {
+						selectPending = false;
+						event.preventDefault();
+					}
+				}}
+				{onkeydown}
+				inputmode="decimal"
+				autocomplete="off"
+				aria-label={label}
+				class={numeral}
+			/>
+		{/if}
 		<div class="label-caps">{label}</div>
 	</div>
 

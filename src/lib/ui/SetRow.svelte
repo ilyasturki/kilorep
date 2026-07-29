@@ -25,9 +25,9 @@
 			times: 'text-base'
 		},
 		active: {
-			// accent-text, not accent: a lime-500 hairline on a light surface is
-			// 1.95:1, and this is the one row the user has to locate at arm's length.
-			shell: 'min-h-24 rounded-2xl bg-surface border-2 border-accent-text',
+			// `card-active` in app.css, shared with the editor this row expands
+			// into — including the reason it is accent-text and not accent.
+			shell: 'card-active min-h-24',
 			numerals: 'text-3xl tracking-numeral text-ink',
 			times: 'text-lg'
 		},
