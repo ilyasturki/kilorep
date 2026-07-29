@@ -161,10 +161,15 @@
 	<div class="mx-auto flex max-w-[1280px] flex-col gap-6 pt-6">
 		<h1 class="text-lg font-extrabold tracking-tight">kilorep · components</h1>
 
-		<!-- items-start, not the default stretch: a card hugs its own content, so a
-		     four-glyph card does not inflate to the height of the numpad beside it. -->
+		<!-- A bento, not a terrace. Cards vary wildly in height — the numpad is three
+		     times the badge card — so the five tallest take row-span-2 and the flow is
+		     dense, which lets a later short card backfill the cell a tall one skipped
+		     past. Rows then differ little enough that the default stretch is affordable:
+		     every card fills its cell, so the grid reads flush instead of leaving a hole
+		     under each short one. The spans are inert at one column, so the phone
+		     layout is untouched. -->
 		<div
-			class="grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr))] items-start gap-4"
+			class="grid grid-flow-row-dense [grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr))] gap-4"
 		>
 			<article class={card}>
 				<h2 class="label-caps">Button</h2>
@@ -182,7 +187,7 @@
 				</div>
 			</article>
 
-			<article class={card}>
+			<article class="{card} row-span-2">
 				<h2 class="label-caps">ChipGroup</h2>
 				{@render pickers(true)}
 				<div class="flex items-baseline gap-2">
@@ -208,7 +213,7 @@
 				</div>
 			</article>
 
-			<article class={card}>
+			<article class="{card} row-span-2">
 				<h2 class="label-caps">SetRow</h2>
 				<div class="flex flex-col gap-2.5 rounded-xl bg-canvas p-3">
 					<div class="flex flex-col gap-1">
@@ -269,7 +274,7 @@
 				</div>
 			</article>
 
-			<article class={card}>
+			<article class="{card} row-span-2">
 				<h2 class="label-caps">Numpad</h2>
 				<div class="flex flex-col gap-1.5">
 					<Numpad mode="keys" label="Weight · kg" placeholder="82.5" />
@@ -385,7 +390,7 @@
 				</div>
 			</article>
 
-			<article class={card}>
+			<article class="{card} row-span-2">
 				<h2 class="label-caps">ListRow</h2>
 				<div class="flex flex-col gap-1 rounded-xl bg-canvas p-2">
 					<div class="flex flex-col">
@@ -412,7 +417,7 @@
 				</div>
 			</article>
 
-			<article class={card}>
+			<article class="{card} row-span-2">
 				<h2 class="label-caps">EmptyState</h2>
 				<EmptyState
 					title="No templates yet"
