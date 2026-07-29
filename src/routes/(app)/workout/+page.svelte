@@ -4,6 +4,7 @@
 	import { WorkoutSession } from '$lib/workout/session.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import OverviewSheet from '$lib/workout/OverviewSheet.svelte';
+	import SessionList from '$lib/workout/SessionList.svelte';
 	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -20,6 +21,11 @@
 	 * are gone. What the list costs is one thing, and it stays: `ExerciseBlock`
 	 * pulls the active set back to centre after a commit, because in a stacked
 	 * session it otherwise marches off the bottom of the page.
+	 *
+	 * Two panes from `lg` up. The header spans both at every width — one header,
+	 * with FINISH in the same corner on a phone and on a desk — and the rail
+	 * below it holds the session list the sheet holds on a phone. There is no
+	 * overview button above `lg`, because there is nothing left for it to open.
 	 */
 	const session = new WorkoutSession();
 
@@ -74,12 +80,16 @@
 				aria-label="Session overview"
 				onclick={() => (overview = true)}
 				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+					border-line text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2
+					lg:hidden"
 			>
 				<Stack size={20} />
 			</button>
 
-			<div class="min-w-0 flex-1 text-center">
+			<!-- Centred between the two controls on a phone; with the overview
+			     button gone above `lg` there is nothing on the left to centre
+			     against, so it goes there instead of drifting. -->
+			<div class="min-w-0 flex-1 text-center lg:pl-1 lg:text-left">
 				<span class="label-caps">Workout</span>
 			</div>
 
@@ -90,37 +100,51 @@
 		</div>
 	</header>
 
-	<main class="min-h-0 flex-1 overflow-y-auto px-3 py-3 pb-safe-b">
-		<div class="flex flex-col gap-7">
-			{#each groups as group (group.meta.id)}
-				<ExerciseBlock
-					meta={group.meta}
-					cursors={group.cursors}
-					{history}
-					activeSetId={session.activeSetId}
-					oncommit={(w, r) => session.commit(w, r)}
-					onselect={(id) => session.select(id)}
-					onadd={() => session.addSet(group.cursors[0].exercise.id)}
-					onoptions={options}
-				/>
-			{/each}
+	<div class="flex min-h-0 flex-1">
+		<!-- The sheet's contents, standing still. It scrolls on its own so a long
+		     session can be walked without moving the set being logged. -->
+		<aside
+			class="hidden w-60 shrink-0 overflow-y-auto border-r border-line-soft bg-surface
+				px-2 py-3 lg:block"
+		>
+			<SessionList {groups} activeSetId={session.activeSetId} onjump={(id) => session.select(id)} />
+		</aside>
 
-			<!-- Under the session rather than instead of it. Every block keeps its
-			     add-set row while this is on screen, which is the only way a set
-			     added after the last one was logged is reachable at all — and the
-			     workout you just finished is still there to look at. -->
-			{#if session.finished}
-				<EmptyState title="Every set logged" description="Nothing left in this session.">
-					{#snippet icon()}
-						<Check size={26} />
-					{/snippet}
-					{#snippet action()}
-						<Button variant="commit" onclick={() => session.reset()}>Finish</Button>
-					{/snippet}
-				</EmptyState>
-			{/if}
-		</div>
-	</main>
+		<main class="min-h-0 flex-1 overflow-y-auto px-3 py-3 pb-safe-b">
+			<!-- Capped and centred inside the pane. A set row stretched across a
+			     1600px monitor puts the weight and the reps a hand apart, and the
+			     pair has to be read as one thing. -->
+			<div class="mx-auto flex max-w-3xl flex-col gap-7">
+				{#each groups as group (group.meta.id)}
+					<ExerciseBlock
+						meta={group.meta}
+						cursors={group.cursors}
+						{history}
+						activeSetId={session.activeSetId}
+						oncommit={(w, r) => session.commit(w, r)}
+						onselect={(id) => session.select(id)}
+						onadd={() => session.addSet(group.cursors[0].exercise.id)}
+						onoptions={options}
+					/>
+				{/each}
+
+				<!-- Under the session rather than instead of it. Every block keeps its
+				     add-set row while this is on screen, which is the only way a set
+				     added after the last one was logged is reachable at all — and the
+				     workout you just finished is still there to look at. -->
+				{#if session.finished}
+					<EmptyState title="Every set logged" description="Nothing left in this session.">
+						{#snippet icon()}
+							<Check size={26} />
+						{/snippet}
+						{#snippet action()}
+							<Button variant="commit" onclick={() => session.reset()}>Finish</Button>
+						{/snippet}
+					</EmptyState>
+				{/if}
+			</div>
+		</main>
+	</div>
 </div>
 
 <OverviewSheet
