@@ -12,11 +12,6 @@
 	 * Jump only. Reorder and mid-workout insert belong here too and are
 	 * deliberately absent — insert needs the exercise catalog, which does not
 	 * exist yet.
-	 *
-	 * It is in this build at all because leaving it out would not cut both
-	 * containers equally. The list mode barely needs it; the focused mode has no
-	 * other way to move around a session, so an overview-less comparison would
-	 * decide against focused for a reason that has nothing to do with focused.
 	 */
 	type Props = {
 		open?: boolean;

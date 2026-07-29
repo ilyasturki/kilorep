@@ -1,12 +1,9 @@
 /**
  * The scripted session the workout screen is judged against.
  *
- * Fixed rather than random, and fixed rather than persisted, because the build
- * it serves is a comparison: the focused and list containers are run through
- * the same fourteen sets and the same four exercises, and any difference in
- * taps or wall-clock has to be attributable to the container and nothing else.
- * Every reload hands back an identical session, which is what makes a run
- * repeatable.
+ * Fixed rather than random, and fixed rather than persisted: every reload hands
+ * back an identical fourteen sets, so a run through the screen is repeatable
+ * and any difference between two of them is attributable to the screen.
  *
  * The four exercises are chosen to cover the states, not to be a plausible
  * chest day:

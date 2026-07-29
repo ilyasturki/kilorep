@@ -8,8 +8,7 @@
  * live — is imported, not reimplemented.
  *
  * In memory only. Persistence and auto-resume are deliberately absent: the
- * store this would be written against does not exist yet, and a fixture that
- * resets on every reload is the better instrument for a comparison run anyway.
+ * store this would be written against does not exist yet.
  */
 
 import { advanceFrom, commitSet, firstUncompleted } from '$lib/domain/workout';

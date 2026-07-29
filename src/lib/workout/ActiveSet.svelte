@@ -10,11 +10,6 @@
 
 	/**
 	 * The active set, expanded in place into an editor.
-	 *
-	 * One component, rendered identically by both container modes. That is what
-	 * makes the focused-vs-list comparison mean anything: everything below the
-	 * container is held constant, so the only variable left is how many exercises
-	 * are on screen around it.
 	 */
 	type Props = {
 		cursor: SetCursor;

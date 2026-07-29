@@ -6,30 +6,18 @@
 	import ActiveSet from '$lib/workout/ActiveSet.svelte';
 
 	/**
-	 * One exercise and its sets. The unit both containers are built from: the
-	 * focused mode renders exactly one of these, the list mode renders all of
-	 * them stacked, and nothing inside differs between the two.
+	 * One exercise and its sets. The unit the session is stacked from.
 	 */
 	type Props = {
 		meta: Exercise;
 		cursors: SetCursor[];
 		history: History;
 		activeSetId: string | null;
-		/** Scroll the active set back into reach. List mode only — see below. */
-		autoscroll?: boolean;
 		oncommit: (weight: number, reps: number) => void;
 		onselect: (setId: string) => void;
 	};
 
-	let {
-		meta,
-		cursors,
-		history,
-		activeSetId,
-		autoscroll = false,
-		oncommit,
-		onselect
-	}: Props = $props();
+	let { meta, cursors, history, activeSetId, oncommit, onselect }: Props = $props();
 
 	const progress = $derived(progressOf(cursors[0].exercise));
 
@@ -62,16 +50,15 @@
 	}
 
 	/**
-	 * In list mode the active set marches down a growing page, so after a few
-	 * commits it is off the bottom and the next tap is a scroll hunt. Pulling it
-	 * back to centre is the same move Hevy makes for supersets, and it is the
-	 * only thing the list container has to do that the focused one gets free —
-	 * worth naming, because it is exactly the cost the comparison is measuring.
+	 * The active set marches down a growing page, so after a few commits it is
+	 * off the bottom and the next tap is a scroll hunt. Pulling it back to
+	 * centre is the same move Hevy makes for supersets, and it is the price the
+	 * stacked session pays for showing everything at once.
 	 */
 	let holder = $state<HTMLElement | null>(null);
 
 	$effect(() => {
-		if (!autoscroll || holder === null || activeSetId === null) {
+		if (holder === null || activeSetId === null) {
 			return;
 		}
 
