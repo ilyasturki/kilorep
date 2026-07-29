@@ -14,6 +14,7 @@
 	import SheetHeader from '$lib/ui/SheetHeader.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
+	import { wideViewport } from '$lib/ui/viewport';
 
 	/**
 	 * One-of-N and any-of-N over a list too long for chips: equipment and muscle
@@ -23,13 +24,18 @@
 	 * RPE) and SearchField (insert an exercise); a control whose options are
 	 * hidden until tapped has no business in the loop.
 	 *
-	 * The list is `ContentStatic` in a portal on `overlay-sheet` rather than the
-	 * floating `Content`, so it lands where every other layered surface in the
-	 * app lands: up from the bottom on a phone, centred from `sm`. A dropdown
-	 * anchored to its trigger puts a fifteen-row list wherever the trigger
-	 * happens to be, which on a large phone is the half of the screen a thumb
-	 * cannot reach. Bits UI still owns the listbox itself — roles, arrow keys,
-	 * typeahead, scroll-into-view — which is the half worth importing.
+	 * The list is two elements and the viewport picks one. On a phone it is
+	 * `ContentStatic` in a portal wearing `overlay-sheet`, up from the bottom
+	 * behind a scrim: a fifteen-row list anchored to a trigger near the top of a
+	 * tall phone opens in the half of the screen a thumb cannot reach. From `sm`
+	 * it is `Content`, anchored under the trigger by Floating UI, because a
+	 * mouse has no reach problem and dimming a 1400px page to answer "which
+	 * equipment" is a modal answer to a question that is not one.
+	 *
+	 * The swap is JS and not CSS for the same reason Tooltip's is: the two are
+	 * different Bits UI parts, and no media query rewrites an element. Bits UI
+	 * owns the listbox itself either way — roles, arrow keys, typeahead,
+	 * scroll-into-view — which is the half worth importing.
 	 *
 	 * `type` is split across two `Select.Root` instances because the primitive's
 	 * value is `string` in one case and `string[]` in the other, and that is a
@@ -84,45 +90,67 @@
 	</Select.Trigger>
 {/snippet}
 
+{#snippet list()}
+	<Select.Viewport class="min-h-0 flex-1 overflow-y-auto p-2">
+		{#each items as item (item.value)}
+			<Select.Item
+				value={item.value}
+				label={item.label}
+				disabled={item.disabled}
+				class="flex min-h-row w-full items-center gap-3 rounded-xl px-3 text-base font-bold
+					select-none data-disabled:pointer-events-none data-disabled:opacity-50
+					data-highlighted:bg-surface-2"
+			>
+				{#snippet children({ selected: isSelected })}
+					<span class="min-w-0 flex-1 truncate">{item.label}</span>
+					{#if isSelected}
+						<Check size={20} class="shrink-0 text-accent-text" />
+					{/if}
+				{/snippet}
+			</Select.Item>
+		{/each}
+	</Select.Viewport>
+{/snippet}
+
 {#snippet panel()}
-	<Select.Portal>
-		<!-- Select has no Overlay part, so the scrim is ours — and so is its
-		     lifetime. `Select.Portal` is only a portal: it mounts its children
-		     whether or not the list is open, and it is `ContentStatic` that Bits
-		     UI gates on presence. Without this `{#if}` the scrim sits over the
-		     page permanently, which is exactly how it first shipped.
+	{#if wideViewport.current}
+		<!-- No scrim and no header: the trigger is still visible and still says
+		     what this is, and Bits UI closes the list on outside pointerdown and
+		     on Escape. `min-w` and not `w`, off Floating UI's measurement of the
+		     trigger — the list lines up with the field it belongs to, and a
+		     label longer than the field widens the list rather than truncating
+		     twice. The ceiling is whatever room is left below the trigger, up to
+		     a list worth scrolling rather than one that reaches the taskbar. -->
+		<Select.Portal>
+			<Select.Content
+				sideOffset={6}
+				class="overlay-menu max-h-[min(20rem,var(--bits-select-content-available-height))]
+					min-w-(--bits-select-anchor-width)"
+			>
+				{@render list()}
+			</Select.Content>
+		</Select.Portal>
+	{:else}
+		<Select.Portal>
+			<!-- Select has no Overlay part, so the scrim is ours — and so is its
+			     lifetime. `Select.Portal` is only a portal: it mounts its children
+			     whether or not the list is open, and it is `ContentStatic` that Bits
+			     UI gates on presence. Without this `{#if}` the scrim sits over the
+			     page permanently, which is exactly how it first shipped.
 
-		     Svelte's own fade rather than the `[data-starting-style]` hooks
-		     `overlay-scrim` reads, because Bits UI sets those on parts it owns
-		     and this is not one. The duration matches the utility's. -->
-		{#if open}
-			<div class="overlay-scrim" transition:fade={{ duration: 180 }}></div>
-		{/if}
+			     Svelte's own fade rather than the `[data-starting-style]` hooks
+			     `overlay-scrim` reads, because Bits UI sets those on parts it owns
+			     and this is not one. The duration matches the utility's. -->
+			{#if open}
+				<div class="overlay-scrim" transition:fade={{ duration: 180 }}></div>
+			{/if}
 
-		<Select.ContentStatic class="overlay-panel overlay-sheet">
-			<SheetHeader title={label} onclose={() => (open = false)} />
-
-			<Select.Viewport class="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-				{#each items as item (item.value)}
-					<Select.Item
-						value={item.value}
-						label={item.label}
-						disabled={item.disabled}
-						class="flex min-h-row w-full items-center gap-3 rounded-xl px-3 text-base font-bold
-							select-none data-disabled:pointer-events-none data-disabled:opacity-50
-							data-highlighted:bg-surface-2"
-					>
-						{#snippet children({ selected: isSelected })}
-							<span class="min-w-0 flex-1 truncate">{item.label}</span>
-							{#if isSelected}
-								<Check size={20} class="shrink-0 text-accent-text" />
-							{/if}
-						{/snippet}
-					</Select.Item>
-				{/each}
-			</Select.Viewport>
-		</Select.ContentStatic>
-	</Select.Portal>
+			<Select.ContentStatic class="overlay-panel overlay-sheet">
+				<SheetHeader title={label} onclose={() => (open = false)} />
+				{@render list()}
+			</Select.ContentStatic>
+		</Select.Portal>
+	{/if}
 {/snippet}
 
 <Field {label} {error} class={klass}>

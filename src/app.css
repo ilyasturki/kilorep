@@ -276,14 +276,30 @@
 	text-align: left;
 }
 
-/* The layered surfaces: the scrim behind them, the skin they share, and the two
+/* The layered surfaces: the scrim behind them, the skin they share, and the
    geometries laid over it. A panel is written `overlay-panel overlay-sheet` or
    `overlay-panel overlay-centred` — the skin is named once so the confirm
    dialog and the sheet cannot drift apart in surface, border or height.
 
-   Sheet, Select and DatePicker take `overlay-sheet` — a bottom sheet within
-   thumb reach on a phone, a centred dialog from `sm` up, because a sheet welded
-   to the bottom edge of a 1400px window is a phone habit rather than a layout.
+   Sheet takes `overlay-sheet` — a bottom sheet within thumb reach on a phone, a
+   centred dialog from `sm` up, because a sheet welded to the bottom edge of a
+   1400px window is a phone habit rather than a layout.
+
+   Select and DatePicker take `overlay-sheet` below `sm` and `overlay-menu` from
+   `sm` up, and that swap is made in JS against `viewport.ts` rather than here.
+   A picker is not a dialog: it has a trigger, and on a pointer that can be
+   parked anywhere the answer belongs under the question rather than in the
+   middle of the window with the page dimmed behind it. What the stylesheet
+   cannot do is make Bits UI anchor the list — that is `Content` instead of
+   `ContentStatic`, a different element, so the decision has to be structural.
+   The phone case is unchanged and stays the reason `overlay-sheet` exists: a
+   list anchored to a trigger near the top of a tall phone opens where a thumb
+   cannot reach.
+
+   `overlay-menu` therefore carries no position of its own — Floating UI owns
+   the anchored element's coordinates, and a `position: fixed` from
+   `overlay-panel` would fight it — which is why it is a whole skin rather than
+   a third geometry laid over that one.
 
    AlertDialog takes `overlay-centred` and is deliberately the one overlay that
    does not rise from the bottom. A confirm that looks like the set-options
@@ -368,6 +384,47 @@
 			translate: -50% -50%;
 			opacity: 0;
 		}
+	}
+}
+
+/* The anchored picker list: Select's options and DatePicker's month from `sm`
+   up. Elevation rather than a scrim, because nothing is dimmed — the page stays
+   readable under a list that is a continuation of the field, not a mode.
+
+   `--radius-xl` and not `--radius-sheet`: this hangs off a `field-box` and
+   reads as the same object, where 22px corners would read as a sheet that lost
+   its way. `shadow-lg` is `@apply`ed rather than written as `var(--shadow-lg)`
+   so Tailwind counts the usage — a theme variable nothing references is not
+   emitted, and the shadow would quietly vanish the day Tooltip stops using it.
+
+   No `max-height` here, unlike `overlay-panel`: the ceiling is Floating UI's
+   `--bits-*-content-available-height`, which knows how much room is left below
+   the trigger, and the variable is namespaced per component so the call site
+   is the only place that can name it.
+
+   The list arrives 4px above where it lands, the direction a menu falls open.
+   Faster than a sheet's 180ms — a sheet crosses the screen and this crosses a
+   hairline, and a dropdown that takes as long to appear as a sheet feels
+   broken rather than smooth. */
+@utility overlay-menu {
+	z-index: 50;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-xl);
+	background-color: var(--surface);
+	color: var(--ink);
+	@apply shadow-lg;
+
+	transition:
+		opacity 120ms var(--ease-sheet),
+		translate 120ms var(--ease-sheet);
+
+	&[data-starting-style],
+	&[data-ending-style] {
+		opacity: 0;
+		translate: 0 -0.25rem;
 	}
 }
 

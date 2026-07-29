@@ -41,6 +41,7 @@
 	import Field from '$lib/ui/Field.svelte';
 	import SheetHeader from '$lib/ui/SheetHeader.svelte';
 	import CalendarIcon from '$lib/ui/icons/Calendar.svelte';
+	import { wideViewport } from '$lib/ui/viewport';
 
 	/**
 	 * A calendar day: backdating a body-weight entry, correcting the date on a
@@ -54,6 +55,13 @@
 	 *
 	 * Which is why `maxToday` exists and why Today is a button rather than a
 	 * cell you hunt for: the common case should cost one tap.
+	 *
+	 * The month rides the same two-element split as Select — `ContentStatic` on
+	 * `overlay-sheet` below `sm`, `Content` anchored under the trigger from `sm`
+	 * up — for the reason written out there, and through the same `viewport.ts`
+	 * read so the two pickers can never disagree about where the line is. The
+	 * calendar is the case that makes it obvious: a grid is a small, dense,
+	 * self-contained object, and blacking out the page to show one is theatre.
 	 *
 	 * The month arrows are `‹` and `›`, characters — the subset carries both
 	 * (measured: U+2039 and U+203A present) — so per the icons README no caret
@@ -111,6 +119,85 @@
 	}
 </script>
 
+{#snippet body()}
+	<Calendar.Root
+		type="single"
+		bind:value
+		bind:placeholder={month}
+		{minValue}
+		maxValue={max}
+		{weekStartsOn}
+		weekdayFormat="short"
+		class="min-h-0 flex-1 overflow-y-auto px-4"
+	>
+		{#snippet children({ months, weekdays })}
+			<Calendar.Header class="flex items-center justify-between pb-1">
+				<Calendar.PrevButton class={nav} aria-label="Previous month">‹</Calendar.PrevButton>
+				<Calendar.Heading class="text-base font-extrabold tracking-tight" />
+				<Calendar.NextButton class={nav} aria-label="Next month">›</Calendar.NextButton>
+			</Calendar.Header>
+
+			{#each months as calendarMonth (calendarMonth.value.toString())}
+				<Calendar.Grid class="w-full table-fixed border-collapse">
+					<Calendar.GridHead>
+						<Calendar.GridRow>
+							{#each weekdays as weekday (weekday)}
+								<Calendar.HeadCell class="pb-1 text-center label-caps">
+									{weekday.slice(0, 2)}
+								</Calendar.HeadCell>
+							{/each}
+						</Calendar.GridRow>
+					</Calendar.GridHead>
+
+					<Calendar.GridBody>
+						{#each calendarMonth.weeks as week, index (index)}
+							<Calendar.GridRow>
+								{#each week as date (date.toString())}
+									<Calendar.Cell {date} month={calendarMonth.value} class="p-0.5 text-center">
+										<Calendar.Day class={day} />
+									</Calendar.Cell>
+								{/each}
+							</Calendar.GridRow>
+						{/each}
+					</Calendar.GridBody>
+				</Calendar.Grid>
+			{/each}
+		{/snippet}
+	</Calendar.Root>
+
+	<div class="px-4 pt-3">
+		<Button variant="secondary" class="w-full" onclick={selectToday}>Today</Button>
+	</div>
+{/snippet}
+
+{#snippet panel()}
+	{#if wideViewport.current}
+		<!-- No scrim and no header, as on Select: the trigger stays visible and
+		     Bits UI closes on outside pointerdown and on Escape. The width is
+		     fixed rather than the trigger's — a month is 7 × 40px of cell plus the
+		     grid's own gutters, and stretching that to match a full-width field
+		     would leave a small calendar adrift in a wide box. -->
+		<Popover.Portal>
+			<Popover.Content
+				sideOffset={6}
+				class="overlay-menu max-h-[min(30rem,var(--bits-popover-content-available-height))] w-80
+					py-3"
+			>
+				{@render body()}
+			</Popover.Content>
+		</Popover.Portal>
+	{:else}
+		<Popover.Portal>
+			<Popover.Overlay class="overlay-scrim" />
+
+			<Popover.ContentStatic class="overlay-panel overlay-sheet">
+				<SheetHeader title={label} onclose={() => (open = false)} />
+				{@render body()}
+			</Popover.ContentStatic>
+		</Popover.Portal>
+	{/if}
+{/snippet}
+
 <Field {label} {error} class={klass}>
 	{#snippet children({ id, describedBy, invalid })}
 		<Popover.Root bind:open>
@@ -128,66 +215,7 @@
 				<CalendarIcon size={18} class="shrink-0 text-ink-muted" />
 			</Popover.Trigger>
 
-			<Popover.Portal>
-				<Popover.Overlay class="overlay-scrim" />
-
-				<Popover.ContentStatic class="overlay-panel overlay-sheet">
-					<SheetHeader title={label} onclose={() => (open = false)} />
-
-					<Calendar.Root
-						type="single"
-						bind:value
-						bind:placeholder={month}
-						{minValue}
-						maxValue={max}
-						{weekStartsOn}
-						weekdayFormat="short"
-						class="min-h-0 flex-1 overflow-y-auto px-4"
-					>
-						{#snippet children({ months, weekdays })}
-							<Calendar.Header class="flex items-center justify-between pb-1">
-								<Calendar.PrevButton class={nav} aria-label="Previous month">‹</Calendar.PrevButton>
-								<Calendar.Heading class="text-base font-extrabold tracking-tight" />
-								<Calendar.NextButton class={nav} aria-label="Next month">›</Calendar.NextButton>
-							</Calendar.Header>
-
-							{#each months as calendarMonth (calendarMonth.value.toString())}
-								<Calendar.Grid class="w-full table-fixed border-collapse">
-									<Calendar.GridHead>
-										<Calendar.GridRow>
-											{#each weekdays as weekday (weekday)}
-												<Calendar.HeadCell class="pb-1 text-center label-caps">
-													{weekday.slice(0, 2)}
-												</Calendar.HeadCell>
-											{/each}
-										</Calendar.GridRow>
-									</Calendar.GridHead>
-
-									<Calendar.GridBody>
-										{#each calendarMonth.weeks as week, index (index)}
-											<Calendar.GridRow>
-												{#each week as date (date.toString())}
-													<Calendar.Cell
-														{date}
-														month={calendarMonth.value}
-														class="p-0.5 text-center"
-													>
-														<Calendar.Day class={day} />
-													</Calendar.Cell>
-												{/each}
-											</Calendar.GridRow>
-										{/each}
-									</Calendar.GridBody>
-								</Calendar.Grid>
-							{/each}
-						{/snippet}
-					</Calendar.Root>
-
-					<div class="px-4 pt-3">
-						<Button variant="secondary" class="w-full" onclick={selectToday}>Today</Button>
-					</div>
-				</Popover.ContentStatic>
-			</Popover.Portal>
+			{@render panel()}
 		</Popover.Root>
 	{/snippet}
 </Field>
