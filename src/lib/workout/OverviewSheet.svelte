@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { progressOf } from '$lib/domain/workout';
 	import type { Group } from '$lib/workout/groups';
 	import Badge from '$lib/ui/Badge.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -39,19 +38,22 @@
 <Sheet bind:open title="Session">
 	<div class="flex flex-col gap-1">
 		{#each groups as group (group.meta.id)}
-			{@const progress = progressOf(group.cursors[0].exercise)}
 			{@const here = group.cursors.some((c) => c.set.id === activeSetId)}
+			<!-- A predicate, not a count. Done/total came out of the app for
+			     restating what the rows already show, and "finished" is the one
+			     part of it this list cannot show for itself. -->
+			{@const done = group.cursors.every((c) => c.set.completed)}
 
 			<ListRow
 				title={group.meta.name}
-				meta="{progress.done}/{progress.total} sets · {group.meta.equipment}"
+				meta={group.meta.equipment}
 				chevron={false}
 				onclick={() => jump(group)}
 			>
 				{#snippet trailing()}
 					{#if here}
 						<Badge tone="accent">Now</Badge>
-					{:else if progress.done === progress.total}
+					{:else if done}
 						<Badge>Done</Badge>
 					{/if}
 				{/snippet}

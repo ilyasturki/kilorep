@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { hintLabel, progressOf } from '$lib/domain/workout';
+	import { hintLabel } from '$lib/domain/workout';
 	import type { Exercise, History, SetCursor } from '$lib/domain/workout';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
@@ -18,8 +18,6 @@
 	};
 
 	let { meta, cursors, history, activeSetId, oncommit, onselect }: Props = $props();
-
-	const progress = $derived(progressOf(cursors[0].exercise));
 
 	// A warmup stays a warmup once logged: its disc wears a W rather than a
 	// check, because it was never a working set and the list should not imply it
@@ -67,16 +65,14 @@
 </script>
 
 <section class="flex flex-col gap-2">
-	<div class="flex items-baseline justify-between gap-3 px-1">
-		<div class="min-w-0">
-			<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
-			<p class="truncate text-sm font-bold text-ink-faint">
-				{meta.equipment}{meta.loadMode === 'per-hand' ? ' · per hand' : ''}
-			</p>
-		</div>
-		<span class="shrink-0 text-sm font-extrabold text-ink-faint">
-			{progress.done}/{progress.total}
-		</span>
+	<!-- No done/total figure here: the rows below are the answer, one disc each,
+	     and a fraction beside the name only restates them in a form that has to
+	     be read rather than seen. -->
+	<div class="min-w-0 px-1">
+		<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
+		<p class="truncate text-sm font-bold text-ink-faint">
+			{meta.equipment}{meta.loadMode === 'per-hand' ? ' · per hand' : ''}
+		</p>
 	</div>
 
 	{#each cursors as cursor (cursor.set.id)}

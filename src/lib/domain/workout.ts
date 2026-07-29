@@ -285,13 +285,3 @@ export function commitSet(workout: Workout, setId: string, weight: number, reps:
 
 	return true;
 }
-
-/** Done and total working sets for one exercise — the overview's only figure. */
-export function progressOf(exercise: WorkoutExercise): { done: number; total: number } {
-	const working = exercise.sets.filter((s) => s.type !== 'warmup');
-
-	return {
-		done: working.filter((s) => s.completed).length,
-		total: working.length
-	};
-}

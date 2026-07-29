@@ -13,7 +13,6 @@ import {
 	hintLabel,
 	parseEntry,
 	prefillFor,
-	progressOf,
 	settle
 } from '$lib/domain/workout';
 import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workout';
@@ -202,18 +201,6 @@ describe('advanceFrom', () => {
 
 		expect(advanceFrom(workout, 'pecdeck-3')).toBeNull();
 		expect(firstUncompleted(workout)).toBeNull();
-	});
-});
-
-describe('progressOf', () => {
-	test('counts working sets only, so a logged warmup is not progress', () => {
-		const workout = freshWorkout(0);
-		const bench = workout.entries[0].exercises[0];
-
-		expect(progressOf(bench)).toEqual({ done: 0, total: 4 });
-
-		commitSet(workout, 'bench-1', 80, 8);
-		expect(progressOf(bench)).toEqual({ done: 1, total: 4 });
 	});
 });
 
