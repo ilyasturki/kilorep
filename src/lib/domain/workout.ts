@@ -295,14 +295,3 @@ export function progressOf(exercise: WorkoutExercise): { done: number; total: nu
 		total: working.length
 	};
 }
-
-/**
- * Seconds left on the rest timer, floored at zero.
- *
- * Derived from the stored `startedAt` and the clock passed in, never from an
- * accumulating counter — PRODUCT.md requires resuming mid-rest to be exact,
- * and a counter that stopped ticking while the app was backgrounded is not.
- */
-export function restRemaining(startedAt: number, seconds: number, now: number): number {
-	return Math.max(0, Math.ceil((startedAt + seconds * 1000 - now) / 1000));
-}

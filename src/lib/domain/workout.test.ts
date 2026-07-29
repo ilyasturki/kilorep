@@ -14,7 +14,6 @@ import {
 	parseEntry,
 	prefillFor,
 	progressOf,
-	restRemaining,
 	settle
 } from '$lib/domain/workout';
 import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workout';
@@ -293,16 +292,5 @@ describe('settle', () => {
 	test('floors at min rather than going negative', () => {
 		expect(settle(-5)).toBe(0);
 		expect(settle(1, 2.5)).toBe(2.5);
-	});
-});
-
-describe('restRemaining', () => {
-	test('counts down from the stored start', () => {
-		expect(restRemaining(1000, 90, 1000)).toBe(90);
-		expect(restRemaining(1000, 90, 31_000)).toBe(60);
-	});
-
-	test('floors at zero rather than going negative when nobody was looking', () => {
-		expect(restRemaining(1000, 90, 500_000)).toBe(0);
 	});
 });

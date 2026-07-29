@@ -15,13 +15,6 @@ import { advanceFrom, commitSet, firstUncompleted } from '$lib/domain/workout';
 import type { Workout } from '$lib/domain/workout';
 import { freshWorkout } from '$lib/domain/fixture';
 
-/**
- * PRODUCT.md puts the real default in Settings and the override on the
- * Exercise. Neither exists, so the value is pinned here and named, rather than
- * being an unexplained 90 somewhere in a component.
- */
-export const REST_SECONDS = 90;
-
 export class WorkoutSession {
 	public workout: Workout = $state(freshWorkout(Date.now()));
 
@@ -31,13 +24,6 @@ export class WorkoutSession {
 	 * gives finishing no ceremony to announce it.
 	 */
 	public activeSetId: string | null = $state(null);
-
-	/**
-	 * Epoch ms of the last commit, or null when not resting. The chip counts down
-	 * from this rather than from a ticking counter, so a resumed or backgrounded
-	 * screen shows the true remaining time instead of a stale one.
-	 */
-	public restStartedAt: number | null = $state(null);
 
 	// The field initialiser above is the tree; the constructor only points the
 	// cursor at it. Calling `reset()` here instead would build a second fixture
@@ -53,7 +39,6 @@ export class WorkoutSession {
 	public reset(): void {
 		this.workout = freshWorkout(Date.now());
 		this.activeSetId = firstUncompleted(this.workout)?.set.id ?? null;
-		this.restStartedAt = null;
 	}
 
 	/** Overriding the advance: an overview jump, or a tap on a pending row. */
@@ -62,9 +47,11 @@ export class WorkoutSession {
 	}
 
 	/**
-	 * The check. One gesture, three effects — write the set, start the rest, move
-	 * on — which is the compound commit BENCHMARK.md records the whole market
-	 * converging on, and the reason a set costs one tap.
+	 * The check. One gesture, two effects — write the set, move on — and the
+	 * reason a set costs one tap.
+	 *
+	 * It used to start a rest timer as well. Rest is deferred until it can
+	 * arrive as something a user can switch off, so nothing here counts.
 	 */
 	public commit(weight: number, reps: number): void {
 		const id = this.activeSetId;
@@ -73,13 +60,7 @@ export class WorkoutSession {
 			return;
 		}
 
-		this.restStartedAt = Date.now();
-
 		const next = advanceFrom(this.workout, id);
 		this.activeSetId = next === null ? null : next.set.id;
-	}
-
-	public skipRest(): void {
-		this.restStartedAt = null;
 	}
 }

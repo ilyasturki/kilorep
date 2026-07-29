@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { exercises, history } from '$lib/domain/fixture';
 	import { groupsWithMeta } from '$lib/workout/groups';
-	import { REST_SECONDS, WorkoutSession } from '$lib/workout/session.svelte';
+	import { WorkoutSession } from '$lib/workout/session.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import OverviewSheet from '$lib/workout/OverviewSheet.svelte';
-	import RestChip from '$lib/workout/RestChip.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
@@ -54,16 +53,6 @@
 			     away. -->
 			<Button variant="chrome" caps onclick={() => session.reset()}>FINISH</Button>
 		</div>
-
-		{#if session.restStartedAt !== null}
-			<div class="px-3 pb-2">
-				<RestChip
-					startedAt={session.restStartedAt}
-					seconds={REST_SECONDS}
-					onskip={() => session.skipRest()}
-				/>
-			</div>
-		{/if}
 	</header>
 
 	<main class="min-h-0 flex-1 overflow-y-auto px-3 py-3 pb-safe-b">
