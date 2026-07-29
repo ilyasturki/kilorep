@@ -1,0 +1,19 @@
+name: nix-build
+
+# Builds the flake on every push and every PR. This is the guardrail for the
+# `deps` fixed-output hash in nix/package.nix: if bun.lock or package.json change
+# without `bun run nix:deps-hash` being run, the hash goes stale and the build
+# fails here, before infra-apps ever tries to deploy it.
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - uses: DeterminateSystems/determinate-nix-action@v3
+            - run: nix build .#kilorep -L
