@@ -4,6 +4,7 @@
 	import { WorkoutSession } from '$lib/workout/session.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import OverviewSheet from '$lib/workout/OverviewSheet.svelte';
+	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
@@ -25,6 +26,40 @@
 	const groups = $derived(groupsWithMeta(session.workout, exercises));
 
 	let overview = $state(false);
+
+	/**
+	 * The set-options sheet is one instance for the screen, addressed by id.
+	 *
+	 * Resolved out of the live tree on every read rather than captured when the
+	 * sheet opens: removing a set renumbers the ones below it, and a cursor
+	 * snapshotted on open would have the sheet describing a row that has moved.
+	 */
+	let optionsOpen = $state(false);
+	let optionsSetId = $state<string | null>(null);
+
+	const optionsGroup = $derived(
+		groups.find((g) => g.cursors.some((c) => c.set.id === optionsSetId)) ?? null
+	);
+
+	const optionsCursor = $derived(
+		optionsGroup === null
+			? null
+			: (optionsGroup.cursors.find((c) => c.set.id === optionsSetId) ?? null)
+	);
+
+	function options(setId: string) {
+		optionsSetId = setId;
+		optionsOpen = true;
+	}
+
+	function removeSet() {
+		if (optionsSetId === null) {
+			return;
+		}
+
+		session.removeSet(optionsSetId);
+		optionsSetId = null;
+	}
 </script>
 
 <svelte:head>
@@ -56,29 +91,35 @@
 	</header>
 
 	<main class="min-h-0 flex-1 overflow-y-auto px-3 py-3 pb-safe-b">
-		{#if session.finished}
-			<EmptyState title="Every set logged" description="Nothing left in this session.">
-				{#snippet icon()}
-					<Check size={26} />
-				{/snippet}
-				{#snippet action()}
-					<Button variant="commit" onclick={() => session.reset()}>Finish</Button>
-				{/snippet}
-			</EmptyState>
-		{:else}
-			<div class="flex flex-col gap-7">
-				{#each groups as group (group.meta.id)}
-					<ExerciseBlock
-						meta={group.meta}
-						cursors={group.cursors}
-						{history}
-						activeSetId={session.activeSetId}
-						oncommit={(w, r) => session.commit(w, r)}
-						onselect={(id) => session.select(id)}
-					/>
-				{/each}
-			</div>
-		{/if}
+		<div class="flex flex-col gap-7">
+			{#each groups as group (group.meta.id)}
+				<ExerciseBlock
+					meta={group.meta}
+					cursors={group.cursors}
+					{history}
+					activeSetId={session.activeSetId}
+					oncommit={(w, r) => session.commit(w, r)}
+					onselect={(id) => session.select(id)}
+					onadd={() => session.addSet(group.cursors[0].exercise.id)}
+					onoptions={options}
+				/>
+			{/each}
+
+			<!-- Under the session rather than instead of it. Every block keeps its
+			     add-set row while this is on screen, which is the only way a set
+			     added after the last one was logged is reachable at all — and the
+			     workout you just finished is still there to look at. -->
+			{#if session.finished}
+				<EmptyState title="Every set logged" description="Nothing left in this session.">
+					{#snippet icon()}
+						<Check size={26} />
+					{/snippet}
+					{#snippet action()}
+						<Button variant="commit" onclick={() => session.reset()}>Finish</Button>
+					{/snippet}
+				</EmptyState>
+			{/if}
+		</div>
 	</main>
 </div>
 
@@ -87,4 +128,11 @@
 	{groups}
 	activeSetId={session.activeSetId}
 	onjump={(id) => session.select(id)}
+/>
+
+<SetOptionsSheet
+	bind:open={optionsOpen}
+	cursor={optionsCursor}
+	removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
+	onremove={removeSet}
 />

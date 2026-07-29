@@ -5,7 +5,7 @@
 	/**
 	 * What a screen shows before it has anything to show: Start with no
 	 * templates, History with no workouts, Exercises with no customs, Weight
-	 * with no entries.
+	 * with no entries — and the mirror of it, a workout with nothing left owed.
 	 *
 	 * Not a decorative afterthought. PRODUCT.md's first install "works
 	 * immediately, empty and serverless", so this is literally the first screen

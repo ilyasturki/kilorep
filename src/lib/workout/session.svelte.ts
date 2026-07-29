@@ -11,7 +11,17 @@
  * store this would be written against does not exist yet.
  */
 
-import { advanceFrom, commitSet, firstUncompleted } from '$lib/domain/workout';
+// The two set-list rules arrive aliased: this class exposes `addSet` and
+// `removeSet` of its own, and a bare call to the domain one from inside them
+// would read like recursion.
+import {
+	addSet as appendSet,
+	advanceFrom,
+	commitSet,
+	cursors,
+	firstUncompleted,
+	removeSet as dropSet
+} from '$lib/domain/workout';
 import type { Workout } from '$lib/domain/workout';
 import { freshWorkout } from '$lib/domain/fixture';
 
@@ -61,6 +71,49 @@ export class WorkoutSession {
 		}
 
 		const next = advanceFrom(this.workout, id);
+		this.activeSetId = next === null ? null : next.set.id;
+	}
+
+	/**
+	 * One more set on an exercise, minted here because the domain has no
+	 * randomness of its own.
+	 *
+	 * A session with nothing left owed has no active set, so the set just added
+	 * becomes it — otherwise the one thing the user asked for would land on
+	 * screen unreachable, under a finish block saying there was nothing to do.
+	 */
+	public addSet(exerciseId: string): void {
+		const set = appendSet(this.workout, exerciseId, crypto.randomUUID());
+
+		if (set !== null && this.activeSetId === null) {
+			this.activeSetId = set.id;
+		}
+	}
+
+	/**
+	 * Removing the active set has to leave the cursor somewhere, and the honest
+	 * answer is where the advance would have put it: the next set still owed
+	 * *after this position*, then the earliest gap left behind, then nowhere.
+	 *
+	 * Which is why the neighbour above is read before the removal rather than
+	 * after: `advanceFrom` measures from a set that is still in the tree, and
+	 * handed the id of one that has just left it, it silently starts again from
+	 * the top of the session — undoing whatever jump the user had made.
+	 */
+	public removeSet(setId: string): void {
+		const all = cursors(this.workout);
+		const at = all.findIndex((c) => c.set.id === setId);
+		const above = at > 0 ? all[at - 1].set.id : null;
+
+		if (!dropSet(this.workout, setId)) {
+			return;
+		}
+
+		if (this.activeSetId !== setId) {
+			return;
+		}
+
+		const next = above === null ? firstUncompleted(this.workout) : advanceFrom(this.workout, above);
 		this.activeSetId = next === null ? null : next.set.id;
 	}
 }

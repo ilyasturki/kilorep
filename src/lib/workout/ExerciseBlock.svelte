@@ -15,9 +15,12 @@
 		activeSetId: string | null;
 		oncommit: (weight: number, reps: number) => void;
 		onselect: (setId: string) => void;
+		onadd: () => void;
+		onoptions: (setId: string) => void;
 	};
 
-	let { meta, cursors, history, activeSetId, oncommit, onselect }: Props = $props();
+	let { meta, cursors, history, activeSetId, oncommit, onselect, onadd, onoptions }: Props =
+		$props();
 
 	// A warmup stays a warmup once logged: its disc wears a W rather than a
 	// check, because it was never a working set and the list should not imply it
@@ -91,6 +94,7 @@
 				weight={cursor.set.weight}
 				reps={cursor.set.reps}
 				onselect={cursor.set.type === 'warmup' ? undefined : () => onselect(cursor.set.id)}
+				onoptions={() => onoptions(cursor.set.id)}
 			>
 				{#snippet right()}
 					{rowHint(cursor) ?? ''}
@@ -98,4 +102,17 @@
 			</SetRow>
 		{/if}
 	{/each}
+
+	<!-- A pending row's silhouette with nothing in it: the block grows by one of
+	     the same shape rather than sprouting a control of a kind the list has
+	     nowhere else. `+` is a character — the icons README is explicit that a
+	     glyph Nunito carries never becomes an SVG. -->
+	<button
+		type="button"
+		onclick={onadd}
+		class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
+			text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+	>
+		<span class="label-caps">+ Add set</span>
+	</button>
 </section>

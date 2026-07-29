@@ -8,10 +8,11 @@
 	 * The confirm before something irreversible: deleting a template, a custom
 	 * exercise, a workout in history, disconnecting a server.
 	 *
-	 * Not for the gym floor. PRODUCT.md is explicit that the loop does not stop
-	 * to ask — a template starts with no confirm, Finish ends with none, and
-	 * discarding an empty workout is one action. Every consumer of this
-	 * component is a planning or settings surface.
+	 * Barely for the gym floor. PRODUCT.md is explicit that the loop does not
+	 * stop to ask — a template starts with no confirm, Finish ends with none,
+	 * and discarding an empty workout is one action. The single exception is
+	 * removing a set that has already been logged: that is the only data the
+	 * workout screen holds, and nothing in the app can put it back.
 	 *
 	 * Centred at every width, and that is the point. It is the one overlay in
 	 * the app that does not rise from the bottom, because the set-options sheet

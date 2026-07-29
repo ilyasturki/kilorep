@@ -285,3 +285,80 @@ export function commitSet(workout: Workout, setId: string, weight: number, reps:
 
 	return true;
 }
+
+/** The exercise `id` names a node of this tree, not a catalog entry. */
+function exerciseIn(workout: Workout, exerciseId: string): WorkoutExercise | null {
+	for (const entry of workout.entries) {
+		for (const exercise of entry.exercises) {
+			if (exercise.id === exerciseId) {
+				return exercise;
+			}
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Appends a working set to an exercise. Null when the exercise is not here.
+ *
+ * It arrives empty, and `plannedReps` is null rather than a copy of the set
+ * above it. PRODUCT.md: an added set shows the hint where history has a
+ * corresponding set and is blank otherwise — the fifth set of an exercise you
+ * did four of last week is a set the app knows nothing about, and a plan copied
+ * off its neighbour would put a number under the user's thumb that nobody
+ * prescribed and nothing recalls.
+ *
+ * The id is the caller's. This module has no clock and no randomness — the same
+ * reason `freshWorkout` is handed its `startedAt` — and minting at the edge is
+ * where it belongs anyway, since the store that will own these records keys
+ * them by id and syncs them by it.
+ */
+export function addSet(workout: Workout, exerciseId: string, id: string): WorkoutSet | null {
+	const exercise = exerciseIn(workout, exerciseId);
+
+	if (exercise === null) {
+		return null;
+	}
+
+	const set: WorkoutSet = {
+		id,
+		type: 'normal',
+		plannedReps: null,
+		weight: null,
+		reps: null,
+		completed: false
+	};
+
+	exercise.sets.push(set);
+
+	return set;
+}
+
+/**
+ * Removes a set, logged or not. False when the id is unknown, and false when it
+ * is the only set its exercise has: an exercise with no sets left is not a
+ * shorter exercise, it is a removed one, and that is a different action against
+ * a different level of the tree.
+ */
+export function removeSet(workout: Workout, setId: string): boolean {
+	for (const entry of workout.entries) {
+		for (const exercise of entry.exercises) {
+			const at = exercise.sets.findIndex((s) => s.id === setId);
+
+			if (at === -1) {
+				continue;
+			}
+
+			if (exercise.sets.length === 1) {
+				return false;
+			}
+
+			exercise.sets.splice(at, 1);
+
+			return true;
+		}
+	}
+
+	return false;
+}

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { freshWorkout, history } from '$lib/domain/fixture';
 import {
+	addSet,
 	advanceFrom,
 	canCommit,
 	commitSet,
@@ -13,6 +14,7 @@ import {
 	hintLabel,
 	parseEntry,
 	prefillFor,
+	removeSet,
 	settle
 } from '$lib/domain/workout';
 import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workout';
@@ -153,6 +155,85 @@ describe('commitSet', () => {
 
 	test('an unknown set is refused rather than silently ignored', () => {
 		expect(commitSet(freshWorkout(0), 'nope', 60, 8)).toBe(false);
+	});
+});
+
+describe('addSet', () => {
+	test('appends an empty working set, planning nothing', () => {
+		const workout = freshWorkout(0);
+		const set = addSet(workout, 'we-bench', 'bench-5');
+
+		expect(set).toEqual({
+			id: 'bench-5',
+			type: 'normal',
+			plannedReps: null,
+			weight: null,
+			reps: null,
+			completed: false
+		});
+		// At the foot of its own exercise, not the foot of the session.
+		expect(idsOf(workout).slice(0, 7)).toEqual([
+			'bench-w',
+			'bench-1',
+			'bench-2',
+			'bench-3',
+			'bench-4',
+			'bench-5',
+			'incline-1'
+		]);
+	});
+
+	// History has four bench sets. The fifth is a set nothing recalls, and the
+	// screen has to be able to say so rather than guess it from its neighbour.
+	test('the added set has no hint and cannot be committed untouched', () => {
+		const workout = freshWorkout(0);
+		addSet(workout, 'we-bench', 'bench-5');
+
+		const cursor = cursorFor(workout, 'bench-5')!;
+		const prefill = prefillFor(cursor, history);
+
+		expect(cursor.workingIndex).toBe(4);
+		expect(prefill).toEqual({ weight: null, reps: null });
+		expect(canCommit(prefill.weight, prefill.reps)).toBe(false);
+	});
+
+	test('an unknown exercise is refused rather than silently ignored', () => {
+		expect(addSet(freshWorkout(0), 'we-nope', 'x-1')).toBeNull();
+	});
+});
+
+describe('removeSet', () => {
+	test('takes the set out of the session, logged or not', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 80, 8);
+
+		expect(removeSet(workout, 'bench-1')).toBe(true);
+		expect(idsOf(workout)).not.toContain('bench-1');
+	});
+
+	// The set numbers are positional, so removing one renumbers the rest — and
+	// with them the hint each remaining set looks up.
+	test('the sets below it move up, hints included', () => {
+		const workout = freshWorkout(0);
+		removeSet(workout, 'bench-1');
+
+		const cursor = cursorFor(workout, 'bench-2')!;
+
+		expect(cursor.workingIndex).toBe(0);
+		expect(hintLabel(history, cursor)).toBe('80 × 8');
+	});
+
+	test('the last set of an exercise stays: that would be removing the exercise', () => {
+		const workout = freshWorkout(0);
+
+		expect(removeSet(workout, 'pecdeck-1')).toBe(true);
+		expect(removeSet(workout, 'pecdeck-2')).toBe(true);
+		expect(removeSet(workout, 'pecdeck-3')).toBe(false);
+		expect(idsOf(workout)).toContain('pecdeck-3');
+	});
+
+	test('an unknown set is refused rather than silently ignored', () => {
+		expect(removeSet(freshWorkout(0), 'nope')).toBe(false);
 	});
 });
 

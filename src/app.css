@@ -483,7 +483,7 @@
 }
 
 /* Every small caps label in the app — section headings, field names, the
-   pad's title. Five utilities that had drifted to four in one place before
+   add-set row. Five utilities that had drifted to four in one place before
    this became a single name. */
 @utility label-caps {
 	font-size: var(--text-xs);
