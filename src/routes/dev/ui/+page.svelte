@@ -10,7 +10,6 @@
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
-	import Numpad from '$lib/ui/Numpad.svelte';
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import Select from '$lib/ui/Select.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
@@ -271,14 +270,6 @@
 							<span class={caption}>{stepper.prop}</span>
 						</div>
 					{/each}
-				</div>
-			</article>
-
-			<article class="{card} row-span-2">
-				<h2 class="label-caps">Numpad</h2>
-				<div class="flex flex-col gap-1.5">
-					<Numpad mode="keys" label="Weight · kg" placeholder="82.5" />
-					<span class={caption}>mode="keys"</span>
 				</div>
 			</article>
 

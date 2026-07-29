@@ -10,9 +10,9 @@
 	 * every labelled control in the library shares. What is left here is the one
 	 * thing only an input can say.
 	 *
-	 * Not for weights and reps. Those go through StepperField and Numpad, which
-	 * exist because a text field is the wrong control for a number you are
-	 * entering with a thumb between sets.
+	 * Not for weights and reps. Those go through StepperField, which exists
+	 * because a bare text field is the wrong control for a number you are
+	 * nudging with a thumb between sets.
 	 */
 	type Props = Omit<HTMLInputAttributes, 'value' | 'class'> & {
 		label: string;

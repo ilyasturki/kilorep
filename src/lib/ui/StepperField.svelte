@@ -1,12 +1,3 @@
-<script lang="ts" module>
-	// One string, two controls. The whole point of the fork below is that the
-	// number looks identical whether it is typed into or tapped through, and two
-	// copies of the class list is the one way for that to stop being true.
-	const numeral =
-		'w-full bg-transparent p-0 text-center text-2xl leading-none font-extrabold ' +
-		'tracking-numeral focus-ring-inset';
-</script>
-
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import { parseEntry, settle } from '$lib/domain/workout';
@@ -23,9 +14,8 @@
 	 *
 	 * Stepping from 40 to 100 is twenty-four taps on the arms, so an arm held
 	 * down repeats and the arms stay the accelerator for the common case rather
-	 * than becoming the only way in. Typing is
-	 * either the field's own input or, where the caller hosts a numpad, whatever
-	 * `ontype` opens — see that prop.
+	 * than becoming the only way in. Anything further away than that is typed
+	 * into the number itself, which raises whatever keyboard the device has.
 	 *
 	 * `value` is the caller's. The field renders it, proposes the next one, and
 	 * owns nothing: a nudge is `onchange`, and what comes back down is the
@@ -51,16 +41,6 @@
 		step?: number;
 		min?: number;
 		onchange?: (value: number) => void;
-		/**
-		 * Host the typing gesture instead of the field's own input.
-		 *
-		 * On touch, focusing an input raises the system keyboard, which is the one
-		 * thing PRODUCT.md and STACK.md deliberately design out of the logging loop
-		 * in favour of the custom pad. The pad has to belong to the caller and not
-		 * to this field, because its field-switch key spans two of them; passing
-		 * `ontype` is how the caller says so. Absent, the field's input stands.
-		 */
-		ontype?: () => void;
 		class?: ClassValue;
 	};
 
@@ -71,7 +51,6 @@
 		step = 2.5,
 		min = 0,
 		onchange,
-		ontype,
 		class: klass
 	}: Props = $props();
 
@@ -184,9 +163,9 @@
 	}
 
 	// Blur commits, so tapping ± while typing steps from the typed number and
-	// not from the one it replaced. Anything unparseable is not an affirmative
-	// claim, so the field keeps what it had rather than guessing — `parseEntry`
-	// owns that rule for the pad as well.
+	// not from the one it replaced — and so Enter, which blurs, logs the value
+	// just typed. Anything unparseable is not an affirmative claim, so the field
+	// keeps what it had rather than guessing.
 	function commit() {
 		const parsed = parseEntry(draft);
 		editing = false;
@@ -249,29 +228,27 @@
 	{@render arm(-1, 'decrease', 'rounded-l-2xl')}
 
 	<div class="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5">
-		{#if ontype}
-			<button type="button" onclick={ontype} aria-label="{label}, tap to type" class={numeral}>
-				{display}
-			</button>
-		{:else}
-			<input
-				value={editing ? draft : display}
-				oninput={(event) => (draft = event.currentTarget.value)}
-				onfocus={start}
-				onblur={commit}
-				onmouseup={(event) => {
-					if (selectPending) {
-						selectPending = false;
-						event.preventDefault();
-					}
-				}}
-				{onkeydown}
-				inputmode="decimal"
-				autocomplete="off"
-				aria-label={label}
-				class={numeral}
-			/>
-		{/if}
+		<!-- `scroll-mb` is load-bearing on a phone: the browser scrolls a focused
+		     input clear of the keyboard it just raised, and the margin is what
+		     makes it carry the commit bar underneath along with it. -->
+		<input
+			value={editing ? draft : display}
+			oninput={(event) => (draft = event.currentTarget.value)}
+			onfocus={start}
+			onblur={commit}
+			onmouseup={(event) => {
+				if (selectPending) {
+					selectPending = false;
+					event.preventDefault();
+				}
+			}}
+			{onkeydown}
+			inputmode="decimal"
+			autocomplete="off"
+			aria-label={label}
+			class="w-full scroll-mb-32 bg-transparent p-0 text-center text-2xl leading-none
+				font-extrabold tracking-numeral focus-ring-inset"
+		/>
 		<div class="label-caps">{label}</div>
 	</div>
 

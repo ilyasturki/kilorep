@@ -1,15 +1,20 @@
 <script lang="ts">
-	import { canCommit, hintLabel, parseEntry, prefillFor, settle } from '$lib/domain/workout';
+	import { canCommit, hintLabel, prefillFor } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import Button from '$lib/ui/Button.svelte';
 	import { tapCommit } from '$lib/ui/haptics';
-	import Numpad from '$lib/ui/Numpad.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 
 	/**
 	 * The active set, expanded in place into an editor.
+	 *
+	 * One shape, always: the set, two fields, the commit bar. Tapping a number
+	 * used to swap both fields and the bar for a custom key grid, so the single
+	 * control the whole loop is built around blinked out of existence mid-edit
+	 * and came back as a different element. Typing is the field's own input and
+	 * the system keyboard now; nothing here transforms into anything.
 	 */
 	type Props = {
 		cursor: SetCursor;
@@ -24,9 +29,9 @@
 
 	/**
 	 * Live values, owned here rather than inside the two fields, because there
-	 * are two ways in — the arms and the pad — and they have to agree. Null means
-	 * there was nothing to recall and the user has not said otherwise yet; the
-	 * check stays inert until both are answered.
+	 * are two ways in — the arms and the keyboard — and they have to agree. Null
+	 * means there was nothing to recall and the user has not said otherwise yet;
+	 * the check stays inert until both are answered.
 	 *
 	 * Derived and then reassigned: an edit overrides the recalled value, and a
 	 * new prefill — a new set — takes the override back without anything having
@@ -40,13 +45,13 @@
 	let weight = $derived(prefill.weight);
 	let reps = $derived(prefill.reps);
 
-	let pad = $state<'weight' | 'reps' | null>(null);
-
 	const live = $derived(canCommit(weight, reps));
 
 	// Which value is missing is worth saying. "Enter a weight to log" under a rep
 	// field the user already filled reads as though the app lost the entry.
 	const inertLabel = $derived(weight === null ? 'Enter a weight to log' : 'Enter reps to log');
+
+	let card = $state<HTMLElement | null>(null);
 
 	function commit() {
 		if (weight === null || reps === null) {
@@ -59,26 +64,50 @@
 		oncommit(weight, reps);
 	}
 
-	// The pad confirms its placeholder when nothing was typed, so an accidental
-	// open-and-confirm keeps the value rather than zeroing it. An unparseable
-	// string — the empty placeholder of a set with no history — is not a claim,
-	// which is the same rule the stepper's own input applies to a typed value.
-	function padConfirm(raw: string) {
-		const parsed = parseEntry(raw);
+	/**
+	 * The system keyboard takes the bottom of the screen, and what sits there is
+	 * the commit bar — the target of the very next tap. Bringing the card's
+	 * bottom edge up on focus is what keeps it in reach, and it is the reason
+	 * this screen can hand typing back to the OS at all.
+	 *
+	 * `focusin` on the card rather than a prop on each field: it bubbles, so
+	 * there is no second copy of the rule to keep in step with the first.
+	 */
+	function reveal() {
+		card?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+	}
 
-		if (parsed !== null) {
-			if (pad === 'weight') {
-				weight = settle(parsed);
-			} else {
-				reps = Math.round(settle(parsed));
-			}
+	/**
+	 * Enter logs the set.
+	 *
+	 * From a field, the input's own handler has already blurred — and blur
+	 * settles the draft — by the time this runs, so what lands is the typed
+	 * value and not the one it replaced. From nothing in particular, which is a
+	 * desk, it logs the set as it stands: Enter, Enter, Enter down a session
+	 * whose hints are already right.
+	 *
+	 * Everything else keeps its own Enter. A focused button activates, and an
+	 * open sheet holds focus inside itself, so neither reaches this test.
+	 */
+	function onkeydown(event: KeyboardEvent) {
+		if (event.key !== 'Enter' || !live) {
+			return;
 		}
 
-		pad = null;
+		const target = event.target;
+		const typing = target instanceof HTMLInputElement && card !== null && card.contains(target);
+
+		if (target !== document.body && !typing) {
+			return;
+		}
+
+		commit();
 	}
 </script>
 
-<div class="relative overflow-hidden card-active">
+<svelte:window {onkeydown} />
+
+<div bind:this={card} onfocusin={reveal} class="relative scroll-mb-3 overflow-hidden card-active">
 	<div class="absolute inset-y-0 left-0 w-1.5 bg-accent-text" aria-hidden="true"></div>
 
 	<div class="flex flex-col gap-3 py-3 pr-3 pl-4">
@@ -96,49 +125,30 @@
 			</span>
 		</div>
 
-		{#if pad !== null}
-			<!-- Keyed so switching fields mounts a clean pad: the buffer only clears
-			     on confirm, and digits typed for a weight must not follow the user
-			     into the rep field. -->
-			{#key pad}
-				<Numpad
-					label={pad === 'weight' ? 'Weight (kg)' : 'Reps'}
-					placeholder={String((pad === 'weight' ? weight : reps) ?? '')}
-					maxLength={pad === 'weight' ? 6 : 3}
-					fieldSwitchLabel={pad === 'weight' ? 'REPS' : 'KG'}
-					onconfirm={padConfirm}
-					onfieldswitch={() => (pad = pad === 'weight' ? 'reps' : 'weight')}
-					onclose={() => (pad = null)}
-				/>
-			{/key}
-		{:else}
-			<div class="grid grid-cols-2 gap-2">
-				<StepperField
-					label="kg"
-					value={weight}
-					recalled={prefill.weight}
-					step={2.5}
-					onchange={(v) => (weight = v)}
-					ontype={() => (pad = 'weight')}
-				/>
-				<StepperField
-					label="reps"
-					value={reps}
-					recalled={prefill.reps}
-					step={1}
-					onchange={(v) => (reps = Math.round(v))}
-					ontype={() => (pad = 'reps')}
-				/>
-			</div>
+		<div class="grid grid-cols-2 gap-2">
+			<StepperField
+				label="kg"
+				value={weight}
+				recalled={prefill.weight}
+				step={2.5}
+				onchange={(v) => (weight = v)}
+			/>
+			<StepperField
+				label="reps"
+				value={reps}
+				recalled={prefill.reps}
+				step={1}
+				onchange={(v) => (reps = Math.round(v))}
+			/>
+		</div>
 
-			<Button variant="commit" disabled={!live} class="w-full" onclick={commit}>
-				{#if live}
-					<Check size={30} />
-					Log set
-				{:else}
-					{inertLabel}
-				{/if}
-			</Button>
-		{/if}
+		<Button variant="commit" disabled={!live} class="w-full" onclick={commit}>
+			{#if live}
+				<Check size={30} />
+				Log set
+			{:else}
+				{inertLabel}
+			{/if}
+		</Button>
 	</div>
 </div>
