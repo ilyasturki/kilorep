@@ -18,13 +18,13 @@ Math:
 
 **Start.** The app opens into the active workout if one exists, otherwise into Start: template list plus an empty-workout action. Tapping a template starts the workout immediately — no preview, no confirm. Two taps from unlock to a loggable set. "Repeat this workout" lives on any past workout in History. Exactly one workout is active at a time.
 
-**During a set.** The screen shows what the next set needs: target or hint, weight, reps, check. Every set displays last time's actual weight × reps. A session overview (exercise names, done/total sets) is one tap away for orientation, jumping, reordering and inserting.
+**During a set.** The screen shows what the next set needs: target or hint, weight, reps, check. Every set displays last time's actual weight × reps. The session list — exercise names, where you are — is a rail on a desktop and one tap away on a phone, for orientation, jumping, reordering and inserting.
 
-**Log a set.** The check commits exactly what's on screen — the hint if untouched, your edits if touched. The hint is never silently written. Same-as-last-time is one tap. Deviating: ± steppers on the active set (±2.5 kg, ±1 rep, stepping from the hint); tapping the number opens the numpad. Bar: 1 tap when the value is right, ≤3 interactions when it isn't.
+**Log a set.** The check commits exactly what's on screen — the hint if untouched, your edits if touched. The hint is never silently written. Same-as-last-time is one tap. Deviating: ± steppers on the active set (±2.5 kg, ±1 rep, stepping from the hint); tapping the number types into it. Bar: 1 tap when the value is right, ≤3 interactions when it isn't.
 
-**Rest.** The timer auto-starts on check. A countdown chip — never a modal, never blocking the next log. On-screen only: nothing fires when rest ends, no notification, no sound. The chip derives from a stored `startedAt`, never an accumulating counter, which is what makes a slept screen safe — unlock and it shows the true remaining time. The app never holds the screen awake: the phone's own timeout is the user's setting and a 90-minute session is not the app's to override. One tap skips or adjusts. Duration: global default, per-exercise override.
+**Rest.** Deferred. It returns only as something that can be switched off. The app never holds the screen awake either way: the phone's own timeout is the user's setting and a 90-minute session is not the app's to override.
 
-**Mid-workout.** Reorder by drag, insert by catalog search, both from the session overview. An added set shows the hint when history has a corresponding set, blank otherwise (check inert until values are entered). No skip state: unchecked sets remain uncompleted.
+**Mid-workout.** Add and remove sets on any exercise; an exercise keeps its last one. Reorder by drag, insert by catalog search, both from the session list. An added set shows the hint when history has a corresponding set, blank otherwise (check inert until values are entered). No skip state: unchecked sets remain uncompleted.
 
 **Finish.** One tap, instant end, back at Start. No summary, no ceremony. Unchecked sets stay in the record flagged uncompleted and are excluded from every stat. If the session drifted from its template, the prompt to apply the changes waits at the planning surface, not the gym floor.
 
@@ -58,6 +58,5 @@ The app opens into Start, always.
 
 ## Unresolved — settle on the phone
 
-- Workout screen: focused one-exercise view vs full scrollable session list.
 - Which of Start / Dashboard / History / Exercises / Weight earn a tab slot.
-- Where set extras (type, RPE, note) live. Candidate: row stays `weight | reps | check`, everything else behind a long-press sheet.
+- Set extras: type, RPE, note. The row stays `weight | reps | check` and the long-press sheet that holds Remove is where they go; what they look like in it is open.
