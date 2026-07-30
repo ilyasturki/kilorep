@@ -5,6 +5,11 @@
  * back an identical fourteen sets, so a run through the screen is repeatable
  * and any difference between two of them is attributable to the screen.
  *
+ * Exercises are real catalog slugs now — the screens join through
+ * `catalogById` like they will against the store — but the *node* ids stay on
+ * the old short scheme (`entry-1`, `we-bench`, `bench-1`) because the tests
+ * name sets directly and the scheme is theirs.
+ *
  * The four exercises are chosen to cover the states, not to be a plausible
  * chest day:
  *
@@ -19,54 +24,119 @@
  *   through their entire first workout.
  */
 
-import type { Exercise, History, Workout, WorkoutEntry, WorkoutSet } from '$lib/domain/workout';
+import type { PastSession } from '$lib/domain/stats';
+import type { History, Workout, WorkoutEntry, WorkoutSet } from '$lib/domain/workout';
 
-export const exercises: Record<string, Exercise> = {
-	bench: { id: 'bench', name: 'Bench Press', equipment: 'Barbell', loadMode: 'total' },
-	incline: {
-		id: 'incline',
-		name: 'Incline DB Press',
-		equipment: 'Dumbbell',
-		loadMode: 'per-hand'
-	},
-	fly: { id: 'fly', name: 'Cable Fly', equipment: 'Cable', loadMode: 'total' },
-	pecdeck: { id: 'pecdeck', name: 'Pec Deck', equipment: 'Machine', loadMode: 'total' }
-};
+const session = (date: number, sets: [number, number][]): PastSession => ({
+	date,
+	sets: sets.map(([weight, reps]) => ({ weight, reps }))
+});
 
 /**
- * Last session's working sets, in order. The decay across each list is
- * deliberate — a hint that reads 80 × 8, 80 × 8, 80 × 7, 77.5 × 7 is what a
- * real fourth set looks like, and a flat list would hide an off-by-one in the
- * lookup by making every index interchangeable.
+ * Weeks of past sessions, oldest first, enough for the detail screen to have
+ * something honest-shaped to draw. The decay across each list is deliberate —
+ * 80 × 8, 80 × 8, 80 × 7, 77.5 × 7 is what a real fourth set looks like, and a
+ * flat list would hide an off-by-one in the hint lookup by making every index
+ * interchangeable. Bench's raw PR (82.5 × 3) sits two sessions back, not in
+ * the last one, so "best" and "last time" render as different numbers.
  *
- * `pecdeck` is absent, not empty. That is the point of it.
+ * `pec-deck` is absent, not empty. That is the point of it.
  */
-export const history: History = {
-	bench: [
-		{ weight: 80, reps: 8 },
-		{ weight: 80, reps: 8 },
-		{ weight: 80, reps: 7 },
-		{ weight: 77.5, reps: 7 }
+export const pastSessions: Record<string, PastSession[]> = {
+	'bench-press': [
+		session(Date.UTC(2026, 5, 15), [
+			[75, 8],
+			[75, 8],
+			[75, 6],
+			[72.5, 8]
+		]),
+		session(Date.UTC(2026, 5, 22), [
+			[77.5, 8],
+			[77.5, 7],
+			[77.5, 6],
+			[75, 8]
+		]),
+		session(Date.UTC(2026, 5, 29), [
+			[82.5, 3],
+			[80, 6],
+			[77.5, 8]
+		]),
+		session(Date.UTC(2026, 6, 6), [
+			[80, 8],
+			[80, 7],
+			[80, 6],
+			[77.5, 8]
+		]),
+		session(Date.UTC(2026, 6, 13), [
+			[80, 8],
+			[80, 8],
+			[80, 7],
+			[77.5, 7]
+		])
 	],
-	incline: [
-		{ weight: 30, reps: 10 },
-		{ weight: 30, reps: 9 },
-		{ weight: 27.5, reps: 9 }
+	'incline-dumbbell-press': [
+		session(Date.UTC(2026, 5, 24), [
+			[27.5, 10],
+			[27.5, 9],
+			[25, 10]
+		]),
+		session(Date.UTC(2026, 6, 1), [
+			[30, 8],
+			[27.5, 10],
+			[27.5, 9]
+		]),
+		session(Date.UTC(2026, 6, 8), [
+			[30, 9],
+			[30, 8],
+			[27.5, 10]
+		]),
+		session(Date.UTC(2026, 6, 15), [
+			[30, 10],
+			[30, 9],
+			[27.5, 9]
+		])
 	],
-	fly: [
-		{ weight: 20, reps: 12 },
-		{ weight: 20, reps: 12 },
-		{ weight: 20, reps: 10 }
+	'cable-fly': [
+		session(Date.UTC(2026, 6, 1), [
+			[17.5, 12],
+			[17.5, 12],
+			[17.5, 11]
+		]),
+		session(Date.UTC(2026, 6, 8), [
+			[20, 11],
+			[20, 10],
+			[17.5, 12]
+		]),
+		session(Date.UTC(2026, 6, 15), [
+			[20, 12],
+			[20, 12],
+			[20, 10]
+		])
 	]
 };
 
-// Two factories rather than a hundred and sixty lines of identical literals, so
-// that the four cases the header describes are legible in the four lines that
-// build them. Ids are generated to the same scheme they were written in —
-// `entry-1`, `we-bench`, `bench-1` — because the tests name sets directly.
-const working = (exerciseId: string, count: number, plannedReps: number | null): WorkoutSet[] =>
+/**
+ * The hint map, derived rather than authored twice: the hint *is* the last
+ * past session, and two copies of the same sets would drift the first time a
+ * session is edited above.
+ */
+export const history: History = Object.fromEntries(
+	Object.entries(pastSessions).flatMap(([id, sessions]) => {
+		const last = sessions.at(-1);
+
+		// An empty session list would be authored nonsense; absent from the
+		// hint map is the honest reading of it, not an empty entry.
+		return last === undefined ? [] : [[id, last.sets]];
+	})
+);
+
+// Two factories rather than a hundred and sixty lines of identical literals,
+// so that the four cases the header describes are legible in the four lines
+// that build them. The short key names the tree's nodes; the slug is what the
+// exercise *is*.
+const working = (key: string, count: number, plannedReps: number | null): WorkoutSet[] =>
 	Array.from({ length: count }, (_, i) => ({
-		id: `${exerciseId}-${i + 1}`,
+		id: `${key}-${i + 1}`,
 		type: 'normal',
 		plannedReps,
 		weight: null,
@@ -74,9 +144,9 @@ const working = (exerciseId: string, count: number, plannedReps: number | null):
 		completed: false
 	}));
 
-const entry = (n: number, exerciseId: string, sets: WorkoutSet[]): WorkoutEntry => ({
+const entry = (n: number, key: string, exerciseId: string, sets: WorkoutSet[]): WorkoutEntry => ({
 	id: `entry-${n}`,
-	exercises: [{ id: `we-${exerciseId}`, exerciseId, sets }]
+	exercises: [{ id: `we-${key}`, exerciseId, sets }]
 });
 
 /**
@@ -92,7 +162,7 @@ export function freshWorkout(startedAt: number): Workout {
 		id: 'fixture-workout',
 		startedAt,
 		entries: [
-			entry(1, 'bench', [
+			entry(1, 'bench', 'bench-press', [
 				// Already logged, so the session opens on working set 1 and the warmup
 				// is present purely as something to render — and as the off-by-one the
 				// hint lookup has to count past.
@@ -106,9 +176,9 @@ export function freshWorkout(startedAt: number): Workout {
 				},
 				...working('bench', 4, 8)
 			]),
-			entry(2, 'incline', working('incline', 3, null)),
-			entry(3, 'fly', working('fly', 3, 12)),
-			entry(4, 'pecdeck', working('pecdeck', 3, 10))
+			entry(2, 'incline', 'incline-dumbbell-press', working('incline', 3, null)),
+			entry(3, 'fly', 'cable-fly', working('fly', 3, 12)),
+			entry(4, 'pecdeck', 'pec-deck', working('pecdeck', 3, 10))
 		]
 	};
 }

@@ -14,12 +14,23 @@
  */
 
 import { groupsOf } from '$lib/domain/workout';
-import type { Exercise, SetCursor, Workout } from '$lib/domain/workout';
+import type { Exercise } from '$lib/domain/exercise';
+import type { SetCursor, Workout } from '$lib/domain/workout';
 
-export type Group = { meta: Exercise; cursors: SetCursor[] };
+export type Group = {
+	/**
+	 * The domain group's node id, not `meta.id` — the screens key their
+	 * `{#each}` blocks on this, and the same exercise performed twice in one
+	 * session is two groups. See `SetGroup`.
+	 */
+	id: string;
+	meta: Exercise;
+	cursors: SetCursor[];
+};
 
 export function groupsWithMeta(workout: Workout, catalog: Record<string, Exercise>): Group[] {
 	return groupsOf(workout).map((group) => ({
+		id: group.id,
 		meta: catalog[group.exerciseId],
 		cursors: group.cursors
 	}));

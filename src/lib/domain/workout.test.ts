@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { freshWorkout, history } from '$lib/domain/fixture';
 import {
+	addExercise,
 	addSet,
 	advanceFrom,
 	canCommit,
@@ -12,6 +13,7 @@ import {
 	groupsOf,
 	hintFor,
 	hintLabel,
+	insertedSetCount,
 	parseEntry,
 	prefillFor,
 	removeSet,
@@ -87,20 +89,20 @@ describe('cursors', () => {
 
 describe('hintFor', () => {
 	test('reads last time by working index', () => {
-		expect(hintFor(history, 'bench', 0)).toEqual({ weight: 80, reps: 8 });
-		expect(hintFor(history, 'bench', 3)).toEqual({ weight: 77.5, reps: 7 });
+		expect(hintFor(history, 'bench-press', 0)).toEqual({ weight: 80, reps: 8 });
+		expect(hintFor(history, 'bench-press', 3)).toEqual({ weight: 77.5, reps: 7 });
 	});
 
 	test('an exercise never performed has no hint', () => {
-		expect(hintFor(history, 'pecdeck', 0)).toBeNull();
+		expect(hintFor(history, 'pec-deck', 0)).toBeNull();
 	});
 
 	test('a warmup has no hint, and asking does not read index -1 off the end', () => {
-		expect(hintFor(history, 'bench', -1)).toBeNull();
+		expect(hintFor(history, 'bench-press', -1)).toBeNull();
 	});
 
 	test('a set beyond last time has no hint', () => {
-		expect(hintFor(history, 'fly', 5)).toBeNull();
+		expect(hintFor(history, 'cable-fly', 5)).toBeNull();
 	});
 });
 
@@ -202,6 +204,58 @@ describe('addSet', () => {
 	});
 });
 
+describe('addExercise', () => {
+	const ids = { entry: 'entry-5', exercise: 'we-row', sets: ['row-1', 'row-2', 'row-3'] };
+
+	test('appends a new entry at the end of the session, sets blank', () => {
+		const workout = freshWorkout(0);
+		const entry = addExercise(workout, 'barbell-row', ids);
+
+		expect(workout.entries.at(-1)).toBe(entry);
+		expect(idsOf(workout).slice(-3)).toEqual(['row-1', 'row-2', 'row-3']);
+
+		// Blank and unplanned: nothing prescribed these sets, and the hint path
+		// resolves them from history by index without any copying here.
+		expect(entry!.exercises[0].sets[0]).toEqual({
+			id: 'row-1',
+			type: 'normal',
+			plannedReps: null,
+			weight: null,
+			reps: null,
+			completed: false
+		});
+	});
+
+	test('an inserted exercise with history opens on last time, via the ordinary hint path', () => {
+		const workout = freshWorkout(0);
+		addExercise(workout, 'cable-fly', { entry: 'entry-5', exercise: 'we-fly2', sets: ['fly2-1'] });
+
+		const prefill = prefillFor(at(workout, 'fly2-1'), history);
+
+		expect(prefill).toEqual({ weight: 20, reps: 12 });
+	});
+
+	test('zero sets is refused: an exercise with no sets is not an exercise', () => {
+		const workout = freshWorkout(0);
+
+		expect(
+			addExercise(workout, 'barbell-row', { entry: 'entry-5', exercise: 'we-row', sets: [] })
+		).toBeNull();
+		expect(workout.entries).toHaveLength(4);
+	});
+});
+
+describe('insertedSetCount', () => {
+	test('as many sets as last time, so the hints line up under them', () => {
+		expect(insertedSetCount(history, 'bench-press')).toBe(4);
+		expect(insertedSetCount(history, 'cable-fly')).toBe(3);
+	});
+
+	test('three when nothing recalls the exercise', () => {
+		expect(insertedSetCount(history, 'pec-deck')).toBe(3);
+	});
+});
+
 describe('removeSet', () => {
 	test('takes the set out of the session, logged or not', () => {
 		const workout = freshWorkout(0);
@@ -289,7 +343,15 @@ describe('groupsOf', () => {
 	test('one group per exercise, in session order, warmup included', () => {
 		const groups = groupsOf(freshWorkout(0));
 
-		expect(groups.map((g) => g.exerciseId)).toEqual(['bench', 'incline', 'fly', 'pecdeck']);
+		expect(groups.map((g) => g.exerciseId)).toEqual([
+			'bench-press',
+			'incline-dumbbell-press',
+			'cable-fly',
+			'pec-deck'
+		]);
+		// The node id, not the catalog id — what tells two performances of the
+		// same exercise apart.
+		expect(groups.map((g) => g.id)).toEqual(['we-bench', 'we-incline', 'we-fly', 'we-pecdeck']);
 		expect(groups[0].cursors.map((c) => c.set.id)).toEqual([
 			'bench-w',
 			'bench-1',

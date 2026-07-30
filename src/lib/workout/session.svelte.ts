@@ -11,19 +11,21 @@
  * store this would be written against does not exist yet.
  */
 
-// The two set-list rules arrive aliased: this class exposes `addSet` and
-// `removeSet` of its own, and a bare call to the domain one from inside them
-// would read like recursion.
+// The list rules arrive aliased: this class exposes `addSet`, `addExercise`
+// and `removeSet` of its own, and a bare call to the domain one from inside
+// them would read like recursion.
 import {
+	addExercise as insertExercise,
 	addSet as appendSet,
 	advanceFrom,
 	commitSet,
 	cursors,
 	firstUncompleted,
+	insertedSetCount,
 	removeSet as dropSet
 } from '$lib/domain/workout';
 import type { Workout } from '$lib/domain/workout';
-import { freshWorkout } from '$lib/domain/fixture';
+import { freshWorkout, history } from '$lib/domain/fixture';
 
 export class WorkoutSession {
 	public workout: Workout = $state(freshWorkout(Date.now()));
@@ -87,6 +89,29 @@ export class WorkoutSession {
 
 		if (set !== null && this.activeSetId === null) {
 			this.activeSetId = set.id;
+		}
+	}
+
+	/**
+	 * Mid-workout insert: a new entry at the end of the session, sets and ids
+	 * minted here for the same reason `addSet`'s is. How many is
+	 * `insertedSetCount`'s rule; the history it reads is the fixture's for now,
+	 * like `freshWorkout` above — both leave together when the store lands.
+	 *
+	 * Same cursor rule as `addSet`: a finished session hands the cursor to the
+	 * first inserted set, otherwise the user's place is not stolen.
+	 */
+	public addExercise(exerciseId: string): void {
+		const count = insertedSetCount(history, exerciseId);
+
+		const entry = insertExercise(this.workout, exerciseId, {
+			entry: crypto.randomUUID(),
+			exercise: crypto.randomUUID(),
+			sets: Array.from({ length: count }, () => crypto.randomUUID())
+		});
+
+		if (entry !== null && this.activeSetId === null) {
+			this.activeSetId = entry.exercises[0].sets[0].id;
 		}
 	}
 

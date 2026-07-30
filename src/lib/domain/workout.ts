@@ -12,15 +12,7 @@
  * here would be guessing at surfaces that have not been designed.
  */
 
-export type LoadMode = 'total' | 'per-hand' | 'unilateral';
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
-
-export type Exercise = {
-	id: string;
-	name: string;
-	equipment: string;
-	loadMode: LoadMode;
-};
 
 export type PerformedSet = { weight: number; reps: number };
 
@@ -103,8 +95,13 @@ export function cursors(workout: Workout): SetCursor[] {
 	return out;
 }
 
-/** One exercise and its sets, session order preserved. */
-export type SetGroup = { exerciseId: string; cursors: SetCursor[] };
+/**
+ * One exercise and its sets, session order preserved. `id` is the
+ * workout-exercise *node* id, not the catalog id: the same exercise performed
+ * twice in one session is two groups, so only the node id can tell them apart
+ * — or key a rendered list of them.
+ */
+export type SetGroup = { id: string; exerciseId: string; cursors: SetCursor[] };
 
 /**
  * Cursors grouped per exercise.
@@ -120,10 +117,14 @@ export function groupsOf(workout: Workout): SetGroup[] {
 	for (const cursor of cursors(workout)) {
 		const last = out.at(-1);
 
-		if (last !== undefined && last.cursors[0].exercise.id === cursor.exercise.id) {
+		if (last !== undefined && last.id === cursor.exercise.id) {
 			last.cursors.push(cursor);
 		} else {
-			out.push({ exerciseId: cursor.exercise.exerciseId, cursors: [cursor] });
+			out.push({
+				id: cursor.exercise.id,
+				exerciseId: cursor.exercise.exerciseId,
+				cursors: [cursor]
+			});
 		}
 	}
 
@@ -299,6 +300,16 @@ function exerciseIn(workout: Workout, exerciseId: string): WorkoutExercise | nul
 	return null;
 }
 
+/** What every set arrives as: nothing prescribed, nothing logged, unchecked. */
+const blankSet = (id: string): WorkoutSet => ({
+	id,
+	type: 'normal',
+	plannedReps: null,
+	weight: null,
+	reps: null,
+	completed: false
+});
+
 /**
  * Appends a working set to an exercise. Null when the exercise is not here.
  *
@@ -321,18 +332,70 @@ export function addSet(workout: Workout, exerciseId: string, id: string): Workou
 		return null;
 	}
 
-	const set: WorkoutSet = {
-		id,
-		type: 'normal',
-		plannedReps: null,
-		weight: null,
-		reps: null,
-		completed: false
-	};
+	const set = blankSet(id);
 
 	exercise.sets.push(set);
 
 	return set;
+}
+
+/**
+ * How many sets an inserted exercise arrives with: as many as last time, else
+ * three. Last time's count is what the hints line up under, and where nothing
+ * recalls anything, three is the gym's default shape rather than a burden of
+ * one-by-one adds.
+ */
+export function insertedSetCount(history: History, exerciseId: string): number {
+	const performed = history[exerciseId];
+
+	return performed === undefined ? 3 : performed.length;
+}
+
+/** Every node an inserted exercise needs, minted by the caller — see `addSet`. */
+export type NewExerciseIds = { entry: string; exercise: string; sets: string[] };
+
+/**
+ * Inserts an exercise as a new entry at the end of the session. Null when no
+ * set ids were provided: an exercise with no sets is not an exercise, the same
+ * rule `removeSet` enforces from the other side.
+ *
+ * At the end, always — the one placement rule, decided over insert-after-here.
+ * Predictable beats clever mid-session, and positioning is reorder's job when
+ * reorder lands, not a second thing insertion does.
+ *
+ * The sets arrive blank with `plannedReps: null`, not copied from anywhere:
+ * nothing prescribed them — plans live in templates, and this exercise joined
+ * after the template had its say. The hint path needs no help here: a blank
+ * working set resolves its prefill from history by index, so an exercise
+ * performed last week opens on last week's numbers untouched.
+ *
+ * A new entry rather than a slot in an existing one, because an entry holding
+ * several exercises is a superset, and inserting into one is a superset edit —
+ * a different gesture against a different level of the tree.
+ */
+export function addExercise(
+	workout: Workout,
+	exerciseId: string,
+	ids: NewExerciseIds
+): WorkoutEntry | null {
+	if (ids.sets.length === 0) {
+		return null;
+	}
+
+	const entry: WorkoutEntry = {
+		id: ids.entry,
+		exercises: [
+			{
+				id: ids.exercise,
+				exerciseId,
+				sets: ids.sets.map((id) => blankSet(id))
+			}
+		]
+	};
+
+	workout.entries.push(entry);
+
+	return entry;
 }
 
 /**

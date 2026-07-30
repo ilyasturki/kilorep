@@ -55,11 +55,12 @@
 </svelte:head>
 
 <!--
-	`justify-end` and `pb-safe-b`: the action sits in the thumb zone, which is
-	where DESIGN.md puts anything pressed with one hand on a gym floor, and the
-	inset keeps it clear of the gesture bar on a device drawing edge to edge.
+	`justify-end`: the action sits in the thumb zone, which is where DESIGN.md
+	puts anything pressed with one hand on a gym floor. `min-h-full` rather than
+	`min-h-dvh`, and no safe-area inset of its own: the (app) layout owns the
+	viewport now, and the tab bar below carries the gesture-bar clearance.
 -->
-<main class="mx-auto flex min-h-dvh max-w-sm flex-col justify-end gap-8 px-4 pt-safe-t pb-safe-b">
+<main class="mx-auto flex min-h-full max-w-sm flex-col justify-end gap-8 px-4 pt-safe-t pb-4">
 	<header class="flex flex-col gap-1.5 pt-10">
 		<h1 class="text-2xl font-extrabold tracking-tight">Kilorep</h1>
 

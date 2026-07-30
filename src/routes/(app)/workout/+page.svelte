@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { exercises, history } from '$lib/domain/fixture';
+	import { catalogById } from '$lib/catalog';
+	import { history } from '$lib/domain/fixture';
 	import { groupsWithMeta } from '$lib/workout/groups';
 	import { WorkoutSession } from '$lib/workout/session.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
+	import InsertSheet from '$lib/workout/InsertSheet.svelte';
 	import OverviewSheet from '$lib/workout/OverviewSheet.svelte';
 	import SessionList from '$lib/workout/SessionList.svelte';
 	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
@@ -29,9 +31,14 @@
 	 */
 	const session = new WorkoutSession();
 
-	const groups = $derived(groupsWithMeta(session.workout, exercises));
+	const groups = $derived(groupsWithMeta(session.workout, catalogById));
 
 	let overview = $state(false);
+
+	// One insert sheet for the screen, reached from the rail and from the
+	// overview alike — the overview closes itself first, so the two are never
+	// open at once.
+	let insertOpen = $state(false);
 
 	/**
 	 * The set-options sheet is one instance for the screen, addressed by id.
@@ -107,7 +114,12 @@
 			class="hidden w-60 shrink-0 overflow-y-auto border-r border-line-soft bg-surface
 				px-2 py-3 lg:block"
 		>
-			<SessionList {groups} activeSetId={session.activeSetId} onjump={(id) => session.select(id)} />
+			<SessionList
+				{groups}
+				activeSetId={session.activeSetId}
+				onjump={(id) => session.select(id)}
+				oninsert={() => (insertOpen = true)}
+			/>
 		</aside>
 
 		<main class="min-h-0 flex-1 overflow-y-auto px-3 py-3 pb-safe-b">
@@ -115,7 +127,7 @@
 			     1600px monitor puts the weight and the reps a hand apart, and the
 			     pair has to be read as one thing. -->
 			<div class="mx-auto flex max-w-3xl flex-col gap-7">
-				{#each groups as group (group.meta.id)}
+				{#each groups as group (group.id)}
 					<ExerciseBlock
 						meta={group.meta}
 						cursors={group.cursors}
@@ -152,7 +164,10 @@
 	{groups}
 	activeSetId={session.activeSetId}
 	onjump={(id) => session.select(id)}
+	oninsert={() => (insertOpen = true)}
 />
+
+<InsertSheet bind:open={insertOpen} onadd={(id) => session.addExercise(id)} />
 
 <SetOptionsSheet
 	bind:open={optionsOpen}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { hintLabel } from '$lib/domain/workout';
-	import type { Exercise, History, SetCursor } from '$lib/domain/workout';
+	import type { Exercise } from '$lib/domain/exercise';
+	import type { History, SetCursor } from '$lib/domain/workout';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 	import ActiveSet from '$lib/workout/ActiveSet.svelte';

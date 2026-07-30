@@ -15,19 +15,27 @@
 		groups: Group[];
 		activeSetId: string | null;
 		onjump: (setId: string) => void;
+		oninsert: () => void;
 	};
 
-	let { open = $bindable(false), groups, activeSetId, onjump }: Props = $props();
+	let { open = $bindable(false), groups, activeSetId, onjump, oninsert }: Props = $props();
 
 	// Jumping is the whole reason the sheet was opened, so it closes behind the
 	// tap. The rail, having nothing to close, passes `onjump` straight through —
-	// which is why closing lives here and not in `SessionList`.
+	// which is why closing lives here and not in `SessionList`. Insert closes
+	// for one more reason: the insert sheet is about to open, and two sheets
+	// stacked is a fight over one focus trap.
 	function jump(setId: string) {
 		onjump(setId);
 		open = false;
 	}
+
+	function insert() {
+		open = false;
+		oninsert();
+	}
 </script>
 
 <Sheet bind:open title="Session">
-	<SessionList {groups} {activeSetId} onjump={jump} />
+	<SessionList {groups} {activeSetId} onjump={jump} oninsert={insert} />
 </Sheet>

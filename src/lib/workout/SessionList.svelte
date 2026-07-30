@@ -4,7 +4,8 @@
 	import ListRow from '$lib/ui/ListRow.svelte';
 
 	/**
-	 * What is in this session, how far it has got, and a tap to go there.
+	 * What is in this session, how far it has got, a tap to go there, and the
+	 * way in for an exercise the plan did not hold.
 	 *
 	 * One component, two homes: a sheet on a phone, where the screen has no room
 	 * to spare, and a permanent rail on a desktop, where it does. Written twice
@@ -12,17 +13,18 @@
 	 * drifts silently — it is the reason a tap on a finished exercise shows it
 	 * rather than refusing.
 	 *
-	 * Jump only. Reorder and mid-workout insert belong here too and are
-	 * deliberately absent — insert needs the exercise catalog, which does not
-	 * exist yet.
+	 * Reorder belongs here too and is deliberately absent — it is drag
+	 * mechanics with no catalog dependency, a slice of its own. Until it lands,
+	 * an inserted exercise runs last, which is where `addExercise` puts it.
 	 */
 	type Props = {
 		groups: Group[];
 		activeSetId: string | null;
 		onjump: (setId: string) => void;
+		oninsert: () => void;
 	};
 
-	let { groups, activeSetId, onjump }: Props = $props();
+	let { groups, activeSetId, onjump, oninsert }: Props = $props();
 
 	// Where a tap lands: the next set still owed, or the last one if the exercise
 	// is finished — jumping to a done exercise should show it, not refuse.
@@ -38,7 +40,7 @@
 </script>
 
 <div class="flex flex-col gap-1">
-	{#each groups as group (group.meta.id)}
+	{#each groups as group (group.id)}
 		{@const here = group.cursors.some((c) => c.set.id === activeSetId)}
 		<!-- A predicate, not a count. Done/total came out of the app for restating
 		     what the rows already show, and "finished" is the one part of it this
@@ -60,4 +62,16 @@
 			{/snippet}
 		</ListRow>
 	{/each}
+
+	<!-- The same dashed silhouette as ExerciseBlock's add-set row: the list
+	     grows by one of the shape it already stacks. `+` is a character, per
+	     the icons README. -->
+	<button
+		type="button"
+		onclick={oninsert}
+		class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
+			text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+	>
+		<span class="label-caps">+ Add exercise</span>
+	</button>
 </div>
