@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 
-import { session } from '$lib/api/auth';
+import { googleEnabled, session } from '$lib/api/auth';
 import { resolveRedirect } from '$lib/api/redirect';
 
 import type { LayoutLoad } from './$types';
@@ -25,10 +25,23 @@ export const prerender = false;
  * case; an unreachable server is not, but the answer is the same — a login form
  * is exactly what someone whose server just came back will want, and refusing
  * to draw one because the server is down is a screen with no way out.
+ *
+ * `google` comes back with it because the screen cannot draw itself without
+ * knowing: an instance with no client configured must not offer a button that
+ * leads nowhere. Asked here rather than in the page so it is one request
+ * alongside the session one, and so the page has the answer before its first
+ * paint rather than growing a button a moment later.
  */
 export const load: LayoutLoad = async ({ url, fetch }) => {
-	let signedIn = false;
+	// Started before the session is awaited, not after it: the two ask different
+	// endpoints and neither reads the other's answer, so awaiting them in turn
+	// would put two round-trips in front of the first paint of the one screen a
+	// signed-out visitor ever sees. `googleEnabled` answers false rather than
+	// throwing, so nothing is left unhandled when the redirect below fires past
+	// this promise.
+	const google = googleEnabled(fetch);
 
+	let signedIn = false;
 	try {
 		await session(fetch);
 		signedIn = true;
@@ -41,4 +54,6 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
 	if (signedIn) {
 		redirect(307, resolveRedirect(url.searchParams.get('redirectTo'), url.origin));
 	}
+
+	return { google: await google };
 };

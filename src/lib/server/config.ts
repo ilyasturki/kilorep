@@ -7,19 +7,52 @@ import { envFlag, envList, envText } from './env.ts';
  */
 
 /**
- * Registration ships closed: `/api/auth/register` answers 404 unless this is
- * explicitly on.
+ * Whether this instance accepts new accounts. Ships closed.
  *
- * The first account on a fresh instance is made with `bun run account:create`,
- * which never touches the network — so a normal self-hosted install never opens
- * this at all. That is the point: with no local path to a first account, an
- * operator would have to enable registration, sign up, disable it and restart,
- * and that window is exactly the claimable-by-a-stranger failure this design
- * rejects. This flag exists for the day the instance genuinely has more than
- * one user.
+ * It governs one thing: what happens when a Google identity nobody has seen
+ * before finishes signing in. Off, it is refused; on, it becomes an account.
+ * Nothing else creates one over the network — the first account on a fresh
+ * instance is made with `bun run account:create`, which never touches the
+ * network, so a normal self-hosted install never opens this at all.
+ *
+ * Linking is deliberately *not* creation, and so is not gated by this: a Google
+ * identity whose verified address already belongs to an account attaches to it
+ * whatever this says. That is how an operator moves their CLI-made account onto
+ * Google without ever opening the instance to strangers.
  */
 export function registrationOpen(): boolean {
 	return envFlag('ALLOW_REGISTRATION');
+}
+
+export type GoogleClient = { id: string; secret: string };
+
+/**
+ * The Google OAuth client, or nothing.
+ *
+ * Unset is the ordinary case and not a misconfiguration: a self-hosted instance
+ * whose accounts all came from `account:create` needs no identity provider, and
+ * the sign-in screen simply does not offer one.
+ *
+ * Resolved whole rather than as an id getter, a secret getter and a boolean.
+ * "Is this configured" and "give me the values" are the same question, and
+ * answering them separately lets a caller ask the second without the first —
+ * which is how an empty client id reaches `verifyClaims`, where it is compared
+ * against a token's `aud`. Having the values *is* the permission to proceed, so
+ * a half-configured instance cannot be represented rather than merely guarded.
+ *
+ * The secret is a real secret — the first this project has had. It belongs in a
+ * systemd `EnvironmentFile` or a container secret, never in the Nix store, which
+ * is world-readable.
+ */
+export function googleClient(): GoogleClient | undefined {
+	const id = envText('GOOGLE_CLIENT_ID', '');
+	const secret = envText('GOOGLE_CLIENT_SECRET', '');
+
+	if (id === '' || secret === '') {
+		return undefined;
+	}
+
+	return { id, secret };
 }
 
 /**

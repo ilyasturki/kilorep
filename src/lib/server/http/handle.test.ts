@@ -123,8 +123,14 @@ describe('enforcement', () => {
 		await expect(response.json()).resolves.toEqual({ message: 'authentication required' });
 	});
 
-	test('opens exactly three public paths', async () => {
-		for (const pathname of ['/api/health', '/api/auth/login', '/api/auth/register']) {
+	test('opens exactly the paths nobody can hold a credential for yet', async () => {
+		for (const pathname of [
+			'/api/health',
+			'/api/auth/login',
+			'/api/auth/google',
+			'/api/auth/google/start',
+			'/api/auth/google/callback'
+		]) {
 			const { response, resolved, locals } = await run(pathname);
 
 			expect(response.status).toBe(200);

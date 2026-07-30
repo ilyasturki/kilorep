@@ -1,11 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 
-import { issueToken, normalizeEmail, revokeToken, verifyLogin } from '$lib/server/auth/accounts';
-import {
-	SESSION_COOKIE,
-	sessionCookieOptions,
-	webCredentialExpiry
-} from '$lib/server/auth/session';
+import { issueToken, normalizeEmail, verifyLogin } from '$lib/server/auth/accounts';
+import { SESSION_COOKIE, sessionCookieOptions, startWebSession } from '$lib/server/auth/session';
 import {
 	acquireVerificationSlot,
 	clearLoginFailures,
@@ -48,8 +44,10 @@ export const POST: RequestHandler = async ({ request, cookies, url, locals, getC
 	}
 
 	// Read before verifying, so a malformed request is refused in microseconds
-	// rather than after a third of a second of scrypt.
-	const label = client === 'web' ? 'Web' : requiredString(body, 'label');
+	// rather than after a third of a second of scrypt. Only `device` and `api`
+	// carry one — a browser credential is named by `startWebSession`, which owns
+	// every other part of that decision too.
+	const label = client === 'web' ? null : requiredString(body, 'label');
 
 	const address = getClientAddress();
 	// Counted against the account as well as the address, so that signing in
@@ -83,37 +81,14 @@ export const POST: RequestHandler = async ({ request, cookies, url, locals, getC
 
 	clearLoginFailures(address, account);
 
-	// A browser signing in on a session it already holds replaces that
-	// credential rather than adding to it. Otherwise a year of signing in each
-	// morning leaves a year of rows all labelled `Web`, every one of them a live
-	// secret for whoever captured its cookie, and none of them distinguishable
-	// from the others in a list that shows a prefix and a last-used date.
-	const previous = locals.credential;
-	if (
-		client === 'web' &&
-		previous !== null &&
-		previous.token.kind === 'web' &&
-		previous.user.id === user.id
-	) {
-		revokeToken(db, user.id, previous.token.id);
-	}
-
-	// `web` alone gets an expiry, matching the cookie carrying it exactly: past
-	// that point the browser has dropped the cookie anyway. Device and API
-	// credentials are revoked from the token list instead — a place their owner
-	// can see them.
-	const { token, record } = issueToken(
-		db,
-		user.id,
-		label,
-		client,
-		client === 'web' ? webCredentialExpiry() : null
-	);
-
-	if (client === 'web') {
+	// `label` is null exactly when `client` is `web` — the two were decided
+	// together above.
+	if (label === null) {
+		const { token } = startWebSession(db, user.id, locals.credential);
 		cookies.set(SESSION_COOKIE, token, sessionCookieOptions(url));
 		return new Response(null, { status: 204 });
 	}
 
+	const { token, record } = issueToken(db, user.id, label, client);
 	return json({ token, credential: publicToken(record, false) }, { status: 201 });
 };

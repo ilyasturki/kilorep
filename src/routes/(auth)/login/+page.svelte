@@ -2,11 +2,14 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 
-	import { login } from '$lib/api/auth';
+	import { googleSignInUrl, login } from '$lib/api/auth';
 	import { ApiError } from '$lib/api/client';
 	import { resolveRedirect } from '$lib/api/redirect';
 	import Button from '$lib/ui/Button.svelte';
 	import Input from '$lib/ui/Input.svelte';
+	import GoogleLogo from '$lib/ui/icons/GoogleLogo.svelte';
+
+	import type { PageProps } from './$types';
 
 	/**
 	 * The web surface's way in. The phone's is not this screen: connecting a
@@ -15,7 +18,17 @@
 	 * ever reuses this page, the card has to be reconsidered rather than
 	 * inherited; a card centred in a viewport is a web shape, and DESIGN.md
 	 * names desktop-shaped forms on a phone as an anti-goal.
+	 *
+	 * Two ways in, and they are not equals. Google is the only way to *create* an
+	 * account, so it leads and takes the single filled button the screen is
+	 * allowed. The password form is for accounts that already have a password —
+	 * every one made with `account:create` — and folds away behind a link, because
+	 * on an instance that offers Google it is the minority path. Where no Google
+	 * client is configured there is nothing to fold behind: the form is the page.
 	 */
+
+	/** `google` comes from the group's layout load — see `(auth)/+layout.ts`. */
+	let { data }: PageProps = $props();
 
 	let email = $state('');
 	let password = $state('');
@@ -31,9 +44,33 @@
 	 */
 	let emailError = $state('');
 	let passwordError = $state('');
-	let formError = $state('');
+
+	/**
+	 * The Google round-trip has no promise to reject: it comes back as a fresh
+	 * navigation, so a failure arrives in the URL and is read from there. Written
+	 * by the callback in the same voice as the server's other messages.
+	 */
+	let formError = $state(page.url.searchParams.get('error') ?? '');
+
+	/**
+	 * Open when there is no Google button to be the obvious choice. On an instance
+	 * that has one, the operator who needs this presses once — and their session
+	 * lasts 400 days, so it is once a year rather than once a visit.
+	 *
+	 * `$derived` rather than `$state` seeded from the prop: seeding captures the
+	 * value once, so an instance that gained or lost its Google client between
+	 * loads would keep drawing the old screen. The button below reassigns this
+	 * directly, which is the documented way to override a derived value — and it
+	 * reverts if `data` ever says something different, which is the behaviour we
+	 * want anyway.
+	 */
+	let passwordOpen = $derived(!data.google);
 
 	let pending = $state(false);
+
+	const destination = $derived(
+		resolveRedirect(page.url.searchParams.get('redirectTo'), page.url.origin)
+	);
 
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
@@ -66,7 +103,6 @@
 		// Validated again even though the guard wrote it — the guard is not the
 		// only thing that can put a value there, and a link is enough.
 		// `replaceState` keeps sign-in out of the history a Back press walks.
-		const destination = resolveRedirect(page.url.searchParams.get('redirectTo'), page.url.origin);
 		await goto(destination, { invalidateAll: true, replaceState: true });
 	}
 </script>
@@ -77,64 +113,85 @@
 
 <main class="flex min-h-dvh items-center justify-center px-4 py-10">
 	<div class="w-full max-w-sm">
-		<!-- `novalidate` because the messages are ours. Left on, a `type="email"`
-		     box raises the browser's own bubble on submit, which lands in a
-		     different place, in a different voice, and about a different rule than
-		     the server's. -->
-		<form
-			novalidate
-			class="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-6"
-			onsubmit={submit}
-		>
+		<div class="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-6">
 			<header class="flex flex-col gap-1.5">
 				<p class="label-caps">Kilorep</p>
 				<h1 class="text-xl font-extrabold tracking-tight">Sign in</h1>
 			</header>
 
-			<Input
-				label="Email"
-				name="email"
-				type="email"
-				autocomplete="email"
-				inputmode="email"
-				autocapitalize="none"
-				spellcheck="false"
-				bind:value={email}
-				error={emailError}
-			/>
-
-			<Input
-				label="Password"
-				name="password"
-				type="password"
-				autocomplete="current-password"
-				bind:value={password}
-				error={passwordError}
-			/>
-
 			<!-- The region is always in the DOM, empty or not. A live region that
 			     appears at the same moment as its text is announced unreliably,
 			     which on this screen means a failed sign-in that says nothing at
-			     all to someone who cannot see the red. -->
+			     all to someone who cannot see the red. It sits above both paths
+			     because either one can put a message in it. -->
 			<div aria-live="polite">
 				{#if formError !== ''}
 					<p class="text-sm font-bold text-danger">{formError}</p>
 				{/if}
 			</div>
 
-			<!-- A disabled commit is Button's dashed inert well, not a dimmed
-			     button: unmistakably not pressable while the request is in flight. -->
-			<Button type="submit" variant="commit" disabled={pending}>
-				{pending ? 'Signing in…' : 'Sign in'}
-			</Button>
-		</form>
+			{#if data.google}
+				<!-- An anchor, not a button with a handler: this leaves the origin, and
+				     a full navigation is what carries the browser to Google. The href
+				     goes through `googleSignInUrl` so it is built on `apiBase()` rather
+				     than written relative — hard rule 4. -->
+				<Button href={googleSignInUrl(destination)} variant="commit">
+					<GoogleLogo size={22} />
+					Continue with Google
+				</Button>
+			{/if}
 
-		<!-- How a fresh instance gets its first account is still unsettled, and
-		     `account:create` is the whole of the answer today. Until that changes,
-		     the person staring at a login screen they cannot pass is the operator,
-		     and this is the command that helps them. Registration ships closed, so
-		     there is no sign-up link to offer instead — and no endpoint that would
-		     say whether one applied. -->
+			{#if passwordOpen}
+				<!-- `novalidate` because the messages are ours. Left on, a `type="email"`
+				     box raises the browser's own bubble on submit, which lands in a
+				     different place, in a different voice, and about a different rule than
+				     the server's. -->
+				<form novalidate class="flex flex-col gap-5" onsubmit={submit}>
+					<Input
+						label="Email"
+						name="email"
+						type="email"
+						autocomplete="email"
+						inputmode="email"
+						autocapitalize="none"
+						spellcheck="false"
+						bind:value={email}
+						error={emailError}
+					/>
+
+					<Input
+						label="Password"
+						name="password"
+						type="password"
+						autocomplete="current-password"
+						bind:value={password}
+						error={passwordError}
+					/>
+
+					<!-- A disabled commit is Button's dashed inert well, not a dimmed
+					     button: unmistakably not pressable while the request is in flight.
+					     `secondary` whenever Google is on the screen, because only one
+					     filled button exists per screen and Google has it. -->
+					<Button type="submit" variant={data.google ? 'secondary' : 'commit'} disabled={pending}>
+						{pending ? 'Signing in…' : 'Sign in'}
+					</Button>
+				</form>
+			{:else}
+				<button
+					type="button"
+					class="rounded-lg py-1 text-sm font-bold text-ink-muted focus-ring hover:text-ink"
+					onclick={() => (passwordOpen = true)}
+				>
+					Sign in with a password
+				</button>
+			{/if}
+		</div>
+
+		<!-- How a fresh instance gets its first account, and still the whole of the
+		     answer: `account:create` runs on the machine, so it needs no identity
+		     provider and no open registration. Google creates accounts only on an
+		     instance whose operator turned ALLOW_REGISTRATION on, which a normal
+		     self-hosted install never does. -->
 		<p class="mt-4 px-1 text-sm text-ink-faint">
 			No account yet? The first one is created on the server with
 			<code class="font-bold">bun run account:create</code>.

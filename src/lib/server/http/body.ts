@@ -1,15 +1,13 @@
 import { error } from '@sveltejs/kit';
 
+import { isRecord } from '../json.ts';
+
 /**
  * Reading a JSON request body without trusting a byte of it.
  *
  * Every failure here is a 400 with a field name, because the client that sent
  * it is the APK or an MCP config and the person debugging it has no server log.
  */
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
 	let parsed: unknown;

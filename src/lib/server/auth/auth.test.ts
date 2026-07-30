@@ -12,15 +12,17 @@ import { runMigrations } from '../db/migrate.ts';
 import { authTokens } from '../db/schema.ts';
 import {
 	createUser,
-	createUserIfNew,
 	credentialProblem,
 	deleteUser,
 	emailProblem,
+	findUserByGoogleSub,
 	issueToken,
 	listTokens,
+	resolveGoogleIdentity,
 	revokeToken,
 	verifyLogin
 } from './accounts.ts';
+import { verifyClaims } from './google.ts';
 import { decoyHash, passwordProblem, verifyPassword } from './password.ts';
 import {
 	SESSION_COOKIE,
@@ -34,8 +36,6 @@ import {
 	clearLoginFailures,
 	loginBlocked,
 	recordLoginFailure,
-	recordRegistration,
-	registrationBlocked,
 	resetLoginThrottle,
 	saturated
 } from './throttle.ts';
@@ -86,9 +86,9 @@ describe('credential validation', () => {
 	});
 
 	test('reports both problems through one function, so no caller can drift', () => {
-		// `createUser` throws a violation and `createUserIfNew` cannot tell that
-		// apart from a real failure — a route checking differently would answer
-		// 500 where it meant 400.
+		// `createUser` reports a violation by throwing, which a caller cannot tell
+		// apart from a real failure — one checking differently would report a bug
+		// where it meant "fix your input".
 		expect(credentialProblem('nope', PASSWORD)).toMatch(/valid address/u);
 		expect(credentialProblem('a@b.co', 'short')).toMatch(/at least 8/u);
 		expect(credentialProblem('a@b.co', PASSWORD)).toBeUndefined();
@@ -132,13 +132,207 @@ describe('verifyLogin', () => {
 	});
 });
 
-describe('createUserIfNew', () => {
-	test('creates, then reports the duplicate rather than throwing', async () => {
-		const first = await createUserIfNew(db, 'lifter@example.com', PASSWORD);
-		expect(first.ok).toBe(true);
+const OPEN = true;
+const CLOSED = false;
 
-		const second = await createUserIfNew(db, 'LIFTER@example.com', PASSWORD);
-		expect(second).toEqual({ ok: false, reason: 'duplicate' });
+function identity(subject: string, email: string): { subject: string; email: string } {
+	return { subject, email };
+}
+
+/**
+ * The rule about who gets an account, exhaustively — the part of Google sign-in
+ * worth testing, and the reason it is a function that takes claims rather than
+ * something buried in the callback beside two `fetch` calls.
+ */
+describe('resolveGoogleIdentity', () => {
+	test('creates an account for an unknown identity when the instance is open', () => {
+		const result = resolveGoogleIdentity(db, identity('sub-1', 'Lifter@Example.com'), OPEN);
+
+		expect(result).toMatchObject({ ok: true, outcome: 'created' });
+		expect(result.ok && result.user.email).toBe('lifter@example.com');
+		// Without a counter the account exists and cannot be written to, so the two
+		// are created together or not at all.
+		expect(result.ok && result.user.googleSub).toBe('sub-1');
+		expect(result.ok && result.user.passwordHash).toBeNull();
+	});
+
+	test('refuses an unknown identity when the instance is closed', () => {
+		expect(resolveGoogleIdentity(db, identity('sub-1', 'stranger@example.com'), CLOSED)).toEqual({
+			ok: false,
+			reason: 'closed'
+		});
+
+		// And left nothing behind: a refusal is not a half-made account.
+		expect(findUserByGoogleSub(db, 'sub-1')).toBeUndefined();
+	});
+
+	test('signs in a subject it has seen before', () => {
+		const created = resolveGoogleIdentity(db, identity('sub-1', 'lifter@example.com'), OPEN);
+		const again = resolveGoogleIdentity(db, identity('sub-1', 'lifter@example.com'), CLOSED);
+
+		// Closed the second time, and it still works: the gate is about creating.
+		expect(again).toMatchObject({ ok: true, outcome: 'signed-in' });
+		expect(again.ok && created.ok && again.user.id).toBe(created.ok && created.user.id);
+	});
+
+	test('links a new subject to the account that already holds its verified address', async () => {
+		// The operator's own account, made on the machine with `account:create`.
+		const existing = await createUser(db, 'operator@example.com', PASSWORD);
+
+		// Closed, deliberately: linking is not creation, and this is how an
+		// operator moves onto Google without opening the instance to strangers.
+		const result = resolveGoogleIdentity(db, identity('sub-9', 'OPERATOR@example.com'), CLOSED);
+
+		expect(result).toMatchObject({ ok: true, outcome: 'linked' });
+		expect(result.ok && result.user.id).toBe(existing.id);
+		// The password still works afterwards. Linking adds a way in; it removes none.
+		expect(result.ok && result.user.passwordHash).not.toBeNull();
+		await expect(verifyLogin(db, 'operator@example.com', PASSWORD)).resolves.not.toBeNull();
+	});
+
+	test('refuses a second subject claiming an address that is already linked', () => {
+		resolveGoogleIdentity(db, identity('sub-1', 'lifter@example.com'), OPEN);
+
+		// Reachable honestly — a Workspace mailbox deleted and recreated gets a
+		// fresh subject — and indistinguishable from a takeover, so nothing moves.
+		expect(resolveGoogleIdentity(db, identity('sub-2', 'lifter@example.com'), OPEN)).toEqual({
+			ok: false,
+			reason: 'claimed'
+		});
+		expect(findUserByGoogleSub(db, 'sub-1')).toBeDefined();
+		expect(findUserByGoogleSub(db, 'sub-2')).toBeUndefined();
+	});
+
+	test('follows the address when a known subject changes it', () => {
+		const created = resolveGoogleIdentity(db, identity('sub-1', 'old@example.com'), OPEN);
+		const moved = resolveGoogleIdentity(db, identity('sub-1', 'new@example.com'), CLOSED);
+
+		// The same account throughout: identity is the subject, never the address.
+		expect(moved.ok && moved.user.id).toBe(created.ok && created.user.id);
+		expect(moved.ok && moved.user.email).toBe('new@example.com');
+	});
+
+	test('keeps the old address when the new one belongs to someone else', async () => {
+		await createUser(db, 'taken@example.com', PASSWORD);
+		const created = resolveGoogleIdentity(db, identity('sub-1', 'mine@example.com'), OPEN);
+
+		const moved = resolveGoogleIdentity(db, identity('sub-1', 'taken@example.com'), OPEN);
+
+		// Signed in regardless. Refusing here would mean somebody else's account
+		// existing is enough to lock you out of your own.
+		expect(moved).toMatchObject({ ok: true, outcome: 'signed-in' });
+		expect(moved.ok && moved.user.id).toBe(created.ok && created.user.id);
+		expect(moved.ok && moved.user.email).toBe('mine@example.com');
+	});
+});
+
+describe('a Google-only account has no password', () => {
+	test('refuses every password, and takes as long doing it as a real account', async () => {
+		const result = resolveGoogleIdentity(db, { subject: 'sub-1', email: 'g@example.com' }, true);
+		expect(result.ok && result.user.passwordHash).toBeNull();
+
+		// Not merely false: the empty string is what a caller sends when trying to
+		// find out whether an account has a password at all.
+		await expect(verifyLogin(db, 'g@example.com', PASSWORD)).resolves.toBeNull();
+		await expect(verifyLogin(db, 'g@example.com', '')).resolves.toBeNull();
+	});
+});
+
+/**
+ * Claim validation, against tokens built here rather than fetched. The two
+ * `fetch` calls around it are the untested part by decision — what matters is
+ * that nothing gets past this with the wrong audience or an unverified address.
+ */
+const CLIENT = 'client-123.apps.googleusercontent.com';
+const NOW = Date.parse('2026-07-29T12:00:00Z');
+
+function segment(value: unknown): string {
+	return Buffer.from(JSON.stringify(value)).toString('base64url');
+}
+
+/**
+ * A well-formed token, with whatever claims this case wants to break. The base
+ * is rebuilt per call so no case can leak into another.
+ *
+ * Overrides are copied in a loop, which looks like the long way round and is the
+ * only way left: spread is banned outside components, `Object.assign` on a fresh
+ * literal trips `prefer-object-spread`, and assigning after the initializer
+ * trips `no-immediate-mutation`.
+ */
+function idToken(overrides: Record<string, unknown> = {}): string {
+	const claims: Record<string, unknown> = {
+		iss: 'https://accounts.google.com',
+		aud: CLIENT,
+		sub: 'sub-1',
+		exp: NOW / 1000 + 3600,
+		email: 'lifter@example.com',
+		email_verified: true
+	};
+
+	for (const [claim, value] of Object.entries(overrides)) {
+		claims[claim] = value;
+	}
+
+	// The signature is never read — see `verifyClaims` on why TLS stands in for
+	// it — so a token only has to be shaped like one.
+	return `${segment({ alg: 'RS256' })}.${segment(claims)}.signature`;
+}
+
+describe('verifyClaims', () => {
+	test('accepts a well-formed token and reads the subject and address out of it', () => {
+		expect(verifyClaims(idToken(), CLIENT, NOW)).toEqual({
+			ok: true,
+			identity: { subject: 'sub-1', email: 'lifter@example.com' }
+		});
+	});
+
+	test('refuses a token minted for another client', () => {
+		// The check that is easy to leave out and must not be: without it, a token
+		// issued to anybody else's Google client signs its bearer in here.
+		expect(verifyClaims(idToken({ aud: 'someone-else' }), CLIENT, NOW)).toEqual({
+			ok: false,
+			problem: 'wrong-audience'
+		});
+	});
+
+	test('refuses a token from another issuer, and accepts both spellings of this one', () => {
+		expect(verifyClaims(idToken({ iss: 'https://evil.example' }), CLIENT, NOW)).toEqual({
+			ok: false,
+			problem: 'wrong-issuer'
+		});
+		expect(verifyClaims(idToken({ iss: 'accounts.google.com' }), CLIENT, NOW).ok).toBe(true);
+	});
+
+	test('refuses an expired token but forgives a minute of clock disagreement', () => {
+		expect(verifyClaims(idToken({ exp: NOW / 1000 - 3600 }), CLIENT, NOW)).toEqual({
+			ok: false,
+			problem: 'expired'
+		});
+		// A sign-in refused because the server is thirty seconds fast is
+		// unexplainable to the person it happens to.
+		expect(verifyClaims(idToken({ exp: NOW / 1000 - 30 }), CLIENT, NOW).ok).toBe(true);
+	});
+
+	test('refuses an unverified address, however it is spelled', () => {
+		// The design links accounts by address; an unverified one is a string
+		// somebody typed.
+		expect(verifyClaims(idToken({ email_verified: false }), CLIENT, NOW)).toEqual({
+			ok: false,
+			problem: 'unverified-email'
+		});
+		expect(verifyClaims(idToken({ email_verified: 'false' }), CLIENT, NOW).ok).toBe(false);
+		expect(verifyClaims(idToken({ email_verified: undefined }), CLIENT, NOW).ok).toBe(false);
+		// The string form is what some older Google responses send.
+		expect(verifyClaims(idToken({ email_verified: 'true' }), CLIENT, NOW).ok).toBe(true);
+	});
+
+	test('refuses anything that is not a token', () => {
+		expect(verifyClaims('not.a.token', CLIENT, NOW)).toEqual({ ok: false, problem: 'malformed' });
+		expect(verifyClaims('', CLIENT, NOW)).toEqual({ ok: false, problem: 'malformed' });
+		expect(verifyClaims(idToken({ sub: '' }), CLIENT, NOW)).toEqual({
+			ok: false,
+			problem: 'malformed'
+		});
 	});
 });
 
@@ -347,19 +541,6 @@ describe('login throttle', () => {
 
 		expect(loginBlocked(ADDRESS, 'first@example.com')).toBe(true);
 		expect(loginBlocked(ADDRESS, 'second@example.com')).toBe(false);
-	});
-
-	test('caps how many accounts one address may create', () => {
-		expect(registrationBlocked(ADDRESS)).toBe(false);
-
-		for (let account = 0; account < 3; account++) {
-			recordRegistration(ADDRESS);
-		}
-
-		// Registration had only the concurrency guard, which bounds how fast
-		// accounts appear and not how many.
-		expect(registrationBlocked(ADDRESS)).toBe(true);
-		expect(registrationBlocked('198.51.100.4')).toBe(false);
 	});
 
 	test('keeps the failure map bounded against an address a caller can vary at will', () => {

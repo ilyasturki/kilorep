@@ -25,6 +25,14 @@ import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlit
  * An account. Multi-tenancy exists from day one for a user count of one, so a
  * hosted instance is a deploy rather than a migration. Every domain row will
  * hang off `id`.
+ *
+ * Two ways in, and an account may hold either or both. `password_hash` is what
+ * `bun run account:create` writes and the only way a self-hosted instance
+ * bootstraps; `google_sub` is the only way a *new* account is created over the
+ * network. Both are nullable, and neither is redundant: a row with only a hash
+ * is every CLI-made account, a row with only a subject is every account that
+ * signed up with Google, and a row with both is a CLI account whose owner later
+ * signed in with Google and got linked.
  */
 export const users = sqliteTable(
 	'users',
@@ -33,7 +41,22 @@ export const users = sqliteTable(
 		email: text('email').notNull().unique(),
 		// scrypt output, self-describing: algorithm, parameters, salt and hash in
 		// one string, so the cost factor can be raised later without a migration.
-		passwordHash: text('password_hash').notNull(),
+		//
+		// Null for an account that has only ever signed in with Google. That null
+		// is load-bearing rather than incidental: `verifyLogin` treats it exactly as
+		// it treats an unknown address — a decoy verification and a refusal — so a
+		// Google-only account cannot be signed into with a password, and cannot be
+		// *identified* as Google-only by how fast it says no.
+		passwordHash: text('password_hash'),
+		// Google's `sub`: the stable, per-client subject id. Identity keys on this
+		// and never on the email beside it, because an address is something a person
+		// changes and a subject is not — see `resolveGoogleIdentity`, where a changed
+		// address updates this row rather than finding a different one.
+		//
+		// Unique, and nullable so that every password-only account can hold null:
+		// SQLite's unique index admits any number of them, which is the property
+		// that makes one column serve both kinds of account.
+		googleSub: text('google_sub').unique(),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull()
 	},
 	(table) => [primaryKey({ columns: [table.id] })]

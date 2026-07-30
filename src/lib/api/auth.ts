@@ -1,7 +1,10 @@
-import { request } from './client.ts';
+import { apiBase, request } from './client.ts';
+import { GOOGLE_ENABLED_PATH, GOOGLE_START_PATH } from './routes.ts';
 
 /**
- * The three auth calls the web surface makes, spelled once.
+ * The auth calls the web surface makes, spelled once — plus the one thing here
+ * that is not a call at all: `googleSignInUrl` builds a link the browser
+ * *navigates* to, because signing in with Google means leaving this origin.
  *
  * `client: 'web'` is the reason this file exists rather than three `request`
  * calls at three call sites. The login route branches on it and the branches
@@ -58,4 +61,37 @@ export async function logout(fetch?: Fetch): Promise<void> {
 export async function session(fetch?: Fetch): Promise<Session> {
 	const result = await request<Session>('/api/auth/session', { fetch });
 	return result;
+}
+
+/**
+ * Whether this server can offer Google sign-in.
+ *
+ * False rather than a throw when the server cannot be reached: the login screen
+ * asks this in order to decide what to draw, and a server that is down has no
+ * Google sign-in to offer either. The password form is what it falls back to,
+ * which is the one thing that might still work.
+ */
+export async function googleEnabled(fetch?: Fetch): Promise<boolean> {
+	try {
+		const { enabled } = await request<{ enabled: boolean }>(GOOGLE_ENABLED_PATH, { fetch });
+		return enabled;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * The href behind "Continue with Google" — a destination to navigate to, never
+ * something to `fetch`.
+ *
+ * Built through `apiBase()` rather than written as a relative `/api/…`, because
+ * a relative one works on the web surface and 404s in the APK, where the origin
+ * is the WebView's and not the server's. That is hard rule 4, and this is
+ * exactly the shape it is about: an `href` looks even less like an API call than
+ * a `fetch` does, so it is the easiest place to forget.
+ */
+export function googleSignInUrl(redirectTo: string): string {
+	const url = new URL(GOOGLE_START_PATH, apiBase());
+	url.searchParams.set('redirectTo', redirectTo);
+	return url.toString();
 }

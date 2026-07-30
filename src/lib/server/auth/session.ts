@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import type { Database } from '../db/client.ts';
 import type { AuthToken, User } from '../db/schema.ts';
 import { authTokens, users } from '../db/schema.ts';
+import { issueToken, revokeToken } from './accounts.ts';
 import { hashToken } from './tokens.ts';
 
 /**
@@ -53,16 +54,34 @@ export type SessionCookieOptions = {
  * HTTP, and refused silently — login answers 204, the cookie is dropped, and
  * the app simply behaves as though it were logged out. Hard-coding it would
  * break every LAN self-hoster on `http://192.168.x.x` in the one way that
- * leaves no evidence. Behind a reverse proxy this needs adapter-node's
- * `PROTOCOL_HEADER=x-forwarded-proto`, or the server sees http and omits the
- * flag on a connection that deserved it.
+ * leaves no evidence.
+ *
+ * Deriving it is necessary and, on its own, not sufficient — because the `url`
+ * this reads is not always the one the client used. adapter-node builds it from
+ * the request headers, and when `PROTOCOL_HEADER` is unset its protocol
+ * defaults to `https` rather than being read off the socket. A plain-http
+ * instance therefore reports `https:` here and hits the silent-drop anyway.
+ *
+ * Two settings avoid it, and one of them is always required: `PROTOCOL_HEADER`
+ * behind a TLS-terminating proxy, or `ORIGIN` on anything served directly over
+ * http. `.env.example` documents both, and Google sign-in depends on the same
+ * fact for a different reason — see `callbackUri`.
+ *
+ * Exported because the OAuth handshake cookie has to answer this the same way.
+ * One function rather than the same expression in two modules: the day this
+ * consults more than `url.protocol`, a second copy would keep the old rule and
+ * break sign-in with an error naming the wrong thing entirely.
  */
+export function secureCookies(url: URL): boolean {
+	return url.protocol === 'https:';
+}
+
 export function sessionCookieOptions(url: URL): SessionCookieOptions {
 	return {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: url.protocol === 'https:',
+		secure: secureCookies(url),
 		maxAge: COOKIE_MAX_AGE_SECONDS
 	};
 }
@@ -141,4 +160,36 @@ export function resolveCredential(db: Database, secret: string | null): Credenti
 	touch(db, row.token, now);
 
 	return row;
+}
+
+/**
+ * Everything that makes a browser session, in one place: what it is called, how
+ * long it lasts, and what happens to the one the caller already had.
+ *
+ * Two routes mint these — the password login and the Google callback — and the
+ * rule is the same for both because it is one rule. A browser signing in on a
+ * session it already holds *replaces* that credential rather than adding to it;
+ * otherwise a year of signing in each morning leaves a year of rows all labelled
+ * `Web`, every one of them a live secret for whoever captured its cookie, and
+ * none of them distinguishable from the others in a list that shows a prefix and
+ * a last-used date.
+ *
+ * The cookie is set by the caller, not here. This module deliberately holds no
+ * framework import: it answers what the credential *is*, and `Cookies` is how a
+ * route delivers it.
+ */
+export function startWebSession(
+	db: Database,
+	userId: string,
+	previous: Credential | null
+): { token: string; record: AuthToken } {
+	if (previous !== null && previous.token.kind === 'web' && previous.user.id === userId) {
+		revokeToken(db, userId, previous.token.id);
+	}
+
+	// `web` alone gets an expiry, matching the cookie carrying it exactly: past
+	// that point the browser has dropped the cookie anyway. Device and API
+	// credentials are revoked from the token list instead — a place their owner
+	// can see them.
+	return issueToken(db, userId, 'Web', 'web', webCredentialExpiry());
 }

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
@@ -55,6 +55,53 @@ describe('migrations', () => {
 		expect(appliedMigrationCount(fresh)).toBe(0);
 		fresh.$client.close();
 	});
+
+	test('rebuild a table without taking its dependents with it', async () => {
+		// SQLite cannot alter a column, so drizzle-kit answers every change to one
+		// with this: new table, copy, `DROP TABLE`, rename. `users` is the parent of
+		// two `on delete cascade` children, so with foreign keys enforced the
+		// implicit delete inside that DROP silently empties both — every credential
+		// revoked, and every sync counter reset to a number its devices are already
+		// past. The pragma drizzle writes into the migration cannot prevent it: the
+		// migrator runs each file in a transaction, where the pragma is a no-op.
+		// `runMigrations` issues it outside one instead, and this is what says so.
+		const folder = path.join(directory, 'migrations');
+		cpSync(migrationsFolder, folder, { recursive: true });
+
+		const user = await createUser(db, 'lifter@example.com', 'correct horse');
+		const { record } = issueToken(db, user.id, 'Pixel 8', 'device');
+		claimSeq(db, user.id);
+		claimSeq(db, user.id);
+		const before = db.select().from(syncCounters).where(eq(syncCounters.userId, user.id)).get()!
+			.nextSeq;
+		expect(before).toBeGreaterThan(1);
+
+		// Named to sort last, and written exactly as drizzle-kit writes one —
+		// pointless pragmas included, because those are part of what is being
+		// tested.
+		const rebuild = path.join(folder, '99999999999999_rebuild_users');
+		mkdirSync(rebuild, { recursive: true });
+		writeFileSync(
+			path.join(rebuild, 'migration.sql'),
+			[
+				'PRAGMA foreign_keys=OFF;',
+				'CREATE TABLE `__new_users` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`email` text NOT NULL UNIQUE,\n\t`password_hash` text,\n\t`google_sub` text UNIQUE,\n\t`created_at` integer NOT NULL\n);',
+				'INSERT INTO `__new_users`(`id`, `email`, `password_hash`, `google_sub`, `created_at`) SELECT `id`, `email`, `password_hash`, `google_sub`, `created_at` FROM `users`;',
+				'DROP TABLE `users`;',
+				'ALTER TABLE `__new_users` RENAME TO `users`;',
+				'PRAGMA foreign_keys=ON;'
+			].join('--> statement-breakpoint\n')
+		);
+		writeFileSync(path.join(rebuild, 'snapshot.json'), '{}');
+
+		runMigrations(db, folder);
+
+		expect(db.select().from(users).where(eq(users.id, user.id)).get()).toBeDefined();
+		expect(db.select().from(authTokens).where(eq(authTokens.id, record.id)).get()).toBeDefined();
+		expect(
+			db.select().from(syncCounters).where(eq(syncCounters.userId, user.id)).get()!.nextSeq
+		).toBe(before);
+	});
 });
 
 describe('accounts', () => {
@@ -73,9 +120,12 @@ describe('accounts', () => {
 	test('never store the password', async () => {
 		const user = await createUser(db, 'a@b.c', 'correct horse');
 
-		expect(user.passwordHash).not.toContain('correct horse');
-		await expect(verifyPassword('correct horse', user.passwordHash)).resolves.toBe(true);
-		await expect(verifyPassword('wrong horse', user.passwordHash)).resolves.toBe(false);
+		// The column is nullable for accounts that only ever signed in with Google;
+		// this path is the one that always writes it.
+		const hash = user.passwordHash!;
+		expect(hash).not.toContain('correct horse');
+		await expect(verifyPassword('correct horse', hash)).resolves.toBe(true);
+		await expect(verifyPassword('wrong horse', hash)).resolves.toBe(false);
 	});
 
 	test('reject a duplicate email', async () => {

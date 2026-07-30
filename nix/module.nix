@@ -88,13 +88,59 @@ in
       type = lib.types.bool;
       default = false;
       description = ''
-        Open self-service sign-up at POST /api/auth/register, which answers 404
-        while this is off.
+        Whether a Google identity nobody has seen before becomes a new account.
+        While this is off, an unknown one is refused.
 
         An instance serving one person never needs this: `kilorep-account
         create` makes the first account on the machine, without exposing
         anything. Turn it on only for an instance that genuinely serves more
         than one person.
+
+        It does not gate linking. A Google identity whose verified address
+        already belongs to an account attaches to it either way, which is how
+        you put your own `kilorep-account create` account behind Google without
+        opening the instance to strangers.
+      '';
+    };
+
+    googleClientId = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      example = "000000000000-xxxx.apps.googleusercontent.com";
+      description = ''
+        OAuth client id for Google sign-in. Empty on both this and the secret is
+        the ordinary case: the sign-in screen offers no Google button, and
+        accounts made with `kilorep-account create` sign in with their password.
+
+        The client's Authorized redirect URI must be exactly
+        `<your origin>/api/auth/google/callback`. A mismatch fails on Google's
+        own page as `redirect_uri_mismatch`, before this server is involved —
+        and behind a proxy it is `trustedProxyHops` above that stops the server
+        deriving `http://` and asking for the wrong one.
+
+        A client id is not a secret; the client secret is, which is why it has no
+        option here — see `environmentFile`.
+      '';
+    };
+
+    origin = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      example = "http://192.168.1.50:3000";
+      description = ''
+        The origin this instance is reached at. Not optional for anything served
+        over plain http.
+
+        adapter-node otherwise derives the origin from the request headers, and
+        its default protocol is `https` — it never inspects the socket. An
+        instance on http://192.168.1.50:3000 then believes it is https, and two
+        things break quietly at once: the session cookie goes out `Secure`,
+        which browsers drop over http, so sign-in appears to succeed and does
+        nothing; and the Google redirect URI is built as https://…, matching no
+        console entry.
+
+        Behind a TLS-terminating proxy, `trustedProxyHops` sets PROTOCOL_HEADER
+        and does the same job, so this can stay empty.
       '';
     };
 
@@ -141,10 +187,19 @@ in
       default = null;
       example = "/run/secrets/kilorep.env";
       description = ''
-        Optional systemd EnvironmentFile. Kilorep needs no secrets — auth is
-        local credentials and session tokens are random and stored hashed — so
-        this exists to override configuration without putting it in the Nix
-        store, not to supply one.
+        systemd EnvironmentFile, and the only correct place for
+        GOOGLE_CLIENT_SECRET.
+
+        Everything set through a module option is written to the Nix store,
+        which every user on the machine can read — so a secret set there is a
+        secret published locally. systemd reads this file at start instead, and
+        the store never sees it. Kilorep has no other secret: the account
+        passwords are scrypt hashes and the session tokens are random and stored
+        hashed, so without Google sign-in this option is only a way to override
+        configuration off-store.
+
+        GOOGLE_CLIENT_SECRET=... on a line of its own is the whole of what it
+        needs to contain.
       '';
     };
   };
@@ -153,12 +208,22 @@ in
     # Believing x-forwarded-for with nothing in front to overwrite it is worse
     # than not reading it at all, and binding off loopback is the only signal
     # available that nothing is.
-    warnings = lib.optional (cfg.trustedProxyHops > 0 && !lib.elem cfg.host loopbackHosts) ''
-      services.kilorep binds ${cfg.host} with trustedProxyHops = ${toString cfg.trustedProxyHops}.
-      If nothing proxies this instance, the client address is whatever the caller
-      puts in x-forwarded-for, and the login throttle can be bypassed at will.
-      Set trustedProxyHops = 0 for a directly-exposed instance.
-    '';
+    warnings =
+      lib.optional (cfg.trustedProxyHops > 0 && !lib.elem cfg.host loopbackHosts) ''
+        services.kilorep binds ${cfg.host} with trustedProxyHops = ${toString cfg.trustedProxyHops}.
+        If nothing proxies this instance, the client address is whatever the caller
+        puts in x-forwarded-for, and the login throttle can be bypassed at will.
+        Set trustedProxyHops = 0 for a directly-exposed instance.
+      ''
+      # The half-configured case fails silently otherwise: the server needs both
+      # halves before it will offer Google at all, so the login screen just shows
+      # no button and nothing anywhere says why.
+      ++ lib.optional (cfg.googleClientId != "" && cfg.environmentFile == null) ''
+        services.kilorep sets googleClientId but no environmentFile, so
+        GOOGLE_CLIENT_SECRET cannot reach the service and Google sign-in stays
+        off. Put the secret in an environmentFile — never in a module option,
+        which would write it to the world-readable Nix store.
+      '';
 
     environment.systemPackages = [ accountTool ];
 
@@ -173,6 +238,12 @@ in
         NODE_ENV = "production";
         DATABASE_PATH = cfg.databasePath;
         ALLOW_REGISTRATION = lib.boolToString cfg.allowRegistration;
+      }
+      // lib.optionalAttrs (cfg.origin != "") {
+        ORIGIN = cfg.origin;
+      }
+      // lib.optionalAttrs (cfg.googleClientId != "") {
+        GOOGLE_CLIENT_ID = cfg.googleClientId;
       }
       // lib.optionalAttrs (cfg.corsOrigins != [ ]) {
         CORS_ORIGINS = lib.concatStringsSep "," cfg.corsOrigins;

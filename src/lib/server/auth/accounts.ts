@@ -5,6 +5,7 @@ import { isUniqueViolation } from '../db/errors.ts';
 import { createSyncCounter } from '../db/seq.ts';
 import type { AuthToken, User } from '../db/schema.ts';
 import { authTokens, users } from '../db/schema.ts';
+import type { GoogleIdentity } from './google.ts';
 import { decoyHash, hashPassword, passwordProblem, verifyPassword } from './password.ts';
 import { mintToken } from './tokens.ts';
 
@@ -39,12 +40,12 @@ export function emailProblem(email: string): string | undefined {
 /**
  * Everything an account must satisfy to be created, in one expression.
  *
- * `createUser` is where this is enforced, and callers check it first only to
- * turn a violation into their own kind of answer — a 400 with the reason, a
- * message on a terminal. One function is what stops those two checks from
- * drifting apart, and the drift is worse than it looks: `createUser` reports a
- * violation by throwing, which `createUserIfNew` cannot tell apart from a real
- * failure, so a route whose copy disagreed would answer 500 where it meant 400.
+ * `createUser` is where this is enforced; a caller checks it first only to turn
+ * a violation into its own kind of answer — a message on a terminal rather than
+ * a throw. One function is what stops the two checks from drifting apart, and
+ * the drift is worse than it looks: `createUser` reports a violation by
+ * throwing, which a caller cannot tell apart from a real failure, so a copy that
+ * disagreed would report a bug where it meant "fix your input".
  */
 export function credentialProblem(email: string, password: string): string | undefined {
 	return emailProblem(email) ?? passwordProblem(password);
@@ -58,15 +59,47 @@ export function findUserByEmail(db: Database, email: string): User | undefined {
 		.get();
 }
 
+export function findUserByGoogleSub(db: Database, subject: string): User | undefined {
+	return db.select().from(users).where(eq(users.googleSub, subject)).get();
+}
+
 export function listUsers(db: Database): User[] {
 	return db.select().from(users).orderBy(users.createdAt).all();
 }
 
 /**
- * Creates an account and its sync counter in one transaction. The two are
- * inseparable: a user without a counter cannot be written to, because every
- * write claims a `seq` from it.
+ * The row-and-counter insert both creation paths share.
+ *
+ * The two are inseparable: a user without a sync counter cannot be written to,
+ * because every write claims a `seq` from it. One transaction is what guarantees
+ * an account never exists in that state, and one function is what stops the
+ * password path and the Google path from each having their own opinion about it.
  */
+function insertUser(
+	db: Database,
+	email: string,
+	passwordHash: string | null,
+	googleSub: string | null
+): User {
+	return db.transaction((tx) => {
+		const user = tx
+			.insert(users)
+			.values({
+				id: crypto.randomUUID(),
+				email: normalizeEmail(email),
+				passwordHash,
+				googleSub,
+				createdAt: new Date()
+			})
+			.returning()
+			.get();
+
+		createSyncCounter(tx, user.id);
+		return user;
+	});
+}
+
+/** An account that signs in with a password. Only `account:create` reaches this. */
 export async function createUser(db: Database, email: string, password: string): Promise<User> {
 	// Enforced here rather than only at the routes: the CLI creates accounts too,
 	// and a rule that lives in one of two callers is not a rule.
@@ -79,47 +112,104 @@ export async function createUser(db: Database, email: string, password: string):
 	// of a second, and SQLite has one writer.
 	const passwordHash = await hashPassword(password);
 
-	return db.transaction((tx) => {
-		const user = tx
-			.insert(users)
-			.values({
-				id: crypto.randomUUID(),
-				email: normalizeEmail(email),
-				passwordHash,
-				createdAt: new Date()
-			})
-			.returning()
-			.get();
-
-		createSyncCounter(tx, user.id);
-		return user;
-	});
+	return insertUser(db, email, passwordHash, null);
 }
 
-export type CreateUserResult = { ok: true; user: User } | { ok: false; reason: 'duplicate' };
-
 /**
- * `createUser`, with a duplicate address reported rather than thrown.
+ * Keeps the stored address on the one the person actually uses.
  *
- * Callers check for an existing address first, so this is only reached when two
- * sign-ups for the same address race — but that path deserves the same answer
- * the check would have given, not a 500. Written as a result rather than a
- * caught exception at the call site, so the route never has to name a `catch`
- * variable `error` while SvelteKit's `error` is in scope.
+ * Identity never depends on this column — that is `googleSub`'s job — so a
+ * refused update is cosmetic. It is refused rather than forced when the new
+ * address already belongs to another row, because the alternative is that
+ * somebody else's account existing is enough to lock you out of yours: a denial
+ * of service wearing a correctness costume. The operator's CLI addresses
+ * accounts by email, so the drift is worth a line in the log.
  */
-export async function createUserIfNew(
-	db: Database,
-	email: string,
-	password: string
-): Promise<CreateUserResult> {
+function syncEmail(db: Database, user: User, email: string): User {
+	const normalized = normalizeEmail(email);
+	if (normalized === user.email) {
+		return user;
+	}
+
 	try {
-		return { ok: true, user: await createUser(db, email, password) };
+		return db
+			.update(users)
+			.set({ email: normalized })
+			.where(eq(users.id, user.id))
+			.returning()
+			.get();
 	} catch (error) {
 		if (isUniqueViolation(error)) {
-			return { ok: false, reason: 'duplicate' };
+			console.warn(
+				`account ${user.id} now signs in as ${normalized}, which another account already holds; keeping ${user.email}`
+			);
+			return user;
 		}
 		throw error;
 	}
+}
+
+export type GoogleResolution =
+	| { ok: true; user: User; outcome: 'signed-in' | 'linked' | 'created' }
+	| { ok: false; reason: 'closed' | 'claimed' };
+
+/**
+ * Everything that happens between "Google says who this is" and "here is the
+ * account", with no HTTP and no network in sight — which is the point. The rule
+ * about who may create an account and which existing one an identity attaches to
+ * is the part worth testing exhaustively, and it is testable here.
+ *
+ * Three ways in, in order:
+ *
+ * 1. **A subject we have seen.** Sign in. The address may have moved since; see
+ *    below.
+ * 2. **A subject we have not, whose verified address we know.** Link, and note
+ *    that this happens whether or not the instance is open — linking is not
+ *    creation. It is how an operator moves their `account:create` account onto
+ *    Google without ever accepting a stranger.
+ * 3. **Neither.** A new account, if this instance takes them.
+ */
+export function resolveGoogleIdentity(
+	db: Database,
+	identity: GoogleIdentity,
+	registrationOpen: boolean
+): GoogleResolution {
+	const known = findUserByGoogleSub(db, identity.subject);
+	if (known !== undefined) {
+		return { ok: true, user: syncEmail(db, known, identity.email), outcome: 'signed-in' };
+	}
+
+	const byEmail = findUserByEmail(db, identity.email);
+	if (byEmail !== undefined) {
+		// The address belongs to an account that is already somebody else's Google
+		// identity. Legitimately reachable — a Workspace mailbox deleted and
+		// recreated gets a fresh subject — but indistinguishable from a takeover,
+		// and the safe answer is the one that changes nothing. The operator can
+		// resolve it with `account:delete`, which is a decision a person should be
+		// making anyway.
+		if (byEmail.googleSub !== null) {
+			return { ok: false, reason: 'claimed' };
+		}
+
+		const linked = db
+			.update(users)
+			.set({ googleSub: identity.subject })
+			.where(eq(users.id, byEmail.id))
+			.returning()
+			.get();
+
+		return { ok: true, user: linked, outcome: 'linked' };
+	}
+
+	if (!registrationOpen) {
+		return { ok: false, reason: 'closed' };
+	}
+
+	return {
+		ok: true,
+		user: insertUser(db, identity.email, null, identity.subject),
+		outcome: 'created'
+	};
 }
 
 /**
@@ -156,6 +246,12 @@ const DECOY_HASH = decoyHash();
  * would answer "is this address registered?" in microseconds rather than a third
  * of a second — an enumeration oracle that identical response bodies do nothing
  * to hide.
+ *
+ * An account with no password hash — one that has only ever signed in with
+ * Google — takes that same path, and for both of its reasons. It must refuse,
+ * because there is no password to be right; and it must refuse *slowly*, or the
+ * timing says "this address exists and signs in with Google", which is a fact
+ * about somebody that nobody asked them.
  */
 export async function verifyLogin(
 	db: Database,
@@ -164,7 +260,7 @@ export async function verifyLogin(
 ): Promise<User | null> {
 	const user = findUserByEmail(db, email);
 
-	if (user === undefined) {
+	if (user === undefined || user.passwordHash === null) {
 		await verifyPassword(password, DECOY_HASH);
 		return null;
 	}
