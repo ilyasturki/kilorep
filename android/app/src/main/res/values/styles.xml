@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. DayNight rather than Capacitor's Light default:
+         DESIGN.md makes both themes first-class, and a light-locked shell puts a
+         white frame around a dark app. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!-- What the activity wears once BridgeActivity swaps to it in onCreate.
+         `windowBackground` is the canvas colour so the gap between that swap and
+         the WebView's first paint is the app's own background rather than the
+         platform's white. -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/kilorep_canvas</item>
+        <item name="android:background">@null</item>
+
+        <!-- Status and navigation bar icon appearance, and nothing else.
+             Deliberately not `overlaysWebView` or a status-bar background: both
+             stop working under the edge-to-edge behaviour Android 16 enforces,
+             and this app targets 36. Icon appearance still applies there, so
+             what is set here is what ships. Resolved per theme by the `-night`
+             qualifier — dark icons on the light canvas, light icons on the dark
+             one — so there is no JS in the loop and nothing to flash. -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <!-- The cold-start theme, worn before any of our code runs. A flat canvas
+         colour rather than Capacitor's `@drawable/splash`, which is a 480x320
+         white PNG and reads as a flash on the way into a dark app. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/kilorep_canvas</item>
+        <item name="android:windowBackground">@color/kilorep_canvas</item>
+    </style>
+</resources>

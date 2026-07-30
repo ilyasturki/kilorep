@@ -1,0 +1,35 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.13.0'
+
+        // Capacitor's template puts `com.google.gms:google-services` here and a
+        // matching `apply plugin` in app/build.gradle. Both are removed and stay
+        // removed: CLAUDE.md hard rule 6 is "no Firebase, ever", and a classpath
+        // entry that only needs a google-services.json to activate is an
+        // invitation rather than an inert line. Deleting it means the day someone
+        // drops that file in, the build says no.
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+apply from: "variables.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

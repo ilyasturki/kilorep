@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 
 import { session } from '$lib/api/auth';
-import { ApiError } from '$lib/api/client';
+import { ApiError, NO_SERVER } from '$lib/api/client';
 
 import type { LayoutLoad } from './$types';
 
@@ -22,19 +22,28 @@ export const prerender = false;
  * is protected without its author having to remember. `/login` is outside this
  * layout, which is what stops the redirect from pointing at itself.
  *
- * Known debt, and the reason it is written down rather than discovered: this
- * blocks app boot on a network round-trip, which is the opposite of what
- * PRODUCT.md promises. On the web surface that is fine — the origin serving the
- * page is the server, so it is reachable whenever the page is. On a phone with
- * no server connected it is wrong, and the answer is not a patch here but the
- * local store, which is what makes "signed in" an answerable question offline.
- * Deferred alongside the Capacitor shell.
+ * There is nothing to gate when nobody has connected a server. PRODUCT.md makes
+ * the server optional and the phone complete standalone, so `no server` is the
+ * app's ordinary condition, not a locked door — and demanding a password to
+ * reach data held on the device would be asking for a credential that protects
+ * nothing and cannot be checked.
+ *
+ * Remaining debt, smaller than it was: with a server configured this still
+ * blocks boot on a round-trip, so a phone whose server is merely unreachable
+ * waits and then fails. The answer is the local store, which is what makes
+ * "signed in" an answerable question offline.
  */
 export const load: LayoutLoad = async ({ url, fetch }) => {
 	try {
 		const { user } = await session(fetch);
 		return { user };
 	} catch (error) {
+		// Not signed out — nowhere to be signed in to. The screens read `user`
+		// as nullable and draw the local-only shape.
+		if (error instanceof ApiError && error.status === NO_SERVER) {
+			return { user: null };
+		}
+
 		if (error instanceof ApiError && error.status === 401) {
 			// The whole attempted URL, so a deep link survives the detour. The
 			// form validates it again on the way back out — this side is not

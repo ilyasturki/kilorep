@@ -7,6 +7,8 @@
 		"dev": "vite dev",
 		"build:server": "vite build",
 		"build:app": "BUILD_TARGET=app vite build",
+		"app:sync": "bun run build:app && cap sync android",
+		"app:install": "bun run app:sync && cd android && ./gradlew installDebug",
 		"start": "node build/server/index.js",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
@@ -28,6 +30,8 @@
 		"account:delete": "node scripts/account.ts delete"
 	},
 	"devDependencies": {
+		"@capacitor/android": "8.4.2",
+		"@capacitor/cli": "8.4.2",
 		"@phosphor-icons/core": "^2.1.1",
 		"@sveltejs/adapter-node": "^5.5.7",
 		"@sveltejs/adapter-static": "^3.0.10",
@@ -49,6 +53,8 @@
 		"vitest": "^4.1.10"
 	},
 	"dependencies": {
+		"@capacitor/core": "8.4.2",
+		"@capacitor/haptics": "^8.0.2",
 		"@internationalized/date": "^3.12.2",
 		"bits-ui": "^2.18.1",
 		"drizzle-orm": "1.0.0-rc.4"

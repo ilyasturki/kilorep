@@ -22,7 +22,7 @@ Math:
 
 **Log a set.** The check commits exactly what's on screen — the hint if untouched, your edits if touched. The hint is never silently written. Same-as-last-time is one tap. Deviating: ± steppers on the active set (±2.5 kg, ±1 rep, stepping from the hint); tapping the number opens the numpad. Bar: 1 tap when the value is right, ≤3 interactions when it isn't.
 
-**Rest.** The timer auto-starts on check. A countdown chip — never a modal, never blocking the next log. On-screen only: nothing fires when rest ends if you aren't looking, so keep-awake is load-bearing. The chip derives from a stored `startedAt`, never an accumulating counter. One tap skips or adjusts. Duration: global default, per-exercise override.
+**Rest.** The timer auto-starts on check. A countdown chip — never a modal, never blocking the next log. On-screen only: nothing fires when rest ends, no notification, no sound. The chip derives from a stored `startedAt`, never an accumulating counter, which is what makes a slept screen safe — unlock and it shows the true remaining time. The app never holds the screen awake: the phone's own timeout is the user's setting and a 90-minute session is not the app's to override. One tap skips or adjusts. Duration: global default, per-exercise override.
 
 **Mid-workout.** Reorder by drag, insert by catalog search, both from the session overview. An added set shows the hint when history has a corresponding set, blank otherwise (check inert until values are entered). No skip state: unchecked sets remain uncompleted.
 

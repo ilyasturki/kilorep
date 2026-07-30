@@ -1,4 +1,4 @@
-import { apiBase, request } from './client.ts';
+import { ApiError, NO_SERVER, apiBase, request } from './client.ts';
 import { GOOGLE_ENABLED_PATH, GOOGLE_START_PATH } from './routes.ts';
 
 /**
@@ -89,9 +89,23 @@ export async function googleEnabled(fetch?: Fetch): Promise<boolean> {
  * is the WebView's and not the server's. That is hard rule 4, and this is
  * exactly the shape it is about: an `href` looks even less like an API call than
  * a `fetch` does, so it is the easiest place to forget.
+ *
+ * Unreachable without a server, and it refuses anyway. `googleEnabled()` above
+ * answers `false` when there is none — `request` raises `NO_SERVER` and the
+ * catch swallows it — so the button this href belongs to is never drawn. The
+ * guard is for the day something else calls this: `new URL(path, null)` throws
+ * a bare `TypeError: Invalid URL`, which no caller can tell apart from a
+ * malformed path and which names nothing about the cause. `NO_SERVER` says
+ * what happened, and says it in the one type the callers already catch.
  */
 export function googleSignInUrl(redirectTo: string): string {
-	const url = new URL(GOOGLE_START_PATH, apiBase());
+	const base = apiBase();
+
+	if (base === null) {
+		throw new ApiError(NO_SERVER, 'no server connected');
+	}
+
+	const url = new URL(GOOGLE_START_PATH, base);
 	url.searchParams.set('redirectTo', redirectTo);
 	return url.toString();
 }

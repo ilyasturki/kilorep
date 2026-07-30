@@ -28,24 +28,59 @@ export class ApiError extends Error {
 export const OFFLINE = 0;
 
 /**
- * Where the server is.
+ * `ApiError.status` when there is no server to reach — nobody has connected
+ * one yet.
  *
- * A function rather than a constant so importing this module touches no
- * globals: the marketing page at `/` is prerendered under Node, where
- * `location` does not exist, and a module-scope read would run during the
- * build for any route that transitively imported it.
- *
- * On the web surface the answer is the origin serving the page, because that
- * origin *is* the server. In the APK it will not be — the WebView's origin is
- * `capacitor://localhost` and the server is wherever the user configured it —
- * which is why every caller goes through this instead of writing `/api/…`
- * relative. That path works on web and 404s on the phone, and it fails as a
- * network error rather than anything that names the cause — CLAUDE.md hard rule
- * 4. The phone's answer is deferred with the rest of the Capacitor shell, which
- * is not installed yet: written today it would key off nothing and be rewritten.
+ * Distinct from `OFFLINE`, and the distinction is the whole point: offline
+ * means a configured server did not answer, which is a fault and worth
+ * reporting. This means the app is doing exactly what PRODUCT.md promises —
+ * running standalone — and a caller that treated it as a fault would draw an
+ * error screen over a working app. Negative so it can never collide with an
+ * HTTP status.
  */
-export function apiBase(): string {
-	return location.origin;
+export const NO_SERVER = -1;
+
+/**
+ * Where the server is, or null when there is none.
+ *
+ * `null` is not an error state. PRODUCT.md: "the server is optional. The phone
+ * is complete standalone: install, lift, export, forever." The app build ships
+ * with no server configured and stays that way until someone connects one, so
+ * null is the ordinary condition on the phone and the exceptional one on the
+ * web, where the origin serving the page *is* the server.
+ *
+ * Never `location.origin` in the APK. The WebView's origin is `https://localhost`
+ * — Capacitor's own local server, which has no `/api` — so a relative call, or
+ * this function guessing, produces a 404 that surfaces as a network error with
+ * nothing naming the cause. CLAUDE.md hard rule 4, and it will not show up in
+ * Chrome.
+ */
+let configured: string | null = null;
+
+/**
+ * A function, and the fallback read deferred to call time rather than resolved
+ * at module scope: the marketing page at `/` is prerendered under Node, where
+ * `location` does not exist, and a module-scope read would run during the build
+ * for any route that transitively imported this file.
+ */
+export function apiBase(): string | null {
+	if (configured !== null) {
+		return configured;
+	}
+
+	return import.meta.env.APP_BUILD ? null : location.origin;
+}
+
+/**
+ * Points the client at a server.
+ *
+ * Unused today — the app build has no screen that could ask for a URL, and the
+ * web build already knows. It exists because the alternative is a module that
+ * cannot be told, and the settings screen that will tell it is the next thing
+ * PRODUCT.md asks for after the local store.
+ */
+export function setApiBase(base: string | null): void {
+	configured = base;
 }
 
 export type RequestOptions = {
@@ -87,9 +122,19 @@ function messageFrom(payload: unknown, fallback: string): string {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
 	const { method = 'GET', body, fetch = globalThis.fetch } = options;
 
+	const base = apiBase();
+
+	// Before the URL is built, not after. Joining `null` produces the string
+	// "null/api/…", which `fetch` resolves against the WebView's own origin and
+	// answers with Capacitor's local server — a 404 that reads as a network
+	// fault and names nothing.
+	if (base === null) {
+		throw new ApiError(NO_SERVER, 'no server connected');
+	}
+
 	let response: Response;
 	try {
-		response = await fetch(`${apiBase()}${path}`, {
+		response = await fetch(`${base}${path}`, {
 			method,
 			headers: body === undefined ? undefined : { 'content-type': 'application/json' },
 			body: body === undefined ? undefined : JSON.stringify(body)

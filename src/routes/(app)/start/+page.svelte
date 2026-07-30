@@ -11,11 +11,16 @@
 	 * A placeholder on a settled address, not a design.
 	 *
 	 * `/start` is where PRODUCT.md says the app always opens, and the address the
-	 * Capacitor shell will boot into — the marketing page owns `/`, so the APK
-	 * cannot. The route is not in question, only what fills it: the real screen
-	 * is the active workout or the template list, and
-	 * it waits on the local store and the domain model. What is here is the
-	 * smallest thing that proves the credential is real and can be given back.
+	 * Capacitor shell boots into — the marketing page owns `/` on the web, so the
+	 * APK redirects past it. The route is not in question, only what fills it:
+	 * the real screen is the active workout or the template list, and it waits on
+	 * the local store.
+	 *
+	 * Two shapes, because PRODUCT.md makes the server optional and the phone
+	 * complete standalone. With no server there is no account to name and nothing
+	 * to sign out of, so the screen is one action and says so. With a server it is
+	 * additionally the smallest thing that proves the credential is real and can
+	 * be given back.
 	 */
 
 	let { data }: PageProps = $props();
@@ -49,25 +54,42 @@
 	<title>Start | Kilorep</title>
 </svelte:head>
 
-<main class="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-8 px-4 py-10">
-	<header class="flex flex-col gap-1.5">
-		<p class="label-caps">Signed in as</p>
-		<h1 class="text-xl font-extrabold tracking-tight break-all">{data.user.email}</h1>
+<!--
+	`justify-end` and `pb-safe-b`: the action sits in the thumb zone, which is
+	where DESIGN.md puts anything pressed with one hand on a gym floor, and the
+	inset keeps it clear of the gesture bar on a device drawing edge to edge.
+-->
+<main class="mx-auto flex min-h-dvh max-w-sm flex-col justify-end gap-8 px-4 pt-safe-t pb-safe-b">
+	<header class="flex flex-col gap-1.5 pt-10">
+		<h1 class="text-2xl font-extrabold tracking-tight">Kilorep</h1>
+
+		{#if data.user}
+			<p class="text-md break-all text-ink-muted">{data.user.email}</p>
+		{/if}
 	</header>
 
-	<p class="text-md text-pretty text-ink-muted">
-		Start is a placeholder. The template list and the active workout land with the local store.
-	</p>
+	<div class="flex flex-1 flex-col justify-end gap-3 pb-4">
+		<p class="text-md text-pretty text-ink-muted">
+			Start is a placeholder. The template list lands with the local store.
+		</p>
 
-	<div class="flex flex-col gap-3">
-		<Button variant="secondary" disabled={pending} onclick={signOut}>
-			{pending ? 'Signing out…' : 'Sign out'}
-		</Button>
+		<!--
+			The one filled button on the screen, per Button's own rule. It is not a
+			commit in the accent's sense — nothing is being logged — but Start has a
+			single primary action and `commit` is the only look sized for the thumb.
+		-->
+		<Button variant="commit" href="/workout">Start workout</Button>
 
-		<div aria-live="polite">
-			{#if signOutError !== ''}
-				<p class="text-sm font-bold text-danger">{signOutError}</p>
-			{/if}
-		</div>
+		{#if data.user}
+			<Button variant="secondary" disabled={pending} onclick={signOut}>
+				{pending ? 'Signing out…' : 'Sign out'}
+			</Button>
+
+			<div aria-live="polite">
+				{#if signOutError !== ''}
+					<p class="text-sm font-bold text-danger">{signOutError}</p>
+				{/if}
+			</div>
+		{/if}
 	</div>
 </main>

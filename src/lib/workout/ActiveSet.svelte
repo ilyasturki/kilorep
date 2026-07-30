@@ -2,6 +2,7 @@
 	import { canCommit, hintLabel, parseEntry, prefillFor, settle } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import Button from '$lib/ui/Button.svelte';
+	import { tapCommit } from '$lib/ui/haptics';
 	import Numpad from '$lib/ui/Numpad.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
@@ -57,6 +58,9 @@
 			return;
 		}
 
+		// After the guard, so a press on an inert check stays silent — a buzz for
+		// a set that was not logged is the app claiming something it did not do.
+		tapCommit();
 		oncommit(weight, reps);
 	}
 

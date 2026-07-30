@@ -3,6 +3,22 @@
 import type { Credential } from '$lib/server/auth/session';
 
 declare global {
+	/**
+	 * Vite declares `ImportMetaEnv` globally; this augments it. Inside `declare
+	 * global` and not beside it, because this file has imports and is therefore a
+	 * module — a bare `interface` here would be module-scoped and merge with
+	 * nothing, leaving `import.meta.env.APP_BUILD` as `any` and every branch on
+	 * it a lint error rather than a type.
+	 */
+	interface ImportMetaEnv {
+		/**
+		 * True in the bundle Capacitor wraps, false in the one the server hosts.
+		 * Substituted literally by `define` in vite.config.ts — see the comment
+		 * there for why it is not a `VITE_`-prefixed variable.
+		 */
+		readonly APP_BUILD: boolean;
+	}
+
 	namespace App {
 		// interface Error {}
 		interface Locals {

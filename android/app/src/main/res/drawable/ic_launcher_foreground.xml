@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The K, stroked rather than filled so the geometry is the same three lines in
+    this file and in `src/lib/assets/favicon.svg` — one mark, two renderers, no
+    chance of them drifting.
+
+    Sized to the adaptive-icon safe zone: the mark's furthest corner sits 32.4dp
+    from centre, inside the 33dp radius Android guarantees is visible under every
+    launcher mask. Ink is neutral-950, the `on-accent` token, which is the
+    pairing app.css already requires for anything painted on the accent. Written
+    without its leading dashes on purpose: a literal double dash is illegal
+    inside an XML comment, and aapt reports it as a file it cannot parse rather
+    than as the typo it is.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M41,32 V76 M41,54 L65,32 M41,54 L67,76"
+        android:strokeColor="#0a0a0a"
+        android:strokeWidth="10"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
