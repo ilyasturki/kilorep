@@ -1,11 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit';
 
-import {
-	GOOGLE_CALLBACK_PATH,
-	GOOGLE_ENABLED_PATH,
-	GOOGLE_START_PATH
-} from '../../api/routes.ts';
+import { GOOGLE_CALLBACK_PATH, GOOGLE_ENABLED_PATH, GOOGLE_START_PATH } from '../../api/routes.ts';
 import type { Credential } from '../auth/session.ts';
 import { SESSION_COOKIE, bearerToken, resolveCredential } from '../auth/session.ts';
 import type { Database } from '../db/client.ts';
