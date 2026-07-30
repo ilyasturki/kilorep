@@ -18,6 +18,15 @@ node_modules
 # capacitor.config.ts and the installed plugin set. Restating any of it here
 # would be two files to keep in agreement for no gain.
 
+# Signing keystores. Nothing here should ever hold one — the release key lives
+# outside the tree and reaches CI as a base64 secret (.github/workflows/release.yml)
+# — but `keytool` writes to the working directory by default, so the one command
+# that creates a keystore is precisely the one that drops it in the repo root.
+# This is the net under that. android/.gitignore ships the same two lines
+# commented out; uncommenting them there would only cover the subtree.
+*.jks
+*.keystore
+
 # Database (the SQLite file, plus WAL and shared-memory sidecars)
 /.data
 

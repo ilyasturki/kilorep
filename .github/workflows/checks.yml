@@ -1,0 +1,58 @@
+name: checks
+
+# The JavaScript-side gate: format, lint, types, tests, and the app bundle.
+#
+# Reusable rather than inlined, because two callers need the identical list.
+# ci.yml runs it on every push and pull request; release.yml runs it before it
+# is allowed to build an APK. A tag that ships an artifact must clear exactly
+# what a pull request clears, and two copies of this file is how one of them
+# quietly falls a check behind the other.
+#
+# It does not build the server — nix-build.yml does that, and does more with it:
+# a `nix build` also fails when the fixed-output `deps` hash in nix/package.nix
+# goes stale. The two workflows overlap on nothing.
+
+on: workflow_call
+
+# Checking out is all it does with the token. Declared here rather than left to
+# the caller because a called workflow inherits whatever the caller holds, and
+# release.yml holds `contents: write` on the job next to this one.
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+
+      # bun's global package cache, which `--frozen-lockfile` populates once and
+      # then reads on every later run. Keyed on the lockfile: a dependency change
+      # is exactly when the cache should miss, and nothing else is.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      # Runs the package's `prepare` script, which is `svelte-kit sync`. That is
+      # not optional here: tsconfig.json extends the file the sync writes, so
+      # `check` and `lint` would both resolve a dangling `extends` without it.
+      # (nix/package.nix installs with `--ignore-scripts` and calls the sync by
+      # hand for the same reason.)
+      - run: bun install --frozen-lockfile
+
+      - run: bun run format
+      - run: bun run lint
+      - run: bun run check
+      - run: bun run test
+
+      # The app bundle, built and thrown away. Nothing else in CI touches it:
+      # `nix build` produces the server artifact, and the two differ in adapter,
+      # in the dev-route stripping plugin, and in every `import.meta.env.APP_BUILD`
+      # branch. Without this step the first place a break in that half shows up
+      # is a release tag, with the APK already announced.
+      - run: bun run build:app

@@ -1,5 +1,23 @@
 apply plugin: 'com.android.application'
 
+// The version, supplied by .github/workflows/release.yml and derived there from
+// the git tag. Defaulted rather than required, so a local `./gradlew` still runs
+// with no properties passed — and defaulted to something a person reading an
+// About screen can tell apart from a release, because a laptop build has no tag
+// behind it and any concrete number here would be a lie about which one.
+def kilorepVersionName = project.findProperty('kilorepVersionName') ?: '0.0.0-dev'
+def kilorepVersionCode = (project.findProperty('kilorepVersionCode') ?: '1') as int
+
+// The release keystore, supplied by the same workflow through the environment.
+//
+// Absent — every local build — the release signing config below is not declared
+// at all and `assembleRelease` emits `app-release-unsigned.apk`. That is the
+// point: the alternative is a committed debug keystore, whose signature would
+// differ from the release one, and an app cannot be updated across a change of
+// signing key. Nothing installable should ever leave a machine that does not
+// hold the real key.
+def kilorepKeystore = System.getenv('KILOREP_KEYSTORE')
+
 android {
     namespace = "io.github.ilyasturki.kilorep"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +25,8 @@ android {
         applicationId "io.github.ilyasturki.kilorep"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode kilorepVersionCode
+        versionName kilorepVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +34,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (kilorepKeystore) {
+            release {
+                storeFile file(kilorepKeystore)
+                storePassword System.getenv('KILOREP_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KILOREP_KEY_ALIAS')
+                keyPassword System.getenv('KILOREP_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (kilorepKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

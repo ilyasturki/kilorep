@@ -1,0 +1,19 @@
+name: ci
+
+# Every push to main or v2, and every pull request. Runs beside nix-build.yml,
+# which covers the other half: this one the TypeScript and the app bundle, that
+# one the packaged server.
+#
+# `v2` is listed because it is where the rewrite is being built — a branch that
+# is the de facto trunk but is not named `main` gets no checks at all under a
+# main-only filter, which is the whole of CI silently not running. Drop it from
+# this list once v2 merges down.
+
+on:
+  push:
+    branches: [main, v2]
+  pull_request:
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
