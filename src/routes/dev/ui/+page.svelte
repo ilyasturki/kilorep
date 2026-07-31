@@ -158,8 +158,6 @@
 
 <div class="min-h-dvh bg-canvas px-6 pt-safe-t pb-16 text-ink">
 	<div class="mx-auto flex max-w-[1280px] flex-col gap-6 pt-6">
-		<h1 class="text-lg font-extrabold tracking-tight">kilorep · components</h1>
-
 		<!-- A bento, not a terrace. Cards vary wildly in height — the numpad is three
 		     times the badge card — so the five tallest take row-span-2 and the flow is
 		     dense, which lets a later short card backfill the cell a tall one skipped

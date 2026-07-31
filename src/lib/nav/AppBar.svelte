@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	import { appBarSlot, isActive, tabs } from '$lib/nav/bar.svelte';
+	import { appBarSlot, isActive, navTabs } from '$lib/nav/bar.svelte';
 
 	/**
 	 * The top bar, from `lg` up and nowhere else. Below it the same tabs are a
@@ -20,9 +20,9 @@
 	 *
 	 * The bar renders on every app route, the Workout screen included. Hard rule
 	 * 7 is a gym-floor rule — a nav target beside the commit button is a mis-tap
-	 * waiting for a tired thumb — and a mouse on a desk does not trip it. There
-	 * is no Workout tab, so Start reads as active while a session is live, which
-	 * is true: Start's destination *is* the workout for as long as one exists.
+	 * waiting for a tired thumb — and a mouse on a desk does not trip it. While
+	 * a session is live the first slot reads Workout instead of Start and wears
+	 * the accent dot — the swap and its reasons live in `navTabs`.
 	 */
 	const slot = appBarSlot();
 </script>
@@ -35,19 +35,22 @@
 			<span class="shrink-0 text-base font-extrabold tracking-tight">Kilorep</span>
 
 			<nav aria-label="Main" class="flex min-w-0 flex-1 items-center gap-1">
-				{#each tabs as tab (tab.href)}
+				{#each navTabs() as tab (tab.href)}
 					{@const active = isActive(page.url.pathname, tab.href)}
 
 					<a
 						href={tab.href}
 						aria-current={active ? 'page' : undefined}
 						class={[
-							'flex min-h-chrome items-center rounded-xl px-3',
+							'flex min-h-chrome items-center gap-1.5 rounded-xl px-3',
 							'label-caps focus-ring',
 							active ? 'text-ink' : 'text-ink-faint hover:text-ink-muted'
 						]}
 					>
 						{tab.label}
+						{#if tab.live}
+							<span class="size-1.5 rounded-full bg-accent"></span>
+						{/if}
 					</a>
 				{/each}
 			</nav>

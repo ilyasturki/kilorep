@@ -5,7 +5,7 @@
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
-	import { WorkoutSession } from '$lib/workout/session.svelte';
+	import { activeWorkout } from '$lib/workout/session.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import InsertSheet from '$lib/workout/InsertSheet.svelte';
 	import OverviewSheet from '$lib/workout/OverviewSheet.svelte';
@@ -43,8 +43,13 @@
 	 */
 	let { data }: PageProps = $props();
 
+	// Taken from the shared holder when one is live, begun otherwise: the
+	// session has to outlive this page, so walking to Exercises mid-workout and
+	// back lands in the same workout — and so the nav bars can read the same
+	// object to swap Start for Workout. After a reload the holder is empty and
+	// `data.resume` carries the snapshot, so beginning *is* the resume.
 	// svelte-ignore state_referenced_locally
-	const session = new WorkoutSession(data.history, data.resume);
+	const session = activeWorkout.session ?? activeWorkout.begin(data.history, data.resume);
 
 	/**
 	 * Persistence, as a side effect of existing: `$state.snapshot` reads every
@@ -67,7 +72,8 @@
 	 * a session with none is discarded — nothing was lifted, and an empty
 	 * workout in history would hint nothing and count nothing. Either way the
 	 * snapshot is cleared, sync is nudged if an account exists, and the screen
-	 * hands back to Start.
+	 * hands back to Start — the holder emptied first, so Start's reroute into
+	 * a live workout finds nothing to bounce off.
 	 */
 	async function finishSession() {
 		if (session.hasLoggedSets) {
@@ -80,6 +86,7 @@
 			syncSoon(data.user.id);
 		}
 
+		activeWorkout.finish();
 		await goto('/start');
 	}
 
@@ -145,7 +152,8 @@
 
 <!-- Declared once and rendered twice — into this screen's own header on a phone,
      and into the app bar's slot on a desk. Finish is instant and has no
-     ceremony: no summary, no confetti. -->
+     ceremony: no summary, no confetti. It discards the session and lands on
+     Start, where a second run is one tap away. -->
 {#snippet finish()}
 	<Button variant="chrome" caps onclick={() => void finishSession()}>FINISH</Button>
 {/snippet}

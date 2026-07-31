@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	import { isActive, tabs } from '$lib/nav/bar.svelte';
+	import { isActive, navTabs } from '$lib/nav/bar.svelte';
 
 	import type { LayoutProps } from './$types';
 
@@ -19,7 +19,8 @@
 	 * Text tabs, no icons: two words are legible at arm's length and the icon
 	 * set has nothing that says "exercise" without inventing decoration. The
 	 * active tab is ink against faint, never the accent — the accent means
-	 * "this logs a set" and a navigation state is not that.
+	 * "this logs a set" and a navigation state is not that. The one exception
+	 * is the dot on a live Workout tab, which is that — see `navTabs`.
 	 *
 	 * The viewport and the top bar belong to `(app)`; this is a `flex-1` box
 	 * inside them.
@@ -34,19 +35,22 @@
 
 	<nav aria-label="Main" class="shrink-0 border-t border-line-soft bg-surface pb-safe-b lg:hidden">
 		<div class="mx-auto flex max-w-sm">
-			{#each tabs as tab (tab.href)}
+			{#each navTabs() as tab (tab.href)}
 				{@const active = isActive(page.url.pathname, tab.href)}
 
 				<a
 					href={tab.href}
 					aria-current={active ? 'page' : undefined}
 					class={[
-						'flex min-h-chrome flex-1 items-center justify-center rounded-xl',
+						'flex min-h-chrome flex-1 items-center justify-center gap-1.5 rounded-xl',
 						'label-caps focus-ring',
 						active ? 'text-ink' : 'text-ink-faint hover:text-ink-muted'
 					]}
 				>
 					{tab.label}
+					{#if tab.live}
+						<span class="size-1.5 rounded-full bg-accent"></span>
+					{/if}
 				</a>
 			{/each}
 		</div>

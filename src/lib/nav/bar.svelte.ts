@@ -1,5 +1,7 @@
 import { getContext, setContext } from 'svelte';
 
+import { activeWorkout } from '$lib/workout/session.svelte';
+
 import type { Snippet } from 'svelte';
 
 /**
@@ -15,10 +17,32 @@ import type { Snippet } from 'svelte';
  * Both bars grow a slot as each screen lands, which is why the list lives here
  * and not inside either one of them.
  */
-export const tabs = [
-	{ href: '/start', label: 'Start' },
-	{ href: '/exercises', label: 'Exercises' }
-];
+export interface NavTab {
+	href: string;
+	label: string;
+	/** A session is live behind this tab; both bars mark it with the accent dot. */
+	live?: boolean;
+}
+
+/**
+ * A function rather than a list, because the first slot is conditional: while
+ * a workout is live it reads Workout and points at it, not Start. The same
+ * slot, not a third tab — Start's destination *is* the workout for as long as
+ * one exists, and `/start` reroutes there to keep the claim honest.
+ *
+ * `live` is the one departure from ink-on-faint: an accent dot beside the
+ * label, the label itself still ink. The accent means "this logs a set", and
+ * a tab leading back into a live session is the single nav target that can
+ * say so — as a fill, per the accent's own rule, never as text.
+ */
+export function navTabs(): NavTab[] {
+	return [
+		activeWorkout.session === null
+			? { href: '/start', label: 'Start' }
+			: { href: '/workout', label: 'Workout', live: true },
+		{ href: '/exercises', label: 'Exercises' }
+	];
+}
 
 export function isActive(pathname: string, href: string): boolean {
 	return pathname === href || pathname.startsWith(`${href}/`);

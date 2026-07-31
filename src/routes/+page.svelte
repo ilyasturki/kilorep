@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>Kilorep — the workout tracker that is actually yours</title>
+	<title>The workout tracker that is actually yours | Kilorep</title>
 	<meta
 		name="description"
 		content="An open-source, self-hosted workout tracker built for speed on the gym floor. Works fully offline, and your data leaves whenever you want."
