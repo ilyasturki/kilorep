@@ -58,12 +58,28 @@ export const NO_SERVER = -1;
 let configured: string | null = null;
 
 /**
+ * Where the app build keeps the URL between launches. localStorage and not the
+ * IndexedDB store: `db.ts` holds records, and this single string has to be
+ * readable synchronously, before the first request of the boot — the guard's
+ * session read — decides whether a server exists at all.
+ */
+const SERVER_KEY = 'kilorep.server';
+
+/** The stored URL has been consulted; `configured` is now the truth either way. */
+let restored = false;
+
+/**
  * A function, and the fallback read deferred to call time rather than resolved
  * at module scope: the marketing page at `/` is prerendered under Node, where
  * `location` does not exist, and a module-scope read would run during the build
  * for any route that transitively imported this file.
  */
 export function apiBase(): string | null {
+	if (import.meta.env.APP_BUILD && !restored) {
+		restored = true;
+		configured = localStorage.getItem(SERVER_KEY);
+	}
+
 	if (configured !== null) {
 		return configured;
 	}
@@ -72,15 +88,62 @@ export function apiBase(): string | null {
 }
 
 /**
- * Points the client at a server.
+ * Points the client at a server — the settings screen connecting one, or
+ * disconnecting it with `null`.
  *
- * Unused today — the app build has no screen that could ask for a URL, and the
- * web build already knows. It exists because the alternative is a module that
- * cannot be told, and the settings screen that will tell it is the next thing
- * PRODUCT.md asks for after the local store.
+ * Persisted only in the app build. On the web the origin serving the page is
+ * the server and needs no remembering, and writing there would let a stored
+ * URL silently shadow it on the next boot.
  */
 export function setApiBase(base: string | null): void {
 	configured = base;
+	restored = true;
+
+	if (import.meta.env.APP_BUILD) {
+		if (base === null) {
+			localStorage.removeItem(SERVER_KEY);
+		} else {
+			localStorage.setItem(SERVER_KEY, base);
+		}
+	}
+}
+
+/**
+ * Whether `base` is a kilorep server that is up, asked before `setApiBase`
+ * commits to it — the one call made to an address the client is not yet
+ * pointed at, which is why it cannot go through `request`.
+ *
+ * Three answers, matching what the connect screen has to say: unreachable
+ * (`OFFLINE` — a typo'd host and a downed server look identical from here),
+ * reachable but not a kilorep server (whatever answered has no `/api/health`
+ * speaking our shape — the status is the stranger's own), or fine.
+ */
+export async function checkServer(base: string): Promise<void> {
+	let response: Response;
+	try {
+		response = await fetch(new URL('/api/health', base));
+	} catch {
+		throw new ApiError(OFFLINE, 'could not reach the server');
+	}
+
+	let payload: unknown;
+	try {
+		payload = await response.json();
+	} catch {
+		payload = undefined;
+	}
+
+	const shape = typeof payload === 'object' && payload !== null && 'ok' in payload;
+
+	if (!shape) {
+		throw new ApiError(response.status, 'that address is not a kilorep server');
+	}
+
+	// `ok: false` is still kilorep — the health endpoint reporting its database
+	// down. Connecting would only move the failure two taps later.
+	if (!response.ok) {
+		throw new ApiError(response.status, 'the server answered, but reports itself unhealthy');
+	}
 }
 
 export type RequestOptions = {

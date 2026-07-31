@@ -33,6 +33,24 @@ export type Session = {
 	user: Account;
 };
 
+/**
+ * A credential as the list endpoint describes it — the same restatement rule
+ * as `Account` above. `prefix` is the only piece of the secret that survives
+ * minting; it exists so a token pasted into a tool can be matched to its row.
+ */
+export type PublicToken = {
+	id: string;
+	label: string;
+	kind: 'web' | 'device' | 'api';
+	prefix: string;
+	/** Epoch milliseconds; the two nullables have simply never happened yet. */
+	createdAt: number;
+	lastUsedAt: number | null;
+	expiresAt: number | null;
+	/** The credential this very request arrived with. */
+	current: boolean;
+};
+
 type Fetch = typeof globalThis.fetch;
 
 /**
@@ -61,6 +79,40 @@ export async function logout(fetch?: Fetch): Promise<void> {
 export async function session(fetch?: Fetch): Promise<Session> {
 	const result = await request<Session>('/api/auth/session', { fetch });
 	return result;
+}
+
+/** Every credential on the account, the caller's own marked `current`. */
+export async function listTokens(fetch?: Fetch): Promise<PublicToken[]> {
+	const tokens = await request<PublicToken[]>('/api/auth/tokens', { fetch });
+	return tokens;
+}
+
+/**
+ * Mints an `api` token. The cleartext in the response is the only time the
+ * secret ever exists outside a hash — the caller shows it once or loses it.
+ *
+ * Always `api`: `device` is the shell sign-in's kind to mint when that flow
+ * exists, and `web` is a cookie the server refuses to hand out as a string.
+ */
+export async function createToken(
+	label: string,
+	fetch?: Fetch
+): Promise<{ token: string; credential: PublicToken }> {
+	const minted = await request<{ token: string; credential: PublicToken }>('/api/auth/tokens', {
+		method: 'POST',
+		body: { label, kind: 'api' },
+		fetch
+	});
+
+	return minted;
+}
+
+/**
+ * Revocation — how access ends, since nothing expires. Revoking the credential
+ * the request rides on is a logout, and the server finishes that job itself.
+ */
+export async function revokeToken(id: string, fetch?: Fetch): Promise<void> {
+	await request<undefined>(`/api/auth/tokens/${id}`, { method: 'DELETE', fetch });
 }
 
 /**
