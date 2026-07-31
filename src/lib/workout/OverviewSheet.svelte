@@ -16,15 +16,27 @@
 		activeSetId: string | null;
 		onjump: (setId: string) => void;
 		oninsert: () => void;
+		onreorder: (entryId: string, index: number) => void;
 	};
 
-	let { open = $bindable(false), groups, activeSetId, onjump, oninsert }: Props = $props();
+	let {
+		open = $bindable(false),
+		groups,
+		activeSetId,
+		onjump,
+		oninsert,
+		onreorder
+	}: Props = $props();
 
 	// Jumping is the whole reason the sheet was opened, so it closes behind the
 	// tap. The rail, having nothing to close, passes `onjump` straight through —
 	// which is why closing lives here and not in `SessionList`. Insert closes
 	// for one more reason: the insert sheet is about to open, and two sheets
 	// stacked is a fight over one focus trap.
+	//
+	// Reordering does not close it, and the asymmetry is the point: a jump is
+	// finished when it lands, and reordering a session is a handful of drags you
+	// want to see the result of before leaving.
 	function jump(setId: string) {
 		onjump(setId);
 		open = false;
@@ -37,5 +49,5 @@
 </script>
 
 <Sheet bind:open title="Session">
-	<SessionList {groups} {activeSetId} onjump={jump} oninsert={insert} />
+	<SessionList {groups} {activeSetId} {onreorder} onjump={jump} oninsert={insert} />
 </Sheet>

@@ -22,6 +22,7 @@ import {
 	cursors,
 	firstUncompleted,
 	insertedSetCount,
+	moveEntry as relocateEntry,
 	removeSet as dropSet
 } from '$lib/domain/workout';
 import type { Workout } from '$lib/domain/workout';
@@ -113,6 +114,18 @@ export class WorkoutSession {
 		if (entry !== null && this.activeSetId === null) {
 			this.activeSetId = entry.exercises[0].sets[0].id;
 		}
+	}
+
+	/**
+	 * Reordering the session, from a drag on the session list.
+	 *
+	 * The cursor is deliberately not touched. Reordering is not a jump — the set
+	 * being logged is still the set being logged, wherever its exercise has
+	 * landed — and what changes is only what `advanceFrom` finds next, because
+	 * that rule reads position at the moment it is asked rather than caching one.
+	 */
+	public moveEntry(entryId: string, index: number): void {
+		relocateEntry(this.workout, entryId, index);
 	}
 
 	/**

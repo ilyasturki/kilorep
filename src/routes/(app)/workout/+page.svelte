@@ -119,6 +119,7 @@
 				activeSetId={session.activeSetId}
 				onjump={(id) => session.select(id)}
 				oninsert={() => (insertOpen = true)}
+				onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 			/>
 		</aside>
 
@@ -165,6 +166,7 @@
 	activeSetId={session.activeSetId}
 	onjump={(id) => session.select(id)}
 	oninsert={() => (insertOpen = true)}
+	onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 />
 
 <InsertSheet bind:open={insertOpen} onadd={(id) => session.addExercise(id)} />

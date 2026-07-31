@@ -85,7 +85,7 @@
 			     mutating the open one underneath the user's thumb. -->
 			<div bind:this={holder}>
 				{#key cursor.set.id}
-					<ActiveSet {cursor} {history} {oncommit} />
+					<ActiveSet {cursor} {history} {oncommit} onoptions={() => onoptions(cursor.set.id)} />
 				{/key}
 			</div>
 		{:else}

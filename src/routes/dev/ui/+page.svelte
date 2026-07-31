@@ -221,6 +221,10 @@
 							{#snippet right()}warmup{/snippet}
 						</SetRow>
 					</div>
+					<!-- `onselect` where `ExerciseBlock` passes it, and withheld from the
+					     warmup where it withholds it: that prop is what decides whether a
+					     row says it is tappable, so a showcase that never passed it would
+					     display four states the screen never renders. -->
 					<div class="flex flex-col gap-1">
 						<span class={caption}>status="done"</span>
 						<SetRow
@@ -228,6 +232,7 @@
 							index={2}
 							weight={85}
 							reps={8}
+							onselect={() => {}}
 							onoptions={() => (optionsOpen = true)}
 						>
 							{#snippet right()}RPE 8{/snippet}
@@ -249,7 +254,12 @@
 					</div>
 					<div class="flex flex-col gap-1">
 						<span class={caption}>status="pending"</span>
-						<SetRow status="pending" index={4} onoptions={() => (optionsOpen = true)}>
+						<SetRow
+							status="pending"
+							index={4}
+							onselect={() => {}}
+							onoptions={() => (optionsOpen = true)}
+						>
 							{#snippet right()}80 × 7{/snippet}
 						</SetRow>
 					</div>

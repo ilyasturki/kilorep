@@ -6,6 +6,7 @@
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
+	import More from '$lib/ui/icons/More.svelte';
 
 	/**
 	 * The active set, expanded in place into an editor.
@@ -20,9 +21,18 @@
 		cursor: SetCursor;
 		history: History;
 		oncommit: (weight: number, reps: number) => void;
+		/**
+		 * The same sheet every other row reaches, from the one row that could not.
+		 *
+		 * Expanding a set used to take its ⋯ away with the row it replaced, which
+		 * left the active set as the single set in a session that could not be
+		 * removed — while `WorkoutSession.removeSet` carried a paragraph of care
+		 * for exactly that case, unreachable.
+		 */
+		onoptions: () => void;
 	};
 
-	let { cursor, history, oncommit }: Props = $props();
+	let { cursor, history, oncommit, onoptions }: Props = $props();
 
 	const prefill = $derived(prefillFor(cursor, history));
 	const hint = $derived(hintLabel(history, cursor));
@@ -72,8 +82,16 @@
 	 *
 	 * `focusin` on the card rather than a prop on each field: it bubbles, so
 	 * there is no second copy of the rule to keep in step with the first.
+	 *
+	 * Which is also why it has to ask what was focused. The ⋯ button bubbles
+	 * through here too and raises no keyboard, so scrolling for it would be the
+	 * card jumping out from under a press for no reason at all.
 	 */
-	function reveal() {
+	function reveal(event: FocusEvent) {
+		if (!(event.target instanceof HTMLInputElement)) {
+			return;
+		}
+
 		card?.scrollIntoView({ block: 'end', behavior: 'smooth' });
 	}
 
@@ -111,18 +129,36 @@
 	<div class="absolute inset-y-0 left-0 w-1.5 bg-accent-text" aria-hidden="true"></div>
 
 	<div class="flex flex-col gap-3 py-3 pr-3 pl-4">
-		<div class="flex items-center justify-between gap-3">
-			<div class="flex items-center gap-3">
+		<div class="flex items-center justify-between gap-2">
+			<div class="flex min-w-0 items-center gap-3">
 				<SetMark status="active" index={cursor.workingIndex + 1} />
 				<span class="label-caps">
 					{cursor.workingIndex < 0 ? 'Warmup' : `Set ${cursor.workingIndex + 1}`}
 				</span>
 			</div>
 
-			<!-- Recall, never coaching: what happened last time, stated and left alone. -->
-			<span class="text-sm font-bold text-ink-faint">
-				{hint === null ? 'First time' : `Last ${hint}`}
-			</span>
+			<div class="flex shrink-0 items-center gap-1">
+				<!-- Recall, never coaching: what happened last time, stated and left alone. -->
+				<span class="text-sm font-bold text-ink-faint">
+					{hint === null ? 'First time' : `Last ${hint}`}
+				</span>
+
+				<!-- Always visible, where `SetRow` shows its own only to a mouse. The
+				     row hides it because 44px of height has nothing to spare; this card
+				     has a header with room, and hiding it here would leave the phone
+				     with no way at all to reach the sheet — long-press is not available,
+				     since a `pointerdown` on a ± arm bubbles to this card and the hold
+				     that accelerates the stepper would open the sheet on top of it. -->
+				<button
+					type="button"
+					aria-label="Set options"
+					onclick={onoptions}
+					class="-mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-lg
+						text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2"
+				>
+					<More size={20} />
+				</button>
+			</div>
 		</div>
 
 		<div class="grid grid-cols-2 gap-2">

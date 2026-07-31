@@ -71,6 +71,15 @@ export type Workout = {
 export type SetCursor = {
 	set: WorkoutSet;
 	exercise: WorkoutExercise;
+	/**
+	 * The entry the exercise was performed under, and the level reorder moves.
+	 *
+	 * Carried rather than looked up, because the only caller that needs it is a
+	 * drag reading it off a row it already has — and searching the tree for the
+	 * entry containing an exercise node is the kind of lookup that goes ambiguous
+	 * the day an entry holds two of them.
+	 */
+	entry: WorkoutEntry;
 	/** Index among this exercise's *working* sets; -1 for a warmup. */
 	workingIndex: number;
 };
@@ -87,7 +96,7 @@ export function cursors(workout: Workout): SetCursor[] {
 			let working = 0;
 
 			for (const set of exercise.sets) {
-				out.push({ set, exercise, workingIndex: set.type === 'warmup' ? -1 : working++ });
+				out.push({ set, exercise, entry, workingIndex: set.type === 'warmup' ? -1 : working++ });
 			}
 		}
 	}
@@ -100,8 +109,18 @@ export function cursors(workout: Workout): SetCursor[] {
  * workout-exercise *node* id, not the catalog id: the same exercise performed
  * twice in one session is two groups, so only the node id can tell them apart
  * — or key a rendered list of them.
+ *
+ * `entryId` is what a reorder acts on, and it is deliberately not the group's
+ * own identity: a superset entry produces two groups that share one `entryId`,
+ * so dragging either of them moves the pair. That is the correct answer — the
+ * two halves of a superset are performed together and must not be torn apart.
  */
-export type SetGroup = { id: string; exerciseId: string; cursors: SetCursor[] };
+export type SetGroup = {
+	id: string;
+	exerciseId: string;
+	entryId: string;
+	cursors: SetCursor[];
+};
 
 /**
  * Cursors grouped per exercise.
@@ -123,6 +142,7 @@ export function groupsOf(workout: Workout): SetGroup[] {
 			out.push({
 				id: cursor.exercise.id,
 				exerciseId: cursor.exercise.exerciseId,
+				entryId: cursor.entry.id,
 				cursors: [cursor]
 			});
 		}
@@ -424,4 +444,45 @@ export function removeSet(workout: Workout, setId: string): boolean {
 	}
 
 	return false;
+}
+
+/**
+ * Moves an entry to `toIndex`, taking everything under it along.
+ *
+ * The entry and not the exercise, because an entry holding two exercises is a
+ * superset and the pair is performed together — a reorder that could land one
+ * half three exercises away from the other is not a reorder, it is a different
+ * edit against a level of the tree the UI does not expose.
+ *
+ * Session order is the only thing that changes. Nothing here touches which set
+ * is active: the cursor is held by id, and `advanceFrom` reads position at the
+ * moment it is asked, so a move quietly changes what comes next — which is
+ * exactly what reordering a session means.
+ *
+ * `toIndex` is clamped rather than refused. It arrives from pointer geometry
+ * measured against row midpoints, and a drag held past the last row is an
+ * unambiguous request to put the entry at the end; failing it over a rounding
+ * error would refuse a move the user plainly made.
+ *
+ * Reports whether it moved, so a caller need not diff the tree to find out.
+ * False for an unknown id and false for a move that lands where it started —
+ * the same honest no-op `nudge` returns at the floor of a stepper.
+ */
+export function moveEntry(workout: Workout, entryId: string, toIndex: number): boolean {
+	const from = workout.entries.findIndex((e) => e.id === entryId);
+
+	if (from === -1) {
+		return false;
+	}
+
+	const to = Math.min(Math.max(toIndex, 0), workout.entries.length - 1);
+
+	if (to === from) {
+		return false;
+	}
+
+	const [entry] = workout.entries.splice(from, 1);
+	workout.entries.splice(to, 0, entry);
+
+	return true;
 }

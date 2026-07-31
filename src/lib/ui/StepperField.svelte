@@ -77,43 +77,82 @@
 		return true;
 	}
 
+	/**
+	 * A tap is a `click`, and nothing else is.
+	 *
+	 * `click` is the one event that already answers every question this field
+	 * used to arbitrate by hand: it fires once per press on a mouse and on a
+	 * finger, it does not fire at all when the gesture turns out to be a scroll,
+	 * and Enter and Space on a focused arm synthesise it for free. Stepping on
+	 * `pointerdown` instead meant swallowing the click that followed — and on a
+	 * touchscreen the pointer is destroyed at release, so `pointerleave` arrived
+	 * *before* that click, cleared the guard, and let every tap step twice.
+	 *
+	 * `pointerdown` is left with one job: arm the hold.
+	 *
+	 * Neither of the two below is `$state`: both are written and read inside
+	 * handlers, and nothing renders from either. `repeating` is set only once a
+	 * hold has actually fired, and cleared again by the next press, so it cannot
+	 * be left standing across gestures the way the old claim could.
+	 */
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let repeating = false;
+
+	function nudgeOnce(event: MouseEvent, direction: number) {
+		// A hold has already stepped, repeatedly, and the release still produces a
+		// click. `detail` is the click count for a pointer and 0 for a keyboard
+		// activation, so the swallow can never reach an Enter — which is the way
+		// the old guard failed once it was left standing.
+		if (repeating && event.detail !== 0) {
+			repeating = false;
+			return;
+		}
+
+		nudge(direction);
+	}
+
 	// Hold to repeat. Stepping from 40 to 100 is twenty-four taps, which is the
 	// cost this field was apologising for; held down it is one gesture of about
-	// two and a half seconds. The first step lands on `pointerdown`, then a pause
-	// long enough to tell a tap from a hold, then an interval that ramps down to
-	// a floor — slow at the start so the value one step away is still reachable,
-	// fast by the end so the one twenty steps away is too.
+	// two and a half seconds. A pause long enough to be deliberate, then an
+	// interval that ramps down to a floor — slow at the start so the value one
+	// step away is still reachable, fast by the end so the one twenty steps away
+	// is too.
+	//
+	// The pause no longer has to be long enough to tell a tap from a hold, since
+	// `click` settles that: it is purely how long the field waits before it
+	// starts running, which is why it is 350 and not the 500 that a
+	// gesture-recognition threshold would need. `SetRow`'s long-press stays at
+	// 500 — that one opens a surface, and this one only accelerates.
 	//
 	// A `setTimeout` chain rather than `setInterval`: the delay changes on every
 	// tick. The ramp is driven by the tick count and not by a clock reading, so a
 	// busy frame shifts the schedule rather than skipping through it.
-	const HOLD_DELAY = 500;
+	const HOLD_DELAY = 350;
 	const REPEAT_FROM = 180;
 	const REPEAT_FLOOR = 50;
 	const REPEAT_RAMP = 0.92;
 
-	// Neither is `$state`: both are written and read inside handlers, and nothing
-	// renders from either.
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	let claimed = false;
-
 	function holdStart(direction: number) {
 		clearTimeout(timer);
-		// The click this pointer sequence ends with would step a second time.
-		claimed = true;
-		nudge(direction);
+		repeating = false;
 
 		let delay = REPEAT_FROM;
 		const tick = () => {
+			repeating = true;
+
 			if (!nudge(direction)) {
 				return;
 			}
+
 			delay = Math.max(REPEAT_FLOOR, delay * REPEAT_RAMP);
 			timer = setTimeout(tick, delay);
 		};
 		timer = setTimeout(tick, HOLD_DELAY);
 	}
 
+	// Every way a press can stop: released, dragged off the arm, or taken by a
+	// scroll. All three end the chain and none of them has anything else to undo,
+	// because nothing was stepped before the chain began.
 	function holdEnd() {
 		clearTimeout(timer);
 	}
@@ -122,24 +161,6 @@
 	// otherwise keep calling `onchange` from a component nobody is rendering.
 	// The body tracks nothing, so this is a teardown on destroy and nothing else.
 	$effect(() => () => clearTimeout(timer));
-
-	// A pointer that leaves the arm — or a scroll that swallows it — produces no
-	// click to swallow in turn, so the claim has to leave with it. Left standing,
-	// it would eat the next keyboard Enter instead.
-	function holdCancel() {
-		clearTimeout(timer);
-		claimed = false;
-	}
-
-	// Keyboard activation arrives here with no `pointerdown` before it, so it is
-	// the one path that still steps on click.
-	function activate(direction: number) {
-		if (claimed) {
-			claimed = false;
-			return;
-		}
-		nudge(direction);
-	}
 
 	// Typing is held in `draft` and only lands in `value` on commit. Writing
 	// every keystroke through would fire `onchange` per digit and make the
@@ -194,11 +215,11 @@
 	<button
 		type="button"
 		aria-label="{verb} {label}"
-		onclick={() => activate(direction)}
+		onclick={(event) => nudgeOnce(event, direction)}
 		onpointerdown={() => holdStart(direction)}
 		onpointerup={holdEnd}
-		onpointerleave={holdCancel}
-		onpointercancel={holdCancel}
+		onpointerleave={holdEnd}
+		onpointercancel={holdEnd}
 		class={[
 			'grid w-11 shrink-0 place-items-center text-2xl font-semibold focus-ring-inset',
 			// `manipulation`, not `none`: a scroll that starts on the arm still

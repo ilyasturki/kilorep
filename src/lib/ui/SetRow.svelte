@@ -67,6 +67,17 @@
 
 	const style = $derived(styles[status]);
 
+	/**
+	 * Whether the row responds to a tap, and therefore whether it says so.
+	 *
+	 * Read off the prop rather than the status, the same test `ListRow` makes:
+	 * a pending row and a logged one are both selectable — tapping a logged set
+	 * reopens it for editing — and a warmup is neither, because `ExerciseBlock`
+	 * hands it no `onselect`. A hover that promised a tap the row then refused
+	 * would be the surprise DESIGN.md rules out.
+	 */
+	const interactive = $derived(Boolean(onselect));
+
 	// Long-press. The timer is cleared by any pointer exit, and a completed press
 	// swallows the click that follows it so options and select never both fire.
 	// Neither of these is `$state`: both are written and read inside handlers and
@@ -102,6 +113,11 @@
 	class={[
 		'@container relative grid grid-cols-[1fr_auto] items-center overflow-hidden',
 		style.shell,
+		// On the shell and not on the button inside it: the ⋯ is a sibling holding
+		// the right edge, so a tint on the button alone would light two thirds of
+		// a row. `:active` still fires here when the press lands on that button.
+		interactive && 'hover:bg-surface-2 active:bg-surface-2',
+		interactive && 'pointer-fine:transition-[background-color] pointer-fine:duration-100',
 		klass
 	]}
 >

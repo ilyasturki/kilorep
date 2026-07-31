@@ -14,6 +14,7 @@ import {
 	hintFor,
 	hintLabel,
 	insertedSetCount,
+	moveEntry,
 	parseEntry,
 	prefillFor,
 	removeSet,
@@ -33,6 +34,11 @@ import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workou
 
 function idsOf(workout: Workout): string[] {
 	return cursors(workout).map((c) => c.set.id);
+}
+
+/** Session order by exercise, which is the thing a reorder is judged on. */
+function orderOf(workout: Workout): string[] {
+	return groupsOf(workout).map((g) => g.exerciseId);
 }
 
 /** A bare uncompleted set, for the shapes the fixture deliberately does not have. */
@@ -380,6 +386,120 @@ describe('groupsOf', () => {
 		];
 
 		expect(groupsOf(workout).map((g) => g.exerciseId)).toEqual(['bench', 'fly']);
+	});
+
+	test('both halves of a superset name the one entry a reorder would move', () => {
+		const workout = freshWorkout(0);
+
+		workout.entries = [
+			{
+				id: 'superset',
+				exercises: [
+					{ id: 'we-a', exerciseId: 'bench', sets: [openSet('a-1')] },
+					{ id: 'we-b', exerciseId: 'fly', sets: [openSet('b-1')] }
+				]
+			}
+		];
+
+		expect(groupsOf(workout).map((g) => g.entryId)).toEqual(['superset', 'superset']);
+	});
+});
+
+describe('moveEntry', () => {
+	test('takes the entry and everything under it', () => {
+		const workout = freshWorkout(0);
+
+		expect(moveEntry(workout, 'entry-4', 0)).toBe(true);
+		expect(orderOf(workout)).toEqual([
+			'pec-deck',
+			'bench-press',
+			'incline-dumbbell-press',
+			'cable-fly'
+		]);
+		expect(idsOf(workout).slice(0, 4)).toEqual(['pecdeck-1', 'pecdeck-2', 'pecdeck-3', 'bench-w']);
+	});
+
+	test('moving down lands where the row was, not one short of it', () => {
+		const workout = freshWorkout(0);
+
+		expect(moveEntry(workout, 'entry-1', 2)).toBe(true);
+		expect(orderOf(workout)).toEqual([
+			'incline-dumbbell-press',
+			'cable-fly',
+			'bench-press',
+			'pec-deck'
+		]);
+	});
+
+	// A superset is one entry and two groups. Dragging it must not leave half of
+	// it three exercises away from the other half.
+	test('a superset moves whole', () => {
+		const workout = freshWorkout(0);
+
+		workout.entries = [
+			workout.entries[0],
+			{
+				id: 'superset',
+				exercises: [
+					{ id: 'we-a', exerciseId: 'fly', sets: [openSet('a-1')] },
+					{ id: 'we-b', exerciseId: 'pecdeck', sets: [openSet('b-1')] }
+				]
+			}
+		];
+
+		expect(moveEntry(workout, 'superset', 0)).toBe(true);
+		expect(orderOf(workout)).toEqual(['fly', 'pecdeck', 'bench-press']);
+	});
+
+	// The drag computes this index off row midpoints, so the last row is exactly
+	// where a rounding error lands.
+	test('an index past the end clamps rather than refusing the move', () => {
+		const workout = freshWorkout(0);
+
+		expect(moveEntry(workout, 'entry-1', 99)).toBe(true);
+		expect(orderOf(workout)).toEqual([
+			'incline-dumbbell-press',
+			'cable-fly',
+			'pec-deck',
+			'bench-press'
+		]);
+	});
+
+	test('landing where it started is a no-op, and says so', () => {
+		const workout = freshWorkout(0);
+
+		expect(moveEntry(workout, 'entry-2', 1)).toBe(false);
+		expect(orderOf(workout)).toEqual([
+			'bench-press',
+			'incline-dumbbell-press',
+			'cable-fly',
+			'pec-deck'
+		]);
+	});
+
+	test('an unknown entry is refused rather than silently ignored', () => {
+		expect(moveEntry(freshWorkout(0), 'nope', 0)).toBe(false);
+	});
+
+	// Reordering is not a jump: the set stays exactly where the cursor left it,
+	// and what changes is what comes *next* — because the advance reads position
+	// at the moment it is asked rather than remembering one.
+	test('the set stays put, but the set after it follows the new order', () => {
+		const workout = freshWorkout(0);
+		completeAll(workout);
+		// Two gaps, one in fly and one in pecdeck, with fly above.
+		workout.entries[2].exercises[0].sets[0].completed = false;
+		workout.entries[3].exercises[0].sets[0].completed = false;
+
+		expect(idOf(advanceFrom(workout, 'bench-4'))).toBe('fly-1');
+		expect(idOf(firstUncompleted(workout))).toBe('fly-1');
+
+		// Fly goes to the foot of the session, so pecdeck is now the nearer gap.
+		moveEntry(workout, 'entry-3', 3);
+
+		expect(cursorFor(workout, 'bench-4')).not.toBeNull();
+		expect(idOf(advanceFrom(workout, 'bench-4'))).toBe('pecdeck-1');
+		expect(idOf(firstUncompleted(workout))).toBe('pecdeck-1');
 	});
 });
 

@@ -25,6 +25,7 @@ export type Group = {
 	 */
 	id: string;
 	meta: Exercise;
+	entryId: string;
 	cursors: SetCursor[];
 };
 
@@ -32,6 +33,10 @@ export function groupsWithMeta(workout: Workout, catalog: Record<string, Exercis
 	return groupsOf(workout).map((group) => ({
 		id: group.id,
 		meta: catalog[group.exerciseId],
+		// Carried through rather than resolved again at the screen: reorder acts
+		// on the entry, and a list that had to go back to the tree to find out
+		// which one a row belongs to would be re-deriving what the walk knew.
+		entryId: group.entryId,
 		cursors: group.cursors
 	}));
 }
