@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The K, stroked rather than filled so the geometry is the same three lines in
-    this file and in `src/lib/assets/favicon.svg` — one mark, two renderers, no
-    chance of them drifting.
+    The rest ring: a lime ring, its gap pushed off-axis to 1:30 so it is not
+    the power symbol, with the dot seated in the gap. The between-sets moment,
+    which is exactly when the phone is in the lifter's hand; it also reads as a
+    plate outline. Chosen over plate and letterform marks after a 23-app audit:
+    every lifting-app icon is angular, none uses circle geometry, and none owns
+    lime on near-black.
 
-    Sized to the adaptive-icon safe zone: the mark's furthest corner sits 32.4dp
-    from centre, inside the 33dp radius Android guarantees is visible under every
-    launcher mask. Ink is neutral-950, the `on-accent` token, which is the
-    pairing app.css already requires for anything painted on the accent. Written
-    without its leading dashes on purpose: a literal double dash is illegal
-    inside an XML comment, and aapt reports it as a file it cannot parse rather
-    than as the typo it is.
+    Same two paths, same numbers, as `src/lib/assets/favicon.svg`: one mark,
+    two renderers, no chance of them drifting. Centre (54,54); ring radius
+    24.76 with stroke 8.49, so the outer edge sits 29dp from centre, inside the
+    33dp radius Android guarantees is visible under every launcher mask. The
+    arc spans from minus 10deg to minus 80deg (a 70deg gap centred at 1:30);
+    the dot rides the ring's centreline at the gap's midpoint. Lime is the
+    sRGB of oklch(76.8% 0.233 130.85), Tailwind's lime-500, written out because
+    Android resources cannot read app.css. The monochrome themed-icon layer in
+    mipmap-anydpi-v26 reuses this drawable as an alpha mask, which is why the
+    mark must stay a single-colour silhouette.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -18,9 +24,11 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:pathData="M41,32 V76 M41,54 L65,32 M41,54 L67,76"
-        android:strokeColor="#0a0a0a"
-        android:strokeWidth="10"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:pathData="M78.38,49.7 A24.76,24.76 0 1 1 58.3,29.62"
+        android:strokeColor="#7ccf00"
+        android:strokeWidth="8.49"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M65.85,36.49 a5.66,5.66 0 1 0 11.32,0 a5.66,5.66 0 1 0 -11.32,0"
+        android:fillColor="#7ccf00" />
 </vector>

@@ -1,12 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+<svg xmlns="http://www.w3.org/2000/svg" width="59" height="59" viewBox="24.5 24.5 59 59">
 	<title>Kilorep</title>
-	<rect width="108" height="108" rx="24" fill="#7ccf00" />
 	<path
-		d="M41,32 V76 M41,54 L65,32 M41,54 L67,76"
+		d="M78.38,49.7 A24.76,24.76 0 1 1 58.3,29.62"
 		fill="none"
-		stroke="#0a0a0a"
-		stroke-width="10"
+		stroke="#7ccf00"
+		stroke-width="8.49"
 		stroke-linecap="round"
-		stroke-linejoin="round"
 	/>
+	<path d="M65.85,36.49 a5.66,5.66 0 1 0 11.32,0 a5.66,5.66 0 1 0 -11.32,0" fill="#7ccf00" />
 </svg>

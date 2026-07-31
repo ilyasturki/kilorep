@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    A placeholder, not an identity. Flat lime-500 — the one accent DESIGN.md
-    allows, and the one swatch that is identical in both themes — behind the K
-    in `ic_launcher_foreground`. The hex is the sRGB of
-    `oklch(76.8% 0.233 130.85)`, Tailwind's lime-500, written out because
-    Android resources cannot read app.css.
+    Flat near-black behind the lime rest ring in `ic_launcher_foreground`. The
+    hex is the sRGB of oklch(14.5% 0 0), Tailwind's neutral-950 and the app's
+    `on-accent` token, written out because Android resources cannot read
+    app.css. Near-black rather than lime on purpose: the icon audit found the
+    bright-field-with-dark-glyph corner already crowded (LADDER, TrainHeroic,
+    HeavySet), while a lime mark on a dark field collides with nobody. The
+    layer must stay a fully opaque flat fill so every adaptive mask crops only
+    dead field.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -12,6 +15,6 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#7ccf00"
+        android:fillColor="#0a0a0a"
         android:pathData="M0,0h108v108h-108z" />
 </vector>

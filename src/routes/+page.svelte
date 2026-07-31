@@ -1,4 +1,5 @@
 <script lang="ts">
+	import favicon from '$lib/assets/favicon.svg';
 	import Button from '$lib/ui/Button.svelte';
 
 	// The three claims the product is built on: data ownership, the in-gym
@@ -32,6 +33,10 @@
 
 <main class="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-14 px-6 py-20">
 	<header class="flex flex-col gap-5">
+		<p class="flex items-center gap-2.5">
+			<img src={favicon} alt="" class="h-7 w-7" />
+			<span class="text-xl font-extrabold tracking-tight">kilorep</span>
+		</p>
 		<h1 class="text-4xl font-extrabold tracking-tight text-balance">
 			The workout tracker that is actually yours.
 		</h1>

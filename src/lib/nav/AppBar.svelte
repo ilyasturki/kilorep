@@ -32,7 +32,7 @@
 	     railed page gives its own content. -->
 	<div class={slot.railed ? 'pl-60' : undefined}>
 		<div class="column-content flex items-center gap-6 px-3 py-2">
-			<span class="shrink-0 text-base font-extrabold tracking-tight">Kilorep</span>
+			<span class="shrink-0 text-base font-extrabold tracking-tight">kilorep</span>
 
 			<nav aria-label="Main" class="flex min-w-0 flex-1 items-center gap-1">
 				{#each navTabs() as tab (tab.href)}

@@ -5,6 +5,7 @@
 	import { googleSignInUrl, login } from '$lib/api/auth';
 	import { ApiError } from '$lib/api/client';
 	import { resolveRedirect } from '$lib/api/redirect';
+	import favicon from '$lib/assets/favicon.svg';
 	import Button from '$lib/ui/Button.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import GoogleLogo from '$lib/ui/icons/GoogleLogo.svelte';
@@ -115,7 +116,10 @@
 	<div class="w-full max-w-sm">
 		<div class="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-6">
 			<header class="flex flex-col gap-1.5">
-				<p class="label-caps">Kilorep</p>
+				<p class="flex items-center gap-2">
+					<img src={favicon} alt="" class="h-5 w-5" />
+					<span class="text-base font-extrabold tracking-tight">kilorep</span>
+				</p>
 				<h1 class="text-xl font-extrabold tracking-tight">Sign in</h1>
 			</header>
 
