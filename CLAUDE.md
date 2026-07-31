@@ -17,3 +17,4 @@ Breaking one is a bug, not a preference.
 - **`seq` is claimed with `claimSeq()`, inside the same transaction as the write it stamps.** Claim it outside, and a failure between the two leaves a consumed number on no record — the client's watermark then steps straight over a row that was never written.
 - **Records carry `deletedAt` tombstones.** Without them, deletes resurrect on the next pull.
 - **Volume counts completed working sets only.** Warmups never count; uncompleted sets never count. Per-hand and unilateral load modes multiply by 2.
+- **Never guess a dev password.** The dev account, the reason a fresh worktree has none, and the fifteen-minute throttle that guessing earns you are all in [TESTING.md](docs/TESTING.md) — read it before driving the app through a browser.
