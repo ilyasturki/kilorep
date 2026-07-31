@@ -80,7 +80,7 @@
 	on a gym floor; the list is read standing still.
 -->
 <main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
-	<!-- The bar above carries the wordmark and the gear from `lg` up; twice on
+	<!-- The bar above carries the app's mark and the gear from `lg` up; twice on
 	     one screen is once too many, so the whole header stands down there. -->
 	<header class="flex items-start justify-between gap-3 pt-10 lg:hidden">
 		<h1 class="text-2xl font-extrabold tracking-tight">Kilorep</h1>

@@ -1,8 +1,14 @@
 import { getContext, setContext } from 'svelte';
 
+import Barbell from '$lib/ui/icons/Barbell.svelte';
+import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
+import ListBullets from '$lib/ui/icons/ListBullets.svelte';
+import Play from '$lib/ui/icons/Play.svelte';
+import PlayFill from '$lib/ui/icons/PlayFill.svelte';
+
 import { activeWorkout } from '$lib/workout/session.svelte';
 
-import type { Snippet } from 'svelte';
+import type { Component, Snippet } from 'svelte';
 
 /**
  * The app's navigation, in one place because it is drawn twice.
@@ -17,9 +23,26 @@ import type { Snippet } from 'svelte';
  * Both bars grow a slot as each screen lands, which is why the list lives here
  * and not inside either one of them.
  */
+/**
+ * The icon contract from `ui/icons/README.md`, named so a tab can hold a
+ * component rather than a string. A dispatcher is what the README rules out;
+ * this is the component itself, so Vite still tree-shakes and there is no
+ * runtime branch on a name.
+ */
+export type NavIcon = Component<{ size?: number; class?: string }>;
+
 export interface NavTab {
 	href: string;
 	label: string;
+	/**
+	 * Bold outline, and its fill-weight partner for the selected state — the
+	 * pairing `ui/icons/README.md` calls the intended one. `iconActive` is
+	 * optional because one glyph has no usable fill: see `ListBullets.svelte`.
+	 * A tab without it wears the outline in both states and lets the pill do
+	 * the work.
+	 */
+	icon: NavIcon;
+	iconActive?: NavIcon;
 	/** A session is live behind this tab; both bars mark it with the accent dot. */
 	live?: boolean;
 }
@@ -30,17 +53,30 @@ export interface NavTab {
  * slot, not a third tab — Start's destination *is* the workout for as long as
  * one exists, and `/start` reroutes there to keep the claim honest.
  *
- * `live` is the one departure from ink-on-faint: an accent dot beside the
- * label, the label itself still ink. The accent means "this logs a set", and
- * a tab leading back into a live session is the single nav target that can
- * say so — as a fill, per the accent's own rule, never as text.
+ * `live` is the one departure from ink-on-faint: an accent dot on the tab, the
+ * label itself still ink. The accent means "this logs a set", and a tab leading
+ * back into a live session is the single nav target that can say so — as a
+ * fill, per the accent's own rule, never as text. It is the only accent in
+ * either bar: the selected tab is a neutral pill, because a navigation state is
+ * not the thing the lime promises.
+ *
+ * The glyph turns over with the slot — a play triangle for a session that has
+ * not started, a barbell for one that is running. The label already changes
+ * there, so an icon that did not would be the one part of the tab still
+ * describing the old state.
  */
 export function navTabs(): NavTab[] {
 	return [
 		activeWorkout.session === null
-			? { href: '/start', label: 'Start' }
-			: { href: '/workout', label: 'Workout', live: true },
-		{ href: '/exercises', label: 'Exercises' }
+			? { href: '/start', label: 'Start', icon: Play, iconActive: PlayFill }
+			: {
+					href: '/workout',
+					label: 'Workout',
+					icon: Barbell,
+					iconActive: BarbellFill,
+					live: true
+				},
+		{ href: '/exercises', label: 'Exercises', icon: ListBullets }
 	];
 }
 

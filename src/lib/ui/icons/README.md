@@ -8,7 +8,9 @@ Bold because gym-first ergonomics wants marks readable at arm's length, and beca
 
 Vendored because the icons need adjusting (`Stack` has no Phosphor original) and because a runtime dependency buys nothing here: the paths are static, and a component per icon already gives Vite perfect tree-shaking.
 
-Phosphor's `fill` weight is the intended partner for active/selected states — a filled tab against a bold outline one. Take it from the same `bold`/`fill` pair, never a second family.
+Phosphor's `fill` weight is the intended partner for active/selected states — a filled tab against a bold outline one. Take it from the same `bold`/`fill` pair, never a second family. Ship the fill as its own file (`PlayFill.svelte`), not as a `weight` prop: a path chosen at runtime is exactly the dynamic template the rules below rule out.
+
+**Check the pair before you rely on it.** `fill` is a solid silhouette for icons that draw an *object* (`play`, `barbell`, `house`) and a *boxed* variant for icons that draw *lines* — `list-bullets-fill` is a filled rounded square with the bars knocked out of it, which beside a true solid reads as a different icon rather than a heavier one. When a glyph has no usable partner, ship the bold alone and let the surrounding state carry the change; `ListBullets.svelte` is the worked example.
 
 ## Rules
 

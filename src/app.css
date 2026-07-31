@@ -39,6 +39,22 @@
 	--line: var(--color-neutral-300);
 	--line-soft: var(--color-neutral-200);
 
+	/* The two fills a nav tab wears, because the depth scale cannot supply them.
+	   A selected tab has to sit a visible step beyond a hovered one, and there
+	   is no single existing token that is that step in both themes: `surface-2`
+	   is a shade *darker* than the bar in light and a shade *lighter* in dark,
+	   and `sunken` reverses direction again. Painted with one name each, hover
+	   and selected came out a hair apart in light and inverted in dark.
+
+	   So each theme moves away from its own bar in the direction that theme
+	   already reads as raised — down from white, up from neutral-900 — two even
+	   steps, hover then selected. Neutral on purpose: the accent means "this
+	   logs a set", and the live dot is the only thing in either bar entitled to
+	   it. Named for the job because the bars are the only chrome in the app with
+	   a selected state to show. */
+	--nav-hover: var(--color-neutral-100);
+	--nav-selected: var(--color-neutral-200);
+
 	/* The accent is a fill, and only a fill. `lime-500` is identical in both
 	   themes — the DESIGN.md promise — because it is only ever painted behind
 	   `on-accent`, which is dark in both. It cannot be used as text: on white
@@ -74,6 +90,9 @@
 
 		--line: var(--color-neutral-700);
 		--line-soft: var(--color-neutral-800);
+
+		--nav-hover: var(--color-neutral-800);
+		--nav-selected: var(--color-neutral-700);
 
 		--accent: var(--color-lime-500);
 		--on-accent: var(--color-neutral-950);
@@ -128,6 +147,9 @@
 
 	--color-line: var(--line);
 	--color-line-soft: var(--line-soft);
+
+	--color-nav-hover: var(--nav-hover);
+	--color-nav-selected: var(--nav-selected);
 
 	--color-accent: var(--accent);
 	--color-on-accent: var(--on-accent);

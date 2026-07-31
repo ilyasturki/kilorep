@@ -16,11 +16,25 @@
 	 * mis-tap waiting for a tired thumb. Chrome-less is a property of where a
 	 * route sits in the tree, not of a path list kept in here.
 	 *
-	 * Text tabs, no icons: two words are legible at arm's length and the icon
-	 * set has nothing that says "exercise" without inventing decoration. The
-	 * active tab is ink against faint, never the accent — the accent means
-	 * "this logs a set" and a navigation state is not that. The one exception
-	 * is the dot on a live Workout tab, which is that — see `navTabs`.
+	 * Glyph over label, and the bar is ~59px rather than the 40 a row of words
+	 * needed. Two words were legible at arm's length, which is why this was text
+	 * for a while, but legible is not the same as *found*: a glyph is what the
+	 * eye lands on before it reads anything, and at arm's length between sets
+	 * that is the whole job. The label stays under it — Start and Workout are
+	 * the same slot in two states, and the word is what tells them apart.
+	 *
+	 * The selected tab is a capsule behind the glyph alone, not a pill around the
+	 * whole tab: with two tabs in a 384px group a full-tab pill is a 192px slab,
+	 * and the capsule stays the same 64px whether there are two tabs here or
+	 * five. Hover is the same capsule one step lighter — `nav-hover` and
+	 * `nav-selected` are a pair for that reason, see `app.css` — and is gated on
+	 * `pointer-fine` so a thumb cannot leave one stuck on after a tap.
+	 *
+	 * Neutral, never the accent: the accent means "this logs a set" and a
+	 * navigation state is not that. The one exception is the dot on a live
+	 * Workout tab, which is — it badges the glyph's corner here and follows the
+	 * label in the top bar, those being the corners each layout has. See
+	 * `navTabs`.
 	 *
 	 * The viewport and the top bar belong to `(app)`; this is a `flex-1` box
 	 * inside them.
@@ -37,20 +51,32 @@
 		<div class="mx-auto flex max-w-sm">
 			{#each navTabs() as tab (tab.href)}
 				{@const active = isActive(page.url.pathname, tab.href)}
+				{@const Icon = (active && tab.iconActive) || tab.icon}
 
 				<a
 					href={tab.href}
 					aria-current={active ? 'page' : undefined}
 					class={[
-						'flex min-h-chrome flex-1 items-center justify-center gap-1.5 rounded-xl',
-						'label-caps focus-ring',
-						active ? 'text-ink' : 'text-ink-faint hover:text-ink-muted'
+						'group flex flex-1 flex-col items-center gap-1 rounded-xl py-1',
+						'focus-ring transition-colors',
+						active ? 'text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
 					]}
 				>
-					{tab.label}
-					{#if tab.live}
-						<span class="size-1.5 rounded-full bg-accent"></span>
-					{/if}
+					<span
+						class={[
+							'flex h-8 w-16 items-center justify-center rounded-full transition-colors',
+							active ? 'bg-nav-selected' : 'pointer-fine:group-hover:bg-nav-hover'
+						]}
+					>
+						<span class="relative flex">
+							<Icon size={22} />
+							{#if tab.live}
+								<span class="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-accent"></span>
+							{/if}
+						</span>
+					</span>
+
+					<span class="text-xs font-bold">{tab.label}</span>
 				</a>
 			{/each}
 		</div>

@@ -20,12 +20,17 @@
 	import Textarea from '$lib/ui/Textarea.svelte';
 	import Tooltip from '$lib/ui/Tooltip.svelte';
 	import Backspace from '$lib/ui/icons/Backspace.svelte';
+	import Barbell from '$lib/ui/icons/Barbell.svelte';
+	import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
 	import Calendar from '$lib/ui/icons/Calendar.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import Info from '$lib/ui/icons/Info.svelte';
+	import ListBullets from '$lib/ui/icons/ListBullets.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import Play from '$lib/ui/icons/Play.svelte';
+	import PlayFill from '$lib/ui/icons/PlayFill.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 
 	// An overview of the component library: one card per component, everything
@@ -483,6 +488,25 @@
 					<div class="flex flex-col items-center gap-1.5">
 						<div class={tile}><Info size={22} /></div>
 						<span class={caption}>Info</span>
+					</div>
+				</div>
+				<!-- The nav's glyphs, each above its selected-state partner. Bold on
+				     top, fill under it — the pairing the README calls the intended
+				     one, and the reason ListBullets stands alone is in its own file. -->
+				<div class="flex flex-wrap items-center gap-5 border-t border-line-soft pt-3">
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Play size={22} /></div>
+						<div class={tile}><PlayFill size={22} /></div>
+						<span class={caption}>Play</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Barbell size={22} /></div>
+						<div class={tile}><BarbellFill size={22} /></div>
+						<span class={caption}>Barbell</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><ListBullets size={22} /></div>
+						<span class={caption}>ListBullets</span>
 					</div>
 				</div>
 				<!-- The marks the font already supplies, so nothing is drawn for them:
