@@ -6,16 +6,21 @@ self:
   ...
 }:
 let
-  cfg = config.services.kilorep;
+  cfg = config.services.kilorep-v1;
 in
 {
-  options.services.kilorep = {
-    enable = lib.mkEnableOption "Kilorep workout & weight tracker";
+  # `kilorep-v1`, not `kilorep`: this branch is the frozen first version, and the
+  # rewrite on `main` carries a module of its own that claims the plain name.
+  # Both are imported into the same host — one serving v1.kilorep.com, the other
+  # kilorep.com — so every name they own has to differ: the option path here, the
+  # unit below, and the StateDirectory that gives each its own DynamicUser uid.
+  options.services.kilorep-v1 = {
+    enable = lib.mkEnableOption "Kilorep v1 workout & weight tracker";
 
     package = lib.mkOption {
       type = lib.types.package;
       default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      defaultText = lib.literalExpression "kilorep.packages.\${system}.default";
+      defaultText = lib.literalExpression "kilorep-v1.packages.\${system}.default";
       description = "The Kilorep server package to run.";
     };
 
@@ -38,7 +43,7 @@ in
     environmentFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       default = null;
-      example = "/run/secrets/kilorep.env";
+      example = "/run/secrets/kilorep-v1.env";
       description = ''
         Optional EnvironmentFile for the service — use it to override settings
         such as DB_FILE_NAME or to inject future secrets without putting them
@@ -48,8 +53,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    systemd.services.kilorep = {
-      description = "Kilorep workout & weight tracker";
+    systemd.services.kilorep-v1 = {
+      description = "Kilorep v1 workout & weight tracker";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
 
@@ -57,8 +62,11 @@ in
         HOST = cfg.host;
         PORT = toString cfg.port;
         NODE_ENV = "production";
-        # StateDirectory below provisions /var/lib/kilorep for the dynamic user.
-        DB_FILE_NAME = "/var/lib/kilorep/workout.db";
+        # StateDirectory below provisions /var/lib/kilorep-v1 for the dynamic
+        # user. /var/lib/kilorep belongs to the rewrite now; an instance that
+        # kept the old path would be handed a directory owned by another
+        # service's uid, and open nothing.
+        DB_FILE_NAME = "/var/lib/kilorep-v1/workout.db";
         DB_MIGRATIONS_DIR = "${cfg.package}/share/kilorep/migrations";
       };
 
@@ -67,8 +75,8 @@ in
         EnvironmentFile = lib.mkIf (cfg.environmentFile != null) cfg.environmentFile;
 
         DynamicUser = true;
-        StateDirectory = "kilorep";
-        WorkingDirectory = "/var/lib/kilorep";
+        StateDirectory = "kilorep-v1";
+        WorkingDirectory = "/var/lib/kilorep-v1";
 
         Restart = "on-failure";
         RestartSec = 5;

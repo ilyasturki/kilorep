@@ -8,7 +8,7 @@
 #   bun run db:pull-prod
 #
 # Goes in over ssh as root: the database belongs to the service's DynamicUser
-# (StateDirectory=kilorep) and is unreadable to anyone else.
+# (StateDirectory=kilorep-v1) and is unreadable to anyone else.
 #
 # Then run the app against the copy with `bun run dev:prod`. Migrations are not
 # applied here — the server does that on boot (server/plugins/migrate.ts), so
@@ -16,7 +16,7 @@
 set -euo pipefail
 
 HOST="${KILOREP_PROD_HOST:-root@infra}"
-REMOTE_DB="${KILOREP_PROD_DB:-/var/lib/kilorep/workout.db}"
+REMOTE_DB="${KILOREP_PROD_DB:-/var/lib/kilorep-v1/workout.db}"
 LOCAL_DB="${KILOREP_PROD_COPY:-.data/prod.db}"
 REMOTE_TMP="kilorep-prod-pull.db"
 
