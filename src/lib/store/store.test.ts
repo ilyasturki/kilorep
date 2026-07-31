@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import type { Template } from '$lib/domain/template';
 import type { Workout, WorkoutSet } from '$lib/domain/workout';
 import type { WireRecord } from '$lib/sync/protocol';
 
@@ -43,6 +44,7 @@ const set = (spec: SetSpec, id: string): WorkoutSet => ({
 function workout(id: string, startedAt: number, exerciseId: string, sets: SetSpec[]): Workout {
 	return {
 		id,
+		templateId: null,
 		startedAt,
 		entries: [
 			{
@@ -70,6 +72,7 @@ const wire = (id: string, updatedAt: number, payload: unknown): WireRecord => ({
 /** A remote copy of a workout: the payload as another device would have written it. */
 const finished = (w: Workout, finishedAt: number): unknown => ({
 	id: w.id,
+	templateId: w.templateId,
 	startedAt: w.startedAt,
 	entries: w.entries,
 	finishedAt
@@ -106,6 +109,72 @@ describe('workouts', () => {
 		await store.applyRemote([Object.assign(wire('w1', 300, null), { deletedAt: 300 })]);
 
 		expect(await store.listWorkouts()).toEqual([]);
+	});
+});
+
+const template = (id: string, createdAt: number, name = 'Push day'): Template => ({
+	id,
+	name,
+	createdAt,
+	entries: []
+});
+
+describe('templates', () => {
+	let store: Store;
+
+	beforeEach(async () => {
+		store = await freshStore();
+	});
+
+	it('round-trips a template and re-saves in place', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		await store.saveTemplate(template('t1', 100, 'Push day A'), 250);
+
+		const listed = await store.listTemplates();
+
+		expect(listed).toHaveLength(1);
+		expect(listed[0].name).toBe('Push day A');
+		expect(await store.getTemplate('t1')).not.toBeNull();
+	});
+
+	it('lists in creation order regardless of save order', async () => {
+		await store.saveTemplate(template('late', 300), 400);
+		await store.saveTemplate(template('early', 100), 500);
+
+		const listed = await store.listTemplates();
+
+		expect(listed.map((t) => t.id)).toEqual(['early', 'late']);
+	});
+
+	it('deletes as a tombstone that wins last-write-wins', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		await store.deleteTemplate('t1', 300);
+
+		expect(await store.listTemplates()).toEqual([]);
+		expect(await store.getTemplate('t1')).toBeNull();
+
+		// The tombstone still owes a push, stamped with the delete's own time —
+		// an old `updatedAt` would lose to the server's live copy and undelete.
+		const dirty = await store.dirtyRecords();
+		const record = dirty.find((r) => r.id === 't1');
+
+		expect(record).toMatchObject({ deletedAt: 300, updatedAt: 300 });
+	});
+
+	it('refuses to tombstone a record of another kind', async () => {
+		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
+		await store.deleteTemplate('w1', 300);
+
+		expect(await store.listWorkouts()).toHaveLength(1);
+	});
+
+	it('keeps kinds isolated in the shared records box', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
+		await store.deleteTemplate('t1', 300);
+
+		expect(await store.listWorkouts()).toHaveLength(1);
+		expect(await store.listTemplates()).toEqual([]);
 	});
 });
 

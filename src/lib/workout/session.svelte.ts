@@ -42,9 +42,10 @@ export type Resume = {
 	activeSetId: string | null;
 };
 
-/** Empty on purpose — with no templates yet, every workout begins as nothing. */
+/** The empty start: no template behind it, everything arrives via insert. */
 const emptyWorkout = (): Workout => ({
 	id: crypto.randomUUID(),
+	templateId: null,
 	startedAt: Date.now(),
 	entries: []
 });

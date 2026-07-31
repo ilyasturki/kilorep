@@ -58,6 +58,16 @@ export type WorkoutEntry = {
 
 export type Workout = {
 	id: string;
+	/**
+	 * The template this session was started from, or null for an empty start.
+	 *
+	 * Carried on the record from birth because records sync and are effectively
+	 * forever: the drift-vs-template surface PRODUCT.md plans reads this link,
+	 * and a workout logged without it could never be compared to its plan.
+	 * Readers tolerate records written before the field existed — absent reads
+	 * as null, an empty start.
+	 */
+	templateId: string | null;
 	/** Epoch ms. Every elapsed figure derives from this, never from a counter. */
 	startedAt: number;
 	entries: WorkoutEntry[];

@@ -9,6 +9,7 @@
  */
 
 import type { PastSession } from '$lib/domain/stats';
+import type { Template } from '$lib/domain/template';
 import type { History, Workout } from '$lib/domain/workout';
 import type { SyncAck, WireRecord } from '$lib/sync/protocol';
 
@@ -63,6 +64,7 @@ export class Store {
 		// added to `Workout` fails the build here instead of silently syncing.
 		const payload: FinishedWorkout = {
 			id: workout.id,
+			templateId: workout.templateId,
 			startedAt: workout.startedAt,
 			entries: workout.entries,
 			finishedAt
@@ -103,6 +105,81 @@ export class Store {
 	/** One exercise's past for the detail screen, oldest first. */
 	public async pastSessions(exerciseId: string): Promise<PastSession[]> {
 		return pastSessionsFrom(await this.listWorkouts(), exerciseId);
+	}
+
+	// --- templates ----------------------------------------------------------
+
+	/**
+	 * Upsert, because the editor autosaves: the same record is written on every
+	 * edit, dirty each time, `updatedAt` stamped by the caller so the clock
+	 * stays at the edge with the ids. A partial plan crossing the wire is fine —
+	 * sync is last-write-wins per record and the final save settles it.
+	 */
+	public async saveTemplate(template: Template, updatedAt: number): Promise<void> {
+		// Spelled field by field, same bargain as `finishWorkout`: a field added
+		// to `Template` fails the build here instead of silently syncing.
+		const payload: Template = {
+			id: template.id,
+			name: template.name,
+			createdAt: template.createdAt,
+			entries: template.entries
+		};
+
+		await this.db.put('records', {
+			id: template.id,
+			kind: 'template',
+			updatedAt,
+			deletedAt: null,
+			payload,
+			dirty: true
+		});
+	}
+
+	/** Every live template, creation order. Tombstones stay in the box. */
+	public async listTemplates(): Promise<Template[]> {
+		const records = await this.db.getAllFromIndex('records', 'kind', 'template');
+
+		return (
+			records
+				.filter((record) => record.deletedAt === null)
+				// The storage-boundary assertion `listWorkouts` already makes, for the
+				// same reason: this store is the only writer of the kind.
+				// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+				.map((record) => record.payload as Template)
+				.toSorted((a, b) => a.createdAt - b.createdAt)
+		);
+	}
+
+	/** One template by id, or null — unknown, tombstoned, or not a template at all. */
+	public async getTemplate(id: string): Promise<Template | null> {
+		const record = await this.db.get('records', id);
+
+		if (record === undefined || record.kind !== 'template' || record.deletedAt !== null) {
+			return null;
+		}
+
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+		return record.payload as Template;
+	}
+
+	/**
+	 * A delete is a tombstone, not a removal — CLAUDE.md: without one, the next
+	 * pull resurrects the record. `updatedAt` is bumped along with `deletedAt`,
+	 * because last-write-wins compares nothing else: a tombstone carrying the
+	 * old timestamp would lose to the server's live copy and undelete itself.
+	 */
+	public async deleteTemplate(id: string, deletedAt: number): Promise<void> {
+		const tx = this.db.transaction('records', 'readwrite');
+		const record = await tx.store.get(id);
+
+		if (record !== undefined && record.kind === 'template') {
+			record.deletedAt = deletedAt;
+			record.updatedAt = deletedAt;
+			record.dirty = true;
+			await tx.store.put(record);
+		}
+
+		await tx.done;
 	}
 
 	// --- the active session -------------------------------------------------

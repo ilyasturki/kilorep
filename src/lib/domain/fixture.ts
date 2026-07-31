@@ -161,6 +161,7 @@ const entry = (n: number, key: string, exerciseId: string, sets: WorkoutSet[]): 
 export function freshWorkout(startedAt: number): Workout {
 	return {
 		id: 'fixture-workout',
+		templateId: null,
 		startedAt,
 		entries: [
 			entry(1, 'bench', 'bench-press', [

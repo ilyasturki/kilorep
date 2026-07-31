@@ -16,7 +16,7 @@ Math:
 
 ## The loop
 
-**Start.** The app opens into the active workout if one exists, otherwise into Start: template list plus an empty-workout action. Tapping a template starts the workout immediately — no preview, no confirm. Two taps from unlock to a loggable set. "Repeat this workout" lives on any past workout in History. Exactly one workout is active at a time.
+**Start.** The app opens into the active workout if one exists, otherwise into Start: template list plus an empty-workout action. Tapping a template opens its editor, and Start lives inside it, under the thumb. Immediate-start-on-tap was weighed and retired: one row cannot honestly carry both "open this plan" and "begin lifting now", and a mis-tap that starts a workout costs more than the tap it saves. "Repeat this workout" lives on any past workout in History. Exactly one workout is active at a time — starting a template over an unfinished session asks before it discards anything.
 
 **During a set.** The screen shows what the next set needs: target or hint, weight, reps, check. Every set displays last time's actual weight × reps. The session list — exercise names, where you are — is a rail on a desktop and one tap away on a phone, for orientation, jumping, reordering and inserting.
 
@@ -32,7 +32,7 @@ Math:
 
 Every screen must justify its existence.
 
-- **Start** — active workout or template list; gear to Settings; template editing reached from here.
+- **Start** — active workout or template list; gear to Settings. A template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
 - **Workout** — the loop above.
 - **History** — workout list + detail; repeat-this-workout; drift-vs-template on the detail.
 - **Exercises** — catalog + customs; detail carries history, raw best set, est-1RM trend.

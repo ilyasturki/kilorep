@@ -9,11 +9,11 @@
  */
 
 /**
- * Every kind of record the protocol carries. One today; body weight and
- * templates join this union when their features land, and nothing else —
- * client store and server table are both kind-agnostic past this point.
+ * Every kind of record the protocol carries. Body weight joins this union
+ * when its feature lands, and nothing else — client store and server table
+ * are both kind-agnostic past this point.
  */
-export const RECORD_KINDS = ['workout'] as const;
+export const RECORD_KINDS = ['workout', 'template'] as const;
 
 export type RecordKind = (typeof RECORD_KINDS)[number];
 

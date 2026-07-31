@@ -82,6 +82,7 @@ function lift(): Workout {
 
 	return {
 		id: `e2e-${n}`,
+		templateId: null,
 		startedAt: n * 1000,
 		entries: [
 			{
@@ -134,6 +135,7 @@ describe('syncNow', () => {
 					deletedAt: null,
 					payload: {
 						id: theirs.id,
+						templateId: theirs.templateId,
 						startedAt: theirs.startedAt,
 						entries: theirs.entries,
 						finishedAt: 999

@@ -14,11 +14,12 @@ import type { PageLoad } from './$types';
  * rule 5: with `ssr = false` this only ever runs in the browser, where the
  * holder is the same one the bars and the workout screen share.
  *
- * Past the reroute, one fact: is there a snapshot to walk back into? That is
- * the reload case — the holder is memory and died with the page, the snapshot
- * did not. The workout screen resumes it either way; this only lets the
- * button say so, because "Resume workout" over a survived session is
- * information and a mislabelled "Start" is a small lie.
+ * Past the reroute, two facts: the template list this screen exists to show,
+ * and whether there is a snapshot to walk back into. The snapshot is the
+ * reload case — the holder is memory and died with the page, the snapshot did
+ * not. The workout screen resumes it either way; this only lets the button
+ * say so, because "Resume workout" over a survived session is information and
+ * a mislabelled "Start" is a small lie.
  */
 export const load: PageLoad = async () => {
 	if (activeWorkout.session !== null) {
@@ -27,5 +28,7 @@ export const load: PageLoad = async () => {
 
 	const store = await getStore();
 
-	return { resuming: (await store.loadSnapshot()) !== null };
+	const [templates, snapshot] = await Promise.all([store.listTemplates(), store.loadSnapshot()]);
+
+	return { templates, resuming: snapshot !== null };
 };
