@@ -23,11 +23,16 @@ import {
 	addSet as appendSet,
 	advanceFrom,
 	commitSet,
+	cursorFor,
 	cursors,
+	draftSet,
 	firstUncompleted,
 	insertedSetCount,
 	moveEntry as relocateEntry,
-	removeSet as dropSet
+	prefillFor,
+	removeEntry as dropEntry,
+	removeSet as dropSet,
+	replaceEntry
 } from '$lib/domain/workout';
 import type { History, Workout } from '$lib/domain/workout';
 
@@ -69,13 +74,18 @@ export class WorkoutSession {
 	 * cursor and all — always and without asking, because a prompt in front of
 	 * the logging loop is what rule 7 forbids, and a stale session is cleared
 	 * by the same FINISH that clears a fresh one.
+	 *
+	 * The cursor arrives through `#focus` rather than by assignment, so a
+	 * resumed set is seeded like any other. It is a no-op for a snapshot written
+	 * since seeding landed — the set already holds what it opened at, and
+	 * `prefillFor` reads that first.
 	 */
 	public constructor(history: History, resume: Resume | null = null) {
 		this.history = history;
 
 		if (resume !== null) {
 			this.workout = resume.workout;
-			this.activeSetId = resume.activeSetId;
+			this.#focus(resume.activeSetId);
 		}
 	}
 
@@ -90,7 +100,52 @@ export class WorkoutSession {
 
 	/** Overriding the advance: an overview jump, or a tap on a pending row. */
 	public select(setId: string): void {
+		this.#focus(setId);
+	}
+
+	/**
+	 * The cursor, and the seeding that comes with it.
+	 *
+	 * Every route to a set goes through here — a tap, a rail jump, the advance
+	 * after a commit, the cursor landing on load — because the seeding rule is
+	 * "a set the cursor reaches opens on its prefill", and a route that set
+	 * `activeSetId` directly would be a set that opened on nothing.
+	 *
+	 * `prefillFor` reads what the set already holds before it reaches for a plan
+	 * or a hint, so this is idempotent: a set already drafted opens on its draft,
+	 * and a logged set opens on what was logged. Nothing here can rewrite either.
+	 *
+	 * The write is deliberate rather than a display trick. The values are on the
+	 * set, so the row shows them while the cursor is elsewhere — uncompleted, in
+	 * its pending dress, because `completed` is the only thing that says a set
+	 * happened and `draftSet` never touches it.
+	 */
+	#focus(setId: string | null): void {
 		this.activeSetId = setId;
+
+		if (setId === null) {
+			return;
+		}
+
+		const cursor = cursorFor(this.workout, setId);
+
+		if (cursor === null) {
+			return;
+		}
+
+		draftSet(this.workout, setId, prefillFor(cursor, this.history));
+	}
+
+	/**
+	 * An edit in the open editor, landing on the set rather than being held in
+	 * the component that made it.
+	 *
+	 * Not a commit and not a partial one: `draftSet` leaves `completed` alone, so
+	 * everything typed before the check is pressed is visible and survives a jump
+	 * away, and none of it claims the set was performed.
+	 */
+	public draft(setId: string, weight: number | null, reps: number | null): void {
+		draftSet(this.workout, setId, { weight, reps });
 	}
 
 	/**
@@ -107,8 +162,7 @@ export class WorkoutSession {
 			return;
 		}
 
-		const next = advanceFrom(this.workout, id);
-		this.activeSetId = next === null ? null : next.set.id;
+		this.#focus(advanceFrom(this.workout, id)?.set.id ?? null);
 	}
 
 	/**
@@ -123,7 +177,7 @@ export class WorkoutSession {
 		const set = appendSet(this.workout, exerciseId, crypto.randomUUID());
 
 		if (set !== null && this.activeSetId === null) {
-			this.activeSetId = set.id;
+			this.#focus(set.id);
 		}
 	}
 
@@ -133,8 +187,11 @@ export class WorkoutSession {
 	 * `insertedSetCount`'s rule, read against the store-derived history the
 	 * session was constructed with.
 	 *
-	 * Same cursor rule as `addSet`: a finished session hands the cursor to the
-	 * first inserted set, otherwise the user's place is not stolen.
+	 * The cursor goes to it, always. Adding an exercise mid-session is a
+	 * statement about what is being done next, and it is the one insertion the
+	 * user has to go looking for otherwise: the entry lands at the end of a
+	 * session that is scrolled somewhere else entirely, so leaving the cursor
+	 * behind means the answer to "add exercise" is a scroll.
 	 */
 	public addExercise(exerciseId: string): void {
 		const count = insertedSetCount(this.history, exerciseId);
@@ -145,9 +202,64 @@ export class WorkoutSession {
 			sets: Array.from({ length: count }, () => crypto.randomUUID())
 		});
 
-		if (entry !== null && this.activeSetId === null) {
-			this.activeSetId = entry.exercises[0].sets[0].id;
+		if (entry !== null) {
+			this.#focus(entry.exercises[0].sets[0].id);
 		}
+	}
+
+	/**
+	 * Swapping what is performed in an entry: the rack was taken.
+	 *
+	 * Set count from the incoming exercise's history, ids minted here, both for
+	 * the same reasons `addExercise` above has them.
+	 *
+	 * The cursor follows only if it was inside the entry — where it has to, the
+	 * set it was on having just left the tree — or if the session had nothing
+	 * left owed. Swapping something further down the session while logging is
+	 * not a statement about what is being done right now, and stealing the
+	 * cursor for it would cost a jump back.
+	 */
+	public swapExercise(entryId: string, exerciseId: string): void {
+		const active = this.activeSetId === null ? null : cursorFor(this.workout, this.activeSetId);
+		const held = active === null || active.entry.id === entryId;
+
+		const count = insertedSetCount(this.history, exerciseId);
+
+		const entry = replaceEntry(this.workout, entryId, exerciseId, {
+			exercise: crypto.randomUUID(),
+			sets: Array.from({ length: count }, () => crypto.randomUUID())
+		});
+
+		if (entry !== null && held) {
+			this.#focus(entry.exercises[0].sets[0].id);
+		}
+	}
+
+	/**
+	 * Removing an exercise, and everything logged under it.
+	 *
+	 * Same care `removeSet` takes with the cursor, one level up: the set above
+	 * the *entry* is read before the removal, because `advanceFrom` handed the id
+	 * of a set that has left the tree silently starts again from the top of the
+	 * session and undoes whatever jump the user had made.
+	 *
+	 * `at` is the first set belonging to the entry, so the one above it is
+	 * necessarily outside — there is no risk of measuring from a set that is
+	 * about to be removed alongside it.
+	 */
+	public removeExercise(entryId: string): void {
+		const all = cursors(this.workout);
+		const at = all.findIndex((c) => c.entry.id === entryId);
+		const above = at > 0 ? all[at - 1].set.id : null;
+		const held = all.some((c) => c.entry.id === entryId && c.set.id === this.activeSetId);
+
+		if (!dropEntry(this.workout, entryId) || !held) {
+			return;
+		}
+
+		const next = above === null ? firstUncompleted(this.workout) : advanceFrom(this.workout, above);
+
+		this.#focus(next?.set.id ?? null);
 	}
 
 	/**
@@ -186,7 +298,8 @@ export class WorkoutSession {
 		}
 
 		const next = above === null ? firstUncompleted(this.workout) : advanceFrom(this.workout, above);
-		this.activeSetId = next === null ? null : next.set.id;
+
+		this.#focus(next?.set.id ?? null);
 	}
 }
 

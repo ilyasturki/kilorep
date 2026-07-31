@@ -5,7 +5,12 @@
 	import Sheet from '$lib/ui/Sheet.svelte';
 
 	/**
-	 * Mid-workout insert: the catalog behind a search field, one tap to add.
+	 * The catalog behind a search field, one tap to pick.
+	 *
+	 * Two questions, one sheet: which exercise to add to the session, and which
+	 * one to swap an entry for. They differ in the title and in what the screen
+	 * does with the answer, and in nothing else — a second copy would be a
+	 * second search field to keep in step with the first.
 	 *
 	 * The same `ExerciseList` the Exercises screen uses — browse folded by
 	 * family, search flat and ranked — with the rows picking instead of
@@ -15,25 +20,26 @@
 	 */
 	type Props = {
 		open?: boolean;
-		onadd: (exerciseId: string) => void;
+		title: string;
+		onpick: (exerciseId: string) => void;
 	};
 
-	let { open = $bindable(false), onadd }: Props = $props();
+	let { open = $bindable(false), title, onpick }: Props = $props();
 
 	let query = $state('');
 
-	// Adding is the whole reason the sheet was opened, so it closes behind the
-	// tap — and the query resets, because the next insert is a new question.
-	function pick(exercise: Exercise) {
-		onadd(exercise.id);
+	// Picking is the whole reason the sheet was opened, so it closes behind the
+	// tap — and the query resets, because the next one is a new question.
+	function choose(exercise: Exercise) {
+		onpick(exercise.id);
 		query = '';
 		open = false;
 	}
 </script>
 
-<Sheet bind:open title="Add exercise">
+<Sheet bind:open {title}>
 	<div class="flex flex-col gap-3">
 		<SearchField label="Search exercises" bind:value={query} />
-		<ExerciseList {query} onpick={pick} />
+		<ExerciseList {query} onpick={choose} />
 	</div>
 </Sheet>

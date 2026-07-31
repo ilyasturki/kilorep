@@ -7,10 +7,12 @@
 	import { groupsWithMeta } from '$lib/workout/groups';
 	import { activeWorkout } from '$lib/workout/session.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
-	import InsertSheet from '$lib/workout/InsertSheet.svelte';
+	import ExerciseOptionsSheet from '$lib/workout/ExerciseOptionsSheet.svelte';
+	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import OverviewSheet from '$lib/workout/OverviewSheet.svelte';
 	import SessionList from '$lib/workout/SessionList.svelte';
 	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
+	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
@@ -100,6 +102,62 @@
 	let insertOpen = $state(false);
 
 	/**
+	 * The exercise-level sheet, and the picker a swap opens behind it.
+	 *
+	 * Addressed by entry id and resolved out of the live tree on every read, for
+	 * the same reason the set sheet is: a swap rebuilds the entry underneath, and
+	 * a group snapshotted on open would have the sheet naming the exercise that
+	 * has just left.
+	 *
+	 * `swapping` outlives the options sheet on purpose — it is what the picker's
+	 * answer is applied to, and the options sheet has closed by then.
+	 */
+	let exerciseOpen = $state(false);
+	let swapOpen = $state(false);
+	let swapping = $state<string | null>(null);
+
+	const exerciseGroup = $derived(groups.find((g) => g.entryId === swapping) ?? null);
+
+	function exerciseOptions(entryId: string) {
+		swapping = entryId;
+		exerciseOpen = true;
+	}
+
+	function swapPick(exerciseId: string) {
+		if (swapping === null) {
+			return;
+		}
+
+		session.swapExercise(swapping, exerciseId);
+		swapping = null;
+	}
+
+	function removeExercise() {
+		if (swapping === null) {
+			return;
+		}
+
+		session.removeExercise(swapping);
+		swapping = null;
+	}
+
+	// Finish asks first, from either header and from the button under the
+	// session. PRODUCT.md gives finishing no ceremony, and this is not one: it is
+	// the single confirm the app grants an action that cannot be undone, the same
+	// one a logged set gets before it is removed.
+	let finishing = $state(false);
+
+	const owed = $derived(
+		groups.flatMap((group) => group.cursors).filter((cursor) => !cursor.set.completed).length
+	);
+
+	const owedLabel = $derived(
+		owed === 0
+			? 'Every set is logged.'
+			: `${owed} set${owed === 1 ? '' : 's'} still owed. The session ends as it stands.`
+	);
+
+	/**
 	 * The set-options sheet is one instance for the screen, addressed by id.
 	 *
 	 * Resolved out of the live tree on every read rather than captured when the
@@ -151,11 +209,12 @@
 </script>
 
 <!-- Declared once and rendered twice — into this screen's own header on a phone,
-     and into the app bar's slot on a desk. Finish is instant and has no
-     ceremony: no summary, no confetti. It discards the session and lands on
-     Start, where a second run is one tap away. -->
+     and into the app bar's slot on a desk. Finish has no ceremony: no summary,
+     no confetti, one question and out. What follows the question is
+     `finishSession` — the session recorded or discarded, and Start, where a
+     second run is one tap away. -->
 {#snippet finish()}
-	<Button variant="chrome" caps onclick={() => void finishSession()}>FINISH</Button>
+	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
 {/snippet}
 
 <svelte:head>
@@ -194,6 +253,7 @@
 				{groups}
 				activeSetId={session.activeSetId}
 				onjump={(id) => session.select(id)}
+				onfocus={(id) => session.select(id)}
 				oninsert={() => (insertOpen = true)}
 				onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 			/>
@@ -215,14 +275,18 @@
 						history={data.history}
 						activeSetId={session.activeSetId}
 						oncommit={(w, r) => session.commit(w, r)}
+						ondraft={(id, w, r) => session.draft(id, w, r)}
 						onselect={(id) => session.select(id)}
 						onadd={() => session.addSet(group.cursors[0].exercise.id)}
 						onoptions={options}
+						onexercise={() => exerciseOptions(group.entryId)}
 					/>
 				{/each}
 
 				<!-- The empty session: with no templates yet, every workout begins as
-				     nothing, and the insert sheet is how everything arrives. -->
+				     nothing, and the insert sheet is how everything arrives. It is also
+				     where a session lands when its last exercise is removed, which is
+				     the same state and needs no second wording. -->
 				{#if groups.length === 0}
 					<EmptyState title="Empty session" description="Add an exercise to start logging.">
 						{#snippet icon()}
@@ -232,19 +296,37 @@
 							<Button variant="commit" onclick={() => (insertOpen = true)}>Add exercise</Button>
 						{/snippet}
 					</EmptyState>
-				{:else if session.finished}
+				{:else}
 					<!-- Under the session rather than instead of it. Every block keeps its
 					     add-set row while this is on screen, which is the only way a set
 					     added after the last one was logged is reachable at all — and the
-					     workout you just finished is still there to look at. -->
-					<EmptyState title="Every set logged" description="Nothing left in this session.">
-						{#snippet icon()}
-							<Check size={26} />
-						{/snippet}
-						{#snippet action()}
-							<Button variant="commit" onclick={() => void finishSession()}>Finish</Button>
-						{/snippet}
-					</EmptyState>
+					     workout you just finished is still there to look at.
+
+					     It carries no button of its own any more: Finish is below, always,
+					     and two of them stacked would be the screen asking twice. -->
+					{#if session.finished}
+						<EmptyState title="Every set logged" description="Nothing left in this session.">
+							{#snippet icon()}
+								<Check size={26} />
+							{/snippet}
+						</EmptyState>
+					{/if}
+
+					<!-- The end of the session, where a session ends. The header keeps its
+					     FINISH for the thumb that never scrolls down here; this is for the
+					     one that has just logged the last set and is already looking at the
+					     bottom of the page.
+
+					     Filled only once nothing is left owed, because `Button`'s standing
+					     rule is one filled button per screen and while the loop is running
+					     that button is `Log set`. -->
+					<Button
+						variant={session.finished ? 'commit' : 'secondary'}
+						class="w-full"
+						onclick={() => (finishing = true)}
+					>
+						Finish
+					</Button>
 				{/if}
 			</div>
 		</main>
@@ -260,11 +342,34 @@
 	onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 />
 
-<InsertSheet bind:open={insertOpen} onadd={(id) => session.addExercise(id)} />
+<ExercisePickerSheet
+	bind:open={insertOpen}
+	title="Add exercise"
+	onpick={(id) => session.addExercise(id)}
+/>
+
+<!-- The same picker, asking a different question. It opens as the options sheet
+     closes, the way the overview already hands over to the insert. -->
+<ExercisePickerSheet bind:open={swapOpen} title="Swap exercise" onpick={swapPick} />
+
+<ExerciseOptionsSheet
+	bind:open={exerciseOpen}
+	group={exerciseGroup}
+	onswap={() => (swapOpen = true)}
+	onremove={removeExercise}
+/>
 
 <SetOptionsSheet
 	bind:open={optionsOpen}
 	cursor={optionsCursor}
 	removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
 	onremove={removeSet}
+/>
+
+<AlertDialog
+	bind:open={finishing}
+	title="Finish workout?"
+	description={owedLabel}
+	confirmLabel="Finish"
+	onconfirm={() => void finishSession()}
 />

@@ -9,6 +9,7 @@ import {
 	commitSet,
 	cursorFor,
 	cursors,
+	draftSet,
 	firstUncompleted,
 	groupsOf,
 	hintFor,
@@ -17,7 +18,9 @@ import {
 	moveEntry,
 	parseEntry,
 	prefillFor,
+	removeEntry,
 	removeSet,
+	replaceEntry,
 	settle
 } from '$lib/domain/workout';
 import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workout';
@@ -166,6 +169,49 @@ describe('commitSet', () => {
 	});
 });
 
+describe('draftSet', () => {
+	test('writes the values and leaves the claim unmade', () => {
+		const workout = freshWorkout(0);
+
+		expect(draftSet(workout, 'bench-1', { weight: 80, reps: 8 })).toBe(true);
+		expect(at(workout, 'bench-1').set).toMatchObject({
+			weight: 80,
+			reps: 8,
+			completed: false
+		});
+	});
+
+	// The whole point of the pair being written together: a draft that skipped
+	// nulls could put a number into a set and never take it back out.
+	test('null is a value, not a slot to skip', () => {
+		const workout = freshWorkout(0);
+		draftSet(workout, 'bench-1', { weight: 80, reps: 8 });
+
+		expect(draftSet(workout, 'bench-1', { weight: null, reps: null })).toBe(true);
+		expect(at(workout, 'bench-1').set).toMatchObject({ weight: null, reps: null });
+	});
+
+	// Seeding a set is `draftSet` of its own prefill, and `prefillFor` reads what
+	// the set already holds first — so a set that has been drafted, or logged,
+	// opens on itself and seeding it again changes nothing.
+	test('seeding is idempotent, and cannot rewrite a logged set', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 82.5, 6);
+
+		draftSet(workout, 'bench-1', prefillOf(workout, 'bench-1'));
+
+		expect(at(workout, 'bench-1').set).toMatchObject({
+			weight: 82.5,
+			reps: 6,
+			completed: true
+		});
+	});
+
+	test('an unknown set is refused rather than silently ignored', () => {
+		expect(draftSet(freshWorkout(0), 'nope', { weight: 60, reps: 8 })).toBe(false);
+	});
+});
+
 describe('addSet', () => {
 	test('appends an empty working set, planning nothing', () => {
 		const workout = freshWorkout(0);
@@ -294,6 +340,79 @@ describe('removeSet', () => {
 
 	test('an unknown set is refused rather than silently ignored', () => {
 		expect(removeSet(freshWorkout(0), 'nope')).toBe(false);
+	});
+});
+
+describe('replaceEntry', () => {
+	const ids = { exercise: 'we-row', sets: ['row-1', 'row-2', 'row-3'] };
+
+	test('keeps the slot and changes what is performed in it', () => {
+		const workout = freshWorkout(0);
+		const entry = replaceEntry(workout, 'entry-2', 'barbell-row', ids);
+
+		// Second of four, exactly where incline was. A remove-and-add would have
+		// dropped it at the end and made the user drag it back.
+		expect(workout.entries[1]).toBe(entry);
+		expect(entry!.id).toBe('entry-2');
+		expect(orderOf(workout)).toEqual(['bench-press', 'barbell-row', 'cable-fly', 'pec-deck']);
+	});
+
+	test('the sets are the incoming exercise, blank — nothing is carried across', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'incline-1', 30, 10);
+		replaceEntry(workout, 'entry-2', 'barbell-row', ids);
+
+		expect(idsOf(workout)).not.toContain('incline-1');
+		expect(idsOf(workout).slice(5, 8)).toEqual(['row-1', 'row-2', 'row-3']);
+		expect(at(workout, 'row-1').set).toEqual({
+			id: 'row-1',
+			type: 'normal',
+			plannedReps: null,
+			weight: null,
+			reps: null,
+			completed: false
+		});
+	});
+
+	test('zero sets is refused, and the entry it would have emptied is left alone', () => {
+		const workout = freshWorkout(0);
+
+		expect(replaceEntry(workout, 'entry-2', 'barbell-row', { exercise: 'we-row', sets: [] })).toBe(
+			null
+		);
+		expect(orderOf(workout)[1]).toBe('incline-dumbbell-press');
+	});
+
+	test('an unknown entry is refused rather than silently ignored', () => {
+		expect(replaceEntry(freshWorkout(0), 'nope', 'barbell-row', ids)).toBeNull();
+	});
+});
+
+describe('removeEntry', () => {
+	test('takes the exercise and every set under it, logged or not', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'incline-1', 30, 10);
+
+		expect(removeEntry(workout, 'entry-2')).toBe(true);
+		expect(orderOf(workout)).toEqual(['bench-press', 'cable-fly', 'pec-deck']);
+		expect(idsOf(workout)).not.toContain('incline-1');
+	});
+
+	// No floor, unlike `removeSet`. An empty session is where every session
+	// starts, so there is nothing here to refuse.
+	test('the last entry goes too, leaving an empty session', () => {
+		const workout = freshWorkout(0);
+
+		for (const id of ['entry-1', 'entry-2', 'entry-3', 'entry-4']) {
+			expect(removeEntry(workout, id)).toBe(true);
+		}
+
+		expect(workout.entries).toEqual([]);
+		expect(firstUncompleted(workout)).toBeNull();
+	});
+
+	test('an unknown entry is refused rather than silently ignored', () => {
+		expect(removeEntry(freshWorkout(0), 'nope')).toBe(false);
 	});
 });
 

@@ -293,6 +293,35 @@ export function canCommit(weight: number | null, reps: number | null): boolean {
  * Mutates in place. The reactive shell holds the tree in a deep `$state` proxy
  * and sees the write; a test holds a plain object and sees it too.
  */
+/**
+ * Writes values onto a set without claiming them: `completed` is untouched.
+ *
+ * The set is what holds the numbers being worked on, not the editor. A set the
+ * cursor has reached opens on its prefill and keeps whatever was nudged into
+ * it, so leaving it for another exercise and coming back finds the same two
+ * numbers — and the row shows them meanwhile, in its pending dress, because a
+ * number on screen that vanished when you looked away was never trustworthy.
+ *
+ * Both slots every time, nulls included: the caller holds the pair, and a patch
+ * that skipped nulls could never take a value back out of a set.
+ *
+ * The one thing this must never do is set `completed`. That flag is the
+ * affirmative claim, and `commitSet` below is the only thing allowed to make
+ * it.
+ */
+export function draftSet(workout: Workout, setId: string, values: Prefill): boolean {
+	const cursor = cursorFor(workout, setId);
+
+	if (cursor === null) {
+		return false;
+	}
+
+	cursor.set.weight = values.weight;
+	cursor.set.reps = values.reps;
+
+	return true;
+}
+
 export function commitSet(workout: Workout, setId: string, weight: number, reps: number): boolean {
 	const cursor = cursorFor(workout, setId);
 
@@ -416,6 +445,76 @@ export function addExercise(
 	workout.entries.push(entry);
 
 	return entry;
+}
+
+/** The nodes a replacement needs. No entry id: the entry itself survives a swap. */
+export type ReplacementIds = { exercise: string; sets: string[] };
+
+/**
+ * Swaps what is performed in an entry, leaving the entry where it is.
+ *
+ * The rack was taken, so you do something else in the slot you had. The entry
+ * is that slot: its id and its position in the session both survive, which is
+ * what keeps a swap out of reorder's business — the alternative, remove and
+ * add, drops the exercise at the end of the session and makes the user drag it
+ * back.
+ *
+ * Everything below the entry is new. The sets are blank and counted by the
+ * *incoming* exercise's history, exactly as if it had been added fresh, because
+ * the sets that were there answered to a different exercise: four sets of bench
+ * is not a prescription for four sets of incline press, and a logged 82.5 × 7
+ * carried across would be the app filing a set under something nobody
+ * performed. Callers with logged sets in hand are expected to have asked first.
+ *
+ * Null for an unknown entry and null for no set ids, the same refusals
+ * `addExercise` makes.
+ */
+export function replaceEntry(
+	workout: Workout,
+	entryId: string,
+	exerciseId: string,
+	ids: ReplacementIds
+): WorkoutEntry | null {
+	const entry = workout.entries.find((e) => e.id === entryId);
+
+	if (entry === undefined || ids.sets.length === 0) {
+		return null;
+	}
+
+	entry.exercises = [
+		{
+			id: ids.exercise,
+			exerciseId,
+			sets: ids.sets.map((id) => blankSet(id))
+		}
+	];
+
+	return entry;
+}
+
+/**
+ * Removes an entry and everything under it, logged or not.
+ *
+ * No floor, unlike `removeSet`: a session with no entries left is an ordinary
+ * state — it is what every session starts as before the first exercise is
+ * added — so there is nothing here to refuse. What a *set* cannot do is leave
+ * its exercise empty, because an exercise with no sets is not a shorter
+ * exercise; an empty session is just an empty session.
+ *
+ * The entry and not the exercise, for the reason `moveEntry` gives: an entry
+ * holding two of them is a superset, and taking one half out is a superset edit
+ * against a level of the tree the UI does not expose.
+ */
+export function removeEntry(workout: Workout, entryId: string): boolean {
+	const at = workout.entries.findIndex((e) => e.id === entryId);
+
+	if (at === -1) {
+		return false;
+	}
+
+	workout.entries.splice(at, 1);
+
+	return true;
 }
 
 /**

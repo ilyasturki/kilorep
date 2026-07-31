@@ -36,7 +36,8 @@
 	//
 	// Reordering does not close it, and the asymmetry is the point: a jump is
 	// finished when it lands, and reordering a session is a handful of drags you
-	// want to see the result of before leaving.
+	// want to see the result of before leaving. A lift selects the exercise all
+	// the same — that is `onfocus`, handed straight down, closing nothing.
 	function jump(setId: string) {
 		onjump(setId);
 		open = false;
@@ -49,5 +50,12 @@
 </script>
 
 <Sheet bind:open title="Session">
-	<SessionList {groups} {activeSetId} {onreorder} onjump={jump} oninsert={insert} />
+	<SessionList
+		{groups}
+		{activeSetId}
+		{onreorder}
+		onjump={jump}
+		onfocus={onjump}
+		oninsert={insert}
+	/>
 </Sheet>

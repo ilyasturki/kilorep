@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { canCommit, hintLabel, prefillFor } from '$lib/domain/workout';
+	import { canCommit, hintLabel } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import Button from '$lib/ui/Button.svelte';
 	import { tapCommit } from '$lib/ui/haptics';
@@ -22,6 +22,15 @@
 		history: History;
 		oncommit: (weight: number, reps: number) => void;
 		/**
+		 * An edit, on its way to the set it belongs to.
+		 *
+		 * Every nudge and every typed value goes out immediately, uncompleted. The
+		 * card holds nothing of its own: what it renders is the set, so leaving
+		 * this exercise and coming back finds the numbers still there, and the row
+		 * shows them meanwhile in its pending dress.
+		 */
+		ondraft: (weight: number | null, reps: number | null) => void;
+		/**
 		 * The same sheet every other row reaches, from the one row that could not.
 		 *
 		 * Expanding a set used to take its ⋯ away with the row it replaced, which
@@ -32,28 +41,40 @@
 		onoptions: () => void;
 	};
 
-	let { cursor, history, oncommit, onoptions }: Props = $props();
+	let { cursor, history, oncommit, ondraft, onoptions }: Props = $props();
 
-	const prefill = $derived(prefillFor(cursor, history));
 	const hint = $derived(hintLabel(history, cursor));
 
 	/**
-	 * Live values, owned here rather than inside the two fields, because there
-	 * are two ways in — the arms and the keyboard — and they have to agree. Null
-	 * means there was nothing to recall and the user has not said otherwise yet;
-	 * the check stays inert until both are answered.
+	 * Live values, read straight off the set. Null means there was nothing to
+	 * recall and the user has not said otherwise yet; the check stays inert until
+	 * both are answered.
 	 *
-	 * Derived and then reassigned: an edit overrides the recalled value, and a
-	 * new prefill — a new set — takes the override back without anything having
-	 * to remember to clear it. Written as `$state` seeded once, this would go
-	 * stale the moment the parent forgot to key the component.
+	 * The card owns neither. A set the cursor reaches has already been seeded
+	 * with its prefill by the session, and every edit goes back out through
+	 * `ondraft` — so there is one copy of these two numbers, on the set, and no
+	 * way for the card and the row above it to disagree about them.
 	 *
-	 * `StepperField` holds none of this. It renders `value` and proposes the next
-	 * one; `prefill` goes down beside it as `recalled` so the touched dot answers
-	 * to what the set opened at rather than to what was typed a keystroke ago.
+	 * `StepperField` holds nothing either. It renders `value` and proposes the
+	 * next one; `opened` goes down beside it as `recalled`, so the touched tint
+	 * answers to what the set opened at rather than to what was typed a keystroke
+	 * ago.
 	 */
-	let weight = $derived(prefill.weight);
-	let reps = $derived(prefill.reps);
+	const weight = $derived(cursor.set.weight);
+	const reps = $derived(cursor.set.reps);
+
+	/**
+	 * What this set opened at, and the only thing the touched tint is measured
+	 * against.
+	 *
+	 * Captured once, deliberately not derived: the values below it now change as
+	 * the user edits, so a live reading of the same thing would chase every
+	 * keystroke and the tint could never appear. `ExerciseBlock` keys this
+	 * component on the set id, so a new set is a new instance and this is never
+	 * a stale reading of a previous one.
+	 */
+	// svelte-ignore state_referenced_locally
+	const opened = { weight: cursor.set.weight, reps: cursor.set.reps };
 
 	const live = $derived(canCommit(weight, reps));
 
@@ -165,16 +186,16 @@
 			<StepperField
 				label="kg"
 				value={weight}
-				recalled={prefill.weight}
+				recalled={opened.weight}
 				step={2.5}
-				onchange={(v) => (weight = v)}
+				onchange={(v) => ondraft(v, reps)}
 			/>
 			<StepperField
 				label="reps"
 				value={reps}
-				recalled={prefill.reps}
+				recalled={opened.reps}
 				step={1}
-				onchange={(v) => (reps = Math.round(v))}
+				onchange={(v) => ondraft(weight, Math.round(v))}
 			/>
 		</div>
 

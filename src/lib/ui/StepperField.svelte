@@ -5,12 +5,14 @@
 	/**
 	 * A weight or rep field with fat ± on either side of the number.
 	 *
-	 * The dot above the value is not decoration. PRODUCT.md: the check "commits
-	 * exactly what's on screen — the hint/target if untouched, your edits if
-	 * touched", and the hint is never silently written. The dot is the only
-	 * thing on screen that distinguishes a recalled hint from an affirmative
-	 * claim, so it appears the moment the value leaves its prefill and clears
-	 * again if you step back onto it.
+	 * The value goes accent-coloured the moment it leaves what the field opened
+	 * at, and back to ink if you step onto that number again. Not decoration.
+	 * PRODUCT.md: the check "commits exactly what's on screen — the hint/target
+	 * if untouched, your edits if touched", and the hint is never silently
+	 * written, so something has to distinguish a recalled number from a claimed
+	 * one. Colouring the number itself rather than parking a mark above it puts
+	 * that on the thing it is about — a dot in the corner of a 76px well is a
+	 * legend the user has to learn.
 	 *
 	 * Stepping from 40 to 100 is twenty-four taps on the arms, so an arm held
 	 * down repeats and the arms stay the accelerator for the common case rather
@@ -26,15 +28,12 @@
 		/** Null is a field with nothing in it — no history to recall, nothing typed yet. */
 		value: number | null;
 		/**
-		 * What the field opened at, and the only thing the touched dot is measured
+		 * What the field opened at, and the only thing the tint is measured
 		 * against.
 		 *
-		 * The dot is not decoration. PRODUCT.md: the check "commits exactly what's
-		 * on screen — the hint/target if untouched, your edits if touched", and the
-		 * hint is never silently written. The dot is the only thing on screen that
-		 * separates a recalled hint from an affirmative claim, so it has to answer
-		 * to the recalled value rather than to the live one — otherwise a caller
-		 * that feeds its own edits back in could never show it at all.
+		 * It has to answer to the recalled value rather than to the live one —
+		 * otherwise a caller that feeds its own edits back in, which every caller
+		 * now does, could never show the tint at all.
 		 */
 		recalled?: number | null;
 		label: string;
@@ -163,9 +162,9 @@
 	$effect(() => () => clearTimeout(timer));
 
 	// Typing is held in `draft` and only lands in `value` on commit. Writing
-	// every keystroke through would fire `onchange` per digit and make the
-	// touched dot blink on the way from 8 to 82.5 — and a half-typed "8." is
-	// not a number the rest of the app should ever see.
+	// every keystroke through would fire `onchange` per digit and flicker the
+	// tint on the way from 8 to 82.5 — and a half-typed "8." is not a number the
+	// rest of the app should ever see.
 	let draft = $state('');
 	let editing = $state(false);
 
@@ -236,16 +235,10 @@
 {/snippet}
 
 <div
-	class={['relative flex min-h-19 items-stretch rounded-2xl bg-sunken', klass]}
+	class={['flex min-h-19 items-stretch rounded-2xl bg-sunken', klass]}
 	role="group"
 	aria-label={label}
 >
-	{#if touched}
-		<div class="pointer-events-none absolute inset-x-0 top-2 flex justify-center">
-			<div class="size-1.5 rounded-full bg-accent-text"></div>
-		</div>
-	{/if}
-
 	{@render arm(-1, 'decrease', 'rounded-l-2xl')}
 
 	<div class="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5">
@@ -267,8 +260,13 @@
 			inputmode="decimal"
 			autocomplete="off"
 			aria-label={label}
-			class="w-full scroll-mb-32 bg-transparent p-0 text-center text-2xl leading-none
-				font-extrabold tracking-numeral focus-ring-inset"
+			class={[
+				'w-full scroll-mb-32 bg-transparent p-0 text-center text-2xl leading-none',
+				'font-extrabold tracking-numeral focus-ring-inset',
+				// `accent-text` and not `accent`: this is the accent as a *string*, on
+				// a surface, which is the distinction app.css draws between the two.
+				touched ? 'text-accent-text' : 'text-ink'
+			]}
 		/>
 		<div class="label-caps">{label}</div>
 	</div>

@@ -8,7 +8,8 @@
 
 	/**
 	 * What is in this session, how far it has got, a tap to go there, a drag to
-	 * reorder it, and the way in for an exercise the plan did not hold.
+	 * reorder it — which goes there too, the moment the row leaves the ground —
+	 * and the way in for an exercise the plan did not hold.
 	 *
 	 * One component, two homes: a sheet on a phone, where the screen has no room
 	 * to spare, and a permanent rail on a desktop, where it does. Written twice
@@ -25,13 +26,22 @@
 	type Props = {
 		groups: Group[];
 		activeSetId: string | null;
+		/** A tap: go to this exercise. Whatever is holding the list may leave with it. */
 		onjump: (setId: string) => void;
+		/**
+		 * A lift: the same set becomes active, but the list stays where it is.
+		 *
+		 * Split from `onjump` for the overview sheet's sake, which dismisses itself
+		 * on a jump — a drag that closed the sheet out from under the finger
+		 * holding a row would end the gesture it just started.
+		 */
+		onfocus: (setId: string) => void;
 		oninsert: () => void;
 		/** Put the entry at `index`. The screen hands this straight to the domain. */
 		onreorder: (entryId: string, index: number) => void;
 	};
 
-	let { groups, activeSetId, onjump, oninsert, onreorder }: Props = $props();
+	let { groups, activeSetId, onjump, onfocus, oninsert, onreorder }: Props = $props();
 
 	/**
 	 * The draggable units are entries, not rows.
@@ -42,26 +52,44 @@
 	 */
 	const entryIds = $derived([...new Set(groups.map((group) => group.entryId))]);
 
+	// Where a gesture on a row lands: the next set still owed, or the last one if
+	// the exercise is finished — going to a done exercise should show it, not
+	// refuse. Which of the two callbacks receives it is the caller's business,
+	// and the only difference between a tap and a lift.
+	function target(group: Group, go: (setId: string) => void) {
+		const cursor = group.cursors.find((c) => !c.set.completed) ?? group.cursors.at(-1);
+
+		if (cursor === undefined) {
+			return;
+		}
+
+		go(cursor.set.id);
+	}
+
 	const drag = new DragOrder({
 		order: () => entryIds,
 		move: (id, index) => {
 			onreorder(id, index);
 
 			return true;
+		},
+		// Picking a row up is as much a statement about which exercise is being
+		// talked about as tapping it, so the screen behind follows immediately —
+		// otherwise a drag ends with the pane still showing whatever was there
+		// before, and the user has to tap the row they just moved.
+		//
+		// The same target a tap picks, so a lift and a tap cannot land on different
+		// sets of the same exercise — only the leaving differs, which is `onfocus`.
+		// `find` and not `filter`: a superset entry renders two groups, and the
+		// first of them is where its sets start.
+		lift: (entryId) => {
+			const group = groups.find((candidate) => candidate.entryId === entryId);
+
+			if (group !== undefined) {
+				target(group, onfocus);
+			}
 		}
 	});
-
-	// Where a tap lands: the next set still owed, or the last one if the exercise
-	// is finished — jumping to a done exercise should show it, not refuse.
-	function jump(group: Group) {
-		const target = group.cursors.find((c) => !c.set.completed) ?? group.cursors.at(-1);
-
-		if (target === undefined) {
-			return;
-		}
-
-		onjump(target.set.id);
-	}
 
 	// A long-press that lifted a row still ends in a click, and the row under it
 	// jumps the session somewhere. Same swallow `SetRow` and `StepperField` make,
@@ -71,7 +99,7 @@
 			return;
 		}
 
-		jump(group);
+		target(group, onjump);
 	}
 
 	// Direct manipulation is not animation: the lifted row has to keep following

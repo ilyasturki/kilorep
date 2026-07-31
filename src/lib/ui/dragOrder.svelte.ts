@@ -18,6 +18,8 @@
  * Rows are assumed to be of a uniform height. The slot geometry is measured
  * once at lift and stays valid for the whole drag on that assumption — which is
  * what lets the list rearrange underneath without the arithmetic chasing it.
+ * It is also what bounds the travel: the row in hand cannot be dragged past the
+ * first or last slot, because there is nothing further for it to say.
  */
 
 import { tapLift } from '$lib/ui/haptics';
@@ -27,6 +29,15 @@ export type DragOrderOptions = {
 	order: () => string[];
 	/** Put `id` at `index`. Whether anything moved. */
 	move: (id: string, index: number) => boolean;
+	/**
+	 * A row has just been picked up. Optional, and fired once per lift.
+	 *
+	 * The moment a row is in hand it is the row being talked about, so a list
+	 * whose selection means something elsewhere on the screen can follow it —
+	 * rather than showing whatever was selected before the drag started and
+	 * catching up only if the user taps afterwards.
+	 */
+	lift?: (id: string) => void;
 };
 
 /** Matches `SetRow`'s long-press: a hold that opens something, not one that accelerates. */
@@ -223,6 +234,11 @@ export class DragOrder {
 		// and by then the user has already started guessing.
 		tapLift();
 
+		// After the lift is fully built, so a handler that reaches back into this
+		// list — the workout screen jumps to the exercise it just picked up — finds
+		// a drag already in hand rather than one half-assembled.
+		this.#options.lift?.(id);
+
 		// The capture keeps the moves coming after the pointer leaves the row it
 		// started on, which it does immediately — the row is what moves. It is
 		// taken against `target` and not `currentTarget`, because the long-press
@@ -274,7 +290,16 @@ export class DragOrder {
 		}
 
 		// The dragged row's centre, in the same content coordinates as the slots.
-		const centre = this.#pointerY - this.#grab - bounds.top + scroller.scrollTop + this.#height / 2;
+		const wanted = this.#pointerY - this.#grab - bounds.top + scroller.scrollTop + this.#height / 2;
+
+		// Clamped to the first and last slot centres, which — rows being of a
+		// uniform height — is exactly the span the list occupies. A row dragged
+		// past the end has already said everything it can say about where it wants
+		// to go, and following the finger out of the list from there is a row
+		// floating over unrelated chrome for no further information.
+		const first = this.#slots[0] ?? wanted;
+		const last = this.#slots.at(-1) ?? wanted;
+		const centre = Math.min(Math.max(wanted, first), last);
 
 		const order = this.#options.order();
 		const at = order.indexOf(id);
@@ -306,10 +331,16 @@ export class DragOrder {
 		// Read after the reorder above, which is what makes a crossing cost no
 		// visible movement: the slot moves a row's height one way, and this moves
 		// the row back the other in the same frame.
+		//
+		// Driven by `centre` rather than by the pointer, so the clamp above is the
+		// one that decides where the row is drawn — unclamped the two are the same
+		// arithmetic, since `centre` is where the pointer asked the row to be.
 		const row = this.#rowFor(id);
 
 		if (row !== null) {
-			this.offset = this.#pointerY - this.#grab - row.getBoundingClientRect().top;
+			const top = centre - this.#height / 2 + bounds.top - scroller.scrollTop;
+
+			this.offset = top - row.getBoundingClientRect().top;
 		}
 
 		this.#frame = requestAnimationFrame(this.#tick);
