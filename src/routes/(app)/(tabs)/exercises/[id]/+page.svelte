@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { catalog } from '$lib/catalog';
-	import { pastSessions } from '$lib/domain/fixture';
 	import { rawPr } from '$lib/domain/stats';
 	import { familyOf } from '$lib/exercises/browse';
 	import Badge from '$lib/ui/Badge.svelte';
@@ -20,8 +19,7 @@
 	 * first chart, and charting gets decided once, at the Dashboard, not
 	 * smuggled in here as a one-off.
 	 *
-	 * History is the fixture's for now, same as the workout screen's hints —
-	 * both read the store when the store lands.
+	 * History is the store's, derived from finished workouts on the way in.
 	 */
 	let { data }: PageProps = $props();
 
@@ -33,7 +31,7 @@
 
 	// Oldest first in the data — the order `rawPr` reads; the screen wants
 	// latest first.
-	const past = $derived(pastSessions[exercise.id] ?? []);
+	const past = $derived(data.past);
 	const sessions = $derived(past.toReversed());
 
 	const pr = $derived(rawPr(past));

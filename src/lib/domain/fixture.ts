@@ -1,9 +1,10 @@
 /**
- * The scripted session the workout screen is judged against.
+ * The scripted session the workout domain's tests are judged against.
  *
- * Fixed rather than random, and fixed rather than persisted: every reload hands
- * back an identical fourteen sets, so a run through the screen is repeatable
- * and any difference between two of them is attributable to the screen.
+ * Test-only since the store landed — the screens read real records now, and
+ * nothing under `routes/` may import this file again. It stays because the
+ * fourteen sets encode the four states the header below describes, and the
+ * tests name their nodes directly.
  *
  * Exercises are real catalog slugs now — the screens join through
  * `catalogById` like they will against the store — but the *node* ids stay on

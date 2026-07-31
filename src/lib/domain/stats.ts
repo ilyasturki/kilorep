@@ -8,8 +8,8 @@ import type { PerformedSet } from '$lib/domain/workout';
 
 /**
  * Whole past sessions of one exercise, oldest first — the shape the exercise
- * detail renders and this module's functions read. Authored in the fixture for
- * now; the store takes both over when it lands.
+ * detail renders and this module's functions read. Derived from finished
+ * workouts by the store — see `$lib/store/derive`.
  */
 export type PastSession = { date: number; sets: PerformedSet[] };
 

@@ -7,8 +7,12 @@
  * where the active set goes, what the fields open at, whether the check is
  * live — is imported, not reimplemented.
  *
- * In memory only. Persistence and auto-resume are deliberately absent: the
- * store this would be written against does not exist yet.
+ * Still in memory: this class holds the live tree and knows nothing of
+ * IndexedDB. Persistence is the page's job — an `$effect` snapshots the tree
+ * into the store on every change — and resume is the constructor accepting
+ * yesterday's snapshot instead of minting a fresh workout. The separation is
+ * deliberate: the store is async and this class is not, and an `await` inside
+ * a commit would put a frame of latency inside the one-tap loop.
  */
 
 // The list rules arrive aliased: this class exposes `addSet`, `addExercise`
@@ -25,33 +29,63 @@ import {
 	moveEntry as relocateEntry,
 	removeSet as dropSet
 } from '$lib/domain/workout';
-import type { Workout } from '$lib/domain/workout';
-import { freshWorkout, history } from '$lib/domain/fixture';
+import type { History, Workout } from '$lib/domain/workout';
+
+/** What a session starts from: the snapshot that survived an app kill. */
+export type Resume = {
+	workout: Workout;
+	activeSetId: string | null;
+};
+
+/** Empty on purpose — with no templates yet, every workout begins as nothing. */
+const emptyWorkout = (): Workout => ({
+	id: crypto.randomUUID(),
+	startedAt: Date.now(),
+	entries: []
+});
 
 export class WorkoutSession {
-	public workout: Workout = $state(freshWorkout(Date.now()));
+	public workout: Workout = $state(emptyWorkout());
 
 	/**
 	 * The one active set. Null once nothing is left uncompleted, which is the
 	 * finished state — the screen has no other way to be done, because PRODUCT.md
 	 * gives finishing no ceremony to announce it.
+	 *
+	 * Also null on an empty session, honestly: a workout with no exercises has
+	 * nothing owed. The screen reads that state off `entries` rather than here.
 	 */
 	public activeSetId: string | null = $state(null);
 
-	// The field initialiser above is the tree; the constructor only points the
-	// cursor at it. Calling `reset()` here instead would build a second fixture
-	// and throw the first away, since `$state` fields initialise first.
-	public constructor() {
-		this.activeSetId = firstUncompleted(this.workout)?.set.id ?? null;
+	/**
+	 * The hint map, read once at construction. It only changes when a workout
+	 * finishes, and finishing leaves this screen — so a session never needs to
+	 * watch it move.
+	 */
+	private readonly history: History;
+
+	/**
+	 * Resuming replaces the field initialiser's empty tree with the snapshot,
+	 * cursor and all — always and without asking, because a prompt in front of
+	 * the logging loop is what rule 7 forbids, and a stale session is cleared
+	 * by the same FINISH that clears a fresh one.
+	 */
+	public constructor(history: History, resume: Resume | null = null) {
+		this.history = history;
+
+		if (resume !== null) {
+			this.workout = resume.workout;
+			this.activeSetId = resume.activeSetId;
+		}
 	}
 
 	public get finished(): boolean {
 		return this.activeSetId === null;
 	}
 
-	public reset(): void {
-		this.workout = freshWorkout(Date.now());
-		this.activeSetId = firstUncompleted(this.workout)?.set.id ?? null;
+	/** Whether anything was actually lifted — what decides if FINISH keeps a record. */
+	public get hasLoggedSets(): boolean {
+		return cursors(this.workout).some((c) => c.set.completed);
 	}
 
 	/** Overriding the advance: an overview jump, or a tap on a pending row. */
@@ -96,14 +130,14 @@ export class WorkoutSession {
 	/**
 	 * Mid-workout insert: a new entry at the end of the session, sets and ids
 	 * minted here for the same reason `addSet`'s is. How many is
-	 * `insertedSetCount`'s rule; the history it reads is the fixture's for now,
-	 * like `freshWorkout` above — both leave together when the store lands.
+	 * `insertedSetCount`'s rule, read against the store-derived history the
+	 * session was constructed with.
 	 *
 	 * Same cursor rule as `addSet`: a finished session hands the cursor to the
 	 * first inserted set, otherwise the user's place is not stolen.
 	 */
 	public addExercise(exerciseId: string): void {
-		const count = insertedSetCount(history, exerciseId);
+		const count = insertedSetCount(this.history, exerciseId);
 
 		const entry = insertExercise(this.workout, exerciseId, {
 			entry: crypto.randomUUID(),

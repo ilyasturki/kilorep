@@ -85,7 +85,7 @@
 	     there would be nothing for the centring to do. -->
 	<div class="flex flex-1 flex-col justify-end gap-3 pb-4 lg:flex-none lg:pb-0">
 		<p class="text-md text-pretty text-ink-muted">
-			Start is a placeholder. The template list lands with the local store.
+			Start is a placeholder. The template list is the next slice.
 		</p>
 
 		<!--
@@ -93,7 +93,9 @@
 			commit in the accent's sense — nothing is being logged — but Start has a
 			single primary action and `commit` is the only look sized for the thumb.
 		-->
-		<Button variant="commit" href="/workout">Start workout</Button>
+		<Button variant="commit" href="/workout">
+			{data.resuming ? 'Resume workout' : 'Start workout'}
+		</Button>
 
 		{#if data.user}
 			<Button variant="secondary" disabled={pending} onclick={signOut}>

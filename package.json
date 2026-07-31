@@ -40,6 +40,7 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"@types/node": "^26.1.1",
 		"drizzle-kit": "1.0.0-rc.4",
+		"fake-indexeddb": "^6.2.5",
 		"oxlint": "^1.75.0",
 		"oxlint-tsgolint": "^7.0.2001",
 		"prettier": "^3.8.3",
@@ -57,6 +58,7 @@
 		"@capacitor/haptics": "^8.0.2",
 		"@internationalized/date": "^3.12.2",
 		"bits-ui": "^2.18.1",
-		"drizzle-orm": "1.0.0-rc.4"
+		"drizzle-orm": "1.0.0-rc.4",
+		"idb": "^8.0.3"
 	}
 }

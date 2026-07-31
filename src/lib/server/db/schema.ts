@@ -1,5 +1,9 @@
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+// Relative rather than `$lib/…`: drizzle-kit loads this module with its own
+// bundler, which knows nothing of SvelteKit's alias.
+import type { RecordKind } from '../../sync/protocol.ts';
+
 /**
  * Server-owned tables only. Domain tables (exercises, sessions, workouts,
  * sets, body weight) are deliberately absent: they are born on a device that
@@ -122,3 +126,46 @@ export const syncCounters = sqliteTable(
 );
 
 export type SyncCounter = typeof syncCounters.$inferSelect;
+
+/**
+ * Every domain record, all kinds in one table. The server's half of the sync
+ * protocol treats records as opaque last-write-wins documents — it stores
+ * them, orders them by `seq` and hands them back — so the honest schema is the
+ * envelope plus a JSON payload, and adding a record kind costs no migration.
+ * The client store is the layer that knows what a payload means; this table
+ * mirrors its envelope exactly, which is the "domain layer defines the shape
+ * first" promise made at the top of this file being kept.
+ *
+ * `updatedAt` and `deletedAt` are plain integers rather than `timestamp_ms`
+ * columns on purpose: they are client-authored epoch milliseconds that must
+ * round-trip byte-identical for last-write-wins to compare them, and a `Date`
+ * detour is a chance to be off by something.
+ *
+ * The key is `(userId, id)`: ids are client-minted uuids, so scoping the key
+ * per tenant means one user cannot occupy — or probe — another's id space.
+ */
+export const records = sqliteTable(
+	'records',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		id: text('id').notNull(),
+		// `$type` narrows what TypeScript reads out of the column; the endpoint's
+		// `isWireRecord` guard is what keeps anything wider from being written.
+		kind: text('kind').notNull().$type<RecordKind>(),
+		/** Claimed from `sync_counters` in the same transaction as the write. */
+		seq: integer('seq').notNull(),
+		updatedAt: integer('updated_at').notNull(),
+		deletedAt: integer('deleted_at'),
+		payload: text('payload', { mode: 'json' }).notNull()
+	},
+	(table) => [
+		primaryKey({ columns: [table.userId, table.id] }),
+		// The pull: `where user_id = ? and seq > ?`, ordered by seq.
+		index('records_user_seq_idx').on(table.userId, table.seq)
+	]
+);
+
+export type RecordRow = typeof records.$inferSelect;
+export type NewRecordRow = typeof records.$inferInsert;

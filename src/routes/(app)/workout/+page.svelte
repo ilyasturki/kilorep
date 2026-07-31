@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
 	import { catalogById } from '$lib/catalog';
-	import { history } from '$lib/domain/fixture';
 	import { appBarSlot } from '$lib/nav/bar.svelte';
+	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
 	import { WorkoutSession } from '$lib/workout/session.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
@@ -13,6 +15,8 @@
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
+
+	import type { PageProps } from './$types';
 
 	/**
 	 * The workout screen: the whole session stacked, the active set expanded in
@@ -37,7 +41,47 @@
 	 * button either way; it is declared once below and rendered into whichever
 	 * header is on screen.
 	 */
-	const session = new WorkoutSession();
+	let { data }: PageProps = $props();
+
+	// svelte-ignore state_referenced_locally
+	const session = new WorkoutSession(data.history, data.resume);
+
+	/**
+	 * Persistence, as a side effect of existing: `$state.snapshot` reads every
+	 * leaf of the tree synchronously, so this effect tracks all of them and
+	 * re-runs on any mutation — a committed set, a reorder, a removal. The
+	 * write is fire-and-forget; the screen never waits on IndexedDB, per the
+	 * loop rule.
+	 */
+	$effect(() => {
+		const snapshot = {
+			workout: $state.snapshot(session.workout),
+			activeSetId: session.activeSetId
+		};
+
+		void data.store.saveSnapshot(snapshot);
+	});
+
+	/**
+	 * No ceremony, one decision: a session with logged sets becomes a record,
+	 * a session with none is discarded — nothing was lifted, and an empty
+	 * workout in history would hint nothing and count nothing. Either way the
+	 * snapshot is cleared, sync is nudged if an account exists, and the screen
+	 * hands back to Start.
+	 */
+	async function finishSession() {
+		if (session.hasLoggedSets) {
+			await data.store.finishWorkout($state.snapshot(session.workout), Date.now());
+		}
+
+		await data.store.clearSnapshot();
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+
+		await goto('/start');
+	}
 
 	const groups = $derived(groupsWithMeta(session.workout, catalogById));
 
@@ -101,10 +145,9 @@
 
 <!-- Declared once and rendered twice — into this screen's own header on a phone,
      and into the app bar's slot on a desk. Finish is instant and has no
-     ceremony: no summary, no confetti. Here it resets the fixture, which is also
-     what makes a second run one tap away. -->
+     ceremony: no summary, no confetti. -->
 {#snippet finish()}
-	<Button variant="chrome" caps onclick={() => session.reset()}>FINISH</Button>
+	<Button variant="chrome" caps onclick={() => void finishSession()}>FINISH</Button>
 {/snippet}
 
 <svelte:head>
@@ -161,7 +204,7 @@
 					<ExerciseBlock
 						meta={group.meta}
 						cursors={group.cursors}
-						{history}
+						history={data.history}
 						activeSetId={session.activeSetId}
 						oncommit={(w, r) => session.commit(w, r)}
 						onselect={(id) => session.select(id)}
@@ -170,17 +213,28 @@
 					/>
 				{/each}
 
-				<!-- Under the session rather than instead of it. Every block keeps its
-				     add-set row while this is on screen, which is the only way a set
-				     added after the last one was logged is reachable at all — and the
-				     workout you just finished is still there to look at. -->
-				{#if session.finished}
+				<!-- The empty session: with no templates yet, every workout begins as
+				     nothing, and the insert sheet is how everything arrives. -->
+				{#if groups.length === 0}
+					<EmptyState title="Empty session" description="Add an exercise to start logging.">
+						{#snippet icon()}
+							<Stack size={26} />
+						{/snippet}
+						{#snippet action()}
+							<Button variant="commit" onclick={() => (insertOpen = true)}>Add exercise</Button>
+						{/snippet}
+					</EmptyState>
+				{:else if session.finished}
+					<!-- Under the session rather than instead of it. Every block keeps its
+					     add-set row while this is on screen, which is the only way a set
+					     added after the last one was logged is reachable at all — and the
+					     workout you just finished is still there to look at. -->
 					<EmptyState title="Every set logged" description="Nothing left in this session.">
 						{#snippet icon()}
 							<Check size={26} />
 						{/snippet}
 						{#snippet action()}
-							<Button variant="commit" onclick={() => session.reset()}>Finish</Button>
+							<Button variant="commit" onclick={() => void finishSession()}>Finish</Button>
 						{/snippet}
 					</EmptyState>
 				{/if}

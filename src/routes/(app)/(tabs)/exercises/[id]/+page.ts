@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 
 import { catalogById } from '$lib/catalog';
 import type { Exercise } from '$lib/domain/exercise';
+import { getStore } from '$lib/store/store';
 
 import type { PageLoad } from './$types';
 
@@ -11,7 +12,7 @@ import type { PageLoad } from './$types';
  * "gone", loudly, because a missing catalog entry is an authoring bug (slugs
  * are never deleted).
  */
-export const load: PageLoad = ({ params }) => {
+export const load: PageLoad = async ({ params }) => {
 	// The widening annotation states what the map cannot: a route param is any
 	// string, so the join can miss.
 	const exercise: Exercise | undefined = catalogById[params.id];
@@ -20,5 +21,7 @@ export const load: PageLoad = ({ params }) => {
 		error(404, 'No such exercise');
 	}
 
-	return { exercise };
+	const store = await getStore();
+
+	return { exercise, past: await store.pastSessions(exercise.id) };
 };

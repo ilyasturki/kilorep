@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 
 import { session } from '$lib/api/auth';
 import { ApiError, NO_SERVER } from '$lib/api/client';
+import { syncNow } from '$lib/sync/client';
 
 import type { LayoutLoad } from './$types';
 
@@ -36,6 +37,12 @@ export const prerender = false;
 export const load: LayoutLoad = async ({ url, fetch }) => {
 	try {
 		const { user } = await session(fetch);
+
+		// The launch sync, fired and forgotten: the screen must not wait on the
+		// network, and `syncNow` never throws. Push-after-write has its own
+		// trigger where the writes happen.
+		void syncNow(user.id);
+
 		return { user };
 	} catch (error) {
 		// Not signed out — nowhere to be signed in to. The screens read `user`
