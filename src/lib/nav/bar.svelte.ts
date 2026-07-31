@@ -6,7 +6,7 @@ import ListBullets from '$lib/ui/icons/ListBullets.svelte';
 import Play from '$lib/ui/icons/Play.svelte';
 import PlayFill from '$lib/ui/icons/PlayFill.svelte';
 
-import { activeWorkout } from '$lib/workout/session.svelte';
+import { activeWorkout } from '$lib/workout/active.svelte';
 
 import type { Component, Snippet } from 'svelte';
 
@@ -31,7 +31,7 @@ import type { Component, Snippet } from 'svelte';
  */
 export type NavIcon = Component<{ size?: number; class?: string }>;
 
-export interface NavTab {
+export type NavTab = {
 	href: string;
 	label: string;
 	/**
@@ -45,7 +45,7 @@ export interface NavTab {
 	iconActive?: NavIcon;
 	/** A session is live behind this tab; both bars mark it with the accent dot. */
 	live?: boolean;
-}
+};
 
 /**
  * A function rather than a list, because the first slot is conditional: while

@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 
 import { getStore } from '$lib/store/store';
-import { activeWorkout } from '$lib/workout/session.svelte';
+import { activeWorkout } from '$lib/workout/active.svelte';
 
 import type { PageLoad } from './$types';
 

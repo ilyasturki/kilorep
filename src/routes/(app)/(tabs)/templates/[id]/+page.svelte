@@ -19,7 +19,7 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import { firstUncompleted } from '$lib/domain/workout';
 	import { syncSoon } from '$lib/sync/client';
-	import { activeWorkout } from '$lib/workout/session.svelte';
+	import { activeWorkout } from '$lib/workout/active.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';

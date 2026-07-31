@@ -5,7 +5,7 @@
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
-	import { activeWorkout } from '$lib/workout/session.svelte';
+	import { activeWorkout } from '$lib/workout/active.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsSheet from '$lib/workout/ExerciseOptionsSheet.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
