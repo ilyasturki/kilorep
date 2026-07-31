@@ -68,8 +68,15 @@ as broken layout rather than as the bug you were looking for.
 
 ## Google sign-in
 
-`.env.dev` at the repo root, read by `bun run dev` and by nothing else. It ships
-with `ALLOW_REGISTRATION=1`; fill in the two Google lines and restart the server.
+```sh
+bun run dev:google   # http://localhost:5173, with .env.google loaded
+```
+
+`.env.google` at the repo root, read by that script and by nothing else — plain
+`bun run dev` is untouched, and so are `bun run start`, the container and
+drizzle-kit. It ships with `ALLOW_REGISTRATION=1`; fill in the two Google lines.
+Missing, the script refuses to start rather than serving a login screen with no
+Google button on it.
 
 Nothing here can be diagnosed from the browser, which is why the file exists: an
 unconfigured client and a closed instance both answer with a login screen that

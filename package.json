@@ -4,7 +4,8 @@
 	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
-		"dev": "node --env-file-if-exists=.env.dev node_modules/vite/bin/vite.js dev",
+		"dev": "vite dev",
+		"dev:google": "node --env-file=.env.google node_modules/vite/bin/vite.js dev",
 		"build:server": "vite build",
 		"build:app": "BUILD_TARGET=app vite build",
 		"app:sync": "bun run build:app && cap sync android",

@@ -17,8 +17,9 @@
 
 # `.env` is not present yet — the defaults in `src/lib/server/env.ts` carry local
 # dev on their own. Listed anyway so the day one appears, it stops being the thing
-# that works in the main checkout and nowhere else. `.env.dev` is the same argument
-# and does exist: without it a worktree's `bun run dev` has no Google client, and
-# the login screen answers that by drawing no button and explaining nothing.
+# that works in the main checkout and nowhere else. `.env.google` is the same
+# argument and does exist: without it a worktree cannot run `bun run dev:google` at
+# all, and plain `bun run dev` has no Google client — the login screen answers that
+# by drawing no button and explaining nothing.
 .env
-.env.dev
+.env.google
