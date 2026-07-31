@@ -11,8 +11,9 @@
 	 * reorder it — which goes there too, the moment the row leaves the ground —
 	 * and the way in for an exercise the plan did not hold.
 	 *
-	 * One component, two homes: a sheet on a phone, where the screen has no room
-	 * to spare, and a permanent rail on a desktop, where it does. Written twice
+	 * One component, two homes: a sheet on anything narrower than `xl`, where the
+	 * screen has no room to keep it open, and a card standing in the gutter above
+	 * it, where the window has room to spare beside the column. Written twice
 	 * it would drift, and the jump rule below is exactly the kind of thing that
 	 * drifts silently — it is the reason a tap on a finished exercise shows it
 	 * rather than refusing.

@@ -31,9 +31,13 @@
 	 * pulls the active set back to centre after a commit, because in a stacked
 	 * session it otherwise marches off the bottom of the page.
 	 *
-	 * Two panes from `lg` up: a rail holding the session list the sheet holds on
-	 * a phone, and the pane being logged into. There is no overview button above
-	 * `lg`, because there is nothing left for it to open.
+	 * From `xl` up the session list the sheet holds on a phone is a card floating
+	 * in the left gutter, beside the pane being logged into rather than in front
+	 * of it: the pane stays where every other screen's column is, and the card
+	 * lives in the margin the window has left over. Below `xl` there is no room
+	 * for it — the arithmetic is in the markup — so the overview button follows
+	 * the bar up out of the phone header and stops at `xl`, where the rail takes
+	 * the job over.
 	 *
 	 * The header is this screen's own below `lg` and the app's bar above it. The
 	 * screen is chrome-less on a phone because hard rule 7 says so, and that rule
@@ -191,19 +195,16 @@
 		optionsSetId = null;
 	}
 
-	// The bar's right-hand slot, and the offset its column needs to clear the
-	// rail. Both are given back on the way out — leaving them set would carry
-	// FINISH onto Exercises, which is a button that resets a workout sitting on
-	// a screen that has none.
+	// The bar's right-hand slot, given back on the way out — leaving it set would
+	// carry FINISH onto Exercises, which is a button that resets a workout
+	// sitting on a screen that has none.
 	const bar = appBarSlot();
 
 	$effect(() => {
-		bar.action = finish;
-		bar.railed = true;
+		bar.action = barActions;
 
 		return () => {
 			bar.action = null;
-			bar.railed = false;
 		};
 	});
 </script>
@@ -215,6 +216,27 @@
      second run is one tap away. -->
 {#snippet finish()}
 	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
+{/snippet}
+
+<!-- What the bar carries, which is FINISH and — until the rail arrives at `xl` —
+     the phone's overview button beside it. Between `lg` and `xl` the bar is on
+     screen and the rail is not, and the sheet is the only place in the app a set
+     can be jumped to or an exercise dragged into a different order. Above `xl`
+     the rail is that place, and this half of the slot goes away with it. -->
+{#snippet barActions()}
+	<div class="flex shrink-0 items-center gap-2">
+		<button
+			type="button"
+			aria-label="Session overview"
+			onclick={() => (overview = true)}
+			class="grid min-h-chrome w-10 place-items-center rounded-full border border-line
+				text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2 xl:hidden"
+		>
+			<Stack size={18} />
+		</button>
+
+		{@render finish()}
+	</div>
 {/snippet}
 
 <svelte:head>
@@ -242,27 +264,43 @@
 		</div>
 	</header>
 
-	<div class="flex min-h-0 flex-1">
-		<!-- The sheet's contents, standing still. It scrolls on its own so a long
-		     session can be walked without moving the set being logged. -->
-		<aside
-			class="hidden w-60 shrink-0 overflow-y-auto border-r border-line-soft bg-surface
-				px-2 py-3 lg:block"
-		>
-			<SessionList
-				{groups}
-				activeSetId={session.activeSetId}
-				onjump={(id) => session.select(id)}
-				onfocus={(id) => session.select(id)}
-				oninsert={() => (insertOpen = true)}
-				onreorder={(entryId, index) => session.moveEntry(entryId, index)}
-			/>
+	<div class="relative flex min-h-0 flex-1">
+		<!-- The session list, floating in the margin the window has left over.
+		     Taken out of the flow on purpose: the pane below is the full width of
+		     the window and scrolls at its edge exactly as every other screen does,
+		     which is the whole reason the set rows land on the same pixel here as
+		     they do on Exercises. A rail with a width would move them, and used to.
+
+		     `left` is where the gutter runs out: half the window, back the 384px
+		     half-cap of the column, back 32px of air, back the card. 39rem is those
+		     three added up, and they are the only numbers in this layout.
+
+		     `inset-y-0` is the pane's height and nothing more, so `max-h-full` on
+		     the card is exact — a session longer than the window scrolls inside the
+		     card rather than off the bottom of it. It is a card and not a pane: the
+		     height of what is in it, no edge borrowed from the window, and no
+		     shadow, which in this app means something has left the page.
+
+		     `xl` and not `lg`, which is the app's breakpoint everywhere else: a
+		     768px column centred in the window leaves (w − 768) / 2 a side, and 240
+		     of that does not exist until 1280px. See `app.css`. -->
+		<aside class="absolute inset-y-0 left-[calc(50%-39rem)] hidden w-52 py-3 xl:block">
+			<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
+				<SessionList
+					{groups}
+					activeSetId={session.activeSetId}
+					onjump={(id) => session.select(id)}
+					onfocus={(id) => session.select(id)}
+					oninsert={() => (insertOpen = true)}
+					onreorder={(entryId, index) => session.moveEntry(entryId, index)}
+				/>
+			</div>
 		</aside>
 
 		<main class="min-h-0 flex-1 overflow-y-auto py-3 pb-safe-b">
-			<!-- Capped and centred inside the pane, which is also where the bar's
-			     column centres itself once `railed` is set — the wordmark and
-			     FINISH land over the set rows rather than 120px to their left.
+			<!-- Capped and centred in the window, which is the same box the bar
+			     centres its own contents in — so the wordmark and FINISH land over
+			     the set rows, and Exercises' column lands over both.
 
 			     The gutter goes inside the cap, never on the pane around it: the
 			     bar puts its own there too, and padding on opposite sides of the
@@ -297,6 +335,23 @@
 						{/snippet}
 					</EmptyState>
 				{:else}
+					<!-- The way in for an exercise the plan did not hold, at the place the
+					     session runs out — the rail and the overview both have one, and
+					     neither is where a thumb that has just logged the last set is
+					     looking. Above Finish, because a session grows before it ends.
+
+					     The same dashed silhouette as the block's add-set row: the session
+					     grows by one of the shape it already stacks, one size up. `+` is a
+					     character, per the icons README. -->
+					<button
+						type="button"
+						onclick={() => (insertOpen = true)}
+						class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
+							text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+					>
+						<span class="label-caps">+ Add exercise</span>
+					</button>
+
 					<!-- Under the session rather than instead of it. Every block keeps its
 					     add-set row while this is on screen, which is the only way a set
 					     added after the last one was logged is reachable at all — and the

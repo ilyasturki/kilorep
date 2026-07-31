@@ -93,17 +93,14 @@ export function isActive(pathname: string, href: string): boolean {
  * already established the rule: a slot appears when a screen fills it, never as
  * a placeholder waiting for one.
  *
- * `railed` says the page's content column is offset past a left rail. The bar's
- * contents sit above the page's content column rather than the window, so the
- * wordmark lines up with what is under it — and on the Workout screen what is
- * under it starts after 240px of session rail. Without this the bar's column
- * and the set rows would be centred against different boxes and miss each other
- * by about 120px on a 1440px screen, which is exactly the kind of near-miss
- * that reads as carelessness rather than as a layout.
+ * There was a second field here, `railed`, offsetting the bar's column past the
+ * Workout rail so the wordmark stayed over the set rows. The rail no longer
+ * takes width from the page — it floats in the gutter beside a column centred
+ * in the window like every other screen's — so there is one box to centre
+ * against again and nothing left for a page to tell the bar about its layout.
  */
 export class AppBarSlot {
 	public action: Snippet | null = $state(null);
-	public railed: boolean = $state(false);
 }
 
 const key = Symbol('app-bar');

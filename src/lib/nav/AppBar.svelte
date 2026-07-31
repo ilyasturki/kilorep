@@ -45,40 +45,39 @@
 </script>
 
 <header class="hidden shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:block">
-	<!-- The rail's width, so the column below inherits the same centring the
-	     railed page gives its own content. -->
-	<div class={slot.railed ? 'pl-60' : undefined}>
-		<div class="column-content flex items-center gap-5 px-3 py-2">
-			<img src={favicon} alt="Kilorep" class="size-5 shrink-0" />
+	<!-- The same cap and the same centring as the page under it, on every route:
+	     the Workout rail floats in the gutter now and takes no width from the
+	     column, so there is nothing left that offsets one and not the other. -->
+	<div class="column-content flex items-center gap-5 px-3 py-2">
+		<img src={favicon} alt="Kilorep" class="size-5 shrink-0" />
 
-			<nav aria-label="Main" class="flex min-w-0 flex-1 items-center gap-1">
-				{#each navTabs() as tab (tab.href)}
-					{@const active = isActive(page.url.pathname, tab.href)}
-					{@const Icon = (active && tab.iconActive) || tab.icon}
+		<nav aria-label="Main" class="flex min-w-0 flex-1 items-center gap-1">
+			{#each navTabs() as tab (tab.href)}
+				{@const active = isActive(page.url.pathname, tab.href)}
+				{@const Icon = (active && tab.iconActive) || tab.icon}
 
-					<a
-						href={tab.href}
-						aria-current={active ? 'page' : undefined}
-						class={[
-							'flex min-h-chrome items-center gap-2 rounded-xl px-3',
-							'text-md font-bold focus-ring transition-colors',
-							active
-								? 'bg-nav-selected text-ink'
-								: 'text-ink-faint pointer-fine:hover:bg-nav-hover pointer-fine:hover:text-ink-muted'
-						]}
-					>
-						<Icon size={18} class="shrink-0" />
-						{tab.label}
-						{#if tab.live}
-							<span class="size-1.5 rounded-full bg-accent"></span>
-						{/if}
-					</a>
-				{/each}
-			</nav>
+				<a
+					href={tab.href}
+					aria-current={active ? 'page' : undefined}
+					class={[
+						'flex min-h-chrome items-center gap-2 rounded-xl px-3',
+						'text-md font-bold focus-ring transition-colors',
+						active
+							? 'bg-nav-selected text-ink'
+							: 'text-ink-faint pointer-fine:hover:bg-nav-hover pointer-fine:hover:text-ink-muted'
+					]}
+				>
+					<Icon size={18} class="shrink-0" />
+					{tab.label}
+					{#if tab.live}
+						<span class="size-1.5 rounded-full bg-accent"></span>
+					{/if}
+				</a>
+			{/each}
+		</nav>
 
-			{#if slot.action !== null}
-				{@render slot.action()}
-			{/if}
-		</div>
+		{#if slot.action !== null}
+			{@render slot.action()}
+		{/if}
 	</div>
 </header>

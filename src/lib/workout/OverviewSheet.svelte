@@ -6,9 +6,11 @@
 	/**
 	 * The session list, on a screen with no room to keep it open.
 	 *
-	 * Above `lg` there is no sheet and no button to open one: the rail holds the
-	 * same `SessionList` permanently, so this is the small-screen half of one
-	 * control rather than a second one.
+	 * Above `xl` there is no sheet and no button to open one: the rail holds the
+	 * same `SessionList` permanently, so this is the narrow half of one control
+	 * rather than a second one. The button opening it moves from the phone's own
+	 * header into the app bar at `lg` and leaves at `xl` — the window is wide
+	 * enough for the bar a good 256px before it is wide enough for the rail.
 	 */
 	type Props = {
 		open?: boolean;
