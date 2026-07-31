@@ -2,7 +2,9 @@ import { redirect } from '@sveltejs/kit';
 
 import { session } from '$lib/api/auth';
 import { ApiError, NO_SERVER } from '$lib/api/client';
+import { getStore } from '$lib/store/store';
 import { syncNow } from '$lib/sync/client';
+import { activeWorkout } from '$lib/workout/active.svelte';
 
 import type { LayoutLoad } from './$types';
 
@@ -34,7 +36,33 @@ export const prerender = false;
  * waits and then fails. The answer is the local store, which is what makes
  * "signed in" an answerable question offline.
  */
+/**
+ * The cold-start resume: a reload empties the holder while the snapshot in the
+ * store survives, and everything reactive — the live dot, the tab bar standing
+ * down, the workout screen's posture — reads the holder. Refilling it here,
+ * above the routes, is what lets a boot onto any screen tell the truth about a
+ * half-logged session; the workout page's own resume then only covers the
+ * template editor's handoff. Awaited so no page renders against a holder this
+ * is still about to fill, and guarded so an invalidation mid-session is a
+ * no-op. Reading module state from a load leans on rule 5: with `ssr = false`
+ * this only ever runs in the browser.
+ */
+async function restoreSession(): Promise<void> {
+	if (activeWorkout.session !== null) {
+		return;
+	}
+
+	const store = await getStore();
+	const snapshot = await store.loadSnapshot();
+
+	if (snapshot !== null) {
+		activeWorkout.begin(await store.history(), snapshot);
+	}
+}
+
 export const load: LayoutLoad = async ({ url, fetch }) => {
+	await restoreSession();
+
 	try {
 		const { user } = await session(fetch);
 

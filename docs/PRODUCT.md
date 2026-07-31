@@ -16,7 +16,7 @@ Math:
 
 ## The loop
 
-**Start.** The app opens into the active workout if one exists, otherwise into Start: template list plus an empty-workout action. Tapping a template opens its editor, and Start lives inside it, under the thumb. Immediate-start-on-tap was weighed and retired: one row cannot honestly carry both "open this plan" and "begin lifting now", and a mis-tap that starts a workout costs more than the tap it saves. "Repeat this workout" lives on any past workout in History. Exactly one workout is active at a time — starting a template over an unfinished session asks before it discards anything.
+**Start.** The app opens into the Workout tab, always: the active session if one exists, the idle posture — an empty-workout action, with templates one tab over — if none does. Nothing starts a workout except an explicit start: the editor's button or the empty-workout action, never navigation. Tapping a template opens its editor, and Start lives inside it, under the thumb. Immediate-start-on-tap was weighed and retired: one row cannot honestly carry both "open this plan" and "begin lifting now", and a mis-tap that starts a workout costs more than the tap it saves. "Repeat this workout" lives on any past workout in History. Exactly one workout is active at a time — starting a template over an unfinished session asks before it discards anything.
 
 **During a set.** The screen shows what the next set needs: target or hint, weight, reps, check. Every set displays last time's actual weight × reps. The session list — exercise names, where you are — is a rail on a desktop and one tap away on a phone, for orientation, jumping, reordering and inserting.
 
@@ -26,21 +26,21 @@ Math:
 
 **Mid-workout.** Add and remove sets on any exercise; an exercise keeps its last one. Reorder by drag, insert by catalog search, both from the session list. An inserted exercise lands at the end as its own entry, with last time's set count (three when nothing recalls it) — positioning is reorder's job, not a second thing insertion does. An added set shows the hint when history has a corresponding set, blank otherwise (check inert until values are entered). No skip state: unchecked sets remain uncompleted.
 
-**Finish.** One tap, instant end, back at Start. No summary, no ceremony. Unchecked sets stay in the record flagged uncompleted and are excluded from every stat. If the session drifted from its template, the prompt to apply the changes waits at the planning surface, not the gym floor.
+**Finish.** One tap, instant end, the screen settles into its idle posture. No summary, no ceremony. Unchecked sets stay in the record flagged uncompleted and are excluded from every stat. If the session drifted from its template, the prompt to apply the changes waits at the planning surface, not the gym floor.
 
 ## Screens
 
 Every screen must justify its existence.
 
-- **Start** — active workout or template list; gear to Settings. A template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
-- **Workout** — the loop above.
+- **Workout** — home. The loop above while a session runs; idle, the place one starts, wearing the gear to Settings.
+- **Templates** — the list; a template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
 - **History** — workout list + detail; repeat-this-workout; drift-vs-template on the detail.
 - **Exercises** — catalog + customs; detail carries history, raw best set, est-1RM trend.
 - **Weight** — log + trend.
 - **Dashboard** — four standing questions, one card each, no configuration: **Progressing?** (recent raw PRs, est-1RM direction on main lifts) · **Consistent?** (sessions this week vs your own habit — facts, never streaks) · **Balanced?** (working volume by muscle, recent weeks) · **Weight on track?** (trend). Never the landing screen. Anything that can't be phrased as a standing question stays off it.
 - **Settings** — behind the gear, not a tab.
 
-The app opens into Start, always.
+The app opens into Workout, always.
 
 ## Offline
 
@@ -58,5 +58,5 @@ The app opens into Start, always.
 
 ## Unresolved — settle on the phone
 
-- The tab bar exists and gains a slot as each screen lands (Start and Exercises so far; the workout screen stays full-bleed, no bar). The final allocation among Start / Dashboard / History / Exercises / Weight still gets judged on the phone.
+- The tab bar exists and gains a slot as each screen lands (Workout, Templates, Exercises and History so far; the workout screen goes full-bleed, no bar, while a session is live). The final allocation among Dashboard / Weight still gets judged on the phone.
 - Set extras: type, RPE, note, and the per-set load-mode override riding with them. The row stays `weight | reps | check` and the long-press sheet that holds Remove is where they go; what they look like in it is open.

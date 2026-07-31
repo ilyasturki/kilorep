@@ -206,8 +206,8 @@
 		<!-- `‹` is a character, like ListRow's `›` — measured: U+2039 present in
 		     the subset. -->
 		<a
-			href="/start"
-			aria-label="Back to start"
+			href="/workout"
+			aria-label="Back to workout"
 			class="grid min-h-chrome w-11 place-items-center self-start rounded-full border
 				border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
 				active:bg-surface-2"

@@ -48,7 +48,8 @@
 
 	// The page owns the live tree; the load's copy is the starting point. Read
 	// once by design — navigating editor-to-editor never happens (every path
-	// re-enters through Start), so the prop never changes under a live page.
+	// re-enters through the Templates tab), so the prop never changes under a
+	// live page.
 	// svelte-ignore state_referenced_locally
 	const template = $state(data.template);
 
@@ -181,7 +182,7 @@
 			syncSoon(data.user.id);
 		}
 
-		await goto('/start');
+		await goto('/templates');
 	}
 
 	/**
@@ -234,8 +235,8 @@
 	<header class="flex flex-col gap-3 pt-3">
 		<!-- `‹` is a character, like ListRow's `›` — the subset carries it. -->
 		<a
-			href="/start"
-			aria-label="Back to start"
+			href="/templates"
+			aria-label="Back to templates"
 			class="grid min-h-chrome w-11 place-items-center self-start rounded-full border
 				border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
 				active:bg-surface-2"

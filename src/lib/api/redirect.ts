@@ -10,8 +10,8 @@
  * story.
  */
 
-/** Where the app opens when nothing asked for anywhere else. PRODUCT.md: always Start. */
-export const AFTER_LOGIN = '/start';
+/** Where the app opens when nothing asked for anywhere else: the Workout tab, home. */
+export const AFTER_LOGIN = '/workout';
 
 const LOGIN = '/login';
 

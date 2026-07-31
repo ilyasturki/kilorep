@@ -16,13 +16,15 @@
 	 * already the app's face on the launcher, the favicon and the sign-in card,
 	 * so the bar says the same thing in the register the other three use.
 	 *
-	 * It is a picture and not a link: the only destination it could plausibly
-	 * have is `/`, which is the marketing page on the web and does not exist in
-	 * the APK at all, so a clickable logo would either leave the app or go
-	 * nowhere depending on which build you were standing in. Start is already a
-	 * tab two inches to the right. It carries a real `alt` rather than the empty
-	 * one the landing page and sign-in card give it — there, a wordmark follows
-	 * and names the app; here nothing does.
+	 * The mark is a link to home, which is the Workout tab — the logo-goes-home
+	 * convention, pointed at the same address in both builds. It was a plain
+	 * picture while home was `/`: the marketing page on the web, nothing at all
+	 * in the APK, so a clickable logo would have left the app or gone nowhere
+	 * depending on which build you were standing in. `/workout` exists in both.
+	 * The accessible name is on the link, per the icons contract; the image
+	 * underneath is decoration to a reader, so its `alt` is empty here unlike
+	 * the landing page and sign-in card, where the mark stands unlabelled in
+	 * flowing content.
 	 *
 	 * The tabs are 14px sentence case, which is the other half of the same fix:
 	 * `label-caps` is the app's *section heading* voice, and a destination you
@@ -49,7 +51,13 @@
 	     the Workout rail floats in the gutter now and takes no width from the
 	     column, so there is nothing left that offsets one and not the other. -->
 	<div class="column-content flex items-center gap-5 px-3 py-2">
-		<img src={favicon} alt="Kilorep" class="size-5 shrink-0" />
+		<a
+			href="/workout"
+			aria-label="Kilorep — workout"
+			class="grid shrink-0 place-items-center rounded-md focus-ring"
+		>
+			<img src={favicon} alt="" class="size-5" />
+		</a>
 
 		<nav aria-label="Main" class="flex min-w-0 flex-1 items-center gap-1">
 			{#each navTabs() as tab (tab.href)}

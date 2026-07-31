@@ -136,3 +136,64 @@ export function searchExercises(pool: Exercise[], query: string): Exercise[] {
 		.toSorted((a, b) => a.distance - b.distance || a.exercise.name.localeCompare(b.exercise.name))
 		.map((s) => s.exercise);
 }
+
+/** A slice of the raw name, `start` inclusive to `end` exclusive. */
+export type MatchRange = { start: number; end: number };
+
+/**
+ * Where the query sits inside the raw name, for a result row to mark. The
+ * search compares normalized spellings, so the offset it finds indexes a
+ * string the screen never shows — hyphens have become spaces, diacritics have
+ * shed their marks — and has to be carried back through the folding to the
+ * characters actually rendered.
+ *
+ * Null when the name simply does not contain the query: an alias hit or a
+ * fuzzy save still lists the row, but text that is not on screen cannot be
+ * marked honestly, so those rows wear no mark.
+ */
+export function matchRange(name: string, query: string): MatchRange | null {
+	const q = normalize(query);
+
+	if (q === '') {
+		return null;
+	}
+
+	// The spelling `normalize` would produce, built one character at a time so
+	// every normalized character remembers the raw index it came from.
+	let text = '';
+	const origin: number[] = [];
+
+	for (let i = 0; i < name.length; i++) {
+		const folded = name[i]
+			.toLowerCase()
+			.normalize('NFD')
+			.replaceAll(/[\u0300-\u036F]/gu, '')
+			.replaceAll('-', ' ');
+
+		for (const char of folded) {
+			if (/\s/u.test(char)) {
+				// Collapse and trim exactly as `normalize` does: one plain space,
+				// never a leading one or two in a row. A dangling trailing space
+				// cannot matter — the query is trimmed, so no match ends on one.
+				if (text === '' || text.endsWith(' ')) {
+					continue;
+				}
+
+				text += ' ';
+				origin.push(i);
+				continue;
+			}
+
+			text += char;
+			origin.push(i);
+		}
+	}
+
+	const at = text.indexOf(q);
+
+	if (at === -1) {
+		return null;
+	}
+
+	return { start: origin[at], end: origin[at + q.length - 1] + 1 };
+}

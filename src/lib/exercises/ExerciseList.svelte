@@ -8,7 +8,7 @@
 </script>
 
 <script lang="ts">
-	import { searchExercises } from '$lib/domain/search';
+	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Exercise } from '$lib/domain/exercise';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -47,8 +47,11 @@
 </script>
 
 {#snippet row(exercise: Exercise, indented: boolean)}
+	<!-- The mark rides the search posture only — browsing asked no question, so
+	     there is nothing to answer for. -->
 	<ListRow
 		title={exercise.name}
+		match={searching ? matchRange(exercise.name, query) : null}
 		meta={exercise.equipment}
 		chevron={onpick === undefined}
 		href={onpick === undefined ? `/exercises/${exercise.id}` : undefined}

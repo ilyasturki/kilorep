@@ -300,6 +300,21 @@
 	}
 }
 
+/* The third form, for a control whose focus target is an input inside it but
+   whose visible shape is the whole box — StepperField, where a ring hugging
+   the bare number in the middle read as a fragment of the field lighting up.
+   `:has(input:focus)` and not `:focus-within`: the stepper's arms live in the
+   same box and carry their own inset rings, and a held + must not light the
+   whole field around it. Plain `:focus` rather than `:focus-visible` because
+   every engine already treats a focused text input as focus-visible — the ring
+   follows a tap exactly as it follows a Tab. */
+@utility focus-ring-within {
+	&:has(input:focus) {
+		outline: 2px solid var(--accent-text);
+		outline-offset: 2px;
+	}
+}
+
 /* The one box every value is typed or picked into: Input, Textarea,
    SearchField, and the triggers on Select and DatePicker. Outlined with a
    transparent fill rather than the `sunken` well the numpad and stepper use,

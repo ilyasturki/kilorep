@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { searchExercises } from '$lib/domain/search';
+import { matchRange, searchExercises } from '$lib/domain/search';
 import type { Exercise } from '$lib/domain/exercise';
 
 /**
@@ -81,5 +81,38 @@ describe('the fuzzy fallback', () => {
 
 	test('far-off queries return nothing rather than guesses', () => {
 		expect(ids('cardio')).toEqual([]);
+	});
+});
+
+/** The slice the range names, which is what the row will underline. */
+const marked = (name: string, query: string): string | null => {
+	const range = matchRange(name, query);
+
+	return range === null ? null : name.slice(range.start, range.end);
+};
+
+describe('the match range', () => {
+	test('a plain substring maps straight through', () => {
+		expect(marked('Bench Press', 'bench')).toBe('Bench');
+		expect(marked('Overhead Press', 'press')).toBe('Press');
+	});
+
+	test('a spaced query marks the hyphenated characters it matched', () => {
+		expect(marked('Close-Grip Lat Pulldown', 'close grip')).toBe('Close-Grip');
+	});
+
+	test('a bare-keyboard query marks the accented name', () => {
+		expect(marked('Développé Couché', 'developpe')).toBe('Développé');
+	});
+
+	test('an alias hit and a fuzzy save mark nothing', () => {
+		// The row lists them, but the matched text is not on screen.
+		expect(marked('Overhead Press', 'ohp')).toBeNull();
+		expect(marked('Bench Press', 'bnech')).toBeNull();
+	});
+
+	test('an empty query marks nothing', () => {
+		expect(marked('Bench Press', '')).toBeNull();
+		expect(marked('Bench Press', '   ')).toBeNull();
 	});
 });

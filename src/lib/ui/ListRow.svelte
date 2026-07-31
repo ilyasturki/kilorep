@@ -21,6 +21,12 @@
 	 */
 	type Props = {
 		title: string;
+		/**
+		 * The slice of `title` a search matched, marked with an underline so a
+		 * result explains itself. Underline and not the accent: the accent means
+		 * "this logs a set", and a matched substring is not that.
+		 */
+		match?: { start: number; end: number } | null;
 		meta?: string;
 		href?: string;
 		onclick?: () => void;
@@ -33,6 +39,7 @@
 
 	let {
 		title,
+		match = null,
 		meta,
 		href,
 		onclick,
@@ -63,7 +70,17 @@
 	{/if}
 
 	<span class="min-w-0 flex-1">
-		<span class="block truncate text-base font-extrabold tracking-tight text-ink">{title}</span>
+		<span class="block truncate text-base font-extrabold tracking-tight text-ink">
+			<!-- One line on purpose: whitespace between the slices would render. -->
+			{#if match !== null}
+				{title.slice(0, match.start)}<mark
+					class="bg-transparent text-inherit underline decoration-2 underline-offset-2"
+					>{title.slice(match.start, match.end)}</mark
+				>{title.slice(match.end)}
+			{:else}
+				{title}
+			{/if}
+		</span>
 		{#if meta}
 			<span class="block truncate text-sm font-bold text-ink-faint">{meta}</span>
 		{/if}

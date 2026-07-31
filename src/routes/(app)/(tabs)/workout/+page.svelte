@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-
 	import { catalogById } from '$lib/catalog';
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
@@ -15,7 +13,9 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import Barbell from '$lib/ui/icons/Barbell.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
+	import Gear from '$lib/ui/icons/Gear.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 
 	import type { PageProps } from './$types';
@@ -40,22 +40,41 @@
 	 * the job over.
 	 *
 	 * The header is this screen's own below `lg` and the app's bar above it. The
-	 * screen is chrome-less on a phone because hard rule 7 says so, and that rule
-	 * is about a tired thumb on a gym floor — it has nothing to say about a mouse
-	 * at a desk, where a second bar stacked under the app's would be the only
-	 * page in the app that looked different for no reason. FINISH is the same
-	 * button either way; it is declared once below and rendered into whichever
-	 * header is on screen.
+	 * screen is chrome-less on a phone *while a session is live* because hard
+	 * rule 7 says so, and that rule is about a tired thumb on a gym floor — it
+	 * has nothing to say about a mouse at a desk, where a second bar stacked
+	 * under the app's would be the only page in the app that looked different
+	 * for no reason. The `(tabs)` layout reads the same holder to stand its bar
+	 * down. FINISH is the same button either way; it is declared once below and
+	 * rendered into whichever header is on screen.
+	 *
+	 * This screen is also home: with no session running it is the place one
+	 * starts, not a page that mints a workout by being looked at. The Start page
+	 * that used to hold that job is gone — it was a button and a reroute, and
+	 * the reroute only knew about the in-memory holder, so a reload left the
+	 * bars claiming no workout existed while a half-logged one sat in the store.
+	 * One address cannot disagree with itself.
 	 */
 	let { data }: PageProps = $props();
 
-	// Taken from the shared holder when one is live, begun otherwise: the
-	// session has to outlive this page, so walking to Exercises mid-workout and
-	// back lands in the same workout — and so the nav bars can read the same
-	// object to swap Start for Workout. After a reload the holder is empty and
-	// `data.resume` carries the snapshot, so beginning *is* the resume.
+	// The template editor's handoff: it writes the snapshot, empties the holder
+	// and navigates here, so beginning from `data.resume` *is* the start. A cold
+	// boot resumes in the `(app)` layout's load instead, before any page runs —
+	// by this line the holder is usually already live.
 	// svelte-ignore state_referenced_locally
-	const session = activeWorkout.session ?? activeWorkout.begin(data.history, data.resume);
+	if (activeWorkout.session === null && data.resume !== null) {
+		activeWorkout.begin(data.history, data.resume);
+	}
+
+	// The holder's, not this page's: the session has to outlive the page so
+	// walking to Exercises mid-workout and back lands in the same workout — and
+	// so the nav bars can read the same object for the live dot. Null is the
+	// idle posture, and only an explicit tap leaves it.
+	const session = $derived(activeWorkout.session);
+
+	function startEmpty() {
+		activeWorkout.begin(data.history);
+	}
 
 	/**
 	 * Persistence, as a side effect of existing: `$state.snapshot` reads every
@@ -63,14 +82,27 @@
 	 * re-runs on any mutation — a committed set, a reorder, a removal. The
 	 * write is fire-and-forget; the screen never waits on IndexedDB, per the
 	 * loop rule.
+	 *
+	 * A session that holds nothing is not saved — cleared, even: "in progress"
+	 * is a claim the bars and the boot resume repeat, and an empty tree left by
+	 * a tap on Start-empty and a change of mind should not survive a reload to
+	 * make it. The clear also retires any such snapshot written before this
+	 * rule existed.
 	 */
 	$effect(() => {
-		const snapshot = {
-			workout: $state.snapshot(session.workout),
-			activeSetId: session.activeSetId
-		};
+		if (session === null) {
+			return;
+		}
 
-		void data.store.saveSnapshot(snapshot);
+		const workout = $state.snapshot(session.workout);
+
+		if (workout.entries.length === 0) {
+			void data.store.clearSnapshot();
+
+			return;
+		}
+
+		void data.store.saveSnapshot({ workout, activeSetId: session.activeSetId });
 	});
 
 	/**
@@ -78,10 +110,14 @@
 	 * a session with none is discarded — nothing was lifted, and an empty
 	 * workout in history would hint nothing and count nothing. Either way the
 	 * snapshot is cleared, sync is nudged if an account exists, and the screen
-	 * hands back to Start — the holder emptied first, so Start's reroute into
-	 * a live workout finds nothing to bounce off.
+	 * settles back into its idle posture — same address, where a second run is
+	 * one tap away.
 	 */
 	async function finishSession() {
+		if (session === null) {
+			return;
+		}
+
 		if (session.hasLoggedSets) {
 			await data.store.finishWorkout($state.snapshot(session.workout), Date.now());
 		}
@@ -93,10 +129,9 @@
 		}
 
 		activeWorkout.finish();
-		await goto('/start');
 	}
 
-	const groups = $derived(groupsWithMeta(session.workout, catalogById));
+	const groups = $derived(session === null ? [] : groupsWithMeta(session.workout, catalogById));
 
 	let overview = $state(false);
 
@@ -128,7 +163,7 @@
 	}
 
 	function swapPick(exerciseId: string) {
-		if (swapping === null) {
+		if (session === null || swapping === null) {
 			return;
 		}
 
@@ -137,7 +172,7 @@
 	}
 
 	function removeExercise() {
-		if (swapping === null) {
+		if (session === null || swapping === null) {
 			return;
 		}
 
@@ -187,7 +222,7 @@
 	}
 
 	function removeSet() {
-		if (optionsSetId === null) {
+		if (session === null || optionsSetId === null) {
 			return;
 		}
 
@@ -197,11 +232,13 @@
 
 	// The bar's right-hand slot, given back on the way out — leaving it set would
 	// carry FINISH onto Exercises, which is a button that resets a workout
-	// sitting on a screen that has none.
+	// sitting on a screen that has none. The idle posture fills it with the gear
+	// instead: home is where PRODUCT.md pins "gear to Settings", and this screen
+	// is home now.
 	const bar = appBarSlot();
 
 	$effect(() => {
-		bar.action = barActions;
+		bar.action = session === null ? gear : barActions;
 
 		return () => {
 			bar.action = null;
@@ -209,11 +246,22 @@
 	});
 </script>
 
+{#snippet gear()}
+	<a
+		href="/settings"
+		aria-label="Settings"
+		class="grid min-h-chrome w-11 place-items-center rounded-full border border-line
+			text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+	>
+		<Gear size={20} />
+	</a>
+{/snippet}
+
 <!-- Declared once and rendered twice — into this screen's own header on a phone,
      and into the app bar's slot on a desk. Finish has no ceremony: no summary,
      no confetti, one question and out. What follows the question is
-     `finishSession` — the session recorded or discarded, and Start, where a
-     second run is one tap away. -->
+     `finishSession` — the session recorded or discarded, and the idle posture,
+     where a second run is one tap away. -->
 {#snippet finish()}
 	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
 {/snippet}
@@ -243,29 +291,60 @@
 	<title>Workout | Kilorep</title>
 </svelte:head>
 
-<div class="flex min-h-0 flex-1 flex-col">
-	<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:hidden">
-		<div class="flex items-center gap-2 px-3 py-2">
-			<button
-				type="button"
-				aria-label="Session overview"
-				onclick={() => (overview = true)}
-				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-			>
-				<Stack size={20} />
-			</button>
+{#if session === null}
+	<!-- The idle posture: home, wearing the header the Start page used to wear.
+	     One act and a pointer — the templates themselves live on their own tab,
+	     because a list to read standing still does not belong on the screen
+	     pressed mid-stride. Nothing begins until the button says so; a session
+	     minted by navigation was how "Resume workout" appeared over a workout
+	     nobody had started. -->
+	<main class="min-h-0 flex-1 overflow-y-auto">
+		<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
+			<header class="flex items-start justify-between gap-3 pt-10 lg:hidden">
+				<h1 class="text-2xl font-extrabold tracking-tight">Kilorep</h1>
 
-			<div class="min-w-0 flex-1 text-center">
-				<span class="label-caps">Workout</span>
+				{@render gear()}
+			</header>
+
+			<div class="flex flex-1 flex-col justify-center pb-16">
+				<EmptyState
+					title="No workout running"
+					description="Start empty and build as you go, or begin from a template."
+				>
+					{#snippet icon()}
+						<Barbell size={26} />
+					{/snippet}
+					{#snippet action()}
+						<Button variant="commit" onclick={startEmpty}>Start empty workout</Button>
+					{/snippet}
+				</EmptyState>
 			</div>
-
-			{@render finish()}
 		</div>
-	</header>
+	</main>
+{:else}
+	<div class="flex min-h-0 flex-1 flex-col">
+		<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:hidden">
+			<div class="flex items-center gap-2 px-3 py-2">
+				<button
+					type="button"
+					aria-label="Session overview"
+					onclick={() => (overview = true)}
+					class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
+					border-line text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+				>
+					<Stack size={20} />
+				</button>
 
-	<div class="relative flex min-h-0 flex-1">
-		<!-- The session list, floating in the margin the window has left over.
+				<div class="min-w-0 flex-1 text-center">
+					<span class="label-caps">Workout</span>
+				</div>
+
+				{@render finish()}
+			</div>
+		</header>
+
+		<div class="relative flex min-h-0 flex-1">
+			<!-- The session list, floating in the margin the window has left over.
 		     Taken out of the flow on purpose: the pane below is the full width of
 		     the window and scrolls at its edge exactly as every other screen does,
 		     which is the whole reason the set rows land on the same pixel here as
@@ -284,58 +363,58 @@
 		     `xl` and not `lg`, which is the app's breakpoint everywhere else: a
 		     768px column centred in the window leaves (w − 768) / 2 a side, and 240
 		     of that does not exist until 1280px. See `app.css`. -->
-		<aside class="absolute inset-y-0 left-[calc(50%-39rem)] hidden w-52 py-3 xl:block">
-			<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
-				<SessionList
-					{groups}
-					activeSetId={session.activeSetId}
-					onjump={(id) => session.select(id)}
-					onfocus={(id) => session.select(id)}
-					oninsert={() => (insertOpen = true)}
-					onreorder={(entryId, index) => session.moveEntry(entryId, index)}
-				/>
-			</div>
-		</aside>
+			<aside class="absolute inset-y-0 left-[calc(50%-39rem)] hidden w-52 py-3 xl:block">
+				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
+					<SessionList
+						{groups}
+						activeSetId={session.activeSetId}
+						onjump={(id) => session.select(id)}
+						onfocus={(id) => session.select(id)}
+						oninsert={() => (insertOpen = true)}
+						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
+					/>
+				</div>
+			</aside>
 
-		<main class="min-h-0 flex-1 overflow-y-auto py-3 pb-safe-b">
-			<!-- Capped and centred in the window, which is the same box the bar
+			<main class="min-h-0 flex-1 overflow-y-auto py-3 pb-safe-b">
+				<!-- Capped and centred in the window, which is the same box the bar
 			     centres its own contents in — so the wordmark and FINISH land over
 			     the set rows, and Exercises' column lands over both.
 
 			     The gutter goes inside the cap, never on the pane around it: the
 			     bar puts its own there too, and padding on opposite sides of the
 			     same cap is how the two columns end up 12px out of true. -->
-			<div class="column-content flex flex-col gap-7 px-3">
-				{#each groups as group (group.id)}
-					<ExerciseBlock
-						meta={group.meta}
-						cursors={group.cursors}
-						history={data.history}
-						activeSetId={session.activeSetId}
-						oncommit={(w, r) => session.commit(w, r)}
-						ondraft={(id, w, r) => session.draft(id, w, r)}
-						onselect={(id) => session.select(id)}
-						onadd={() => session.addSet(group.cursors[0].exercise.id)}
-						onoptions={options}
-						onexercise={() => exerciseOptions(group.entryId)}
-					/>
-				{/each}
+				<div class="column-content flex flex-col gap-7 px-3">
+					{#each groups as group (group.id)}
+						<ExerciseBlock
+							meta={group.meta}
+							cursors={group.cursors}
+							history={data.history}
+							activeSetId={session.activeSetId}
+							oncommit={(w, r) => session.commit(w, r)}
+							ondraft={(id, w, r) => session.draft(id, w, r)}
+							onselect={(id) => session.select(id)}
+							onadd={() => session.addSet(group.cursors[0].exercise.id)}
+							onoptions={options}
+							onexercise={() => exerciseOptions(group.entryId)}
+						/>
+					{/each}
 
-				<!-- The empty session: with no templates yet, every workout begins as
+					<!-- The empty session: with no templates yet, every workout begins as
 				     nothing, and the insert sheet is how everything arrives. It is also
 				     where a session lands when its last exercise is removed, which is
 				     the same state and needs no second wording. -->
-				{#if groups.length === 0}
-					<EmptyState title="Empty session" description="Add an exercise to start logging.">
-						{#snippet icon()}
-							<Stack size={26} />
-						{/snippet}
-						{#snippet action()}
-							<Button variant="commit" onclick={() => (insertOpen = true)}>Add exercise</Button>
-						{/snippet}
-					</EmptyState>
-				{:else}
-					<!-- The way in for an exercise the plan did not hold, at the place the
+					{#if groups.length === 0}
+						<EmptyState title="Empty session" description="Add an exercise to start logging.">
+							{#snippet icon()}
+								<Stack size={26} />
+							{/snippet}
+							{#snippet action()}
+								<Button variant="commit" onclick={() => (insertOpen = true)}>Add exercise</Button>
+							{/snippet}
+						</EmptyState>
+					{:else}
+						<!-- The way in for an exercise the plan did not hold, at the place the
 					     session runs out — the rail and the overview both have one, and
 					     neither is where a thumb that has just logged the last set is
 					     looking. Above Finish, because a session grows before it ends.
@@ -343,31 +422,31 @@
 					     The same dashed silhouette as the block's add-set row: the session
 					     grows by one of the shape it already stacks, one size up. `+` is a
 					     character, per the icons README. -->
-					<button
-						type="button"
-						onclick={() => (insertOpen = true)}
-						class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
+						<button
+							type="button"
+							onclick={() => (insertOpen = true)}
+							class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
 							text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-					>
-						<span class="label-caps">+ Add exercise</span>
-					</button>
+						>
+							<span class="label-caps">+ Add exercise</span>
+						</button>
 
-					<!-- Under the session rather than instead of it. Every block keeps its
+						<!-- Under the session rather than instead of it. Every block keeps its
 					     add-set row while this is on screen, which is the only way a set
 					     added after the last one was logged is reachable at all — and the
 					     workout you just finished is still there to look at.
 
 					     It carries no button of its own any more: Finish is below, always,
 					     and two of them stacked would be the screen asking twice. -->
-					{#if session.finished}
-						<EmptyState title="Every set logged" description="Nothing left in this session.">
-							{#snippet icon()}
-								<Check size={26} />
-							{/snippet}
-						</EmptyState>
-					{/if}
+						{#if session.finished}
+							<EmptyState title="Every set logged" description="Nothing left in this session.">
+								{#snippet icon()}
+									<Check size={26} />
+								{/snippet}
+							</EmptyState>
+						{/if}
 
-					<!-- The end of the session, where a session ends. The header keeps its
+						<!-- The end of the session, where a session ends. The header keeps its
 					     FINISH for the thumb that never scrolls down here; this is for the
 					     one that has just logged the last set and is already looking at the
 					     bottom of the page.
@@ -375,56 +454,57 @@
 					     Filled only once nothing is left owed, because `Button`'s standing
 					     rule is one filled button per screen and while the loop is running
 					     that button is `Log set`. -->
-					<Button
-						variant={session.finished ? 'commit' : 'secondary'}
-						class="w-full"
-						onclick={() => (finishing = true)}
-					>
-						Finish
-					</Button>
-				{/if}
-			</div>
-		</main>
+						<Button
+							variant={session.finished ? 'commit' : 'secondary'}
+							class="w-full"
+							onclick={() => (finishing = true)}
+						>
+							Finish
+						</Button>
+					{/if}
+				</div>
+			</main>
+		</div>
 	</div>
-</div>
 
-<OverviewSheet
-	bind:open={overview}
-	{groups}
-	activeSetId={session.activeSetId}
-	onjump={(id) => session.select(id)}
-	oninsert={() => (insertOpen = true)}
-	onreorder={(entryId, index) => session.moveEntry(entryId, index)}
-/>
+	<OverviewSheet
+		bind:open={overview}
+		{groups}
+		activeSetId={session.activeSetId}
+		onjump={(id) => session.select(id)}
+		oninsert={() => (insertOpen = true)}
+		onreorder={(entryId, index) => session.moveEntry(entryId, index)}
+	/>
 
-<ExercisePickerSheet
-	bind:open={insertOpen}
-	title="Add exercise"
-	onpick={(id) => session.addExercise(id)}
-/>
+	<ExercisePickerSheet
+		bind:open={insertOpen}
+		title="Add exercise"
+		onpick={(id) => session.addExercise(id)}
+	/>
 
-<!-- The same picker, asking a different question. It opens as the options sheet
+	<!-- The same picker, asking a different question. It opens as the options sheet
      closes, the way the overview already hands over to the insert. -->
-<ExercisePickerSheet bind:open={swapOpen} title="Swap exercise" onpick={swapPick} />
+	<ExercisePickerSheet bind:open={swapOpen} title="Swap exercise" onpick={swapPick} />
 
-<ExerciseOptionsSheet
-	bind:open={exerciseOpen}
-	group={exerciseGroup}
-	onswap={() => (swapOpen = true)}
-	onremove={removeExercise}
-/>
+	<ExerciseOptionsSheet
+		bind:open={exerciseOpen}
+		group={exerciseGroup}
+		onswap={() => (swapOpen = true)}
+		onremove={removeExercise}
+	/>
 
-<SetOptionsSheet
-	bind:open={optionsOpen}
-	cursor={optionsCursor}
-	removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
-	onremove={removeSet}
-/>
+	<SetOptionsSheet
+		bind:open={optionsOpen}
+		cursor={optionsCursor}
+		removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
+		onremove={removeSet}
+	/>
 
-<AlertDialog
-	bind:open={finishing}
-	title="Finish workout?"
-	description={owedLabel}
-	confirmLabel="Finish"
-	onconfirm={() => void finishSession()}
-/>
+	<AlertDialog
+		bind:open={finishing}
+		title="Finish workout?"
+		description={owedLabel}
+		confirmLabel="Finish"
+		onconfirm={() => void finishSession()}
+	/>
+{/if}

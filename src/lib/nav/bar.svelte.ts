@@ -4,8 +4,7 @@ import Barbell from '$lib/ui/icons/Barbell.svelte';
 import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
 import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 import ListBullets from '$lib/ui/icons/ListBullets.svelte';
-import Play from '$lib/ui/icons/Play.svelte';
-import PlayFill from '$lib/ui/icons/PlayFill.svelte';
+import Stack from '$lib/ui/icons/Stack.svelte';
 
 import { activeWorkout } from '$lib/workout/active.svelte';
 
@@ -49,34 +48,35 @@ export type NavTab = {
 };
 
 /**
- * A function rather than a list, because the first slot is conditional: while
- * a workout is live it reads Workout and points at it, not Start. The same
- * slot, not a third tab — Start's destination *is* the workout for as long as
- * one exists, and `/start` reroutes there to keep the claim honest.
+ * A function rather than a list, because the first tab's dot is conditional:
+ * Workout is home — the screen that starts a session when none is running and
+ * logs into it when one is — so the tab itself never changes, only the fact it
+ * badges. The Start tab that used to share this slot is gone with the Start
+ * page; one address for the workout means there is no second page to fall out
+ * of step with it.
  *
  * `live` is the one departure from ink-on-faint: an accent dot on the tab, the
  * label itself still ink. The accent means "this logs a set", and a tab leading
  * back into a live session is the single nav target that can say so — as a
  * fill, per the accent's own rule, never as text. It is the only accent in
  * either bar: the selected tab is a neutral pill, because a navigation state is
- * not the thing the lime promises.
+ * not the thing the lime promises. The holder it reads is refilled from the
+ * snapshot at boot by the `(app)` layout, so a reload cannot hide a
+ * half-logged session from the bars.
  *
- * The glyph turns over with the slot — a play triangle for a session that has
- * not started, a barbell for one that is running. The label already changes
- * there, so an icon that did not would be the one part of the tab still
- * describing the old state.
+ * Stack wears the bold outline in both states: like ListBullets it has no
+ * usable fill partner — see `ui/icons/README.md` — so the pill does the work.
  */
 export function navTabs(): NavTab[] {
 	return [
-		activeWorkout.session === null
-			? { href: '/start', label: 'Start', icon: Play, iconActive: PlayFill }
-			: {
-					href: '/workout',
-					label: 'Workout',
-					icon: Barbell,
-					iconActive: BarbellFill,
-					live: true
-				},
+		{
+			href: '/workout',
+			label: 'Workout',
+			icon: Barbell,
+			iconActive: BarbellFill,
+			live: activeWorkout.session !== null
+		},
+		{ href: '/templates', label: 'Templates', icon: Stack },
 		{ href: '/exercises', label: 'Exercises', icon: ListBullets },
 		// Bold alone, like Exercises — see the glyph's own header for why the
 		// fill is no partner. PRODUCT.md still owes the bar its final order,

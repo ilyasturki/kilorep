@@ -19,7 +19,7 @@ export const prerender = !import.meta.env.APP_BUILD;
 
 /**
  * `/` is the marketing page on the web and nothing at all in the APK, which
- * opens where PRODUCT.md says it always opens: Start.
+ * opens where PRODUCT.md says it always opens: the Workout tab, home.
  *
  * A redirect here rather than a start path in the Capacitor config, because
  * Capacitor has none to give — it loads `index.html` and the router decides the
@@ -29,6 +29,6 @@ export const prerender = !import.meta.env.APP_BUILD;
  */
 export const load: PageLoad = () => {
 	if (import.meta.env.APP_BUILD) {
-		redirect(307, '/start');
+		redirect(307, '/workout');
 	}
 };

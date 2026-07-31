@@ -235,7 +235,7 @@
 {/snippet}
 
 <div
-	class={['flex min-h-19 items-stretch rounded-2xl bg-sunken', klass]}
+	class={['flex min-h-19 items-stretch rounded-2xl bg-sunken focus-ring-within', klass]}
 	role="group"
 	aria-label={label}
 >
@@ -262,7 +262,10 @@
 			aria-label={label}
 			class={[
 				'w-full scroll-mb-32 bg-transparent p-0 text-center text-2xl leading-none',
-				'font-extrabold tracking-numeral focus-ring-inset',
+				// No ring of its own: the field's box wears it — `focus-ring-within`
+				// on the wrapper — because a ring hugging the bare number read as a
+				// fragment of the control lighting up.
+				'font-extrabold tracking-numeral outline-hidden',
 				// `accent-text` and not `accent`: this is the accent as a *string*, on
 				// a surface, which is the distinction app.css draws between the two.
 				touched ? 'text-accent-text' : 'text-ink'
