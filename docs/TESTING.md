@@ -66,6 +66,40 @@ Keep the tab you are driving **visible**. A backgrounded tab has
 overlays, the set-completion animation — is caught mid-flight and screenshots
 as broken layout rather than as the bug you were looking for.
 
+## Google sign-in
+
+`.env.dev` at the repo root, read by `bun run dev` and by nothing else. It ships
+with `ALLOW_REGISTRATION=1`; fill in the two Google lines and restart the server.
+
+Nothing here can be diagnosed from the browser, which is why the file exists: an
+unconfigured client and a closed instance both answer with a login screen that
+draws no Google button, and that looks exactly like a correctly configured one you
+are not allowed into. The endpoints under `/api/auth/google` are 404 for the same
+reason — a self-hosted instance with no identity provider has nothing to say about
+one. Half a client is the same as none; it resolves whole or not at all.
+
+`ALLOW_REGISTRATION` belongs in this file and never in `.env`, which `bun run
+start` and the container also read. It is needed because the first Google sign-in
+is a *creation*: the seeded account is `dev@kilorep.local`, which is nobody's
+Google address, so there is nothing for the identity to link to. Closed, the
+callback redirects back to `/login` with a refusal rather than failing — the one
+case here that does explain itself.
+
+Then, in the Cloud console:
+
+- the Authorized redirect URI must be `http://localhost:5173/api/auth/google/callback`
+  exactly. A mismatch fails on Google's own page as `redirect_uri_mismatch`,
+  before this server sees the request again.
+- while publishing status is "Testing", only the addresses listed as test users
+  can sign in. Your own is not there by default.
+
+`http` on localhost needs no `ORIGIN`: `secureCookies` reads the request's scheme,
+so the handshake cookie goes out without `Secure` and the browser keeps it.
+
+After a successful run, `bun run account:list` shows the new account beside the
+seeded one. `bun run account:delete you@gmail.com` puts you back to testing the
+creation path from empty.
+
 ## The three states
 
 **Signed in.** Sign in through the form at `/login`; that is the flow worth
