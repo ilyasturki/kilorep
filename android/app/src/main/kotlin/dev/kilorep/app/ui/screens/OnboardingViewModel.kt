@@ -145,7 +145,13 @@ class OnboardingViewModel(
     }
 
     companion object {
-        /** The hosted instance every fresh install points at by default. */
-        const val DEFAULT_SERVER = "kilorep.com"
+        /**
+         * The hosted instance every fresh install points at by default.
+         *
+         * `v1.kilorep.com`, not `kilorep.com`: the bare domain now serves the
+         * rewrite, whose API this app cannot speak. Only fresh installs read
+         * this — an existing one keeps the server it stored at onboarding.
+         */
+        const val DEFAULT_SERVER = "v1.kilorep.com"
     }
 }
