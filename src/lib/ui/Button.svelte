@@ -26,18 +26,21 @@
 	const outlined =
 		'min-h-14 rounded-xl px-5 border border-line hover:bg-surface-2 active:bg-surface-2';
 
+	// The paint is split from the box it goes on, because both of these come in
+	// two sizes and only the box changes between them.
+	const filled =
+		'font-extrabold bg-accent text-on-accent ' +
+		'hover:brightness-[0.97] active:brightness-[0.94] active:translate-y-px';
+
+	const well = 'font-bold border-[1.5px] border-dashed border-line text-ink-faint';
+
 	// `size` is split from `shape` so exactly one type scale ever reaches the
 	// element: `caps` replaces the look's scale instead of being appended
 	// alongside it. Two font sizes in one class attribute is not a tie broken by
 	// order of appearance — Tailwind breaks it by stylesheet order, where
 	// `text-sm` loses to `text-2xl` no matter which was written last.
 	const looks: Record<Look, { shape: string; size: string }> = {
-		commit: {
-			shape:
-				'min-h-commit rounded-2xl px-6 font-extrabold bg-accent text-on-accent ' +
-				'hover:brightness-[0.97] active:brightness-[0.94] active:translate-y-px',
-			size: 'text-2xl tracking-tight'
-		},
+		commit: { shape: `min-h-commit rounded-2xl px-6 ${filled}`, size: 'text-2xl tracking-tight' },
 		secondary: { shape: `${outlined} font-bold text-ink-muted`, size: 'text-md' },
 		destructive: { shape: `${outlined} font-extrabold text-danger`, size: 'text-md' },
 		chrome: {
@@ -46,11 +49,23 @@
 				'hover:bg-surface-2 active:bg-surface-2',
 			size: 'text-md'
 		},
-		inert: {
-			shape:
-				'min-h-commit rounded-2xl px-6 font-bold border-[1.5px] border-dashed border-line text-ink-faint',
-			size: 'text-base'
-		}
+		inert: { shape: `min-h-commit rounded-2xl px-6 ${well}`, size: 'text-base' }
+	};
+
+	/**
+	 * The commit at ordinary scale, for the screens that are not the gym floor.
+	 *
+	 * 78px of 28px type is sized for a thumb at arm's length between sets. A
+	 * sign-in button is pressed once and read from a foot away, and at commit
+	 * scale it wraps inside a card and outranks the heading above it.
+	 *
+	 * Only the two filled looks have a compact form. The outlined variants were
+	 * never gym-sized, so there is nothing for them to shrink to — `compact` is
+	 * silently nothing on those rather than a second size to keep in step.
+	 */
+	const compacts: Partial<Record<Look, { shape: string; size: string }>> = {
+		commit: { shape: `min-h-row rounded-xl px-5 ${filled}`, size: 'text-lg tracking-tight' },
+		inert: { shape: `min-h-row rounded-xl px-5 ${well}`, size: 'text-md' }
 	};
 
 	const capsSize = 'text-sm tracking-caps';
@@ -70,12 +85,15 @@
 			variant?: Variant;
 			/** Caps label with letter-spacing — FINISH, SKIP, CLOSE. */
 			caps?: boolean;
+			/** A commit at row height rather than gym height. Nothing on the outlined variants. */
+			compact?: boolean;
 			children: Snippet;
 		};
 
 	let {
 		variant = 'secondary',
 		caps = false,
+		compact = false,
 		disabled = false,
 		href,
 		class: klass,
@@ -83,7 +101,8 @@
 		...rest
 	}: Props = $props();
 
-	const look = $derived(looks[disabled && variant === 'commit' ? 'inert' : variant]);
+	const key = $derived(disabled && variant === 'commit' ? ('inert' as const) : variant);
+	const look = $derived((compact ? compacts[key] : undefined) ?? looks[key]);
 	const klasses = $derived([base, look.shape, caps ? capsSize : look.size, klass]);
 </script>
 
