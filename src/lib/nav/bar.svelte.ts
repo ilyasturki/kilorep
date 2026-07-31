@@ -2,6 +2,7 @@ import { getContext, setContext } from 'svelte';
 
 import Barbell from '$lib/ui/icons/Barbell.svelte';
 import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
+import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 import ListBullets from '$lib/ui/icons/ListBullets.svelte';
 import Play from '$lib/ui/icons/Play.svelte';
 import PlayFill from '$lib/ui/icons/PlayFill.svelte';
@@ -76,7 +77,11 @@ export function navTabs(): NavTab[] {
 					iconActive: BarbellFill,
 					live: true
 				},
-		{ href: '/exercises', label: 'Exercises', icon: ListBullets }
+		{ href: '/exercises', label: 'Exercises', icon: ListBullets },
+		// Bold alone, like Exercises — see the glyph's own header for why the
+		// fill is no partner. PRODUCT.md still owes the bar its final order,
+		// judged on the phone; History lands last until then.
+		{ href: '/history', label: 'History', icon: ClockCounterClockwise }
 	];
 }
 

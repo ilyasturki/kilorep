@@ -97,6 +97,40 @@ export class Store {
 		);
 	}
 
+	/** One finished workout by id, or null — unknown, tombstoned, or another kind. */
+	public async getWorkout(id: string): Promise<FinishedWorkout | null> {
+		const record = await this.db.get('records', id);
+
+		if (record === undefined || record.kind !== 'workout' || record.deletedAt !== null) {
+			return null;
+		}
+
+		// The storage-boundary assertion `listWorkouts` already makes, for the
+		// same reason: this store is the only writer of the kind.
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+		return record.payload as FinishedWorkout;
+	}
+
+	/**
+	 * A delete is a tombstone, not a removal — the same bargain as
+	 * `deleteTemplate`, and the derivations need no telling: every read path
+	 * filters tombstones, so the workout leaves history, hints and PRs in the
+	 * one move.
+	 */
+	public async deleteWorkout(id: string, deletedAt: number): Promise<void> {
+		const tx = this.db.transaction('records', 'readwrite');
+		const record = await tx.store.get(id);
+
+		if (record !== undefined && record.kind === 'workout') {
+			record.deletedAt = deletedAt;
+			record.updatedAt = deletedAt;
+			record.dirty = true;
+			await tx.store.put(record);
+		}
+
+		await tx.done;
+	}
+
 	/** The hint map for the workout screen — see `historyFrom` for the rules. */
 	public async history(): Promise<History> {
 		return historyFrom(await this.listWorkouts());

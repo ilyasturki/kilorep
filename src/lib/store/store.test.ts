@@ -78,6 +78,13 @@ const finished = (w: Workout, finishedAt: number): unknown => ({
 	finishedAt
 });
 
+const template = (id: string, createdAt: number, name = 'Push day'): Template => ({
+	id,
+	name,
+	createdAt,
+	entries: []
+});
+
 describe('workouts', () => {
 	let store: Store;
 
@@ -110,13 +117,45 @@ describe('workouts', () => {
 
 		expect(await store.listWorkouts()).toEqual([]);
 	});
-});
 
-const template = (id: string, createdAt: number, name = 'Push day'): Template => ({
-	id,
-	name,
-	createdAt,
-	entries: []
+	it('gets one workout by id, and null for unknown, deleted or wrong-kind ids', async () => {
+		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
+		await store.saveTemplate(template('t1', 100), 150);
+
+		expect(await store.getWorkout('w1')).toMatchObject({ finishedAt: 200 });
+		expect(await store.getWorkout('missing')).toBeNull();
+		expect(await store.getWorkout('t1')).toBeNull();
+
+		await store.deleteWorkout('w1', 300);
+
+		expect(await store.getWorkout('w1')).toBeNull();
+	});
+
+	it('deletes by tombstone: dirty, stamped, and gone from every read', async () => {
+		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
+		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
+
+		await store.deleteWorkout('w1', 300);
+
+		expect(await store.listWorkouts()).toEqual([]);
+		expect(await store.history()).toEqual({});
+
+		const dirty = await store.dirtyRecords();
+
+		expect(dirty).toHaveLength(1);
+		expect(dirty[0]).toMatchObject({ id: 'w1', deletedAt: 300, updatedAt: 300 });
+	});
+
+	it('deleting an unknown or wrong-kind id writes nothing', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		await store.acknowledge([{ id: 't1', updatedAt: 150 }]);
+
+		await store.deleteWorkout('missing', 300);
+		await store.deleteWorkout('t1', 300);
+
+		expect(await store.getTemplate('t1')).not.toBeNull();
+		expect(await store.dirtyRecords()).toEqual([]);
+	});
 });
 
 describe('templates', () => {
