@@ -65,6 +65,23 @@ export default defineConfig({
 		'import.meta.env.APP_BUILD': JSON.stringify(isAppBuild)
 	},
 
+	/**
+	 * Agent worktrees are checkouts of this same tree, sitting inside the root.
+	 *
+	 * Each one regenerates its own `.svelte-kit/tsconfig.json`, and Vite reacts
+	 * to *any* watched `tsconfig.json` by invalidating every module graph and
+	 * forcing a full reload — so a worktree the running server never reads would
+	 * blow away its state, repeatedly, while it is minding its own business.
+	 *
+	 * Merged with Vite's own defaults (`.git`, `node_modules`, the cache dir),
+	 * not a replacement for them.
+	 */
+	server: {
+		watch: {
+			ignored: ['**/.claude/**']
+		}
+	},
+
 	plugins: [
 		...(isAppBuild ? [stripDevRoutes()] : []),
 		tailwindcss(),
