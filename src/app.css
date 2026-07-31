@@ -209,6 +209,43 @@
 	--spacing-safe-r: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
 }
 
+/* The app has two content widths, named here rather than written as a `max-w-*`
+   at each call site. Written by hand they had already drifted to four different
+   numbers across five screens, none of which was a decision — a new screen
+   should reach for the job it is doing, not guess a number.
+
+   `column-content` is a screen that holds content: Exercises and its detail,
+   the Workout pane, History and the Dashboard when they land. The cap is not
+   generosity, it is the set row — stretched across a wide monitor it puts the
+   weight and the reps a hand apart, and the pair has to be read as one thing.
+
+   `column-action` is a screen that is one decision: Start, sign-in. These do
+   not grow with the window, because a lone button 768px wide is worse than a
+   narrow column, not better.
+
+   Both centre themselves and neither sets a gutter: horizontal padding belongs
+   to the screen, which knows whether its rows bleed to the edge. It goes inside
+   the cap — on the element carrying it or on a child, never on a wrapper around
+   it. The top bar's column and the page's column are two different boxes with
+   the same cap, and padding on opposite sides of it is how they end up 12px out
+   of true with each other, which is visible and reads as a mistake.
+
+   The one breakpoint is `lg`. Everything that changes shape between a phone and
+   a desk — the nav bar swapping ends, Start's thumb-zone anchor, the Workout
+   rail — changes there and nowhere else, so there is one number to hold in your
+   head and nothing that can half-flip at a width nobody tested. */
+@utility column-content {
+	width: 100%;
+	max-width: var(--container-3xl);
+	margin-inline: auto;
+}
+
+@utility column-action {
+	width: 100%;
+	max-width: var(--container-sm);
+	margin-inline: auto;
+}
+
 /* Two recipes that were being copied by hand into every control. Both take
    `var(--accent-text)` and not `var(--color-accent-text)`: the `--color-*`
    names live in `@theme inline`, which inlines its values into the utilities

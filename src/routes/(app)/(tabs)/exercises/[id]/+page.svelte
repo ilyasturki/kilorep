@@ -50,7 +50,7 @@
 	<title>{exercise.name} | Kilorep</title>
 </svelte:head>
 
-<main class="mx-auto flex min-h-full w-full max-w-md flex-col gap-5 px-3 pt-safe-t pb-4">
+<main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
 	<header class="flex flex-col gap-3 pt-3">
 		<!-- `‹` is a character, like ListRow's `›` — measured: U+2039 present in
 		     the subset. -->

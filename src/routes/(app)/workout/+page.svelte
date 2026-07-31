@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { catalogById } from '$lib/catalog';
 	import { history } from '$lib/domain/fixture';
+	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { groupsWithMeta } from '$lib/workout/groups';
 	import { WorkoutSession } from '$lib/workout/session.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
@@ -24,10 +25,17 @@
 	 * pulls the active set back to centre after a commit, because in a stacked
 	 * session it otherwise marches off the bottom of the page.
 	 *
-	 * Two panes from `lg` up. The header spans both at every width — one header,
-	 * with FINISH in the same corner on a phone and on a desk — and the rail
-	 * below it holds the session list the sheet holds on a phone. There is no
-	 * overview button above `lg`, because there is nothing left for it to open.
+	 * Two panes from `lg` up: a rail holding the session list the sheet holds on
+	 * a phone, and the pane being logged into. There is no overview button above
+	 * `lg`, because there is nothing left for it to open.
+	 *
+	 * The header is this screen's own below `lg` and the app's bar above it. The
+	 * screen is chrome-less on a phone because hard rule 7 says so, and that rule
+	 * is about a tired thumb on a gym floor — it has nothing to say about a mouse
+	 * at a desk, where a second bar stacked under the app's would be the only
+	 * page in the app that looked different for no reason. FINISH is the same
+	 * button either way; it is declared once below and rendered into whichever
+	 * header is on screen.
 	 */
 	const session = new WorkoutSession();
 
@@ -73,37 +81,54 @@
 		session.removeSet(optionsSetId);
 		optionsSetId = null;
 	}
+
+	// The bar's right-hand slot, and the offset its column needs to clear the
+	// rail. Both are given back on the way out — leaving them set would carry
+	// FINISH onto Exercises, which is a button that resets a workout sitting on
+	// a screen that has none.
+	const bar = appBarSlot();
+
+	$effect(() => {
+		bar.action = finish;
+		bar.railed = true;
+
+		return () => {
+			bar.action = null;
+			bar.railed = false;
+		};
+	});
 </script>
+
+<!-- Declared once and rendered twice — into this screen's own header on a phone,
+     and into the app bar's slot on a desk. Finish is instant and has no
+     ceremony: no summary, no confetti. Here it resets the fixture, which is also
+     what makes a second run one tap away. -->
+{#snippet finish()}
+	<Button variant="chrome" caps onclick={() => session.reset()}>FINISH</Button>
+{/snippet}
 
 <svelte:head>
 	<title>Workout | Kilorep</title>
 </svelte:head>
 
-<div class="flex h-dvh flex-col bg-canvas text-ink">
-	<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t">
+<div class="flex min-h-0 flex-1 flex-col">
+	<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:hidden">
 		<div class="flex items-center gap-2 px-3 py-2">
 			<button
 				type="button"
 				aria-label="Session overview"
 				onclick={() => (overview = true)}
 				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2
-					lg:hidden"
+					border-line text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
 			>
 				<Stack size={20} />
 			</button>
 
-			<!-- Centred between the two controls on a phone; with the overview
-			     button gone above `lg` there is nothing on the left to centre
-			     against, so it goes there instead of drifting. -->
-			<div class="min-w-0 flex-1 text-center lg:pl-1 lg:text-left">
+			<div class="min-w-0 flex-1 text-center">
 				<span class="label-caps">Workout</span>
 			</div>
 
-			<!-- Finish is instant and has no ceremony: no summary, no confetti. Here
-			     it resets the fixture, which is also what makes a second run one tap
-			     away. -->
-			<Button variant="chrome" caps onclick={() => session.reset()}>FINISH</Button>
+			{@render finish()}
 		</div>
 	</header>
 
@@ -123,11 +148,15 @@
 			/>
 		</aside>
 
-		<main class="min-h-0 flex-1 overflow-y-auto px-3 py-3 pb-safe-b">
-			<!-- Capped and centred inside the pane. A set row stretched across a
-			     1600px monitor puts the weight and the reps a hand apart, and the
-			     pair has to be read as one thing. -->
-			<div class="mx-auto flex max-w-3xl flex-col gap-7">
+		<main class="min-h-0 flex-1 overflow-y-auto py-3 pb-safe-b">
+			<!-- Capped and centred inside the pane, which is also where the bar's
+			     column centres itself once `railed` is set — the wordmark and
+			     FINISH land over the set rows rather than 120px to their left.
+
+			     The gutter goes inside the cap, never on the pane around it: the
+			     bar puts its own there too, and padding on opposite sides of the
+			     same cap is how the two columns end up 12px out of true. -->
+			<div class="column-content flex flex-col gap-7 px-3">
 				{#each groups as group (group.id)}
 					<ExerciseBlock
 						meta={group.meta}
