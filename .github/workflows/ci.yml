@@ -2,7 +2,9 @@ name: CI
 
 on:
     push:
-        branches: [main]
+        # `v1` is this version's trunk; `main` is the rewrite, which has its own
+        # workflows. A stale main-only filter here would run nothing at all.
+        branches: [v1]
     pull_request:
 
 jobs:
