@@ -23,7 +23,7 @@
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import { DragOrder } from '$lib/ui/dragOrder.svelte';
+	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
@@ -124,10 +124,9 @@
 	// full of controls, and a long-press that lifts the card out from under a
 	// rep target being held would fight the very gesture it shares a row with.
 	//
-	// DragOrder measures its slots once, assuming uniform rows; these cards
-	// vary with set count, so mid-drag thresholds skew by the difference.
-	// Accepted: a template holds a handful of exercises, the live reorder
-	// self-corrects at every crossing, and Escape still restores.
+	// The cards vary in height with set count, which is fine: DragOrder
+	// measures each row's own height at lift and computes the slots from them,
+	// so the thresholds land where the cards actually are.
 	const drag = new DragOrder({
 		order: () => entryIds,
 		move: (id, index) => {
@@ -250,16 +249,20 @@
 	<div bind:this={drag.root} class="flex flex-1 flex-col gap-3">
 		{#each groups as group, index (group.id)}
 			{@const lifted = drag.isLifted(group.entryId)}
+			{@const settling = drag.settlingId === group.entryId}
 
 			<!-- Outer element for flip and slot measurement, inner for the finger —
-			     the same split as SessionList, for the same reason. -->
+			     the same split as SessionList, for the same reason. And as there,
+			     the outer's box is the vacated slot while the card is airborne, so
+			     the sunken fill is the landing shown at the card's exact size. -->
 			<div
 				data-drag-id={group.entryId}
 				animate:flip={{ duration: slide }}
-				class={lifted ? 'relative z-10' : ''}
+				class={lifted ? 'relative z-10 rounded-2xl bg-sunken' : ''}
 			>
 				<section
 					style:transform={lifted ? `translateY(${drag.offset}px) scale(1.01)` : null}
+					style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
 					class={[
 						'flex flex-col gap-2 rounded-2xl border border-line-soft bg-surface p-3',
 						lifted && 'shadow-lg'
@@ -294,8 +297,8 @@
 							aria-hidden="true"
 							onpointerdown={(event) => drag.handleDown(event, group.entryId)}
 							onpointermove={(event) => drag.move(event)}
-							onpointerup={() => drag.up()}
-							onpointercancel={() => drag.up()}
+							onpointerup={(event) => drag.up(event)}
+							onpointercancel={(event) => drag.up(event)}
 							class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
 								text-ink-faint select-none"
 						>

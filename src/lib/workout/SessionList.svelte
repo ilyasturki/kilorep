@@ -3,7 +3,7 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import type { Group } from '$lib/workout/groups';
 	import Badge from '$lib/ui/Badge.svelte';
-	import { DragOrder } from '$lib/ui/dragOrder.svelte';
+	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 
 	/**
@@ -119,19 +119,25 @@
 		     list cannot show for itself. -->
 		{@const done = group.cursors.every((c) => c.set.completed)}
 		{@const lifted = drag.isLifted(group.entryId)}
+		{@const settling = drag.settlingId === group.entryId}
 
 		<!-- The outer element is what `animate:flip` moves between slots and what
 		     the drag measures; the inner one is what follows the finger. They have
 		     to be separate: flip snapshots the node's computed transform when it
 		     starts and replays it for the whole animation, so a transform being
-		     rewritten every frame would freeze the moment a neighbour was crossed. -->
+		     rewritten every frame would freeze the moment a neighbour was crossed.
+
+		     While the inner is off following the finger, the outer's own box is
+		     the vacated slot — so painting it sunken is the landing shown, at the
+		     row's exact size, sliding with every crossing because flip moves it. -->
 		<div
 			data-drag-id={group.entryId}
 			animate:flip={{ duration: slide }}
-			class={lifted ? 'relative z-10' : ''}
+			class={lifted ? 'relative z-10 rounded-xl bg-sunken' : ''}
 		>
 			<div
 				style:transform={lifted ? `translateY(${drag.offset}px) scale(1.02)` : null}
+				style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
 				class={[
 					'flex min-h-row items-center gap-1 rounded-xl pr-1 pl-3',
 					'pointer-fine:transition-[background-color] pointer-fine:duration-100',
@@ -146,8 +152,8 @@
 					onclick={(event) => select(event, group)}
 					onpointerdown={(event) => drag.rowDown(event, group.entryId)}
 					onpointermove={(event) => drag.move(event)}
-					onpointerup={() => drag.up()}
-					onpointercancel={() => drag.up()}
+					onpointerup={(event) => drag.up(event)}
+					onpointercancel={(event) => drag.up(event)}
 					class="flex min-w-0 flex-1 items-center gap-3 py-2 text-left focus-ring-inset"
 				>
 					<span class="min-w-0 flex-1">
@@ -179,8 +185,8 @@
 					aria-hidden="true"
 					onpointerdown={(event) => drag.handleDown(event, group.entryId)}
 					onpointermove={(event) => drag.move(event)}
-					onpointerup={() => drag.up()}
-					onpointercancel={() => drag.up()}
+					onpointerup={(event) => drag.up(event)}
+					onpointercancel={(event) => drag.up(event)}
 					class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
 						text-ink-faint select-none"
 				>

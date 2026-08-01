@@ -11,15 +11,19 @@
  * lifts on a 500ms hold — the same threshold `SetRow` uses, since both are a
  * hold that opens something rather than a hold that accelerates.
  *
- * The list reorders live, on every midpoint crossing, so the drop has nothing
- * left to do. What that costs is a cancel path: the index the row started at is
+ * The list reorders live, on every crossing, so the drop has nothing left to
+ * do. What that costs is a cancel path: the index the row started at is
  * remembered, and Escape puts it back.
  *
- * Rows are assumed to be of a uniform height. The slot geometry is measured
- * once at lift and stays valid for the whole drag on that assumption — which is
- * what lets the list rearrange underneath without the arithmetic chasing it.
- * It is also what bounds the travel: the row in hand cannot be dragged past the
- * first or last slot, because there is nothing further for it to say.
+ * Heights are measured once at lift — per entry, so a superset's two rows
+ * weigh as one — and the slot geometry is computed from them against the live
+ * order on every frame. Positions are never read back off the DOM mid-drag:
+ * `animate:flip` is usually still sliding rows toward the layout the last move
+ * decided, and thresholds built on rects caught mid-slide would chase their own
+ * consequences. The computed slots are that slide's destination, which is the
+ * one worth measuring against. Travel is bounded to the list either way: past
+ * the end the row gives a damped few pixels and no more, which is the edge
+ * telling the finger it is an edge.
  */
 
 import { tapLift } from '$lib/ui/haptics';
@@ -56,6 +60,26 @@ const EDGE = 48;
 const EDGE_SPEED = 14;
 
 /**
+ * How far a row will follow the finger past the end of the list, in px. The
+ * travel is a diminishing fraction of the overrun — half of it at first,
+ * flattening toward this ceiling — so the stop reads as elastic rather than
+ * as a wall the row was nailed to.
+ */
+const GIVE = 24;
+
+/** How long the put-down takes. `SETTLE` below and the settle window share it. */
+const SETTLE_MS = 200;
+
+/**
+ * The put-down, applied by the consumer as an inline `transition` on the same
+ * element its drag transform lives on: quick, with a hair of overshoot so the
+ * landing reads as a spring rather than a stop. Only while `settlingId` says
+ * so — left on permanently it would lag the very transform it animates, one
+ * frame of transition chasing every frame of drag.
+ */
+export const SETTLE = `transform ${SETTLE_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
+
+/**
  * The nearest ancestor that scrolls, so the rail and the sheet both work
  * without either of them being told which one they are. Falls back to the
  * document, which is what a list on an unconstrained page scrolls.
@@ -86,6 +110,13 @@ export class DragOrder {
 	public liftedId: string | null = $state(null);
 
 	/**
+	 * The row just put down, until its landing finishes. What the consumer
+	 * keys the `SETTLE` transition on, and cleared on a schedule slightly
+	 * longer than the transition so the spring is never cut off mid-flight.
+	 */
+	public settlingId: string | null = $state(null);
+
+	/**
 	 * What the lifted row's inner element is translated by, in px.
 	 *
 	 * Recomputed every frame against the row's *live* rect rather than
@@ -99,7 +130,9 @@ export class DragOrder {
 	// None of these render, so none of them is `$state`.
 	readonly #options: DragOrderOptions;
 	#scroller: HTMLElement | null = null;
-	#slots: number[] = [];
+	#heights = new Map<string, number>();
+	#gap = 0;
+	#listTop = 0;
 	#height = 0;
 	#grab = 0;
 	#pointerY = 0;
@@ -107,6 +140,7 @@ export class DragOrder {
 	#origin = 0;
 	#frame: number | undefined;
 	#hold: ReturnType<typeof setTimeout> | undefined;
+	#settle: ReturnType<typeof setTimeout> | undefined;
 	#lifted = false;
 
 	/**
@@ -133,27 +167,51 @@ export class DragOrder {
 	 * `touch-action: none` on the handle itself is what keeps the browser from
 	 * claiming the gesture as a scroll — scoped there so the list still pans
 	 * normally everywhere else.
+	 *
+	 * A second finger arriving while a row is already in hand is noise, not a
+	 * gesture: the drag belongs to the pointer that lifted it, and here — like
+	 * in `rowDown`, `move` and `up` — every other pointer is ignored.
 	 */
 	public handleDown(event: PointerEvent, id: string): void {
+		if (this.liftedId !== null) {
+			return;
+		}
+
 		this.#arm(event);
 		this.#lift(event, id);
 	}
 
 	/** A press on the row, which lifts only if it is still held at 500ms. */
 	public rowDown(event: PointerEvent, id: string): void {
+		if (this.liftedId !== null) {
+			return;
+		}
+
 		this.#arm(event);
 		this.#hold = setTimeout(() => {
 			this.#lift(event, id);
 		}, HOLD_LIFT);
 	}
 
-	/** Every way a press ends: released, dragged off, or taken by the browser. */
-	public up(): void {
+	/**
+	 * Every way the press ends: released, dragged off, or taken by the browser.
+	 * Only the pointer that started the gesture may end it — a second finger
+	 * tapped against the list mid-drag must not put the row down.
+	 */
+	public up(event: PointerEvent): void {
+		if (event.pointerId !== this.#pointerId) {
+			return;
+		}
+
 		clearTimeout(this.#hold);
 		this.#end();
 	}
 
 	public move(event: PointerEvent): void {
+		if (event.pointerId !== this.#pointerId) {
+			return;
+		}
+
 		this.#pointerY = event.clientY;
 	}
 
@@ -197,38 +255,102 @@ export class DragOrder {
 		this.#pointerY = event.clientY;
 	}
 
+	// Registered on the document for the length of a lift, like `refuse`. The
+	// row's own handlers cannot be trusted with a live drag: every crossing
+	// relocates the row's DOM node, relocation clears pointer capture, and from
+	// then on events go by hit-testing — a release just past the drawn row
+	// would land on unrelated chrome and leave the row lifted with nothing
+	// holding it. The document hears everything whoever the browser aims at;
+	// `move` and `up` filter by pointer id, so nothing else gets through.
+	readonly #docMove = (event: PointerEvent): void => {
+		this.move(event);
+	};
+
+	readonly #docUp = (event: PointerEvent): void => {
+		this.up(event);
+	};
+
 	#rowFor(id: string): HTMLElement | null {
 		return this.root?.querySelector(`[data-drag-id="${CSS.escape(id)}"]`) ?? null;
 	}
 
+	/**
+	 * The centres each entry would settle at were the list in this order, in
+	 * the scroller's content coordinates — the layout flip is heading toward,
+	 * not the one mid-slide on screen. Built from the heights measured at lift,
+	 * walked top to bottom the way flex will lay them.
+	 */
+	#centres(order: string[]): number[] {
+		let top = this.#listTop;
+
+		return order.map((id) => {
+			const height = this.#heights.get(id) ?? this.#height;
+			const centre = top + height / 2;
+
+			top += height + this.#gap;
+
+			return centre;
+		});
+	}
+
 	#lift(event: PointerEvent, id: string): void {
+		const root = this.root;
 		const row = this.#rowFor(id);
 
-		if (this.root === null || row === null) {
+		if (root === null || row === null) {
 			return;
 		}
 
-		const scroller = scrollParent(this.root);
+		const scroller = scrollParent(root);
 		const bounds = scroller.getBoundingClientRect();
-		const rows = [...this.root.querySelectorAll<HTMLElement>('[data-drag-id]')];
 
-		// Slot centres in the scroller's content coordinates, so auto-scrolling
-		// mid-drag moves the pointer through them rather than dragging them along.
-		this.#slots = rows.map((node) => {
-			const box = node.getBoundingClientRect();
+		// One span per entry, not per row: a superset is one entry rendering as
+		// two rows that travel as one, so its rects merge — inner gap included —
+		// and the slot arithmetic never sees more slots than the order has ids.
+		const spans = this.#options.order().flatMap((entryId) => {
+			const parts = [
+				...root.querySelectorAll<HTMLElement>(`[data-drag-id="${CSS.escape(entryId)}"]`)
+			];
 
-			return box.top - bounds.top + scroller.scrollTop + box.height / 2;
+			if (parts.length === 0) {
+				return [];
+			}
+
+			const rects = parts.map((part) => part.getBoundingClientRect());
+
+			return [
+				{
+					entryId,
+					top: Math.min(...rects.map((rect) => rect.top)),
+					bottom: Math.max(...rects.map((rect) => rect.bottom))
+				}
+			];
 		});
+
+		this.#heights = new Map(spans.map((span) => [span.entryId, span.bottom - span.top]));
+
+		// The flex gap, read off the first seam — uniform per list, so one seam
+		// is every seam. And where the list starts, in content coordinates: a
+		// fixed point however the rows trade places below it, which is what lets
+		// the slot layout be computed instead of chased.
+		this.#gap = spans.length > 1 ? spans[1].top - spans[0].bottom : 0;
+		this.#listTop = (spans[0]?.top ?? bounds.top) - bounds.top + scroller.scrollTop;
 
 		const box = row.getBoundingClientRect();
 
 		this.#scroller = scroller;
-		this.#height = box.height;
+		this.#height = this.#heights.get(id) ?? box.height;
 		this.#grab = this.#pointerY - box.top;
 		this.#origin = this.#options.order().indexOf(id);
 		this.#lifted = true;
 		this.liftedId = id;
 		this.offset = 0;
+
+		// A row lifted again before its landing finished must not drag through
+		// the settle transition — one frame of spring chasing every frame of
+		// finger.
+		clearTimeout(this.#settle);
+		this.settlingId = null;
 
 		// A hold has nothing on screen to say it registered until the row moves,
 		// and by then the user has already started guessing.
@@ -239,17 +361,24 @@ export class DragOrder {
 		// a drag already in hand rather than one half-assembled.
 		this.#options.lift?.(id);
 
-		// The capture keeps the moves coming after the pointer leaves the row it
-		// started on, which it does immediately — the row is what moves. It is
-		// taken against `target` and not `currentTarget`, because the long-press
-		// path reads this event half a second after dispatch, by which time the
-		// browser has already nulled `currentTarget`.
+		// The document listeners are what actually carry the drag — see `#docMove`
+		// for why the row's own handlers stop being trustworthy the moment the
+		// first crossing relocates its node.
+		document.addEventListener('pointermove', this.#docMove);
+		document.addEventListener('pointerup', this.#docUp);
+		document.addEventListener('pointercancel', this.#docUp);
+
+		// The capture is now only a courtesy — it keeps hover states and text
+		// selection from lighting up under a row being dragged across them, and
+		// the first crossing clears it anyway. It is taken against `target` and
+		// not `currentTarget`, because the long-press path reads this event half
+		// a second after dispatch, by which time the browser has already nulled
+		// `currentTarget`.
 		//
 		// Not fatal if it is refused. `setPointerCapture` throws when the pointer
 		// is no longer active, and a lift is already half-built by this line — an
 		// exception here would leave a row marked lifted with nothing driving it
-		// and no way to put it down. Without the capture the drag still works for
-		// as long as the pointer stays over the list, which is the ordinary case.
+		// and no way to put it down.
 		try {
 			if (event.target instanceof Element) {
 				event.target.setPointerCapture(this.#pointerId);
@@ -289,39 +418,70 @@ export class DragOrder {
 			scroller.scrollTop += EDGE_SPEED * (1 - Math.max(below, 0) / EDGE);
 		}
 
-		// The dragged row's centre, in the same content coordinates as the slots.
+		// The dragged entry's centre, in the same content coordinates as the slots.
 		const wanted = this.#pointerY - this.#grab - bounds.top + scroller.scrollTop + this.#height / 2;
 
-		// Clamped to the first and last slot centres, which — rows being of a
-		// uniform height — is exactly the span the list occupies. A row dragged
-		// past the end has already said everything it can say about where it wants
-		// to go, and following the finger out of the list from there is a row
-		// floating over unrelated chrome for no further information.
-		const first = this.#slots[0] ?? wanted;
-		const last = this.#slots.at(-1) ?? wanted;
-		const centre = Math.min(Math.max(wanted, first), last);
-
 		const order = this.#options.order();
+		const total =
+			order.reduce((sum, entryId) => sum + (this.#heights.get(entryId) ?? this.#height), 0) +
+			this.#gap * Math.max(order.length - 1, 0);
+
+		// Clamped to where *this* entry's centre would sit in the first and last
+		// slots — not to the resident rows' centres, which a taller entry's
+		// clamped centre could never cross. A row dragged past the end has
+		// already said everything it can say about where it wants to go, and
+		// following the finger out of the list from there is a row floating over
+		// unrelated chrome for no further information.
+		const min = this.#listTop + this.#height / 2;
+		const max = this.#listTop + total - this.#height / 2;
+		const centre = Math.min(Math.max(wanted, min), max);
+
 		const at = order.indexOf(id);
 
 		if (at !== -1) {
-			// Walked one slot at a time from where the row is now, which is what
-			// makes the threshold symmetric: going down it takes the next slot on
-			// passing that slot's centre, and going up it does the mirror image.
 			let target = at;
 
-			while (target > 0 && centre < this.#slots[target - 1]) {
-				target -= 1;
-			}
+			if (centre <= min) {
+				// At the stops the walk below can go quiet — a short resident row
+				// has a centre the clamp keeps a taller entry from ever crossing —
+				// but a finger pushed all the way to the clamp has said "first" or
+				// "last" as clearly as it is possible to say it.
+				target = 0;
+			} else if (centre >= max) {
+				target = order.length - 1;
+			} else {
+				// Walked one slot at a time against a simulated order, the centres
+				// recomputed after every step: with heights varying, each crossing
+				// changes the very layout the next threshold is read from. Going
+				// down it takes the next slot on passing that resident's centre,
+				// and going up it does the mirror image.
+				const work = [...order];
+				let centres = this.#centres(work);
 
-			while (target < this.#slots.length - 1 && centre > this.#slots[target + 1]) {
-				target += 1;
+				while (target > 0 && centre <= centres[target - 1]) {
+					[work[target - 1], work[target]] = [work[target], work[target - 1]];
+					target -= 1;
+					centres = this.#centres(work);
+				}
+
+				while (target < work.length - 1 && centre >= centres[target + 1]) {
+					[work[target + 1], work[target]] = [work[target], work[target + 1]];
+					target += 1;
+					centres = this.#centres(work);
+				}
 			}
 
 			if (target !== at) {
 				this.#options.move(id, target);
 			}
 		}
+
+		// Past the clamp the row gives a little instead of nothing: a
+		// diminishing fraction of the overrun, half at first and flattening
+		// toward `GIVE`. Pull back and it follows back — the elastic is the
+		// finger's own motion damped, not an animation.
+		const overrun = wanted - centre;
+		const give = (GIVE * overrun) / (Math.abs(overrun) + GIVE * 2);
 
 		// Measured, not accumulated — see `offset`. `data-drag-id` is on the outer
 		// element and this translates the inner one, so what is read here is where
@@ -338,7 +498,7 @@ export class DragOrder {
 		const row = this.#rowFor(id);
 
 		if (row !== null) {
-			const top = centre - this.#height / 2 + bounds.top - scroller.scrollTop;
+			const top = centre + give - this.#height / 2 + bounds.top - scroller.scrollTop;
 
 			this.offset = top - row.getBoundingClientRect().top;
 		}
@@ -353,9 +513,24 @@ export class DragOrder {
 		}
 
 		document.removeEventListener('touchmove', refuse);
+		document.removeEventListener('pointermove', this.#docMove);
+		document.removeEventListener('pointerup', this.#docUp);
+		document.removeEventListener('pointercancel', this.#docUp);
+
+		// The row that was in hand gets its landing: `settlingId` holds it just
+		// past the transition's own length, so the spring finishes before the
+		// inline transition comes back off.
+		if (this.liftedId !== null) {
+			this.settlingId = this.liftedId;
+			clearTimeout(this.#settle);
+			this.#settle = setTimeout(() => {
+				this.settlingId = null;
+			}, SETTLE_MS + 50);
+		}
 
 		this.#scroller = null;
-		this.#slots = [];
+		this.#heights = new Map();
+		this.#pointerId = -1;
 		this.liftedId = null;
 		this.offset = 0;
 	}

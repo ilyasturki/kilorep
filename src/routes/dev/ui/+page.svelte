@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { flip } from 'svelte/animate';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -7,6 +9,7 @@
 	import Chip from '$lib/ui/Chip.svelte';
 	import ChipGroup from '$lib/ui/ChipGroup.svelte';
 	import DatePicker from '$lib/ui/DatePicker.svelte';
+	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -25,6 +28,7 @@
 	import Calendar from '$lib/ui/icons/Calendar.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
+	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Info from '$lib/ui/icons/Info.svelte';
 	import ListBullets from '$lib/ui/icons/ListBullets.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
@@ -114,6 +118,44 @@
 		{ tone: 'danger', label: 'Failed' }
 	] as const;
 
+	// The drag card's list. One row is deliberately taller than the rest — the
+	// drag measures each row's own height at lift, and a list that happened to
+	// be uniform would showcase nothing about that.
+	type DragItem = { id: string; name: string; meta: string; note?: string };
+
+	const dragItems = $state<DragItem[]>([
+		{ id: 'bench', name: 'Bench Press (Barbell)', meta: 'Chest · barbell' },
+		{ id: 'incline', name: 'Incline Dumbbell Press', meta: 'Chest · dumbbell' },
+		{
+			id: 'row',
+			name: 'Bent-Over Row',
+			meta: 'Back · barbell',
+			note: 'a third line, so this row is taller on purpose'
+		},
+		{ id: 'press', name: 'Overhead Press', meta: 'Shoulders · barbell' }
+	]);
+
+	const dragList = new DragOrder({
+		order: () => dragItems.map((item) => item.id),
+		move: (id, index) => {
+			const from = dragItems.findIndex((item) => item.id === id);
+
+			if (from === -1 || from === index) {
+				return false;
+			}
+
+			const [item] = dragItems.splice(from, 1);
+
+			dragItems.splice(index, 0, item);
+
+			return true;
+		}
+	});
+
+	// The same reduced-motion split the real lists make: the row in hand keeps
+	// following the finger, the displaced rows stop sliding.
+	const dragSlide = $derived(prefersReducedMotion.current ? 0 : 200);
+
 	let setType = $state('normal');
 	let rpe = $state('8');
 	let overviewOpen = $state(false);
@@ -135,6 +177,8 @@
 </script>
 
 <svelte:head><title>Components | Kilorep</title></svelte:head>
+
+<svelte:window onkeydown={(e) => e.key === 'Escape' && dragList.cancel()} />
 
 <!-- The two ChipGroups. Shown twice — standalone and inside the options sheet —
      and the point of the page is that they are the same thing. `annotated` is
@@ -419,6 +463,75 @@
 						<span class={caption}>no href, no onclick — inert</span>
 					</div>
 				</div>
+			</article>
+
+			<article class="{card} row-span-2">
+				<h2 class="label-caps">DragOrder</h2>
+				<div bind:this={dragList.root} class="flex flex-col gap-1 rounded-xl bg-canvas p-2">
+					{#each dragItems as item (item.id)}
+						{@const lifted = dragList.isLifted(item.id)}
+						{@const settling = dragList.settlingId === item.id}
+
+						<!-- The outer/inner split, the sunken slot and the settle spring,
+						     exactly as SessionList wires them — the card is the gesture on
+						     dummy rows, not a second implementation of it. -->
+						<div
+							data-drag-id={item.id}
+							animate:flip={{ duration: dragSlide }}
+							class={lifted ? 'relative z-10 rounded-xl bg-sunken' : ''}
+						>
+							<div
+								style:transform={lifted ? `translateY(${dragList.offset}px) scale(1.02)` : null}
+								style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
+								class={[
+									'flex min-h-row items-center gap-1 rounded-xl pr-1 pl-3',
+									lifted ? 'bg-surface shadow-lg' : 'hover:bg-surface-2 active:bg-surface-2'
+								]}
+							>
+								<button
+									type="button"
+									onclick={(event) => dragList.swallowClick(event)}
+									onpointerdown={(event) => dragList.rowDown(event, item.id)}
+									onpointermove={(event) => dragList.move(event)}
+									onpointerup={(event) => dragList.up(event)}
+									onpointercancel={(event) => dragList.up(event)}
+									class="flex min-w-0 flex-1 items-center gap-3 py-2 text-left focus-ring-inset"
+								>
+									<span class="min-w-0 flex-1">
+										<span class="block truncate text-base font-extrabold tracking-tight text-ink">
+											{item.name}
+										</span>
+										<span class="block truncate text-sm font-bold text-ink-faint">
+											{item.meta}
+										</span>
+										{#if item.note !== undefined}
+											<span class="block truncate text-sm font-bold text-ink-faint">
+												{item.note}
+											</span>
+										{/if}
+									</span>
+								</button>
+
+								<span
+									role="presentation"
+									aria-hidden="true"
+									onpointerdown={(event) => dragList.handleDown(event, item.id)}
+									onpointermove={(event) => dragList.move(event)}
+									onpointerup={(event) => dragList.up(event)}
+									onpointercancel={(event) => dragList.up(event)}
+									class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
+										text-ink-faint select-none"
+								>
+									<DotsSixVertical size={18} />
+								</span>
+							</div>
+						</div>
+					{/each}
+				</div>
+				<span class={caption}>grip lifts at once · hold 500ms anywhere · Escape cancels</span>
+				<span class={caption}
+					>the sunken block is the landing · the ends give a little and spring back</span
+				>
 			</article>
 
 			<article class="{card} row-span-2">
