@@ -7,6 +7,7 @@ import type { Workout, WorkoutSet } from '$lib/domain/workout';
 import type { WireRecord } from '$lib/sync/protocol';
 
 import { openDatabase } from './db.ts';
+import { hintsOf } from './derive.ts';
 import { Store } from './store.ts';
 
 /**
@@ -271,6 +272,53 @@ describe('history derivation', () => {
 		const history = await store.history();
 
 		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8 }]);
+	});
+});
+
+describe('last performed', () => {
+	let store: Store;
+
+	beforeEach(async () => {
+		store = await freshStore();
+	});
+
+	it('dates the last session by its start, not its finish', async () => {
+		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 150);
+
+		expect(await store.lastPerformed()).toEqual({
+			'bench-press': { date: 100, sets: [{ weight: 80, reps: 8 }] }
+		});
+	});
+
+	it('recalls the last workout that performed the exercise, whatever order they arrived in', async () => {
+		await store.finishWorkout(workout('w2', 200, 'bench-press', [{ weight: 85, reps: 5 }]), 250);
+		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 150);
+
+		const last = await store.lastPerformed();
+
+		expect(last['bench-press']).toEqual({ date: 200, sets: [{ weight: 85, reps: 5 }] });
+	});
+
+	it('is absent for an exercise with nothing completed, the shape a row reads as never trained', async () => {
+		await store.finishWorkout(
+			workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8, completed: false }]),
+			200
+		);
+
+		expect(await store.lastPerformed()).toEqual({});
+	});
+
+	it('agrees with the hint map it projects', async () => {
+		await store.finishWorkout(
+			workout('w1', 100, 'bench-press', [
+				{ weight: 40, reps: 10, type: 'warmup' },
+				{ weight: 80, reps: 8 }
+			]),
+			150
+		);
+		await store.finishWorkout(workout('w2', 200, 'cable-fly', [{ weight: 20, reps: 12 }]), 250);
+
+		expect(hintsOf(await store.lastPerformed())).toEqual(await store.history());
 	});
 });
 

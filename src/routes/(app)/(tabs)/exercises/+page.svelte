@@ -2,11 +2,15 @@
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
 	import SearchField from '$lib/ui/SearchField.svelte';
 
+	import type { PageProps } from './$types';
+
 	/**
 	 * The catalog as a place: browse by muscle, search by anything, tap through
 	 * to the detail. Catalog only for now — customs are a later slice, so there
 	 * is no create action here yet and the empty search state is a plain fact.
 	 */
+	let { data }: PageProps = $props();
+
 	let query = $state('');
 </script>
 
@@ -30,5 +34,5 @@
 		<SearchField label="Search exercises" bind:value={query} />
 	</div>
 
-	<ExerciseList {query} />
+	<ExerciseList {query} lastPerformed={data.lastPerformed} />
 </main>

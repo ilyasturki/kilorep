@@ -23,5 +23,14 @@ export const load: PageLoad = async ({ params }) => {
 
 	const store = await getStore();
 
-	return { exercise, past: await store.pastSessions(exercise.id) };
+	// The family rows below the fold are catalog rows like any other, so they
+	// carry the same last-session line — which is the whole point of linking
+	// them: hints never cross entries, and the numbers are how you tell the
+	// close-grip you actually train from the wide-grip you do not.
+	const [past, lastPerformed] = await Promise.all([
+		store.pastSessions(exercise.id),
+		store.lastPerformed()
+	]);
+
+	return { exercise, past, lastPerformed };
 };

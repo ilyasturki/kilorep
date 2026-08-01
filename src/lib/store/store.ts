@@ -15,8 +15,8 @@ import type { SyncAck, WireRecord } from '$lib/sync/protocol';
 
 import type { KilorepDatabase } from './db.ts';
 import { openDatabase } from './db.ts';
-import type { FinishedWorkout } from './derive.ts';
-import { historyFrom, pastSessionsFrom } from './derive.ts';
+import type { FinishedWorkout, LastPerformed } from './derive.ts';
+import { historyFrom, lastPerformedFrom, pastSessionsFrom } from './derive.ts';
 
 /**
  * The in-flight session, exactly as the screen holds it: the tree plus where
@@ -134,6 +134,16 @@ export class Store {
 	/** The hint map for the workout screen — see `historyFrom` for the rules. */
 	public async history(): Promise<History> {
 		return historyFrom(await this.listWorkouts());
+	}
+
+	/**
+	 * The last session of every exercise ever performed — what the catalog rows
+	 * say under a name. A screen needing the hint map too derives it from this
+	 * with `hintsOf` rather than calling `history` as well, which would walk
+	 * every stored workout a second time to reach the same answer.
+	 */
+	public async lastPerformed(): Promise<LastPerformed> {
+		return lastPerformedFrom(await this.listWorkouts());
 	}
 
 	/** One exercise's past for the detail screen, oldest first. */

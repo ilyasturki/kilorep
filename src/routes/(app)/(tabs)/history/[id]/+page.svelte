@@ -5,6 +5,7 @@
 	import { driftFrom, hasDrift, hasSetDrift } from '$lib/domain/drift';
 	import type { SetDrift } from '$lib/domain/drift';
 	import type { WorkoutExercise, WorkoutSet } from '$lib/domain/workout';
+	import { loadModeNote } from '$lib/exercises/label';
 	import { formatDuration, workoutTitle } from '$lib/history/label';
 	import { syncSoon } from '$lib/sync/client';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -139,7 +140,14 @@
 						<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">
 							{group.meta.name}
 						</h2>
-						<p class="truncate text-sm font-bold text-ink-faint">{group.meta.equipment}</p>
+						<!-- The load mode and nothing else: the sets below are the record of
+						     the day, and this line exists only to say when their numbers
+						     count double. -->
+						{#if loadModeNote(group.meta.loadMode)}
+							<p class="truncate text-sm font-bold text-ink-faint">
+								{loadModeNote(group.meta.loadMode)}
+							</p>
+						{/if}
 					</div>
 
 					{#if drift !== null}

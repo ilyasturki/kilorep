@@ -10,6 +10,8 @@
 <script lang="ts">
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Exercise } from '$lib/domain/exercise';
+	import { lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
+	import type { LastPerformed } from '$lib/store/derive';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
@@ -27,9 +29,19 @@
 	 * flattens everything into `searchExercises`' ranked order — ranking beats
 	 * shelving once a question has been asked — and variants surface
 	 * individually, which is how "close grip" goes straight to the child.
+	 *
+	 * A row says what it was last lifted at and how long ago, which is what the
+	 * pick actually turns on; an exercise with no past says nothing at all, so
+	 * the list sorts itself by eye into movements trained and movements not.
 	 */
 	type Props = {
 		query: string;
+		/**
+		 * Every exercise's last session. Passed in rather than read here: this
+		 * component stays store-free, and all three consumers already load from
+		 * the store on the way in.
+		 */
+		lastPerformed: LastPerformed;
 		/** Row action. Absent, rows navigate to the exercise detail instead. */
 		onpick?: (exercise: Exercise) => void;
 		/**
@@ -42,7 +54,14 @@
 		similar?: Exercise[];
 	};
 
-	let { query, onpick, similar = [] }: Props = $props();
+	let { query, lastPerformed, onpick, similar = [] }: Props = $props();
+
+	/**
+	 * Read once per mount, not per render: nothing on screen is worth a ticking
+	 * clock, `12d` is wrong for at most a day, and the sheet re-mounts this list
+	 * on every open — so the reading is fresh exactly when a row is being read.
+	 */
+	const now = Date.now();
 
 	// The empty-query answer ("the pool, untouched") is `searchExercises`' own
 	// rule; `searching` only picks which posture the template draws.
@@ -55,12 +74,23 @@
 </script>
 
 {#snippet row(exercise: Exercise, indented: boolean)}
+	{@const last = lastPerformed[exercise.id]}
+	{@const since = lastSinceLabel(last, now)}
+
+	<!-- Declared inside the row rather than beside it so the snippet closes over
+	     this exercise, and so `trailing` can be withheld entirely on an untrained
+	     row: an always-passed snippet rendering nothing would still open
+	     ListRow's trailing span, and its gap would shift the chevron on every
+	     row that has no past. -->
+	{#snippet recency()}{since}{/snippet}
+
 	<!-- The mark rides the search posture only — browsing asked no question, so
 	     there is nothing to answer for. -->
 	<ListRow
 		title={exercise.name}
 		match={searching ? matchRange(exercise.name, query) : null}
-		meta={exercise.equipment}
+		meta={lastSetLabel(last)}
+		trailing={since === undefined ? undefined : recency}
 		chevron={onpick === undefined}
 		href={onpick === undefined ? `/exercises/${exercise.id}` : undefined}
 		onclick={onpick === undefined ? undefined : () => onpick(exercise)}

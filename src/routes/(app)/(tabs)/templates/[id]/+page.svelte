@@ -17,6 +17,7 @@
 	} from '$lib/domain/template';
 	import type { TemplateExercise, TemplateSet } from '$lib/domain/template';
 	import type { Exercise } from '$lib/domain/exercise';
+	import { loadModeNote } from '$lib/exercises/label';
 	import { firstUncompleted } from '$lib/domain/workout';
 	import { syncSoon } from '$lib/sync/client';
 	import { activeWorkout } from '$lib/workout/active.svelte';
@@ -273,9 +274,11 @@
 							<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">
 								{group.meta.name}
 							</h2>
-							<p class="truncate text-sm font-bold text-ink-faint">
-								{group.meta.equipment}{group.meta.loadMode === 'per-hand' ? ' · per hand' : ''}
-							</p>
+							{#if loadModeNote(group.meta.loadMode)}
+								<p class="truncate text-sm font-bold text-ink-faint">
+									{loadModeNote(group.meta.loadMode)}
+								</p>
+							{/if}
 						</div>
 
 						<!-- An edit, not a loss of data — the plan is not history — so no
@@ -412,7 +415,12 @@
 	</div>
 </main>
 
-<ExercisePickerSheet bind:open={insertOpen} title="Add exercise" onpick={plan} />
+<ExercisePickerSheet
+	bind:open={insertOpen}
+	title="Add exercise"
+	lastPerformed={data.lastPerformed}
+	onpick={plan}
+/>
 
 <AlertDialog
 	bind:open={deleteOpen}

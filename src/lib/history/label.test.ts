@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { catalog } from '$lib/catalog';
-import { completedSetCount, formatDuration, workoutTitle } from '$lib/history/label';
+import { completedSetCount, formatDuration, formatSince, workoutTitle } from '$lib/history/label';
 import type { Workout, WorkoutSet } from '$lib/domain/workout';
 
 /**
@@ -88,5 +88,35 @@ describe('formatDuration', () => {
 		expect(formatDuration(0, 45 * 60_000)).toBe('45 min');
 		expect(formatDuration(0, 60 * 60_000)).toBe('1 h');
 		expect(formatDuration(0, 85 * 60_000)).toBe('1 h 25 min');
+	});
+});
+
+describe('formatSince', () => {
+	const DAY = 86_400_000;
+	const since = (days: number): string => formatSince(0, days * DAY);
+
+	test('anything inside the day is today', () => {
+		expect(since(0)).toBe('today');
+		expect(formatSince(0, DAY - 1)).toBe('today');
+		expect(since(1)).toBe('1d');
+	});
+
+	test('days to a fortnight, then weeks, then months', () => {
+		expect(since(13)).toBe('13d');
+		expect(since(14)).toBe('2w');
+		expect(since(62)).toBe('8w');
+		expect(since(63)).toBe('2mo');
+		expect(since(365)).toBe('12mo');
+	});
+
+	test('the scale never steps backwards at a seam', () => {
+		// 8w is 56 days and the first month figure would claim ~61, so the weeks
+		// run to 62 rather than handing over at 56 and reading as *less* time.
+		expect(since(56)).toBe('8w');
+		expect(since(60)).toBe('8w');
+	});
+
+	test('a clock-skewed future timestamp reads as today, never negative', () => {
+		expect(formatSince(10 * DAY, 0)).toBe('today');
 	});
 });

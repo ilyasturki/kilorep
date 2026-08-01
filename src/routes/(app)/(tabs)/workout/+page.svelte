@@ -487,6 +487,7 @@
 	<ExercisePickerSheet
 		bind:open={insertOpen}
 		title="Add exercise"
+		lastPerformed={data.lastPerformed}
 		onpick={(id) => session.addExercise(id)}
 	/>
 
@@ -503,6 +504,7 @@
 		bind:open={swapOpen}
 		title="Swap exercise"
 		replacing={exerciseGroup === null ? null : exerciseGroup.meta}
+		lastPerformed={data.lastPerformed}
 		onpick={swapPick}
 	/>
 

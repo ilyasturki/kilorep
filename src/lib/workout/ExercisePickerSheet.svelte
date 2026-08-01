@@ -3,6 +3,7 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
 	import { similarTo } from '$lib/exercises/browse';
+	import type { LastPerformed } from '$lib/store/derive';
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
 
@@ -31,10 +32,12 @@
 		 * nothing is being replaced, so there is nothing to be similar to.
 		 */
 		replacing?: Exercise | null;
+		/** Straight through to the list, which renders it under each name. */
+		lastPerformed: LastPerformed;
 		onpick: (exerciseId: string) => void;
 	};
 
-	let { open = $bindable(false), title, replacing = null, onpick }: Props = $props();
+	let { open = $bindable(false), title, replacing = null, lastPerformed, onpick }: Props = $props();
 
 	const similar = $derived(replacing === null ? [] : similarTo(catalog, replacing));
 
@@ -52,6 +55,6 @@
 <Sheet bind:open {title}>
 	<div class="flex flex-col gap-3">
 		<SearchField label="Search exercises" bind:value={query} />
-		<ExerciseList {query} {similar} onpick={choose} />
+		<ExerciseList {query} {similar} {lastPerformed} onpick={choose} />
 	</div>
 </Sheet>

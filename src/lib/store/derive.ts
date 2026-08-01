@@ -85,25 +85,53 @@ export function pastSessionsFrom(workouts: FinishedWorkout[], exerciseId: string
 }
 
 /**
- * The hint map: for every exercise ever performed, the working sets of the
- * last workout that performed it. Walked oldest to newest with later workouts
- * overwriting, so "last time" is literal; an exercise nothing has completed is
- * absent rather than empty, which is the shape `hintFor` reads as "never
- * performed".
+ * For every exercise ever performed, its last session — the working sets, and
+ * the day they were lifted. `PastSession` rather than a shape of its own: it
+ * is one entry of what `pastSessionsFrom` returns, and the catalog rows that
+ * read this render the same two facts the detail's history list does.
+ *
+ * Walked oldest to newest with later workouts overwriting, so "last" is
+ * literal; an exercise nothing has completed is absent rather than empty,
+ * which is the shape `hintFor` reads as "never performed".
  */
-export function historyFrom(workouts: FinishedWorkout[]): History {
+export type LastPerformed = Record<string, PastSession | undefined>;
+
+export function lastPerformedFrom(workouts: FinishedWorkout[]): LastPerformed {
 	const sorted = workouts.toSorted((a, b) => a.startedAt - b.startedAt);
-	const out: History = {};
+	const out: LastPerformed = {};
 
 	for (const workout of sorted) {
 		for (const exerciseId of exercisesIn(workout)) {
 			const sets = performedSets(workout, exerciseId);
 
 			if (sets.length > 0) {
-				out[exerciseId] = sets;
+				out[exerciseId] = { date: workout.startedAt, sets };
 			}
 		}
 	}
 
 	return out;
+}
+
+/**
+ * The hint map the workout screen prefills from: the same last sessions with
+ * the date dropped. A projection rather than its own walk, so a screen holding
+ * both — the workout page, whose insert sheet lists the catalog — pays for one
+ * pass over the records, and so the hint can never disagree with the row that
+ * claims to show the same set.
+ */
+export function hintsOf(last: LastPerformed): History {
+	const out: History = {};
+
+	for (const [exerciseId, session] of Object.entries(last)) {
+		if (session !== undefined) {
+			out[exerciseId] = session.sets;
+		}
+	}
+
+	return out;
+}
+
+export function historyFrom(workouts: FinishedWorkout[]): History {
+	return hintsOf(lastPerformedFrom(workouts));
 }

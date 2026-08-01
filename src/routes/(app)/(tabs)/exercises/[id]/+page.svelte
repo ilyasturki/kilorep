@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { catalog } from '$lib/catalog';
+	import type { Exercise } from '$lib/domain/exercise';
 	import { rawPr } from '$lib/domain/stats';
 	import { familyOf } from '$lib/exercises/browse';
+	import { lastSetLabel, lastSinceLabel, loadModeNote } from '$lib/exercises/label';
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -36,17 +38,37 @@
 
 	const pr = $derived(rawPr(past));
 
-	// Total says nothing: it is the unmarked case, and naming it would make
-	// every barbell entry carry a word that only matters by its absence.
-	const loadNotes = { total: '', 'per-hand': ' · per hand', unilateral: ' · one side at a time' };
-	const loadNote = $derived(loadNotes[exercise.loadMode]);
+	const loadNote = $derived(loadModeNote(exercise.loadMode));
 
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+
+	// Captured once per mount, like `ExerciseList`'s: `12d` is wrong for at most
+	// a day, and a navigation remounts this screen.
+	const now = Date.now();
 </script>
 
 <svelte:head>
 	<title>{exercise.name} | Kilorep</title>
 </svelte:head>
+
+<!-- A family link is a choice between entries, so it reads like a catalog row:
+     last time's best set under the name, how long since on the right, and
+     nothing at all when the entry has never been trained. Spelled here rather
+     than reusing `ExerciseList` — that component is the browse-and-search
+     posture, and these two sections are neither. -->
+{#snippet familyRow(entry: Exercise)}
+	{@const last = data.lastPerformed[entry.id]}
+	{@const since = lastSinceLabel(last, now)}
+
+	{#snippet recency()}{since}{/snippet}
+
+	<ListRow
+		title={entry.name}
+		meta={lastSetLabel(last)}
+		trailing={since === undefined ? undefined : recency}
+		href="/exercises/{entry.id}"
+	/>
+{/snippet}
 
 <main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
 	<header class="flex flex-col gap-3 pt-3">
@@ -64,7 +86,12 @@
 
 		<div class="flex flex-col gap-1 px-1">
 			<h1 class="text-2xl font-extrabold tracking-tight">{exercise.name}</h1>
-			<p class="text-md font-bold text-ink-faint">{exercise.equipment}{loadNote}</p>
+			<!-- No equipment: the name already carries it wherever it is not the
+			     default. What survives is the load mode, and only when there is one
+			     — it is the line that says the numbers below count double. -->
+			{#if loadNote}
+				<p class="text-md font-bold text-ink-faint">{loadNote}</p>
+			{/if}
 
 			<div class="flex flex-wrap gap-1.5 pt-1">
 				<Badge tone="accent">{exercise.muscles.primary}</Badge>
@@ -88,10 +115,9 @@
 	{/if}
 
 	{#if family.parent !== null}
-		{@const parent = family.parent}
 		<section class="flex flex-col gap-1">
 			<h2 class="px-3 label-caps text-ink-faint">Variant of</h2>
-			<ListRow title={parent.name} meta={parent.equipment} href="/exercises/{parent.id}" />
+			{@render familyRow(family.parent)}
 		</section>
 	{/if}
 
@@ -99,7 +125,7 @@
 		<section class="flex flex-col gap-1">
 			<h2 class="px-3 label-caps text-ink-faint">Variants</h2>
 			{#each family.variants as variant (variant.id)}
-				<ListRow title={variant.name} meta={variant.equipment} href="/exercises/{variant.id}" />
+				{@render familyRow(variant)}
 			{/each}
 		</section>
 	{/if}

@@ -83,3 +83,41 @@ export function formatDuration(startedAt: number, finishedAt: number): string {
 
 	return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }
+
+const DAY = 86_400_000;
+
+/**
+ * How long since, in the coarsest unit that still answers the question —
+ * `today`, `9d`, `5w`, `4mo`. The catalog rows carry this beside a name, where
+ * the question is "am I neglecting this", and a date makes the reader do the
+ * subtraction to find out.
+ *
+ * Elapsed time, not calendar days: a session eight hours ago is `today`
+ * whether or not midnight fell between. The units are deliberately unequal —
+ * days up to a fortnight, then weeks, then months — because precision stops
+ * mattering as the gap grows, and `63d` is a number nobody converts.
+ *
+ * A future timestamp reads as `today` rather than going negative. Records
+ * arrive from other devices, and two phones disagreeing about the clock by a
+ * minute must not print `-1d`.
+ */
+export function formatSince(then: number, now: number): string {
+	const days = Math.floor((now - then) / DAY);
+
+	if (days < 1) {
+		return 'today';
+	}
+
+	if (days < 14) {
+		return `${days}d`;
+	}
+
+	// Nine weeks, not eight: the handover lands at 63 days, past the ~61 that
+	// the first month figure below would claim, so the two scales never step
+	// backwards across the seam.
+	if (days < 63) {
+		return `${Math.floor(days / 7)}w`;
+	}
+
+	return `${Math.floor(days / 30)}mo`;
+}

@@ -13,14 +13,22 @@ import type { PageLoad } from './$types';
  *
  * The store rides along because the page keeps writing to it — every edit
  * persists, and Start hands the built workout over as a snapshot.
+ *
+ * The last sessions are the picker sheet's, not the editor's: adding an
+ * exercise to a plan is the same choice the workout screen's insert makes, and
+ * the rows answer it the same way.
  */
 export const load: PageLoad = async ({ params }) => {
 	const store = await getStore();
-	const stored = await store.getTemplate(params.id);
+	const [stored, lastPerformed] = await Promise.all([
+		store.getTemplate(params.id),
+		store.lastPerformed()
+	]);
 
 	return {
 		store,
 		template: stored ?? blankTemplate(params.id, Date.now()),
-		persisted: stored !== null
+		persisted: stored !== null,
+		lastPerformed
 	};
 };
