@@ -135,6 +135,49 @@ describe('prefillFor', () => {
 
 		expect(prefillOf(workout, 'bench-1')).toEqual({ weight: 82.5, reps: 6 });
 	});
+
+	test('a set past the end of history carries the one above it', () => {
+		const workout = freshWorkout(0);
+		// Bench has four sets last time, so a fifth is a set history cannot reach.
+		const added = addSet(workout, 'we-bench', 'bench-5');
+		commitSet(workout, 'bench-4', 75, 8);
+
+		expect(added).not.toBeNull();
+		expect(prefillOf(workout, 'bench-5')).toEqual({ weight: 75, reps: 8 });
+	});
+
+	test('an exercise with no history at all carries too', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'pecdeck-1', 45, 10);
+
+		// The plan still owns the reps; only the weight had nowhere else to come
+		// from. Every set of every exercise is in this state for a new user.
+		expect(prefillOf(workout, 'pecdeck-2')).toEqual({ weight: 45, reps: 10 });
+	});
+
+	test('history at this index outranks the set above it', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'fly-1', 25, 12);
+
+		// Last time's second fly was 20 × 12, and that is still the recall — a
+		// carry here would quietly replace the hint everywhere it is right.
+		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: 20, reps: 12 });
+	});
+
+	test('the carry skips a warmup and any set holding nothing', () => {
+		const workout = freshWorkout(0);
+		// Nothing logged under pecdeck, so the only set above the third holding a
+		// pair is none of them — and bench's warmup belongs to another exercise
+		// entirely, which is the off-by-one the working-set walk already counts past.
+		expect(prefillOf(workout, 'pecdeck-3')).toEqual({ weight: null, reps: 10 });
+
+		const bench = freshWorkout(0);
+		addSet(bench, 'we-bench', 'bench-5');
+
+		// bench-w is a completed 40 × 10 above four blank working sets: a warmup is
+		// never what the next working set opens on.
+		expect(prefillOf(bench, 'bench-5')).toEqual({ weight: null, reps: null });
+	});
 });
 
 describe('canCommit', () => {

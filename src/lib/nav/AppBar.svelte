@@ -37,11 +37,12 @@
 	 * logs a set", and the live dot is the only thing in either bar entitled
 	 * to it.
 	 *
-	 * The bar renders on every app route, the Workout screen included. Hard rule
-	 * 7 is a gym-floor rule — a nav target beside the commit button is a mis-tap
-	 * waiting for a tired thumb — and a mouse on a desk does not trip it. While
-	 * a session is live the first slot reads Workout instead of Start and wears
-	 * the accent dot — the swap and its reasons live in `navTabs`.
+	 * The bar renders on every app route, the Workout screen included, in every
+	 * state of it. So does the phone's now — the `(tabs)` layout used to drop
+	 * its bar mid-session and no longer does, for the reason recorded there —
+	 * so the two ends agree again and there is no width at which a live session
+	 * is a screen with no way out. The live one wears the accent dot; that swap
+	 * and its reasons live in `navTabs`.
 	 */
 	const slot = appBarSlot();
 </script>

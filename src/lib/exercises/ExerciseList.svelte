@@ -32,9 +32,17 @@
 		query: string;
 		/** Row action. Absent, rows navigate to the exercise detail instead. */
 		onpick?: (exercise: Exercise) => void;
+		/**
+		 * A short list to shelve above the sections, for a caller that arrived
+		 * with a question the muscle order cannot answer — today that is the swap
+		 * picker and `similarTo`. Browse posture only: a search has already been
+		 * asked and answered, and a pinned block above its results would be the
+		 * screen ignoring what was typed.
+		 */
+		similar?: Exercise[];
 	};
 
-	let { query, onpick }: Props = $props();
+	let { query, onpick, similar = [] }: Props = $props();
 
 	// The empty-query answer ("the pool, untouched") is `searchExercises`' own
 	// rule; `searching` only picks which posture the template draws.
@@ -76,6 +84,20 @@
 	{/if}
 {:else}
 	<div class="flex flex-col gap-5">
+		<!-- Flat, and the variants are not folded: the whole point of this block is
+		     that every row in it is already an answer, and an expander over six
+		     rows would be a fold hiding nothing. The sections below are unchanged
+		     underneath — this is a shortcut past them, never a replacement. -->
+		{#if similar.length > 0}
+			<section class="flex flex-col gap-1">
+				<h2 class="px-3 label-caps text-ink-faint">Similar</h2>
+
+				{#each similar as exercise (exercise.id)}
+					{@render row(exercise, false)}
+				{/each}
+			</section>
+		{/if}
+
 		{#each browse as section (section.muscle)}
 			<section class="flex flex-col gap-1">
 				<h2 class="px-3 label-caps text-ink-faint">{section.muscle}</h2>

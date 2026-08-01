@@ -2,7 +2,6 @@
 	import { page } from '$app/state';
 
 	import { isActive, navTabs } from '$lib/nav/bar.svelte';
-	import { activeWorkout } from '$lib/workout/active.svelte';
 
 	import type { LayoutProps } from './$types';
 
@@ -10,12 +9,15 @@
 	 * The tab bar, below `lg`. Above it the same tabs are in the bar across the
 	 * top — the tab list itself lives in `bar.svelte.ts`.
 	 *
-	 * The Workout screen is in this group because it is home now — the idle
-	 * posture needs the bar to reach Templates and Exercises — but the in-gym
-	 * rule still owns every pixel of it while a session is live: a bar under the
-	 * commit button is a mis-tap waiting for a tired thumb. So the bar stands
-	 * down for exactly that state, which is a fact the holder already publishes,
-	 * not a path list kept in here.
+	 * The bar stands on every tab, the Workout screen included, and it used not
+	 * to: while a session was live this layout dropped it, reading rule 7 as
+	 * "nothing below the commit button". That left the one screen a user spends
+	 * an hour on with no way out of it — Templates, Exercises and History all
+	 * unreachable until the workout was finished — which is a worse tax on the
+	 * session than the mis-tap it was avoiding. The gap between the commit
+	 * button and the bar is the answer to the tired thumb, not the absence of
+	 * the bar. Decided on the floor; the accent dot on the Workout tab is what
+	 * says the session is still there.
 	 *
 	 * Workout also keeps its own scroll pane — the rail's geometry depends on it
 	 * — so it renders straight into the flex column while every other tab sits
@@ -47,7 +49,6 @@
 	let { children }: LayoutProps = $props();
 
 	const onWorkout = $derived(page.url.pathname === '/workout');
-	const chromeless = $derived(onWorkout && activeWorkout.session !== null);
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
@@ -59,43 +60,38 @@
 		</div>
 	{/if}
 
-	{#if !chromeless}
-		<nav
-			aria-label="Main"
-			class="shrink-0 border-t border-line-soft bg-surface pb-safe-b lg:hidden"
-		>
-			<div class="mx-auto flex max-w-sm">
-				{#each navTabs() as tab (tab.href)}
-					{@const active = isActive(page.url.pathname, tab.href)}
-					{@const Icon = (active && tab.iconActive) || tab.icon}
+	<nav aria-label="Main" class="shrink-0 border-t border-line-soft bg-surface pb-safe-b lg:hidden">
+		<div class="mx-auto flex max-w-sm">
+			{#each navTabs() as tab (tab.href)}
+				{@const active = isActive(page.url.pathname, tab.href)}
+				{@const Icon = (active && tab.iconActive) || tab.icon}
 
-					<a
-						href={tab.href}
-						aria-current={active ? 'page' : undefined}
+				<a
+					href={tab.href}
+					aria-current={active ? 'page' : undefined}
+					class={[
+						'group flex flex-1 flex-col items-center gap-1 rounded-xl py-1',
+						'focus-ring transition-colors',
+						active ? 'text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
+					]}
+				>
+					<span
 						class={[
-							'group flex flex-1 flex-col items-center gap-1 rounded-xl py-1',
-							'focus-ring transition-colors',
-							active ? 'text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
+							'flex h-8 w-16 items-center justify-center rounded-full transition-colors',
+							active ? 'bg-nav-selected' : 'pointer-fine:group-hover:bg-nav-hover'
 						]}
 					>
-						<span
-							class={[
-								'flex h-8 w-16 items-center justify-center rounded-full transition-colors',
-								active ? 'bg-nav-selected' : 'pointer-fine:group-hover:bg-nav-hover'
-							]}
-						>
-							<span class="relative flex">
-								<Icon size={22} />
-								{#if tab.live}
-									<span class="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-accent"></span>
-								{/if}
-							</span>
+						<span class="relative flex">
+							<Icon size={22} />
+							{#if tab.live}
+								<span class="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-accent"></span>
+							{/if}
 						</span>
+					</span>
 
-						<span class="text-xs font-bold">{tab.label}</span>
-					</a>
-				{/each}
-			</div>
-		</nav>
-	{/if}
+					<span class="text-xs font-bold">{tab.label}</span>
+				</a>
+			{/each}
+		</div>
+	</nav>
 </div>

@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { catalog } from '$lib/catalog';
 	import type { Exercise } from '$lib/domain/exercise';
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
+	import { similarTo } from '$lib/exercises/browse';
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
 
@@ -8,9 +10,10 @@
 	 * The catalog behind a search field, one tap to pick.
 	 *
 	 * Two questions, one sheet: which exercise to add to the session, and which
-	 * one to swap an entry for. They differ in the title and in what the screen
-	 * does with the answer, and in nothing else — a second copy would be a
-	 * second search field to keep in step with the first.
+	 * one to swap an entry for. They differ in the title, in what the screen
+	 * does with the answer, and — since `replacing` — in what sits at the top of
+	 * the list. Still one component: a second copy would be a second search
+	 * field to keep in step with the first.
 	 *
 	 * The same `ExerciseList` the Exercises screen uses — browse folded by
 	 * family, search flat and ranked — with the rows picking instead of
@@ -21,10 +24,19 @@
 	type Props = {
 		open?: boolean;
 		title: string;
+		/**
+		 * The exercise this pick will replace, which turns the sheet's browse
+		 * posture into an answer rather than a catalog: `similarTo` shelves a
+		 * handful of substitutes above the muscle sections. Null for an insert —
+		 * nothing is being replaced, so there is nothing to be similar to.
+		 */
+		replacing?: Exercise | null;
 		onpick: (exerciseId: string) => void;
 	};
 
-	let { open = $bindable(false), title, onpick }: Props = $props();
+	let { open = $bindable(false), title, replacing = null, onpick }: Props = $props();
+
+	const similar = $derived(replacing === null ? [] : similarTo(catalog, replacing));
 
 	let query = $state('');
 
@@ -40,6 +52,6 @@
 <Sheet bind:open {title}>
 	<div class="flex flex-col gap-3">
 		<SearchField label="Search exercises" bind:value={query} />
-		<ExerciseList {query} onpick={choose} />
+		<ExerciseList {query} {similar} onpick={choose} />
 	</div>
 </Sheet>

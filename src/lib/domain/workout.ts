@@ -232,12 +232,57 @@ export function hintLabel(history: History, cursor: SetCursor): string | null {
 export type Prefill = { weight: number | null; reps: number | null };
 
 /**
- * Precedence: what the set already holds, then the plan, then last time.
+ * The pair on the nearest working set above this one in the same exercise, or
+ * blanks when there is none.
+ *
+ * Both slots or neither. A weight taken from one set and a rep count from
+ * another is a set nobody performed, and the whole worth of carrying is that
+ * the row opens on something that was actually done — so a set is a candidate
+ * only once it holds both numbers, which is every set the cursor has reached
+ * and no set it has not.
+ *
+ * Warmups are skipped rather than merely ranked below: 40 × 10 off the bar is
+ * not a suggestion for a working set, and it is the same off-by-one the hint
+ * lookup counts past.
+ */
+function carriedInto(cursor: SetCursor): Prefill {
+	const sets = cursor.exercise.sets;
+	const at = sets.findIndex((s) => s.id === cursor.set.id);
+
+	for (let i = at - 1; i >= 0; i--) {
+		const set = sets[i];
+
+		if (set.type === 'warmup' || set.weight === null || set.reps === null) {
+			continue;
+		}
+
+		return { weight: set.weight, reps: set.reps };
+	}
+
+	return { weight: null, reps: null };
+}
+
+/**
+ * Precedence: what the set already holds, then the plan, then last time, then
+ * the set above it.
  *
  * Reps take a planned value over the hint because a planned rep count is an
  * instruction for today and the hint is only a memory of the last one. Weight
  * has no planned tier by design — PRODUCT.md: progression is recall, never
  * prescription — so it falls straight from the set to the hint.
+ *
+ * The last tier is the one that catches a set history cannot reach: the fifth
+ * set of an exercise you did four of last week, which is what `addSet` mints
+ * every time, and every set of an exercise never performed at all. A blank
+ * pair there costs a full re-entry to log a set identical to the one above it,
+ * which is friction the loop rule does not allow — and the honest answer to
+ * "what is this set" when nothing recalls it is the set the user just did.
+ *
+ * It sits *below* the recall rather than above, so an exercise with history
+ * still opens on last time's fourth set rather than today's third: the recall
+ * is the whole reason the hint map exists, and carrying would quietly replace
+ * it everywhere it is right. The two never both apply — history holding a set
+ * at this index means `recalled` fills both slots and the carry is unreachable.
  */
 export function prefillFor(cursor: SetCursor, history: History): Prefill {
 	// Collapsed to a blank pair rather than null-checked twice below, so each
@@ -248,9 +293,11 @@ export function prefillFor(cursor: SetCursor, history: History): Prefill {
 		reps: null
 	};
 
+	const carried = carriedInto(cursor);
+
 	return {
-		weight: cursor.set.weight ?? recalled.weight,
-		reps: cursor.set.reps ?? cursor.set.plannedReps ?? recalled.reps
+		weight: cursor.set.weight ?? recalled.weight ?? carried.weight,
+		reps: cursor.set.reps ?? cursor.set.plannedReps ?? recalled.reps ?? carried.reps
 	};
 }
 
@@ -372,12 +419,15 @@ const blankSet = (id: string): WorkoutSet => ({
 /**
  * Appends a working set to an exercise. Null when the exercise is not here.
  *
- * It arrives empty, and `plannedReps` is null rather than a copy of the set
- * above it. PRODUCT.md: an added set shows the hint where history has a
- * corresponding set and is blank otherwise — the fifth set of an exercise you
- * did four of last week is a set the app knows nothing about, and a plan copied
- * off its neighbour would put a number under the user's thumb that nobody
- * prescribed and nothing recalls.
+ * It arrives empty, and `plannedReps` stays null rather than becoming a copy of
+ * the set above it. Nothing prescribed this set: plans live in templates, and a
+ * plan invented here would be the app claiming a target nobody set.
+ *
+ * What the row *opens* on is a different question, and `prefillFor` answers it:
+ * the hint where history has a corresponding set, the set above it where it
+ * does not. The fifth set of an exercise you did four of last week is a set the
+ * app has no memory of, and the honest fallback is the fourth one you just did
+ * — carried as values, never as a plan, so nothing here claims it was intended.
  *
  * The id is the caller's. This module has no clock and no randomness — the same
  * reason `freshWorkout` is handed its `startedAt` — and minting at the edge is

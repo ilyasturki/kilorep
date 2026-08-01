@@ -257,13 +257,15 @@
    so there is one number to hold in your head and nothing that can half-flip at
    a width nobody tested.
 
-   `xl` is the one exception, and it is arithmetic rather than taste: the Workout
-   rail floats in the gutter left over beside this cap, and that gutter is
-   (window − 48rem) / 2. A 208px card sitting 32px off the column needs 256px of
-   it, which the window does not have until 1280px. Put at `lg` the rail would
-   either overlap the set rows or push them off centre, and pushing them off
-   centre is what it used to do. Nothing else may take `xl` for a reason that is
-   not this one. */
+   `xl` and `2xl` are the one exception, and both are arithmetic rather than
+   taste: the Workout rail floats in the gutter left over beside this cap, and
+   that gutter is (window − 48rem) / 2. A 208px card sitting 32px off the column
+   needs 240px of it, which the window does not have until 1248px — hence `xl`.
+   The 288px it grows to needs 320px, which arrives at 1408px — hence `2xl`, the
+   nearest breakpoint above it, rather than a third number nobody else uses. Put
+   at `lg` the rail would either overlap the set rows or push them off centre,
+   and pushing them off centre is what it used to do. Nothing else may take `xl`
+   or `2xl` for a reason that is not this one. */
 @utility column-content {
 	width: 100%;
 	max-width: var(--container-3xl);

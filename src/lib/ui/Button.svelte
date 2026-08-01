@@ -29,27 +29,58 @@
 	// The paint is split from the box it goes on, because both of these come in
 	// two sizes and only the box changes between them.
 	const filled =
-		'font-extrabold bg-accent text-on-accent ' +
+		'bg-accent text-on-accent ' +
 		'hover:brightness-[0.97] active:brightness-[0.94] active:translate-y-px';
 
-	const well = 'font-bold border-[1.5px] border-dashed border-line text-ink-faint';
+	const well = 'border-[1.5px] border-dashed border-line text-ink-faint';
 
-	// `size` is split from `shape` so exactly one type scale ever reaches the
-	// element: `caps` replaces the look's scale instead of being appended
-	// alongside it. Two font sizes in one class attribute is not a tie broken by
-	// order of appearance — Tailwind breaks it by stylesheet order, where
-	// `text-sm` loses to `text-2xl` no matter which was written last.
-	const looks: Record<Look, { shape: string; size: string }> = {
-		commit: { shape: `min-h-commit rounded-2xl px-6 ${filled}`, size: 'text-2xl tracking-tight' },
-		secondary: { shape: `${outlined} font-bold text-ink-muted`, size: 'text-md' },
-		destructive: { shape: `${outlined} font-extrabold text-danger`, size: 'text-md' },
+	/**
+	 * A look is a box and the type that goes in it, and `text` carries the whole
+	 * type dress — size, tracking *and* weight — so that exactly one of each
+	 * reaches the element. `caps` replaces that dress rather than being appended
+	 * alongside it: two font sizes in one class attribute is not a tie broken by
+	 * order of appearance, and neither is two weights. Tailwind breaks both by
+	 * stylesheet order, where `text-sm` loses to `text-2xl` and `font-bold` to
+	 * `font-extrabold` no matter which was written last.
+	 *
+	 * Caps is per look and not one constant, which is what it used to be. FINISH
+	 * has to read as the same word in the header's 44px pill and in the 78px
+	 * button at the foot of a session, and one fixed 13px cannot do that job in
+	 * both — at commit scale it is a caption lost in a slab. So each look states
+	 * the caps size its box can carry, one step down from its sentence-case
+	 * dress: caps at the same size reads larger than the words around it, and
+	 * dropping a step is what keeps a caps label from shouting.
+	 */
+	type Dress = { shape: string; text: string; caps: string };
+
+	const looks: Record<Look, Dress> = {
+		commit: {
+			shape: `min-h-commit rounded-2xl px-6 ${filled}`,
+			text: 'text-2xl font-extrabold tracking-tight',
+			caps: 'text-xl font-extrabold tracking-caps'
+		},
+		secondary: {
+			shape: `${outlined} text-ink-muted`,
+			text: 'text-md font-bold',
+			caps: 'text-md font-extrabold tracking-caps'
+		},
+		destructive: {
+			shape: `${outlined} text-danger`,
+			text: 'text-md font-extrabold',
+			caps: 'text-md font-extrabold tracking-caps'
+		},
 		chrome: {
 			shape:
-				'min-h-chrome rounded-full px-4 font-extrabold border border-line text-ink-muted ' +
+				'min-h-chrome rounded-full px-4 border border-line text-ink-muted ' +
 				'hover:bg-surface-2 active:bg-surface-2',
-			size: 'text-md'
+			text: 'text-md font-extrabold',
+			caps: 'text-sm font-extrabold tracking-caps'
 		},
-		inert: { shape: `min-h-commit rounded-2xl px-6 ${well}`, size: 'text-base' }
+		inert: {
+			shape: `min-h-commit rounded-2xl px-6 ${well}`,
+			text: 'text-base font-bold',
+			caps: 'text-sm font-bold tracking-caps'
+		}
 	};
 
 	/**
@@ -63,12 +94,18 @@
 	 * never gym-sized, so there is nothing for them to shrink to — `compact` is
 	 * silently nothing on those rather than a second size to keep in step.
 	 */
-	const compacts: Partial<Record<Look, { shape: string; size: string }>> = {
-		commit: { shape: `min-h-row rounded-xl px-5 ${filled}`, size: 'text-lg tracking-tight' },
-		inert: { shape: `min-h-row rounded-xl px-5 ${well}`, size: 'text-md' }
+	const compacts: Partial<Record<Look, Dress>> = {
+		commit: {
+			shape: `min-h-row rounded-xl px-5 ${filled}`,
+			text: 'text-lg font-extrabold tracking-tight',
+			caps: 'text-md font-extrabold tracking-caps'
+		},
+		inert: {
+			shape: `min-h-row rounded-xl px-5 ${well}`,
+			text: 'text-md font-bold',
+			caps: 'text-sm font-bold tracking-caps'
+		}
 	};
-
-	const capsSize = 'text-sm tracking-caps';
 </script>
 
 <script lang="ts">
@@ -103,7 +140,7 @@
 
 	const key = $derived(disabled && variant === 'commit' ? ('inert' as const) : variant);
 	const look = $derived((compact ? compacts[key] : undefined) ?? looks[key]);
-	const klasses = $derived([base, look.shape, caps ? capsSize : look.size, klass]);
+	const klasses = $derived([base, look.shape, caps ? look.caps : look.text, klass]);
 </script>
 
 <!--

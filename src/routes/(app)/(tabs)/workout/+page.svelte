@@ -352,7 +352,15 @@
 
 		     `left` is where the gutter runs out: half the window, back the 384px
 		     half-cap of the column, back 32px of air, back the card. 39rem is those
-		     three added up, and they are the only numbers in this layout.
+		     three added up at `xl`, 44rem at `2xl`, and they are the only numbers in
+		     this layout.
+
+		     Two widths, because 208px is a card that truncates half the catalog —
+		     Incline Dumbbell Press has never once fitted in it — and the fix is not
+		     a wider rail everywhere but a rail that grows when the window can pay
+		     for it. At `2xl` it takes 288px and still leaves 64px of the gutter
+		     spare; below that the window genuinely has no more to give and the
+		     truncation is the honest price of the rail existing at all.
 
 		     `inset-y-0` is the pane's height and nothing more, so `max-h-full` on
 		     the card is exact — a session longer than the window scrolls inside the
@@ -361,9 +369,14 @@
 		     shadow, which in this app means something has left the page.
 
 		     `xl` and not `lg`, which is the app's breakpoint everywhere else: a
-		     768px column centred in the window leaves (w − 768) / 2 a side, and 240
-		     of that does not exist until 1280px. See `app.css`. -->
-			<aside class="absolute inset-y-0 left-[calc(50%-39rem)] hidden w-52 py-3 xl:block">
+		     768px column centred in the window leaves (w − 768) / 2 a side, and the
+		     240 a 208px card needs does not exist until 1280px. The 320 a 288px one
+		     needs does not exist until 1408px, which is why the second width waits
+		     for `2xl` rather than landing at a breakpoint of its own. See `app.css`. -->
+			<aside
+				class="absolute inset-y-0 left-[calc(50%-39rem)] hidden w-52 py-3
+					xl:block 2xl:left-[calc(50%-44rem)] 2xl:w-72"
+			>
 				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
 					<SessionList
 						{groups}
@@ -414,23 +427,6 @@
 							{/snippet}
 						</EmptyState>
 					{:else}
-						<!-- The way in for an exercise the plan did not hold, at the place the
-					     session runs out — the rail and the overview both have one, and
-					     neither is where a thumb that has just logged the last set is
-					     looking. Above Finish, because a session grows before it ends.
-
-					     The same dashed silhouette as the block's add-set row: the session
-					     grows by one of the shape it already stacks, one size up. `+` is a
-					     character, per the icons README. -->
-						<button
-							type="button"
-							onclick={() => (insertOpen = true)}
-							class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
-							text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-						>
-							<span class="label-caps">+ Add exercise</span>
-						</button>
-
 						<!-- Under the session rather than instead of it. Every block keeps its
 					     add-set row while this is on screen, which is the only way a set
 					     added after the last one was logged is reachable at all — and the
@@ -446,20 +442,32 @@
 							</EmptyState>
 						{/if}
 
-						<!-- The end of the session, where a session ends. The header keeps its
-					     FINISH for the thumb that never scrolls down here; this is for the
-					     one that has just logged the last set and is already looking at the
-					     bottom of the page.
+						<!-- The end of the session, where a session ends, and now the only
+					     control under the blocks. The `+ Add exercise` that used to sit
+					     above it is gone: the rail carries one from `xl`, the overview
+					     sheet carries one below that and the sheet is a tap from the
+					     header, so the pane was the third copy of an act nobody performs
+					     mid-set. What it cost was the two things at the bottom of a
+					     session both being buttons, one of them dashed, the other quiet,
+					     neither obviously the end.
+
+					     The header keeps its FINISH for the thumb that never scrolls down
+					     here; this is for the one that has just logged the last set and is
+					     already looking at the bottom of the page. Same word in the same
+					     dress either way — `Button`'s caps size follows the box, so the
+					     header's 13px and this button's are the same label at two scales
+					     rather than two different labels.
 
 					     Filled only once nothing is left owed, because `Button`'s standing
 					     rule is one filled button per screen and while the loop is running
 					     that button is `Log set`. -->
 						<Button
 							variant={session.finished ? 'commit' : 'secondary'}
+							caps
 							class="w-full"
 							onclick={() => (finishing = true)}
 						>
-							Finish
+							FINISH
 						</Button>
 					{/if}
 				</div>
@@ -483,8 +491,20 @@
 	/>
 
 	<!-- The same picker, asking a different question. It opens as the options sheet
-     closes, the way the overview already hands over to the insert. -->
-	<ExercisePickerSheet bind:open={swapOpen} title="Swap exercise" onpick={swapPick} />
+     closes, the way the overview already hands over to the insert.
+
+     `replacing` is what makes it a different question rather than the same list
+     under another title: the sheet shelves substitutes for this exercise above
+     the muscle sections. It resolves out of the live tree like everything else
+     addressed by `swapping`, and is null once the entry is gone — the sheet has
+     closed by then, and a Similar list for an exercise that has left the session
+     would be describing nothing. -->
+	<ExercisePickerSheet
+		bind:open={swapOpen}
+		title="Swap exercise"
+		replacing={exerciseGroup === null ? null : exerciseGroup.meta}
+		onpick={swapPick}
+	/>
 
 	<ExerciseOptionsSheet
 		bind:open={exerciseOpen}
