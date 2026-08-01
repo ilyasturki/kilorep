@@ -1,25 +1,9 @@
 # Gitignored files Claude Code copies into every new worktree it creates.
-# `.gitignore` syntax; only files that match *and* are gitignored are copied,
-# so nothing tracked is ever duplicated.
-#
-# The dev database is here because a worktree is a fresh checkout and `/.data`
-# is ignored, so without this every worktree starts with zero accounts — and
-# a login screen with no account behind it fails ten times and then throttles
-# for fifteen minutes. See docs/TESTING.md.
-#
-# `-wal` is not optional. SQLite in WAL mode leaves most recent writes in the
-# sidecar, so copying `kilorep.db` alone hands the worktree a stale database
-# that is missing whatever the last session did. `-shm` is deliberately absent:
-# it is a shared-memory index tied to the process that held it, and SQLite
-# rebuilds it on open.
+
 .data/kilorep.db
 .data/kilorep.db-wal
 
-# `.env` is not present yet — the defaults in `src/lib/server/env.ts` carry local
-# dev on their own. Listed anyway so the day one appears, it stops being the thing
-# that works in the main checkout and nowhere else. `.env.google` is the same
-# argument and does exist: without it a worktree cannot run `bun run dev:google` at
-# all, and plain `bun run dev` has no Google client — the login screen answers that
-# by drawing no button and explaining nothing.
 .env
 .env.google
+
+node_modules
