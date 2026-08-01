@@ -55,11 +55,13 @@
 		"vitest": "^4.1.10"
 	},
 	"dependencies": {
+		"@capacitor/app": "^8",
 		"@capacitor/core": "8.4.2",
 		"@capacitor/haptics": "^8.0.2",
 		"@internationalized/date": "^3.12.2",
 		"bits-ui": "^2.18.1",
 		"drizzle-orm": "1.0.0-rc.4",
-		"idb": "^8.0.3"
+		"idb": "^8.0.3",
+		"vaul-svelte": "1.0.0-next.7"
 	}
 }

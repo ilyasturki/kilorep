@@ -14,6 +14,7 @@
 	import SheetHeader from '$lib/ui/SheetHeader.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
+	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
 	/**
@@ -65,6 +66,14 @@
 	}: Props = $props();
 
 	let open = $state(false);
+
+	// Hardware back closes the list before it navigates — see `ui/overlays.ts`.
+	$effect(() => {
+		if (!open) {
+			return;
+		}
+		return registerOverlay(() => (open = false));
+	});
 
 	const selected = $derived(
 		type === 'multiple'

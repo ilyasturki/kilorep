@@ -2,8 +2,14 @@
 	import '../app.css';
 	import { Tooltip } from 'bits-ui';
 	import favicon from '$lib/assets/favicon.svg';
+	import { wireHardwareBack } from '$lib/nav/hardware-back';
 
 	let { children } = $props();
+
+	// The Android back button, owned for the app's whole life — here and not in
+	// `(app)` because the login screen is outside that group and a press there
+	// must not fall through to Capacitor's default. A no-op on the web.
+	$effect(() => wireHardwareBack());
 </script>
 
 <svelte:head>

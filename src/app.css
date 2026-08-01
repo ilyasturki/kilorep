@@ -540,6 +540,143 @@
 	}
 }
 
+/* The drawer: what Sheet wears below `sm`, where vaul-svelte drives the panel.
+   vaul owns every movement — the drag follows the finger through inline
+   transforms, and a release settles or dismisses on the library's own 0.5s
+   curve — so this skin is `overlay-sheet`'s phone geometry with the motion
+   removed. The `translate` transition and `[data-starting-style]` rules cannot
+   come along: two owners for one panel's position play against each other. */
+@utility overlay-drawer {
+	inset-inline: 0;
+	bottom: 0;
+	border-top: 1px solid var(--line);
+	border-start-start-radius: var(--radius-sheet);
+	border-start-end-radius: var(--radius-sheet);
+	/* Clear of the gesture bar, but never less than the design's own padding. */
+	padding-bottom: max(1.25rem, var(--spacing-safe-b));
+}
+
+/* The scrim under the drawer. `overlay-scrim`'s 180ms opacity transition would
+   turn every drag frame — vaul writes the overlay's opacity inline as the
+   panel moves — into a tween running behind the finger. Static color; the
+   fade in and out is vaul's, in the keyframes below. */
+@utility overlay-scrim-drawer {
+	position: fixed;
+	inset: 0;
+	z-index: 40;
+	background-color: var(--scrim);
+}
+
+/* vaul's base stylesheet, cut to what the app renders: a bottom drawer with no
+   snap points. vaul-svelte ships no CSS — the drag is inline style, but the
+   enter and exit ride these `data-vaul-*` attributes and are left to the
+   consumer, so the rules come from the upstream React package's style.css.
+
+   The 0.5s cubic-bezier(0.32, 0.72, 0, 1) is not the sheet's 180ms and stays
+   that way deliberately: the library hard-codes the same duration and curve
+   into the inline transition a released drag settles with, and a drawer that
+   arrives in 180ms but snaps back from a drag in 500ms is two animations
+   disagreeing about one panel. */
+[data-vaul-drawer] {
+	touch-action: none;
+	will-change: transform;
+	transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+	animation-duration: 0.5s;
+	animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[data-vaul-drawer][data-vaul-snap-points='false'][data-vaul-drawer-direction='bottom'][data-state='open'] {
+	animation-name: vaul-slide-from-bottom;
+}
+
+[data-vaul-drawer][data-vaul-snap-points='false'][data-vaul-drawer-direction='bottom'][data-state='closed'] {
+	animation-name: vaul-slide-to-bottom;
+}
+
+[data-vaul-overlay][data-vaul-snap-points='false'] {
+	animation-duration: 0.5s;
+	animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[data-vaul-overlay][data-vaul-snap-points='false'][data-state='open'] {
+	animation-name: vaul-fade-in;
+}
+
+[data-vaul-overlay][data-state='closed'] {
+	animation-name: vaul-fade-out;
+}
+
+[data-vaul-animate='false'] {
+	animation: none !important;
+}
+
+/* The tail below the drawer, wearing the drawer's own surface: an overdrag
+   upward would otherwise open a gap between the panel and the screen edge. */
+[data-vaul-drawer][data-vaul-drawer-direction='bottom']::after {
+	content: '';
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	height: 200%;
+	background: inherit;
+	background-color: inherit;
+}
+
+/* The grab handle, in the app's neutrals rather than vaul's grey. The hitarea
+   is the library's: the visible pill is 5px tall and the touch target is not
+   allowed to be. */
+[data-vaul-handle] {
+	display: block;
+	position: relative;
+	margin-inline: auto;
+	height: 5px;
+	width: 2.5rem;
+	border-radius: 1rem;
+	background-color: var(--line);
+	touch-action: pan-y;
+}
+
+[data-vaul-handle-hitarea] {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: max(100%, 2.75rem);
+	height: max(100%, 2.75rem);
+	touch-action: inherit;
+}
+
+@keyframes vaul-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes vaul-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes vaul-slide-from-bottom {
+	from {
+		transform: translate3d(0, var(--initial-transform, 100%), 0);
+	}
+	to {
+		transform: translate3d(0, 0, 0);
+	}
+}
+
+@keyframes vaul-slide-to-bottom {
+	to {
+		transform: translate3d(0, var(--initial-transform, 100%), 0);
+	}
+}
+
 /* The heading on a panel — a sheet, a confirm, an empty state. Same argument as
    `label-caps` one step up the scale: the recipe was written out in six places
    and the muted line under it had already drifted between two sizes. */

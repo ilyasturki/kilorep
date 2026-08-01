@@ -41,6 +41,7 @@
 	import Field from '$lib/ui/Field.svelte';
 	import SheetHeader from '$lib/ui/SheetHeader.svelte';
 	import CalendarIcon from '$lib/ui/icons/Calendar.svelte';
+	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
 	/**
@@ -103,6 +104,14 @@
 	}: Props = $props();
 
 	let open = $state(false);
+
+	// Hardware back closes the month before it navigates — see `ui/overlays.ts`.
+	$effect(() => {
+		if (!open) {
+			return;
+		}
+		return registerOverlay(() => (open = false));
+	});
 
 	const max = $derived(maxValue ?? (maxToday ? today(zone) : undefined));
 

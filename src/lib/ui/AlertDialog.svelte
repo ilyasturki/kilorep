@@ -3,6 +3,7 @@
 	import type { ClassValue } from 'svelte/elements';
 	import { AlertDialog } from 'bits-ui';
 	import Button from '$lib/ui/Button.svelte';
+	import { registerOverlay } from '$lib/ui/overlays';
 
 	/**
 	 * The confirm before something irreversible: deleting a template, a custom
@@ -46,6 +47,15 @@
 	}: Props = $props();
 
 	let cancel = $state<HTMLElement | null>(null);
+
+	// Hardware back cancels the confirm — the safe direction, same as Escape.
+	// See `ui/overlays.ts`.
+	$effect(() => {
+		if (!open) {
+			return;
+		}
+		return registerOverlay(() => (open = false));
+	});
 
 	// Bits UI focuses the panel itself, which is correct for a dialog you are
 	// about to read and wrong for one you are about to dismiss. The safe choice
