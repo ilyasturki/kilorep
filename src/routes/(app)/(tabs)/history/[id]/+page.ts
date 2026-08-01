@@ -22,7 +22,13 @@ export const load: PageLoad = async ({ params }) => {
 		error(404, 'No such workout');
 	}
 
-	const template = workout.templateId === null ? null : await store.getTemplate(workout.templateId);
+	// `??`, not `=== null`: a record written before `templateId` existed carries
+	// no such key at all, and `undefined` slipping past a strict null check
+	// reaches `getTemplate` as an undefined IndexedDB key — a `DataError`, which
+	// the screen shows as a bare 500. The type says `string | null`; the storage
+	// boundary's assertion is what lets an older shape through it.
+	const templateId = workout.templateId ?? null;
+	const template = templateId === null ? null : await store.getTemplate(templateId);
 
 	return { store, workout, template };
 };
