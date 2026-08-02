@@ -3,6 +3,7 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -538,12 +539,18 @@
 				<h2 class="label-caps">EmptyState</h2>
 				<EmptyState
 					title="No templates yet"
-					description="Build one, or start an empty workout and log as you go."
+					description="Plan a session once, start it every gym day."
 				>
 					{#snippet icon()}<Stack size={24} />{/snippet}
-					{#snippet action()}<Button variant="secondary">New template</Button>{/snippet}
+					{#snippet action()}<Button variant="commit" compact>New template</Button>{/snippet}
 				</EmptyState>
-				<span class={caption}>icon · action</span>
+				<span class={caption}>icon · action — flex-1 centres it in a pane with height to give</span>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">AddRow</h2>
+				<AddRow label="Add exercise" />
+				<span class={caption}>the dashed grow-by-one silhouette every list ends on</span>
 			</article>
 
 			<article class={card}>

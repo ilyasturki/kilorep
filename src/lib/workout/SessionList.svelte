@@ -2,6 +2,7 @@
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import type { Group } from '$lib/workout/groups';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
@@ -196,15 +197,5 @@
 		</div>
 	{/each}
 
-	<!-- The same dashed silhouette as ExerciseBlock's add-set row: the list
-	     grows by one of the shape it already stacks. `+` is a character, per
-	     the icons README. -->
-	<button
-		type="button"
-		onclick={oninsert}
-		class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
-			text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-	>
-		<span class="label-caps">+ Add exercise</span>
-	</button>
+	<AddRow label="Add exercise" onclick={oninsert} />
 </div>

@@ -22,6 +22,7 @@
 	import { syncSoon } from '$lib/sync/client';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
@@ -371,35 +372,25 @@
 						</div>
 					{/each}
 
-					<!-- The dashed grow-by-one silhouette, per ExerciseBlock. -->
-					<button
-						type="button"
-						onclick={() => addSet(template, group.id, crypto.randomUUID())}
-						class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
-							text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-					>
-						<span class="label-caps">+ Add set</span>
-					</button>
+					<AddRow label="Add set" onclick={() => addSet(template, group.id, crypto.randomUUID())} />
 				</section>
 			</div>
 		{/each}
 
 		{#if groups.length === 0}
+			<!-- Centred in the pane, the CTA inside. Outlined, not commit: the
+			     screen's one filled button is the sticky Start below. -->
 			<EmptyState title="Nothing planned" description="Add an exercise to shape the session.">
 				{#snippet icon()}
 					<Stack size={24} />
 				{/snippet}
+				{#snippet action()}
+					<Button onclick={() => (insertOpen = true)}>Add exercise</Button>
+				{/snippet}
 			</EmptyState>
+		{:else}
+			<AddRow label="Add exercise" onclick={() => (insertOpen = true)} />
 		{/if}
-
-		<button
-			type="button"
-			onclick={() => (insertOpen = true)}
-			class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
-				text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-		>
-			<span class="label-caps">+ Add exercise</span>
-		</button>
 
 		{#if persisted}
 			<Button variant="destructive" class="self-center" onclick={() => (deleteOpen = true)}>

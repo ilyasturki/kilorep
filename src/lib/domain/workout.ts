@@ -677,3 +677,61 @@ export function moveEntry(workout: Workout, entryId: string, toIndex: number): b
 
 	return true;
 }
+
+/**
+ * Copy-on-repeat: the session a finished workout begins again — PRODUCT.md's
+ * "Repeat this workout", the History detail's one way to start something.
+ *
+ * Structure only, never performance. Working sets return blank with the
+ * planned reps carried: the plan was a prescription and prescriptions repeat,
+ * but weight and reps were what happened that day, and recall is the hint
+ * path's job — a prefilled number nobody entered today could be committed by
+ * habit. Warmups are dropped rather than copied, the same reason a template
+ * plans none: the ramp-in is decided on the floor. Drop and failure sets come
+ * back as normal sets — how a set *went* is not part of what was planned.
+ *
+ * An exercise whose sets were all warmups has no structure to repeat and is
+ * not carried; an entry left with no exercises goes with it, the husk rule
+ * `removeExercise` already enforces on the template tree.
+ *
+ * Every id is fresh from `mint`, `startFrom`'s rule for the same reason: the
+ * same workout repeated twice must be two records. `templateId` rides along —
+ * a repeated session still answers to the plan its original answered to — and
+ * `??` tolerates records written before the field existed.
+ */
+export function repeatFrom(past: Workout, startedAt: number, mint: () => string): Workout {
+	const entries: WorkoutEntry[] = [];
+
+	for (const entry of past.entries) {
+		const exercises: WorkoutExercise[] = [];
+
+		for (const exercise of entry.exercises) {
+			const working = exercise.sets.filter((set) => set.type !== 'warmup');
+
+			if (working.length === 0) {
+				continue;
+			}
+
+			exercises.push({
+				id: mint(),
+				exerciseId: exercise.exerciseId,
+				sets: working.map((set) => ({
+					id: mint(),
+					type: 'normal' as const,
+					plannedReps: set.plannedReps,
+					weight: null,
+					reps: null,
+					completed: false
+				}))
+			});
+		}
+
+		if (exercises.length === 0) {
+			continue;
+		}
+
+		entries.push({ id: mint(), exercises });
+	}
+
+	return { id: mint(), templateId: past.templateId ?? null, startedAt, entries };
+}

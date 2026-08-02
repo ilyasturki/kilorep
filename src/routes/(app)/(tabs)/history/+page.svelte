@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { completedSetCount, formatDuration, workoutTitle } from '$lib/history/label';
 	import type { FinishedWorkout } from '$lib/store/derive';
+	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
@@ -43,9 +44,14 @@
 	</header>
 
 	{#if workouts.length === 0}
+		<!-- Not a dead end: the tab that records sessions points at the tab that
+		     starts them. Outlined — the lit commit belongs to Workout's own Start. -->
 		<EmptyState title="No workouts yet" description="Finish a session and it lands here.">
 			{#snippet icon()}
 				<ClockCounterClockwise size={24} />
+			{/snippet}
+			{#snippet action()}
+				<Button href="/workout">Start a workout</Button>
 			{/snippet}
 		</EmptyState>
 	{:else}

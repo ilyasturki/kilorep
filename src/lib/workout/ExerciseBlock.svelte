@@ -2,6 +2,7 @@
 	import { hintLabel } from '$lib/domain/workout';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 	import ActiveSet from '$lib/workout/ActiveSet.svelte';
@@ -138,16 +139,5 @@
 		{/if}
 	{/each}
 
-	<!-- A pending row's silhouette with nothing in it: the block grows by one of
-	     the same shape rather than sprouting a control of a kind the list has
-	     nowhere else. `+` is a character — the icons README is explicit that a
-	     glyph Nunito carries never becomes an SVG. -->
-	<button
-		type="button"
-		onclick={onadd}
-		class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
-			text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-	>
-		<span class="label-caps">+ Add set</span>
-	</button>
+	<AddRow label="Add set" onclick={onadd} />
 </section>

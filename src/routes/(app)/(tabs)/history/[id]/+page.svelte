@@ -11,18 +11,22 @@
 		addSet,
 		cursorFor,
 		draftSet,
+		firstUncompleted,
 		markSet,
 		moveEntry,
 		removeEntry,
 		removeSet,
+		repeatFrom,
 		replaceEntry
 	} from '$lib/domain/workout';
 	import { formatDuration, workoutTitle } from '$lib/history/label';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
+	import { activeWorkout } from '$lib/workout/active.svelte';
 	import ExerciseOptionsSheet from '$lib/workout/ExerciseOptionsSheet.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
@@ -38,6 +42,10 @@
 	 * One past workout, read as it was lifted: every set in session order,
 	 * warmups and unchecked slots included, because the record is the session and
 	 * a view that tidied it would be editing by omission.
+	 *
+	 * And begun again, from the sticky commit: PRODUCT.md's "Repeat this
+	 * workout", the record as a plan for today — structure only, see
+	 * `repeatFrom`.
 	 *
 	 * And corrected, behind Edit. A logged number can be wrong — the wrong bar
 	 * typed, a set checked that was never lifted, an exercise left in that was
@@ -342,6 +350,44 @@
 
 		await goto('/history');
 	}
+
+	/**
+	 * Repeat-as-resume, the template editor's handoff verbatim: `repeatFrom`
+	 * mints the session, the snapshot is written, and the workout screen begins
+	 * from it on arrival — no second start-path to keep honest.
+	 */
+	async function launch() {
+		activeWorkout.finish();
+
+		const next = repeatFrom(workout, Date.now(), () => crypto.randomUUID());
+		const first = firstUncompleted(next);
+
+		await data.store.saveSnapshot({
+			workout: next,
+			activeSetId: first === null ? null : first.set.id
+		});
+
+		await goto('/workout');
+	}
+
+	let discardOpen = $state(false);
+
+	/**
+	 * The same gate the editor's Start stands behind, for the same reason:
+	 * exactly one workout is active at a time, and a live session — or a
+	 * snapshot waiting out a reload — may hold logged sets that overwriting
+	 * would destroy. This is a reading surface, not the gym floor; the dialog
+	 * costs nothing the loop rule protects.
+	 */
+	async function repeat() {
+		if (activeWorkout.session !== null || (await data.store.loadSnapshot()) !== null) {
+			discardOpen = true;
+
+			return;
+		}
+
+		await launch();
+	}
 </script>
 
 <svelte:head>
@@ -371,7 +417,9 @@
 	</span>
 {/snippet}
 
-<main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
+<!-- No bottom padding of its own: the sticky Repeat bar carries the foot of
+     the page, the same bargain the template editor strikes. -->
+<main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t lg:pt-0">
 	<header class="flex flex-col gap-3 pt-3">
 		<div class="flex items-center justify-between gap-3">
 			<!-- `‹` is a character, like ListRow's `›` — the subset carries it. It
@@ -448,14 +496,7 @@
 
 		{#if editing}
 			<!-- The same dashed silhouette the sections grow by, one level up. -->
-			<button
-				type="button"
-				onclick={() => (insertOpen = true)}
-				class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
-					text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-			>
-				<span class="label-caps">+ Add exercise</span>
-			</button>
+			<AddRow label="Add exercise" onclick={() => (insertOpen = true)} />
 		{:else if groups.length === 0}
 			<!-- Editing down to nothing is allowed — the record is still a record of a
 			     day, and Delete is right there for a session that should not have
@@ -485,6 +526,16 @@
 
 		<Button variant="destructive" class="self-center" onclick={() => (deleteOpen = true)}>
 			Delete workout
+		</Button>
+	</div>
+
+	<!-- Pinned like the editor's Start, because it is the same act from a
+	     different door: this record, begun again. Structure only — see
+	     `repeatFrom` — so today's numbers arrive from the hints, not from a
+	     prefill nobody entered today. -->
+	<div class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3">
+		<Button variant="commit" class="w-full" onclick={() => void repeat()}>
+			Repeat this workout
 		</Button>
 	</div>
 </main>
@@ -526,4 +577,12 @@
 	description="Its sets leave history, hints and records for good, on every device."
 	confirmLabel="Delete"
 	onconfirm={() => void deleteWorkout()}
+/>
+
+<AlertDialog
+	bind:open={discardOpen}
+	title="A workout is in progress"
+	description="Repeating this workout discards it, logged sets and all. Finish it from the Workout tab to keep it."
+	confirmLabel="Discard and start"
+	onconfirm={() => void launch()}
 />

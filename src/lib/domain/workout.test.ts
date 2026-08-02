@@ -21,6 +21,7 @@ import {
 	prefillFor,
 	removeEntry,
 	removeSet,
+	repeatFrom,
 	replaceEntry,
 	settle
 } from '$lib/domain/workout';
@@ -760,5 +761,86 @@ describe('settle', () => {
 	test('floors at min rather than going negative', () => {
 		expect(settle(-5)).toBe(0);
 		expect(settle(1, 2.5)).toBe(2.5);
+	});
+});
+
+/** Deterministic ids, so a test can name the node it means. */
+function mint(prefix: string): () => string {
+	let n = 0;
+
+	return () => {
+		n += 1;
+
+		return `${prefix}-${n}`;
+	};
+}
+
+/** Every node id in a tree, walked — the same sweep template.test makes. */
+function idsIn(workout: Workout): string[] {
+	const out = [workout.id];
+
+	for (const entry of workout.entries) {
+		out.push(entry.id);
+
+		for (const exercise of entry.exercises) {
+			out.push(exercise.id);
+
+			for (const set of exercise.sets) {
+				out.push(set.id);
+			}
+		}
+	}
+
+	return out;
+}
+
+describe('copy-on-repeat', () => {
+	test('the shape returns, the performance does not', () => {
+		const past = freshWorkout(5000);
+		past.templateId = 't1';
+		completeAll(past);
+
+		const next = repeatFrom(past, 9000, mint('r'));
+
+		expect(next.startedAt).toBe(9000);
+		expect(next.templateId).toBe('t1');
+		expect(orderOf(next)).toEqual(orderOf(past));
+
+		const sets = cursors(next).map((c) => c.set);
+
+		// Bench's warmup is gone; its four working sets survive, and so does
+		// every planned target — the prescription repeats, the numbers do not.
+		expect(sets.length).toBe(13);
+		expect(sets.slice(0, 4).map((s) => s.plannedReps)).toEqual([8, 8, 8, 8]);
+		expect(
+			sets.every((s) => s.type === 'normal' && !s.completed && s.weight === null && s.reps === null)
+		).toBe(true);
+	});
+
+	test('every id is fresh — nothing from the record survives into the session', () => {
+		const past = freshWorkout(5000);
+		const next = repeatFrom(past, 9000, mint('r'));
+
+		const pastIds = new Set(idsIn(past));
+		const nextIds = idsIn(next);
+
+		expect(nextIds.some((id) => pastIds.has(id))).toBe(false);
+		expect(new Set(nextIds).size).toBe(nextIds.length);
+	});
+
+	test('an exercise of nothing but warmups has no structure to carry', () => {
+		const past = freshWorkout(5000);
+
+		for (const set of past.entries[3].exercises[0].sets) {
+			set.type = 'warmup';
+		}
+
+		const next = repeatFrom(past, 9000, mint('r'));
+
+		expect(orderOf(next)).toEqual(['bench-press', 'incline-dumbbell-press', 'cable-fly']);
+	});
+
+	test('an empty start repeats as an empty start', () => {
+		expect(repeatFrom(freshWorkout(5000), 9000, mint('r')).templateId).toBeNull();
 	});
 });

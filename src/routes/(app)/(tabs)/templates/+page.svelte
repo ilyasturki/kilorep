@@ -2,6 +2,8 @@
 	import { goto } from '$app/navigation';
 
 	import type { Template } from '$lib/domain/template';
+	import AddRow from '$lib/ui/AddRow.svelte';
+	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
@@ -27,6 +29,10 @@
 	 */
 	let { data }: PageProps = $props();
 
+	function newTemplate() {
+		void goto(`/templates/${crypto.randomUUID()}`);
+	}
+
 	function planned(template: Template): string {
 		const count = template.entries.flatMap((entry) => entry.exercises).length;
 
@@ -49,17 +55,21 @@
 		<h1 class="text-2xl font-extrabold tracking-tight">Templates</h1>
 	</header>
 
-	<section class="flex flex-col gap-1">
-		{#if data.templates.length === 0}
-			<EmptyState
-				title="No templates yet"
-				description="Plan a session once, start it every gym day."
-			>
-				{#snippet icon()}
-					<Stack size={24} />
-				{/snippet}
-			</EmptyState>
-		{:else}
+	{#if data.templates.length === 0}
+		<!-- Centred in the pane, action inside — an empty tab is one decision,
+		     and the dashed grow-by-one row waits until there is a list to grow. -->
+		<EmptyState title="No templates yet" description="Plan a session once, start it every gym day.">
+			{#snippet icon()}
+				<Stack size={24} />
+			{/snippet}
+			{#snippet action()}
+				<!-- Compact: the commit at planning scale — the gym-sized slab
+				     belongs to the floor, and this screen is not it. -->
+				<Button variant="commit" compact onclick={newTemplate}>New template</Button>
+			{/snippet}
+		</EmptyState>
+	{:else}
+		<section class="flex flex-col gap-1">
 			{#each data.templates as template (template.id)}
 				<!-- A persisted template can be nameless — named-nothing but planned-
 				     something escapes the blank rule — and a row with no title reads
@@ -70,17 +80,8 @@
 					href="/templates/{template.id}"
 				/>
 			{/each}
-		{/if}
 
-		<!-- The same dashed silhouette every list in the app grows by. `+` is a
-		     character, per the icons README. -->
-		<button
-			type="button"
-			onclick={() => void goto(`/templates/${crypto.randomUUID()}`)}
-			class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
-				text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-		>
-			<span class="label-caps">+ New template</span>
-		</button>
-	</section>
+			<AddRow label="New template" onclick={newTemplate} />
+		</section>
+	{/if}
 </main>

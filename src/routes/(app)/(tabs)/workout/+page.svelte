@@ -293,11 +293,13 @@
 
 {#if session === null}
 	<!-- The idle posture: home, wearing the header the Start page used to wear.
-	     One act and a pointer — the templates themselves live on their own tab,
+	     One act and a route — the templates themselves live on their own tab,
 	     because a list to read standing still does not belong on the screen
-	     pressed mid-stride. Nothing begins until the button says so; a session
-	     minted by navigation was how "Resume workout" appeared over a workout
-	     nobody had started. -->
+	     pressed mid-stride, but the copy naming them owes the thumb a way there
+	     that is not hunting the tab bar. Nothing begins until the commit says
+	     so; a session minted by navigation was how "Resume workout" appeared
+	     over a workout nobody had started, and the outlined route below it is
+	     only a walk to the list. -->
 	<main class="min-h-0 flex-1 overflow-y-auto">
 		<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
 			<header class="flex items-start justify-between gap-3 pt-10 lg:hidden">
@@ -306,19 +308,21 @@
 				{@render gear()}
 			</header>
 
-			<div class="flex flex-1 flex-col justify-center pb-16">
-				<EmptyState
-					title="No workout running"
-					description="Start empty and build as you go, or begin from a template."
-				>
-					{#snippet icon()}
-						<Barbell size={26} />
-					{/snippet}
-					{#snippet action()}
+			<EmptyState
+				class="pb-16"
+				title="No workout running"
+				description="Start empty and build as you go, or begin from a template."
+			>
+				{#snippet icon()}
+					<Barbell size={24} />
+				{/snippet}
+				{#snippet action()}
+					<div class="flex flex-col items-center gap-3">
 						<Button variant="commit" onclick={startEmpty}>Start empty workout</Button>
-					{/snippet}
-				</EmptyState>
-			</div>
+						<Button href="/templates">Start from a template</Button>
+					</div>
+				{/snippet}
+			</EmptyState>
 		</div>
 	</main>
 {:else}
@@ -397,7 +401,12 @@
 			     The gutter goes inside the cap, never on the pane around it: the
 			     bar puts its own there too, and padding on opposite sides of the
 			     same cap is how the two columns end up 12px out of true. -->
-				<div class="column-content flex flex-col gap-7 px-3">
+				<!-- `min-h-full` only while the session is empty: it hands EmptyState
+			     the height to centre in, and with blocks on screen it would let
+			     the finished-state's flex-1 shove FINISH to the pane's floor. -->
+				<div
+					class={['column-content flex flex-col gap-7 px-3', groups.length === 0 && 'min-h-full']}
+				>
 					{#each groups as group (group.id)}
 						<ExerciseBlock
 							meta={group.meta}
@@ -420,7 +429,7 @@
 					{#if groups.length === 0}
 						<EmptyState title="Empty session" description="Add an exercise to start logging.">
 							{#snippet icon()}
-								<Stack size={26} />
+								<Stack size={24} />
 							{/snippet}
 							{#snippet action()}
 								<Button variant="commit" onclick={() => (insertOpen = true)}>Add exercise</Button>
@@ -437,7 +446,7 @@
 						{#if session.finished}
 							<EmptyState title="Every set logged" description="Nothing left in this session.">
 								{#snippet icon()}
-									<Check size={26} />
+									<Check size={24} />
 								{/snippet}
 							</EmptyState>
 						{/if}
