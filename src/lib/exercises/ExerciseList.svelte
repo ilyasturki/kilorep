@@ -1,49 +1,10 @@
 <script lang="ts" module>
-	import type { Component } from 'svelte';
-
 	import { catalog } from '$lib/catalog';
-	import type { Muscle } from '$lib/domain/exercise';
 	import { sections } from '$lib/exercises/browse';
-	import Back from '$lib/ui/icons/muscles/Back.svelte';
-	import Biceps from '$lib/ui/icons/muscles/Biceps.svelte';
-	import Calves from '$lib/ui/icons/muscles/Calves.svelte';
-	import Chest from '$lib/ui/icons/muscles/Chest.svelte';
-	import Core from '$lib/ui/icons/muscles/Core.svelte';
-	import Forearms from '$lib/ui/icons/muscles/Forearms.svelte';
-	import Glutes from '$lib/ui/icons/muscles/Glutes.svelte';
-	import Hamstrings from '$lib/ui/icons/muscles/Hamstrings.svelte';
-	import Quads from '$lib/ui/icons/muscles/Quads.svelte';
-	import Shoulders from '$lib/ui/icons/muscles/Shoulders.svelte';
-	import Triceps from '$lib/ui/icons/muscles/Triceps.svelte';
 
 	// Once per app, not per mount: the catalog is immutable and the insert
 	// sheet re-mounts this list on every open.
 	const browse = sections(catalog);
-
-	/**
-	 * The one place a `Muscle` becomes a picture. This is the lookup the icons
-	 * README rules out — and the reason it does not apply here: the objection to
-	 * a dispatcher is that it defeats tree-shaking and pays a runtime branch per
-	 * icon, and this screen renders all eleven at once, one lookup per section.
-	 * Nothing is shaken out because nothing is unused.
-	 *
-	 * `Record<Muscle, …>` and not a partial map: a muscle added to `MUSCLES`
-	 * without a body map drawn for it fails the build here rather than rendering
-	 * a section with a hole above it.
-	 */
-	const MUSCLE_ICONS: Record<Muscle, Component<{ size?: number; class?: string }>> = {
-		Chest,
-		Back,
-		Shoulders,
-		Biceps,
-		Triceps,
-		Forearms,
-		Core,
-		Quads,
-		Hamstrings,
-		Glutes,
-		Calves
-	};
 
 	// The same posture as `Chip.svelte`'s resting state, minus the toggle
 	// machinery: these chips navigate or pick, they never stay pressed.
@@ -216,20 +177,10 @@
 		{/if}
 
 		{#each browse as section (section.muscle)}
-			<!-- Capitalised because that is what makes it a component in the
-			     template; `Muscle` itself is taken by the domain type. -->
-			{@const Figure = MUSCLE_ICONS[section.muscle]}
-
 			<section class="flex flex-col gap-2">
-				<!-- The figure is the anchor on a long scroll and the word confirms
-				     it, so both sit above the card rather than inside it: a header
-				     row would spend a whole tappable-height slot on something that
-				     is not tappable. 28px is the floor the family is legible at —
-				     `icons/README.md` has the measurement and what breaks below it. -->
-				<h2 class="flex items-center gap-2 px-3 label-caps">
-					<Figure size={28} />
-					{section.muscle}
-				</h2>
+				<!-- Above the card rather than inside it: a header row would spend a
+				     whole tappable-height slot on something that is not tappable. -->
+				<h2 class="px-3 label-caps">{section.muscle}</h2>
 
 				<div class="list-group">
 					{#each section.families as family (family.parent.id)}
