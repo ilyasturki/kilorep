@@ -25,6 +25,10 @@
 	 * `8–12 reps` for a pyramid, `Mixed` for a plan holding both numbers and open
 	 * sets. Nothing on this card ever prints a number the plan does not hold.
 	 *
+	 * A target set is a target that can be dropped again, in one press, and the
+	 * exercise's name is the way to its own page. Both have their reasons written
+	 * where they are drawn.
+	 *
 	 * The grip arrives as a snippet: the drag belongs to the screen stacking
 	 * these — it owns the order, the measurements and the flip — and a card that
 	 * took four pointer handlers as props would be pretending otherwise.
@@ -89,12 +93,34 @@
 
 <section class="flex flex-col gap-2 rounded-2xl border border-line-soft bg-surface p-3">
 	<div class="flex items-center gap-1">
-		<div class="min-w-0 flex-1 px-1">
-			<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
-			{#if loadModeNote(meta.loadMode)}
-				<p class="truncate text-sm font-bold text-ink-faint">{loadModeNote(meta.loadMode)}</p>
-			{/if}
-		</div>
+		<!-- The name is the way to the exercise page. An anchor and not a handler:
+		     this is an ordinary navigation to an ordinary screen, so it middle-
+		     clicks, opens in a tab and answers Enter the way every other link in
+		     the app does. It takes the load-mode note with it — the two lines are
+		     one thing being named, and a tap target that stopped at the baseline of
+		     the first would be a strip of dead card under a live one.
+
+		     Scoped to the title and no further. The rest of this card is steppers
+		     and a grip, none of which is a navigation, and a whole-card link would
+		     make every mis-touch on a stepper's edge leave the editor.
+
+		     The heading stays a heading with the link inside it: the exercise's
+		     name titles this section whether or not it is also a destination. -->
+		<h2 class="min-w-0 flex-1">
+			<a
+				href="/exercises/{meta.id}"
+				class="flex min-w-0 flex-col rounded-lg px-1 py-0.5 focus-ring hover:bg-surface-2
+					active:bg-surface-2 pointer-fine:transition-[background-color]
+					pointer-fine:duration-100"
+			>
+				<span class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</span>
+				{#if loadModeNote(meta.loadMode)}
+					<span class="truncate text-sm font-bold text-ink-faint">
+						{loadModeNote(meta.loadMode)}
+					</span>
+				{/if}
+			</a>
+		</h2>
 
 		<!-- `×` is a character the subset carries. It asks first now — see the
 		     screen's dialog for why the plan earned one. -->
@@ -144,6 +170,44 @@
 			<CaretDown size={16} class={expanded ? 'rotate-180' : ''} />
 		</button>
 	</div>
+
+	<!-- The way back out of a rep target, in one press.
+
+	     `−` has always walked down to Open through 1, and that is eight taps from
+	     the default 8 — a path that exists rather than one anybody takes. This is
+	     the same act named: `setExerciseReps(…, null)`, the open target applied to
+	     every set alike.
+
+	     Its own row, at full 44px, rather than a fourth control beside the
+	     steppers. The row above is two steppers and a caret in a card that is
+	     327px wide on a phone, and the value between a stepper's arms is already
+	     down to ~45px — enough for `8 reps` and not a character more. A fourth
+	     arm there would cost the readouts the very numbers they print.
+
+	     Only while there is a target to clear, so a card sitting at Open keeps the
+	     height it has now. Offered on a range and on a mixed plan too, not just on
+	     a single agreed number: those are exactly the states the shared stepper
+	     above goes inert in, and without this there would be no way back from a
+	     12/10/8 short of stepping three sets down by hand.
+
+	     The accessible name carries the exercise — several cards on one screen
+	     each saying "Clear target" tell a screen reader nothing about which — and
+	     it opens with the visible words, so the two are one label. -->
+	{#if shape.kind !== 'open'}
+		<div class="flex justify-end">
+			<button
+				type="button"
+				aria-label="Clear target for {meta.name}"
+				onclick={() => onreps(null)}
+				class="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-md font-bold
+					text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2"
+			>
+				<!-- `×` is a character the subset carries, same as the removal's above. -->
+				<span aria-hidden="true" class="text-lg leading-none">×</span>
+				Clear target
+			</button>
+		</div>
+	{/if}
 
 	{#if expanded}
 		<!-- Two up wherever the column has the width for it, which from `sm` it

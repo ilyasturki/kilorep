@@ -78,7 +78,9 @@
 			<!-- The variant chips below walk exercise to exercise, so the fixed
 			     parent was wrong on this screen before any other: `/exercises` is
 			     the catalog root, not the exercise the user pressed a chip from.
-			     `BackLink` walks history and keeps the root as its fallback. -->
+			     A plan card's title is now a third way in, and `BackLink` answers
+			     all of them the same way: it walks history and keeps the root as
+			     its fallback. -->
 			<BackLink href="/exercises" label="Back to exercises" />
 
 			<h1 class="min-w-0 text-2xl font-extrabold tracking-tight">{exercise.name}</h1>
@@ -103,23 +105,38 @@
 						<Badge>{muscle}</Badge>
 					{/each}
 				</div>
+
+				<!-- The best set ever logged, opposite the art rather than in a slab of
+				     its own below the fold of the header. It belongs with what describes
+				     the exercise: the load mode says how the numbers are counted and the
+				     badges say what the lift is, and this is the third fact of the same
+				     paragraph.
+
+				     It keeps its border and fill at a smaller scale, sized to its
+				     contents — the one measured thing in a column of labels, and a
+				     bordered card is how this app has always said so. Wrapping rather
+				     than truncating: the column is ~183px beside a 144px illustration on
+				     a 375px phone, which `RAW BEST 100 × 5` fits on one line and a
+				     four-digit total would not.
+
+				     `label-caps` carries `ink-faint` itself, so the colour is not
+				     restated here. -->
+				{#if pr !== null}
+					<div
+						class="flex w-fit flex-wrap items-baseline gap-x-2 rounded-xl border
+							border-line-soft bg-surface px-3 py-2"
+					>
+						<span class="label-caps">Raw best</span>
+						<span class="text-md font-extrabold tracking-tight">
+							{pr.set.weight} × {pr.set.reps}
+						</span>
+					</div>
+				{/if}
 			</div>
 
 			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-36 shrink-0" />
 		</div>
 	</header>
-
-	{#if pr !== null}
-		<section
-			class="flex items-baseline justify-between gap-3 rounded-2xl border border-line-soft
-				bg-surface px-4 py-3"
-		>
-			<span class="label-caps text-ink-faint">Raw best</span>
-			<span class="text-xl font-extrabold tracking-tight">
-				{pr.set.weight} × {pr.set.reps}
-			</span>
-		</section>
-	{/if}
 
 	{#if family.parent !== null}
 		<section class="flex flex-col gap-2">

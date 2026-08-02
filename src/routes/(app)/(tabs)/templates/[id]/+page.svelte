@@ -319,15 +319,21 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
 <div class="flex min-h-0 flex-1 flex-col">
-	<!-- Back, the name and Start on one line. The name is the page's title and
-	     its one field at once, so it is a bare input with no caps label over it:
-	     a label here would push the field onto a second row and say "Name" above
-	     a box that already reads "Push day".
+	<!-- Back, the name and Start on one line, on a phone and nowhere else. The
+	     name is the page's title and its one field at once, so it is a bare input
+	     with no caps label over it: a label here would push the field onto a
+	     second row and say "Name" above a box that already reads "Push day".
 
-	     Bordered and opaque because the pane below scrolls under it. START is
-	     gone from `lg` up, where the bar overhead holds it — the header itself
-	     stays at every width, since the app bar has nowhere to put a text field. -->
-	<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:pt-0">
+	     Bordered and opaque because the pane below scrolls under it.
+
+	     Gone from `lg` up — the same `lg:hidden` the workout screen's header
+	     wears, and now for the same reason. This bar used to stand at every
+	     width, on the argument that the app bar has nowhere to put a text field:
+	     true, and beside the point, because the pane does. Two bars stacked is
+	     what that argument bought, and the field has moved into the pane below
+	     rather than the chrome shrinking to accommodate it. START and the trash
+	     are already up in the bar from `lg` — see `deskActions`. -->
+	<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:hidden">
 		<div class="column-content flex items-center gap-2 px-3 py-2">
 			<BackLink href="/templates" label="Back to templates" />
 
@@ -339,9 +345,7 @@
 				class="field-box min-h-chrome min-w-0 flex-1 border-line focus-ring"
 			/>
 
-			<div class="lg:hidden">
-				{@render go()}
-			</div>
+			{@render go()}
 		</div>
 	</header>
 
@@ -376,7 +380,29 @@
 		</aside>
 
 		<main bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
-			<div class="column-content flex min-h-full flex-col gap-3 px-3 pt-3">
+			<!-- The drag's root, and not the `<main>` above it: `DragOrder` reads the
+			     flex gap off the first seam between cards, so its root has to be the
+			     box that actually lays them out. It was never bound at all until now,
+			     which is the whole of why a card in this pane could not be dragged —
+			     `#rowFor` looked for rows through a null root, found none, and every
+			     lift returned on its first guard. The sidebar's list has bound its own
+			     since the day it was written, which is why that one worked. -->
+			<div bind:this={drag.root} class="column-content flex min-h-full flex-col gap-3 px-3 pt-3">
+				<!-- The name, from `lg` up, where the header that used to carry it is
+				     gone. A title that happens to be typable: no border, no fill, no
+				     caps label above it — the same 2xl extrabold the Exercises and
+				     History detail screens set their `h1` in, so it reads as the page's
+				     name and not as a form with one field in it. It scrolls away with
+				     the cards, which a name read once on arrival should. -->
+				<input
+					bind:value={template.name}
+					aria-label="Template name"
+					placeholder="Push day"
+					autocomplete="off"
+					class="hidden w-full rounded-lg bg-transparent px-1 text-2xl font-extrabold
+						tracking-tight text-ink focus-ring placeholder:text-ink-faint lg:block"
+				/>
+
 				{#each groups as group (group.id)}
 					{@const lifted = drag.isLifted(group.entryId)}
 					{@const settling = drag.settlingId === group.entryId}

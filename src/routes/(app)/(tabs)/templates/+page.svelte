@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-
 	import type { Template } from '$lib/domain/template';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -28,9 +26,21 @@
 	 */
 	let { data }: PageProps = $props();
 
-	function newTemplate() {
-		void goto(`/templates/${crypto.randomUUID()}`);
-	}
+	/**
+	 * The address of the template nobody has written yet.
+	 *
+	 * A link and not a button, so the press is a navigation the browser
+	 * performs — which is what makes it middle-clickable, openable in a new tab,
+	 * and reachable by the same keys every other row on this screen answers to.
+	 * That costs one thing: an anchor has to know where it goes before it is
+	 * pressed, so the id is minted here at mount rather than inside a handler.
+	 *
+	 * Which the blank-birth rule makes free. An id that is visited and abandoned
+	 * leaves no record, and one that is never visited leaves less; the page
+	 * remounts on every return to this tab, so the next new template is a new
+	 * id without anything having to reset one.
+	 */
+	const blank = `/templates/${crypto.randomUUID()}`;
 
 	function planned(template: Template): string {
 		const count = template.entries.flatMap((entry) => entry.exercises).length;
@@ -64,7 +74,7 @@
 			{#snippet action()}
 				<!-- Compact: the commit at planning scale — the gym-sized slab
 				     belongs to the floor, and this screen is not it. -->
-				<Button variant="commit" compact onclick={newTemplate}>New template</Button>
+				<Button variant="commit" compact href={blank}>New template</Button>
 			{/snippet}
 		</EmptyState>
 	{:else}
@@ -92,7 +102,7 @@
 			     the rows weigh, and the accent stays out of it: nothing on this screen
 			     logs a set. See `Button`'s `raised` for why the dashed silhouette is
 			     still right everywhere it sits *inside* a card. -->
-			<Button variant="raised" class="w-full" onclick={newTemplate}>+ New template</Button>
+			<Button variant="raised" class="w-full" href={blank}>+ New template</Button>
 		</section>
 	{/if}
 </main>
