@@ -22,6 +22,8 @@
  * runs directly.
  */
 
+import type { BodyweightEntry } from '../../src/lib/domain/bodyweight.ts';
+import { localDateOf } from '../../src/lib/domain/bodyweight.ts';
 import type { Template, TemplateEntry } from '../../src/lib/domain/template.ts';
 import type { Workout, WorkoutEntry, WorkoutSet } from '../../src/lib/domain/workout.ts';
 import type { FinishedWorkout } from '../../src/lib/store/derive.ts';
@@ -546,6 +548,59 @@ function plantDrift(workout: Workout): void {
 	});
 }
 
+/** One weigh-in as the seed plants it: the entry plus the moment it was logged. */
+export type SeedBodyweight = { entry: BodyweightEntry; loggedAt: number };
+
+/** Weigh-ins are a morning ritual; only the time is arbitrary, like START_HOUR. */
+const WEIGH_HOUR = 7;
+const WEIGH_MINUTE = 40;
+
+/** Sixty days of daily-ish weigh-ins: the block, plus the few days before it. */
+const WEIGH_DAYS = 60;
+
+/** Yesterday's weight, the newest point in the log. */
+const END_KG = 80.2;
+
+/** A slow cut, walked backwards: about 0.3 kg a week across the block. */
+const SLOPE_PER_DAY = 0.04;
+
+/**
+ * Day-to-day wobble, cycled: water, salt and meal timing. Two weeks of it
+ * hand-authored rather than random for the reason nothing here is random —
+ * the same anchor must seed the same log — and sized to dwarf the daily
+ * slope, because that is the whole case for the 7-day average the Weight
+ * screen draws over these.
+ */
+const WOBBLE = [0.3, -0.2, 0.1, 0.4, -0.3, 0, 0.2, -0.4, 0.1, -0.1, 0.3, -0.2, 0, 0.2];
+
+/**
+ * Daily-ish weigh-ins ending yesterday, walked backwards like `trainingDays`.
+ * Sundays go unweighed — the lie-in — and one three-day stretch mid-block is
+ * a weekend away, so the trend renders gaps the way a real log has them.
+ */
+function bodyweightLog(now: number): SeedBodyweight[] {
+	const out: SeedBodyweight[] = [];
+	const cursor = new Date(now);
+
+	cursor.setHours(WEIGH_HOUR, WEIGH_MINUTE, 0, 0);
+	cursor.setDate(cursor.getDate() - 1);
+
+	for (let back = 0; back < WEIGH_DAYS; back++) {
+		const away = back >= 23 && back <= 25;
+
+		if (cursor.getDay() !== 0 && !away) {
+			const kg =
+				Math.round((END_KG + back * SLOPE_PER_DAY + WOBBLE[back % WOBBLE.length]) * 10) / 10;
+
+			out.push({ entry: { date: localDateOf(cursor), kg }, loggedAt: cursor.getTime() });
+		}
+
+		cursor.setDate(cursor.getDate() - 1);
+	}
+
+	return out.toReversed();
+}
+
 /** A template as the seed plants it: the payload, plus the tombstone if it has one. */
 export type SeedTemplate = {
 	template: Template;
@@ -557,6 +612,8 @@ export type SeedContent = {
 	templates: SeedTemplate[];
 	/** Oldest first. */
 	workouts: FinishedWorkout[];
+	/** Oldest first. */
+	bodyweight: SeedBodyweight[];
 };
 
 /**
@@ -628,6 +685,7 @@ export function seedContent(now: number): SeedContent {
 			// Recent, and never started: a plan made last week and not yet run.
 			{ template: templateOf(ARMS, days[days.length - 3]), deletedAt: null }
 		],
-		workouts
+		workouts,
+		bodyweight: bodyweightLog(now)
 	};
 }

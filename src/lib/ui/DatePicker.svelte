@@ -132,6 +132,15 @@
 	<Calendar.Root
 		type="single"
 		bind:value
+		onValueChange={(picked) => {
+			// Picking a day is the panel's whole question answered, so it leaves
+			// with the answer — the same close `selectToday` performs, found the
+			// hard way: a panel that stayed open sat over the sheet under it and
+			// swallowed the Save tap. Deselecting (undefined) is not an answer.
+			if (picked !== undefined) {
+				open = false;
+			}
+		}}
 		bind:placeholder={month}
 		{minValue}
 		maxValue={max}

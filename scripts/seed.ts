@@ -1,5 +1,6 @@
 import { and, eq, like } from 'drizzle-orm';
 
+import { bodyweightId } from '../src/lib/domain/bodyweight.ts';
 import { createUser, issueToken } from '../src/lib/server/auth/accounts.ts';
 import { getDatabase } from '../src/lib/server/db/client.ts';
 import { databasePath } from '../src/lib/server/db/config.ts';
@@ -48,7 +49,7 @@ const SEED_PREFIX = 'seed-';
  * fresh seq above its watermark.
  */
 function plant(db: Database, userId: string, now: number): number {
-	const { templates, workouts } = seedContent(now);
+	const { templates, workouts, bodyweight } = seedContent(now);
 
 	return db.transaction((tx) => {
 		const rows = [
@@ -68,6 +69,19 @@ function plant(db: Database, userId: string, now: number): number {
 				updatedAt: workout.finishedAt,
 				deletedAt: null,
 				payload: workout
+			})),
+			// The one kind that cannot wear the seed prefix: a day's entry has
+			// exactly one id, `bodyweight-<date>`, or the app's own put for that
+			// day would sit beside the seed's as a duplicate. The costs are small
+			// and accepted — the planted-count check above does not see these
+			// rows (the prefixed ones already answer it), and a `--force` replant
+			// overwrites a hand-logged weight on a day the seed covers.
+			...bodyweight.map(({ entry, loggedAt }) => ({
+				id: bodyweightId(entry.date),
+				kind: 'bodyweight' as const,
+				updatedAt: loggedAt,
+				deletedAt: null,
+				payload: entry
 			}))
 		];
 
@@ -127,6 +141,6 @@ if (planted.length > 0 && !force) {
 } else {
 	const count = plant(db, user.id, Date.now());
 
-	console.log(`planted ${count} records: eight weeks of training, ending yesterday`);
+	console.log(`planted ${count} records: eight weeks of training and weigh-ins, ending yesterday`);
 	console.log('  sign in and the launch sync pulls it onto the device');
 }

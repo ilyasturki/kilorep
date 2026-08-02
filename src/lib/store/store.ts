@@ -8,6 +8,8 @@
  * time, so a record is born syncable rather than retrofitted on push.
  */
 
+import type { BodyweightEntry } from '$lib/domain/bodyweight';
+import { bodyweightId } from '$lib/domain/bodyweight';
 import type { PastSession } from '$lib/domain/stats';
 import type { Template } from '$lib/domain/template';
 import type { History, Workout } from '$lib/domain/workout';
@@ -259,6 +261,70 @@ export class Store {
 		const record = await tx.store.get(id);
 
 		if (record !== undefined && record.kind === 'template') {
+			record.deletedAt = deletedAt;
+			record.updatedAt = deletedAt;
+			record.dirty = true;
+			await tx.store.put(record);
+		}
+
+		await tx.done;
+	}
+
+	// --- body weight ----------------------------------------------------------
+
+	/**
+	 * Upsert by day: the id is derived from the entry's date, so "one per day,
+	 * re-logging overwrites" is a same-key put rather than a rule anyone
+	 * enforces. A blind put on purpose, unlike `updateWorkout`'s read-modify —
+	 * writing over a tombstone here is not an accident to guard against but the
+	 * gesture's meaning: logging a weight for a day is an affirmative claim
+	 * about that day, deleted before or not.
+	 */
+	public async saveBodyweight(entry: BodyweightEntry, updatedAt: number): Promise<void> {
+		// Spelled field by field, same bargain as `finishWorkout`: a field added
+		// to `BodyweightEntry` fails the build here instead of silently syncing.
+		const payload: BodyweightEntry = {
+			date: entry.date,
+			kg: entry.kg
+		};
+
+		await this.db.put('records', {
+			id: bodyweightId(entry.date),
+			kind: 'bodyweight',
+			updatedAt,
+			deletedAt: null,
+			payload,
+			dirty: true
+		});
+	}
+
+	/** Every live entry, oldest day first. Tombstones stay in the box. */
+	public async listBodyweight(): Promise<BodyweightEntry[]> {
+		const records = await this.db.getAllFromIndex('records', 'kind', 'bodyweight');
+
+		return (
+			records
+				.filter((record) => record.deletedAt === null)
+				// The storage-boundary assertion `listWorkouts` already makes, for the
+				// same reason: this store is the only writer of the kind.
+				// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+				.map((record) => record.payload as BodyweightEntry)
+				// ISO dates order lexicographically, so the calendar sort is a string
+				// sort.
+				.toSorted((a, b) => (a.date < b.date ? -1 : 1))
+		);
+	}
+
+	/**
+	 * A delete is a tombstone, not a removal — CLAUDE.md's rule, same as
+	 * `deleteTemplate`, and `updatedAt` moves with it or the tombstone loses
+	 * last-write-wins to the live copy and undeletes itself on the next pull.
+	 */
+	public async deleteBodyweight(date: string, deletedAt: number): Promise<void> {
+		const tx = this.db.transaction('records', 'readwrite');
+		const record = await tx.store.get(bodyweightId(date));
+
+		if (record !== undefined && record.kind === 'bodyweight') {
 			record.deletedAt = deletedAt;
 			record.updatedAt = deletedAt;
 			record.dirty = true;

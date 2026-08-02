@@ -245,3 +245,37 @@ describe('the planted states', () => {
 		expect(workoutTitle(orphan, live)).toBe('Bench Press + 4 more');
 	});
 });
+
+describe('the weigh-ins', () => {
+	it('runs oldest first, one per day, ending just before the anchor', () => {
+		const dates = content.bodyweight.map(({ entry }) => entry.date);
+
+		// ISO dates order lexicographically, which is also what makes them keys.
+		expect(dates).toStrictEqual(dates.toSorted());
+		expect(new Set(dates).size).toBe(dates.length);
+
+		const last = content.bodyweight.at(-1);
+
+		if (last === undefined) {
+			throw new Error('no weigh-ins planted');
+		}
+
+		expect(last.loggedAt).toBeLessThan(NOW);
+		expect(NOW - last.loggedAt).toBeLessThan(2 * DAY);
+	});
+
+	it('misses days the way a real log does', () => {
+		// Sixty calendar days, minus the Sundays and one weekend away: the trend
+		// must render gaps, and a log with an entry every single day tests none.
+		expect(content.bodyweight.length).toBeGreaterThan(40);
+		expect(content.bodyweight.length).toBeLessThan(60);
+	});
+
+	it('stays inside a plausible human range, one decimal at most', () => {
+		for (const { entry } of content.bodyweight) {
+			expect(entry.kg).toBeGreaterThan(75);
+			expect(entry.kg).toBeLessThan(90);
+			expect(Math.round(entry.kg * 10) / 10).toBe(entry.kg);
+		}
+	});
+});

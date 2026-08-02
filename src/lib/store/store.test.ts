@@ -278,6 +278,58 @@ describe('templates', () => {
 	});
 });
 
+describe('body weight', () => {
+	let store: Store;
+
+	beforeEach(async () => {
+		store = await freshStore();
+	});
+
+	it('round-trips an entry and overwrites the same day in place', async () => {
+		await store.saveBodyweight({ date: '2026-08-02', kg: 80.4 }, 100);
+		await store.saveBodyweight({ date: '2026-08-02', kg: 80.1 }, 200);
+
+		expect(await store.listBodyweight()).toEqual([{ date: '2026-08-02', kg: 80.1 }]);
+	});
+
+	it('lists oldest day first regardless of save order', async () => {
+		await store.saveBodyweight({ date: '2026-08-02', kg: 80 }, 100);
+		await store.saveBodyweight({ date: '2026-07-28', kg: 80.6 }, 200);
+
+		const listed = await store.listBodyweight();
+
+		expect(listed.map((entry) => entry.date)).toEqual(['2026-07-28', '2026-08-02']);
+	});
+
+	it('deletes as a tombstone that wins last-write-wins', async () => {
+		await store.saveBodyweight({ date: '2026-08-02', kg: 80 }, 100);
+		await store.deleteBodyweight('2026-08-02', 300);
+
+		expect(await store.listBodyweight()).toEqual([]);
+
+		const dirty = await store.dirtyRecords();
+		const record = dirty.find((r) => r.id === 'bodyweight-2026-08-02');
+
+		expect(record).toMatchObject({ deletedAt: 300, updatedAt: 300 });
+	});
+
+	it('re-logging a deleted day resurrects it, deliberately', async () => {
+		await store.saveBodyweight({ date: '2026-08-02', kg: 80 }, 100);
+		await store.deleteBodyweight('2026-08-02', 200);
+		await store.saveBodyweight({ date: '2026-08-02', kg: 80.2 }, 300);
+
+		expect(await store.listBodyweight()).toEqual([{ date: '2026-08-02', kg: 80.2 }]);
+	});
+
+	it('stays out of the other kinds in the shared records box', async () => {
+		await store.saveBodyweight({ date: '2026-08-02', kg: 80 }, 100);
+		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
+
+		expect(await store.listBodyweight()).toHaveLength(1);
+		expect(await store.listWorkouts()).toHaveLength(1);
+	});
+});
+
 describe('history derivation', () => {
 	let store: Store;
 

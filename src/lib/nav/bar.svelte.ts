@@ -3,6 +3,8 @@ import { getContext, setContext } from 'svelte';
 import Barbell from '$lib/ui/icons/Barbell.svelte';
 import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
 import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
+import Gauge from '$lib/ui/icons/Gauge.svelte';
+import GaugeFill from '$lib/ui/icons/GaugeFill.svelte';
 import ListBullets from '$lib/ui/icons/ListBullets.svelte';
 import Stack from '$lib/ui/icons/Stack.svelte';
 
@@ -78,6 +80,9 @@ export function navTabs(): NavTab[] {
 		},
 		{ href: '/templates', label: 'Templates', icon: Stack },
 		{ href: '/exercises', label: 'Exercises', icon: ListBullets },
+		// The gauge is the closest glyph Phosphor has to a scale's dial; its
+		// fill is a true solid of the same object, so the pair holds.
+		{ href: '/weight', label: 'Weight', icon: Gauge, iconActive: GaugeFill },
 		// Bold alone, like Exercises — see the glyph's own header for why the
 		// fill is no partner. PRODUCT.md still owes the bar its final order,
 		// judged on the phone; History lands last until then.
