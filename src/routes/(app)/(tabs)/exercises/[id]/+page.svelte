@@ -3,6 +3,7 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import { rawPr } from '$lib/domain/stats';
 	import { familyOf } from '$lib/exercises/browse';
+	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, loadModeNote } from '$lib/exercises/label';
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -84,21 +85,27 @@
 			‹
 		</a>
 
-		<div class="flex flex-col gap-1 px-1">
-			<h1 class="text-2xl font-extrabold tracking-tight">{exercise.name}</h1>
-			<!-- No equipment: the name already carries it wherever it is not the
-			     default. What survives is the load mode, and only when there is one
-			     — it is the line that says the numbers below count double. -->
-			{#if loadNote}
-				<p class="text-md font-bold text-ink-faint">{loadNote}</p>
-			{/if}
+		<div class="flex items-start justify-between gap-3 px-1">
+			<div class="flex flex-col gap-1">
+				<h1 class="text-2xl font-extrabold tracking-tight">{exercise.name}</h1>
+				<!-- No equipment: the name already carries it wherever it is not the
+				     default. What survives is the load mode, and only when there is one
+				     — it is the line that says the numbers below count double. -->
+				{#if loadNote}
+					<p class="text-md font-bold text-ink-faint">{loadNote}</p>
+				{/if}
 
-			<div class="flex flex-wrap gap-1.5 pt-1">
-				<Badge tone="accent">{exercise.muscles.primary}</Badge>
-				{#each exercise.muscles.secondary as muscle (muscle)}
-					<Badge>{muscle}</Badge>
-				{/each}
+				<div class="flex flex-wrap gap-1.5 pt-1">
+					<Badge tone="accent">{exercise.muscles.primary}</Badge>
+					{#each exercise.muscles.secondary as muscle (muscle)}
+						<Badge>{muscle}</Badge>
+					{/each}
+				</div>
 			</div>
+
+			<!-- Absent, not reserved, when there is no art: the title column
+			     simply takes the full width. -->
+			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-24 shrink-0" />
 		</div>
 	</header>
 

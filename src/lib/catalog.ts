@@ -20,7 +20,9 @@
  *   `per-hand` and `unilateral`, so a wrong default here corrupts stats
  *   silently. Weight on a per-hand entry means *one* dumbbell; on unilateral,
  *   reps are per side.
- * - **No descriptions, no media, ever** (PRODUCT.md).
+ * - **No descriptions, no photos, no video, ever** (PRODUCT.md). The one
+ *   visual is a bundled line-art SVG per entry in `static/illustrations/`,
+ *   keyed by id — and an entry may ship without one.
  */
 
 import type { Exercise } from '$lib/domain/exercise';
