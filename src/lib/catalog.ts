@@ -73,6 +73,15 @@ export const catalog: Exercise[] = [
 		variantOf: 'dumbbell-bench-press'
 	},
 	{
+		id: 'machine-chest-press',
+		name: 'Machine Chest Press',
+		aliases: ['chest press', 'chest press machine', 'seated chest press'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
+		variantOf: 'bench-press'
+	},
+	{
 		id: 'cable-fly',
 		name: 'Cable Fly',
 		aliases: ['cable crossover', 'crossover'],
@@ -182,6 +191,14 @@ export const catalog: Exercise[] = [
 		loadMode: 'unilateral',
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
 	},
+	{
+		id: 'machine-row',
+		name: 'Machine Row',
+		aliases: ['chest supported row', 'seated machine row', 'hammer row'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
+	},
 
 	// Shoulders
 	{
@@ -209,12 +226,30 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Shoulders', secondary: [] }
 	},
 	{
+		id: 'cable-lateral-raise',
+		name: 'Cable Lateral Raise',
+		aliases: ['cable side raise', 'cable side lateral'],
+		equipment: 'Cable',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Shoulders', secondary: [] },
+		variantOf: 'lateral-raise'
+	},
+	{
 		id: 'rear-delt-fly',
 		name: 'Rear Delt Fly',
 		aliases: ['reverse fly', 'rear delt raise'],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
 		muscles: { primary: 'Shoulders', secondary: ['Back'] }
+	},
+	{
+		id: 'reverse-pec-deck',
+		name: 'Reverse Pec Deck',
+		aliases: ['reverse fly machine', 'rear delt machine', 'reverse peck deck'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		variantOf: 'rear-delt-fly'
 	},
 	{
 		id: 'face-pull',
@@ -241,6 +276,15 @@ export const catalog: Exercise[] = [
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
 		muscles: { primary: 'Biceps', secondary: ['Forearms'] }
+	},
+	{
+		id: 'incline-dumbbell-curl',
+		name: 'Incline DB Curl',
+		aliases: ['incline curl', 'incline dumbbell curl'],
+		equipment: 'Dumbbell',
+		loadMode: 'per-hand',
+		muscles: { primary: 'Biceps', secondary: ['Forearms'] },
+		variantOf: 'dumbbell-curl'
 	},
 	{
 		id: 'hammer-curl',
@@ -346,6 +390,14 @@ export const catalog: Exercise[] = [
 		variantOf: 'squat'
 	},
 	{
+		id: 'hack-squat',
+		name: 'Hack Squat',
+		aliases: ['hack squat machine', 'machine squat'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Quads', secondary: ['Glutes'] }
+	},
+	{
 		id: 'leg-press',
 		name: 'Leg Press',
 		aliases: [],
@@ -387,13 +439,36 @@ export const catalog: Exercise[] = [
 		loadMode: 'total',
 		muscles: { primary: 'Hamstrings', secondary: ['Glutes', 'Back'] }
 	},
+	// The parent kept its slug when the bench angles were split out, because a
+	// slug is never deleted and this one carries every leg curl logged before
+	// the split. Its positional aliases moved to the entries that earned them:
+	// "seated leg curl" typed at the search box must land on the seated entry,
+	// not back here on the row that cannot say which machine it was.
 	{
 		id: 'leg-curl',
 		name: 'Leg Curl',
-		aliases: ['lying leg curl', 'seated leg curl', 'hamstring curl'],
+		aliases: ['hamstring curl'],
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Hamstrings', secondary: [] }
+	},
+	{
+		id: 'seated-leg-curl',
+		name: 'Seated Leg Curl',
+		aliases: ['seated hamstring curl'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Hamstrings', secondary: [] },
+		variantOf: 'leg-curl'
+	},
+	{
+		id: 'lying-leg-curl',
+		name: 'Lying Leg Curl',
+		aliases: ['prone leg curl', 'lying hamstring curl'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Hamstrings', secondary: [] },
+		variantOf: 'leg-curl'
 	},
 
 	// Glutes
@@ -404,6 +479,14 @@ export const catalog: Exercise[] = [
 		equipment: 'Barbell',
 		loadMode: 'total',
 		muscles: { primary: 'Glutes', secondary: ['Hamstrings'] }
+	},
+	{
+		id: 'hip-abduction',
+		name: 'Hip Abduction',
+		aliases: ['abductor machine', 'hip abductor', 'glute abduction'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Glutes', secondary: [] }
 	},
 
 	// Calves
