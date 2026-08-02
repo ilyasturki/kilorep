@@ -31,13 +31,14 @@
 	 * pulls the active set back to centre after a commit, because in a stacked
 	 * session it otherwise marches off the bottom of the page.
 	 *
-	 * From `xl` up the session list the sheet holds on a phone is a card floating
+	 * From `lg` up the session list the sheet holds on a phone is a card floating
 	 * in the left gutter, beside the pane being logged into rather than in front
 	 * of it: the pane stays where every other screen's column is, and the card
-	 * lives in the margin the window has left over. Below `xl` there is no room
-	 * for it — the arithmetic is in the markup — so the overview button follows
-	 * the bar up out of the phone header and stops at `xl`, where the rail takes
-	 * the job over.
+	 * lives in the margin the window has left over. The rail and the app bar
+	 * arrive at the same breakpoint — the column cap steps down at `lg` to make
+	 * the gutter that pays for it, see `app.css` — so the overview button lives
+	 * in the phone header and nowhere else; there is no longer a band where the
+	 * bar is up but the rail is not.
 	 *
 	 * The header is this screen's own below `lg` and the app's bar above it. The
 	 * screen is chrome-less on a phone *while a session is live* because hard
@@ -238,7 +239,7 @@
 	const bar = appBarSlot();
 
 	$effect(() => {
-		bar.action = session === null ? gear : barActions;
+		bar.action = session === null ? gear : finish;
 
 		return () => {
 			bar.action = null;
@@ -264,27 +265,6 @@
      where a second run is one tap away. -->
 {#snippet finish()}
 	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
-{/snippet}
-
-<!-- What the bar carries, which is FINISH and — until the rail arrives at `xl` —
-     the phone's overview button beside it. Between `lg` and `xl` the bar is on
-     screen and the rail is not, and the sheet is the only place in the app a set
-     can be jumped to or an exercise dragged into a different order. Above `xl`
-     the rail is that place, and this half of the slot goes away with it. -->
-{#snippet barActions()}
-	<div class="flex shrink-0 items-center gap-2">
-		<button
-			type="button"
-			aria-label="Session overview"
-			onclick={() => (overview = true)}
-			class="grid min-h-chrome w-10 place-items-center rounded-full border border-line
-				text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2 xl:hidden"
-		>
-			<Stack size={18} />
-		</button>
-
-		{@render finish()}
-	</div>
 {/snippet}
 
 <svelte:head>
@@ -354,17 +334,17 @@
 		     which is the whole reason the set rows land on the same pixel here as
 		     they do on Exercises. A rail with a width would move them, and used to.
 
-		     `left` is where the gutter runs out: half the window, back the 384px
-		     half-cap of the column, back 32px of air, back the card. 39rem is those
-		     three added up at `xl`, 44rem at `2xl`, and they are the only numbers in
+		     `left` is where the gutter runs out: half the window, back the 288px
+		     half-cap of the column, back 16px of air, back the card. 32rem is those
+		     three added up at `lg`, 37rem at `xl`, and they are the only numbers in
 		     this layout.
 
 		     Two widths, because 208px is a card that truncates half the catalog —
 		     Incline Dumbbell Press has never once fitted in it — and the fix is not
 		     a wider rail everywhere but a rail that grows when the window can pay
-		     for it. At `2xl` it takes 288px and still leaves 64px of the gutter
-		     spare; below that the window genuinely has no more to give and the
-		     truncation is the honest price of the rail existing at all.
+		     for it. At `xl` it takes 288px and the gutter still covers it; below
+		     that the window genuinely has no more to give and the truncation is
+		     the honest price of the rail existing at all.
 
 		     `inset-y-0` is the pane's height and nothing more, so `max-h-full` on
 		     the card is exact — a session longer than the window scrolls inside the
@@ -372,14 +352,15 @@
 		     height of what is in it, no edge borrowed from the window, and no
 		     shadow, which in this app means something has left the page.
 
-		     `xl` and not `lg`, which is the app's breakpoint everywhere else: a
-		     768px column centred in the window leaves (w − 768) / 2 a side, and the
-		     240 a 208px card needs does not exist until 1280px. The 320 a 288px one
-		     needs does not exist until 1408px, which is why the second width waits
-		     for `2xl` rather than landing at a breakpoint of its own. See `app.css`. -->
+		     `lg`, the app's one breakpoint, and the cap is what pays for that: at
+		     `lg` the column steps down to 576px, and 576 + 2 × (208 + 16) = 1024
+		     exactly — the rail fits the moment the top bar exists, and no laptop
+		     is left with the bar but not the rail. The 288px width waits for the
+		     1184px that 576 + 2 × (288 + 16) makes, first cleared at `xl` rather
+		     than at a breakpoint of its own. See `app.css`. -->
 			<aside
-				class="absolute inset-y-0 left-[calc(50%-39rem)] hidden w-52 py-3
-					xl:block 2xl:left-[calc(50%-44rem)] 2xl:w-72"
+				class="absolute inset-y-0 left-[calc(50%-32rem)] hidden w-52 py-3
+					lg:block xl:left-[calc(50%-37rem)] xl:w-72"
 			>
 				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
 					<SessionList
@@ -394,9 +375,10 @@
 			</aside>
 
 			<main class="min-h-0 flex-1 overflow-y-auto py-3 pb-safe-b">
-				<!-- Capped and centred in the window, which is the same box the bar
-			     centres its own contents in — so the wordmark and FINISH land over
-			     the set rows, and Exercises' column lands over both.
+				<!-- Capped and centred in the window, which is where the bar centres
+			     its tabs — so the tabs land over the set rows, and Exercises'
+			     column lands under them too. The mark and FINISH pin to the
+			     window's edges instead; the bar explains the split.
 
 			     The gutter goes inside the cap, never on the pane around it: the
 			     bar puts its own there too, and padding on opposite sides of the
@@ -453,7 +435,7 @@
 
 						<!-- The end of the session, where a session ends, and now the only
 					     control under the blocks. The `+ Add exercise` that used to sit
-					     above it is gone: the rail carries one from `xl`, the overview
+					     above it is gone: the rail carries one from `lg`, the overview
 					     sheet carries one below that and the sheet is a tap from the
 					     header, so the pane was the third copy of an act nobody performs
 					     mid-set. What it cost was the two things at the bottom of a

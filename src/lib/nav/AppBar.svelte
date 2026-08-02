@@ -48,19 +48,25 @@
 </script>
 
 <header class="hidden shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:block">
-	<!-- The same cap and the same centring as the page under it, on every route:
-	     the Workout rail floats in the gutter now and takes no width from the
-	     column, so there is nothing left that offsets one and not the other. -->
-	<div class="column-content flex items-center gap-5 px-3 py-2">
+	<!-- Split, not capped. The bar's crew used to share `column-content` with the
+	     page below, until that cap stepped down to 36rem at `lg` to pay for the
+	     Workout rail — and mark, four tabs and FINISH are ~600px that do not fit
+	     in 576. So the tabs keep the alignment that matters: centred in the
+	     window, which is where the column centres itself, they stand over the
+	     set rows with no shared box needed to keep them true. The mark and the
+	     page's action pin to the window's edges instead, framing the whole desk
+	     layout rather than the column. `1fr auto 1fr` is what holds the tabs on
+	     centre while the two ends weigh differently. -->
+	<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 py-2">
 		<a
 			href="/workout"
 			aria-label="Kilorep — workout"
-			class="grid shrink-0 place-items-center rounded-md focus-ring"
+			class="grid place-items-center justify-self-start rounded-md focus-ring"
 		>
 			<img src={favicon} alt="" class="size-5" />
 		</a>
 
-		<nav aria-label="Main" class="flex min-w-0 flex-1 items-center gap-1">
+		<nav aria-label="Main" class="flex items-center gap-1">
 			{#each navTabs() as tab (tab.href)}
 				{@const active = isActive(page.url.pathname, tab.href)}
 				{@const Icon = (active && tab.iconActive) || tab.icon}
@@ -86,7 +92,9 @@
 		</nav>
 
 		{#if slot.action !== null}
-			{@render slot.action()}
+			<div class="justify-self-end">
+				{@render slot.action()}
+			</div>
 		{/if}
 	</div>
 </header>
