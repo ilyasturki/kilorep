@@ -715,6 +715,49 @@
 	background-color: var(--surface);
 }
 
+/* The card a list of rows sits in: History's workouts, Settings' tokens, a
+   muscle's exercises. Rows used to sit bare on `canvas` with nothing but a gap
+   between them, which on a phone reads as a list and on a 1400px monitor reads
+   as a wash of text with no edges.
+
+   A utility rather than a `<ListGroup>` component because the element differs
+   by screen — `<ul>` where the rows are a collection, `<section>` where they
+   are part of the page's outline — and a wrapper component would either force
+   a `<div>` around those or grow an `as` prop, which is a component earning
+   its keep by taking a parameter that says which component it should have been.
+
+   `overflow: hidden` is what rounds the ends: the first and last rows are
+   square and the card clips them, so no child has to know where it sits in the
+   list. The cost is that an outward focus ring on those rows would be clipped
+   too, hence the inset offset below — the same trade `focus-ring-inset` makes
+   for a key in the numpad, for the same reason.
+
+   The fill is `surface`, so on `canvas` this is a card and inside a Sheet —
+   whose panel is already `surface` — it is border and dividers only. That is
+   deliberate and is why nothing here is conditional on context: the picker is a
+   list you scan against a background you have already dismissed, and grouping
+   it a second step up would be the sheet arguing with itself. */
+@utility list-group {
+	overflow: hidden;
+	border-radius: var(--radius-2xl);
+	border: 1px solid var(--line-soft);
+	background-color: var(--surface);
+
+	/* Direct children, so a row wrapped in an `<li>` is parted from its
+	   neighbour exactly like a bare one. */
+	& > * + * {
+		border-top: 1px solid var(--line-soft);
+	}
+
+	& [data-list-row] {
+		border-radius: 0;
+	}
+
+	& [data-list-row]:focus-visible {
+		outline-offset: -2px;
+	}
+}
+
 /* Every small caps label in the app — section headings, field names, the
    add-set row. Five utilities that had drifted to four in one place before
    this became a single name. */

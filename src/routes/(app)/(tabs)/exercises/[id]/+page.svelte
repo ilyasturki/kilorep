@@ -115,23 +115,25 @@
 	{/if}
 
 	{#if family.parent !== null}
-		<section class="flex flex-col gap-1">
-			<h2 class="px-3 label-caps text-ink-faint">Variant of</h2>
-			{@render familyRow(family.parent)}
+		<section class="flex flex-col gap-2">
+			<h2 class="px-3 label-caps">Variant of</h2>
+			<div class="list-group">{@render familyRow(family.parent)}</div>
 		</section>
 	{/if}
 
 	{#if family.variants.length > 0}
-		<section class="flex flex-col gap-1">
-			<h2 class="px-3 label-caps text-ink-faint">Variants</h2>
-			{#each family.variants as variant (variant.id)}
-				{@render familyRow(variant)}
-			{/each}
+		<section class="flex flex-col gap-2">
+			<h2 class="px-3 label-caps">Variants</h2>
+			<div class="list-group">
+				{#each family.variants as variant (variant.id)}
+					{@render familyRow(variant)}
+				{/each}
+			</div>
 		</section>
 	{/if}
 
-	<section class="flex flex-col gap-1">
-		<h2 class="px-3 label-caps text-ink-faint">History</h2>
+	<section class="flex flex-col gap-2">
+		<h2 class="px-3 label-caps">History</h2>
 
 		{#if sessions.length === 0}
 			<EmptyState
@@ -143,9 +145,12 @@
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<div class="flex flex-col px-3">
+			<!-- The same card the family lists above wear, so the screen reads as
+			     three lists rather than two lists and a loose log. The hairlines are
+			     the group's now — these entries used to draw their own. -->
+			<div class="list-group">
 				{#each sessions as session (session.date)}
-					<div class="flex flex-col gap-0.5 border-b border-line-soft py-2.5 last:border-0">
+					<div class="flex flex-col gap-0.5 px-3 py-2.5">
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-bold text-ink-faint">{day.format(session.date)}</span>
 							{#if session.date === pr?.date}

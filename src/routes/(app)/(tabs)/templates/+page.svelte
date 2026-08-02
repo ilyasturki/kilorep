@@ -69,17 +69,22 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<section class="flex flex-col gap-1">
-			{#each data.templates as template (template.id)}
-				<!-- A persisted template can be nameless — named-nothing but planned-
-				     something escapes the blank rule — and a row with no title reads
-				     as a bug, not a choice. -->
-				<ListRow
-					title={template.name.trim() === '' ? 'Untitled' : template.name}
-					meta={planned(template)}
-					href="/templates/{template.id}"
-				/>
-			{/each}
+		<section class="flex flex-col gap-3">
+			<!-- The card stops at the templates: the AddRow below grows the list
+			     rather than belonging to it, and inside the group its dashed edge
+			     would read as a row that had lost its title. -->
+			<div class="list-group">
+				{#each data.templates as template (template.id)}
+					<!-- A persisted template can be nameless — named-nothing but planned-
+					     something escapes the blank rule — and a row with no title reads
+					     as a bug, not a choice. -->
+					<ListRow
+						title={template.name.trim() === '' ? 'Untitled' : template.name}
+						meta={planned(template)}
+						href="/templates/{template.id}"
+					/>
+				{/each}
+			</div>
 
 			<AddRow label="New template" onclick={newTemplate} />
 		</section>

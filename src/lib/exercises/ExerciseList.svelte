@@ -1,10 +1,49 @@
 <script lang="ts" module>
+	import type { Component } from 'svelte';
+
 	import { catalog } from '$lib/catalog';
+	import type { Muscle } from '$lib/domain/exercise';
 	import { sections } from '$lib/exercises/browse';
+	import Back from '$lib/ui/icons/muscles/Back.svelte';
+	import Biceps from '$lib/ui/icons/muscles/Biceps.svelte';
+	import Calves from '$lib/ui/icons/muscles/Calves.svelte';
+	import Chest from '$lib/ui/icons/muscles/Chest.svelte';
+	import Core from '$lib/ui/icons/muscles/Core.svelte';
+	import Forearms from '$lib/ui/icons/muscles/Forearms.svelte';
+	import Glutes from '$lib/ui/icons/muscles/Glutes.svelte';
+	import Hamstrings from '$lib/ui/icons/muscles/Hamstrings.svelte';
+	import Quads from '$lib/ui/icons/muscles/Quads.svelte';
+	import Shoulders from '$lib/ui/icons/muscles/Shoulders.svelte';
+	import Triceps from '$lib/ui/icons/muscles/Triceps.svelte';
 
 	// Once per app, not per mount: the catalog is immutable and the insert
 	// sheet re-mounts this list on every open.
 	const browse = sections(catalog);
+
+	/**
+	 * The one place a `Muscle` becomes a picture. This is the lookup the icons
+	 * README rules out — and the reason it does not apply here: the objection to
+	 * a dispatcher is that it defeats tree-shaking and pays a runtime branch per
+	 * icon, and this screen renders all eleven at once, one lookup per section.
+	 * Nothing is shaken out because nothing is unused.
+	 *
+	 * `Record<Muscle, …>` and not a partial map: a muscle added to `MUSCLES`
+	 * without a body map drawn for it fails the build here rather than rendering
+	 * a section with a hole above it.
+	 */
+	const MUSCLE_ICONS: Record<Muscle, Component<{ size?: number; class?: string }>> = {
+		Chest,
+		Back,
+		Shoulders,
+		Biceps,
+		Triceps,
+		Forearms,
+		Core,
+		Quads,
+		Hamstrings,
+		Glutes,
+		Calves
+	};
 </script>
 
 <script lang="ts">
@@ -33,6 +72,11 @@
 	 * A row says what it was last lifted at and how long ago, which is what the
 	 * pick actually turns on; an exercise with no past says nothing at all, so
 	 * the list sorts itself by eye into movements trained and movements not.
+	 *
+	 * Every block of rows here — a muscle's exercises, a search's results, the
+	 * Similar shortcut — is one `list-group` card. Bare rows on the page were
+	 * legible on a phone and a wash of text on a monitor, where the column is
+	 * wide and nothing draws an edge between one exercise and the next.
 	 */
 	type Props = {
 		query: string;
@@ -85,7 +129,12 @@
 	{#snippet recency()}{since}{/snippet}
 
 	<!-- The mark rides the search posture only — browsing asked no question, so
-	     there is nothing to answer for. -->
+	     there is nothing to answer for.
+
+	     A variant is indented with padding rather than a margin, now that the row
+	     sits inside a card: a margin would pull the row off the card's left edge
+	     and take the hairline above it along, leaving a divider that starts a
+	     third of the way in. -->
 	<ListRow
 		title={exercise.name}
 		match={searching ? matchRange(exercise.name, query) : null}
@@ -94,7 +143,7 @@
 		chevron={onpick === undefined}
 		href={onpick === undefined ? `/exercises/${exercise.id}` : undefined}
 		onclick={onpick === undefined ? undefined : () => onpick(exercise)}
-		class={indented ? 'ml-8' : undefined}
+		class={indented ? 'pl-11' : undefined}
 	/>
 {/snippet}
 
@@ -106,7 +155,9 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<div class="flex flex-col gap-1">
+		<!-- One card, not one per result: the ranking is the answer and a stack of
+		     separate cards would draw eleven edges through a single ordered list. -->
+		<div class="list-group">
 			{#each results as exercise (exercise.id)}
 				{@render row(exercise, false)}
 			{/each}
@@ -119,46 +170,63 @@
 		     rows would be a fold hiding nothing. The sections below are unchanged
 		     underneath — this is a shortcut past them, never a replacement. -->
 		{#if similar.length > 0}
-			<section class="flex flex-col gap-1">
-				<h2 class="px-3 label-caps text-ink-faint">Similar</h2>
+			<section class="flex flex-col gap-2">
+				<h2 class="px-3 label-caps">Similar</h2>
 
-				{#each similar as exercise (exercise.id)}
-					{@render row(exercise, false)}
-				{/each}
+				<div class="list-group">
+					{#each similar as exercise (exercise.id)}
+						{@render row(exercise, false)}
+					{/each}
+				</div>
 			</section>
 		{/if}
 
 		{#each browse as section (section.muscle)}
-			<section class="flex flex-col gap-1">
-				<h2 class="px-3 label-caps text-ink-faint">{section.muscle}</h2>
+			<!-- Capitalised because that is what makes it a component in the
+			     template; `Muscle` itself is taken by the domain type. -->
+			{@const Figure = MUSCLE_ICONS[section.muscle]}
 
-				{#each section.families as family (family.parent.id)}
-					{@render row(family.parent, false)}
+			<section class="flex flex-col gap-2">
+				<!-- The figure is the anchor on a long scroll and the word confirms
+				     it, so both sit above the card rather than inside it: a header
+				     row would spend a whole tappable-height slot on something that
+				     is not tappable. 28px is the floor the family is legible at —
+				     `icons/README.md` has the measurement and what breaks below it. -->
+				<h2 class="flex items-center gap-2 px-3 label-caps">
+					<Figure size={28} />
+					{section.muscle}
+				</h2>
 
-					{#if family.variants.length > 0}
-						{@const open = expanded[family.parent.id] === true}
+				<div class="list-group">
+					{#each section.families as family (family.parent.id)}
+						{@render row(family.parent, false)}
 
-						<!-- Its own row rather than a control inside the parent's:
-						     ListRow's rule is one element per tap, and the parent row
-						     already spends its tap on the exercise itself. -->
-						<button
-							type="button"
-							onclick={() => (expanded[family.parent.id] = !open)}
-							class="ml-8 flex min-h-chrome items-center gap-1.5 rounded-xl px-3 text-left
-								label-caps text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2"
-						>
-							<CaretDown size={14} class="transition-transform {open ? 'rotate-180' : ''}" />
-							{family.variants.length}
-							{family.variants.length === 1 ? 'variant' : 'variants'}
-						</button>
+						{#if family.variants.length > 0}
+							{@const open = expanded[family.parent.id] === true}
 
-						{#if open}
-							{#each family.variants as variant (variant.id)}
-								{@render row(variant, true)}
-							{/each}
+							<!-- Its own row rather than a control inside the parent's:
+							     ListRow's rule is one element per tap, and the parent row
+							     already spends its tap on the exercise itself. Square, like
+							     every row in the card — the card owns the corners. -->
+							<button
+								type="button"
+								onclick={() => (expanded[family.parent.id] = !open)}
+								class="flex min-h-chrome w-full items-center gap-1.5 pr-3 pl-11 text-left
+									label-caps focus-ring-inset hover:bg-surface-2 active:bg-surface-2"
+							>
+								<CaretDown size={14} class="transition-transform {open ? 'rotate-180' : ''}" />
+								{family.variants.length}
+								{family.variants.length === 1 ? 'variant' : 'variants'}
+							</button>
+
+							{#if open}
+								{#each family.variants as variant (variant.id)}
+									{@render row(variant, true)}
+								{/each}
+							{/if}
 						{/if}
-					{/if}
-				{/each}
+					{/each}
+				</div>
 			</section>
 		{/each}
 	</div>

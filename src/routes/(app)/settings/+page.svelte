@@ -307,7 +307,7 @@
 				</div>
 			{/if}
 
-			<ul class="flex flex-col">
+			<ul class="list-group">
 				{#each data.tokens as token (token.id)}
 					<li>
 						<ListRow

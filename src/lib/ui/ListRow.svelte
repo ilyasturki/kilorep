@@ -97,10 +97,15 @@
 	{/if}
 {/snippet}
 
+<!-- `data-list-row` is how `list-group` finds the row it is wrapping: inside a
+     card the row's own corners are squared and its focus ring turns inward, and
+     the attribute survives the `<li>` and `<section>` wrappers the call sites
+     put in between. A class would have to be threaded through every one of
+     those. -->
 {#if href}
-	<a {href} class={shape}>{@render body()}</a>
+	<a {href} data-list-row class={shape}>{@render body()}</a>
 {:else if onclick}
-	<button type="button" {onclick} class={shape}>{@render body()}</button>
+	<button type="button" data-list-row {onclick} class={shape}>{@render body()}</button>
 {:else}
-	<div class={shape}>{@render body()}</div>
+	<div data-list-row class={shape}>{@render body()}</div>
 {/if}

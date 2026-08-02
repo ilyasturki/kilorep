@@ -19,6 +19,16 @@ Phosphor's `fill` weight is the intended partner for active/selected states — 
 - **Keep the contract**: `size` (number, default 24) and `class`, `viewBox="0 0 256 256"`, `fill="currentColor"`, `aria-hidden="true"`, `focusable="false"`. Colour always inherits from the parent's `text-*`; the accessible name lives on the wrapping control.
 - **Nothing dynamic but `width` / `height` / `class`.** Everything else static so Svelte hoists the template.
 
+## The muscle family (`muscles/`)
+
+Eleven body maps, one per `MUSCLES` entry, and the one thing here Phosphor did not draw — it has no anatomy set, so this geometry is ours. They are not Phosphor-shaped and must not try to be: a bold outline glyph cannot say *which* muscle without a body under it.
+
+Each file is a lit region over a shared faint silhouette — `BodyFront.svelte` or `BodyBack.svelte`, imported, never copied. Copying the figure is how eleven icons stop being one family.
+
+**The back view is load-bearing.** Biceps and Triceps are the same rectangles in the same place; so are Quads and Hamstrings. The only thing telling them apart is the posterior base's spine channel, which splits the trunk into halves. Measured in Chrome: clear at 28px, soft at 24, gone at 20 — so the section header renders these at **28px** and anything smaller silently merges two pairs of sections. Do not shrink them without redrawing the pairs.
+
+Same contract as the rest (`size`, `class`, `viewBox="0 0 256 256"`, `currentColor`, `aria-hidden`), so they colour from the parent's `text-*` like everything else. The faint layer is an `opacity` on the figure rather than a second colour, which keeps them single-token and theme-proof.
+
 ## Adding one
 
 ```

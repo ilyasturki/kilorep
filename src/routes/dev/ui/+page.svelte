@@ -466,6 +466,20 @@
 				</div>
 			</article>
 
+			<article class={card}>
+				<h2 class="label-caps">list-group</h2>
+				<!-- On `canvas`, which is the only place the fill is visible: dropped on
+				     a Sheet the card is border and dividers alone, by design. -->
+				<div class="rounded-xl bg-canvas p-2">
+					<div class="list-group">
+						<ListRow title="Bench Press" meta="80 kg × 8" href="#list-group" />
+						<ListRow title="Cable Fly" onclick={() => {}} />
+						<ListRow title="Pec Deck" meta="never" />
+					</div>
+				</div>
+				<span class={caption}>rows squared and parted; the card clips the ends</span>
+			</article>
+
 			<article class="{card} row-span-2">
 				<h2 class="label-caps">DragOrder</h2>
 				<div bind:this={dragList.root} class="flex flex-col gap-1 rounded-xl bg-canvas p-2">

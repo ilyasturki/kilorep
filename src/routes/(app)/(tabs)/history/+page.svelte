@@ -55,7 +55,7 @@
 			{/snippet}
 		</EmptyState>
 	{:else}
-		<section class="flex flex-col gap-1">
+		<section class="list-group">
 			{#each workouts as workout (workout.id)}
 				<ListRow
 					title={workoutTitle(workout, data.templates)}
