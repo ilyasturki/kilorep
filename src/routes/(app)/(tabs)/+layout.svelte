@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { tick } from 'svelte';
+	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 
 	import { isActive, navTabs } from '$lib/nav/bar.svelte';
 
-	import type { LayoutProps } from './$types';
+	import type { LayoutProps, Snapshot } from './$types';
 
 	/**
 	 * The tab bar, below `lg`. Above it the same tabs are in the bar across the
@@ -55,13 +57,82 @@
 	const ownsPane = $derived(
 		page.url.pathname === '/workout' || page.url.pathname.startsWith('/templates/')
 	);
+
+	let pane = $state<HTMLElement | null>(null);
+
+	/**
+	 * Where each tab was scrolled to, given back on the way back.
+	 *
+	 * SvelteKit already restores scroll per history entry and it has never once
+	 * worked here, for a reason that is this layout's doing: `scroll_state()`
+	 * reads `pageYOffset`, and the window in this app does not scroll. `(app)`
+	 * is `h-dvh`, the scroller is the box below, and the number the framework
+	 * dutifully saves and restores is a permanent zero. Worse, its router sets
+	 * `history.scrollRestoration = 'manual'` at boot, so the browser's own
+	 * restoration is switched off underneath it and there is nothing to fall
+	 * back on. A snapshot is the sanctioned way to say what the framework
+	 * cannot see, and one on the layout covers all four tabs that share this
+	 * box — Exercises, History, Templates, Weight — because the box is one
+	 * element that outlives the navigations between them.
+	 *
+	 * Back and forward only, which is the whole contract of a snapshot: it is
+	 * keyed to the history entry being returned to. Tapping a tab is a new
+	 * entry and still lands at the top, which is what a tap on a destination
+	 * should do.
+	 *
+	 * `tick` before the write, because restore runs while the incoming page is
+	 * still the outgoing one's height — assigning a deep offset to a short pane
+	 * clamps it, and the clamp is silent. Waiting is also what sequences this
+	 * against the page-level snapshots underneath: Exercises restores its
+	 * search text in the same pass, and the offset has to be measured against
+	 * the list that text produces, not the unfiltered one it replaces.
+	 *
+	 * Zero when the route owns its own pane and this box is not rendered, which
+	 * is Workout and the template editor. Workout deliberately has no snapshot
+	 * of its own: `ExerciseBlock` already pulls the live set to centre when it
+	 * mounts, so coming back mid-session lands on the set being logged rather
+	 * than on an offset — measured on a phone, back from a tab returned the
+	 * active set to the middle of the pane from a page the user had scrolled to
+	 * the top. That is rule 7's answer and it beats a remembered offset; a
+	 * snapshot here would only race the smooth scroll that produces it.
+	 */
+	export const snapshot: Snapshot<number> = {
+		capture: () => pane?.scrollTop ?? 0,
+		restore: async (top) => {
+			await tick();
+
+			if (pane !== null) {
+				pane.scrollTop = top;
+			}
+		}
+	};
+
+	/**
+	 * And the other half: a tab tapped is a tab opened at the top.
+	 *
+	 * The box below is one element for all four tabs, and nothing was resetting
+	 * it — SvelteKit zeroes `pageYOffset`, which this app does not use. So the
+	 * offset leaked across every tap and arrived clamped to whatever the next
+	 * tab happened to be tall enough to hold: measured on a phone, Exercises at
+	 * 1200 handed History a 747 it had never asked for, and Weight a 947. Not a
+	 * restoration and not a top — a number with no meaning on either screen.
+	 *
+	 * Everything except a popstate, because a popstate is the snapshot's and
+	 * this would undo it. `enter` writes a zero over a zero on first mount,
+	 * which costs nothing and is worth the one less branch.
+	 */
+	afterNavigate((navigation) => {
+		if (navigation.type !== 'popstate' && pane !== null) {
+			pane.scrollTop = 0;
+		}
+	});
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
 	{#if ownsPane}
 		{@render children()}
 	{:else}
-		<div class="min-h-0 flex-1 overflow-y-auto">
+		<div bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
 			{@render children()}
 		</div>
 	{/if}

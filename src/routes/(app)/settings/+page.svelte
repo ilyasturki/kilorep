@@ -3,6 +3,7 @@
 
 	import { createToken, logout, revokeToken } from '$lib/api/auth';
 	import { ApiError, apiBase, checkServer, setApiBase } from '$lib/api/client';
+	import BackLink from '$lib/nav/BackLink.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -204,17 +205,7 @@
 
 <main class="column-content flex min-h-full flex-col gap-6 px-3 pt-safe-t pb-4 lg:pt-0">
 	<header class="flex flex-col gap-3 pt-3">
-		<!-- `‹` is a character, like ListRow's `›` — measured: U+2039 present in
-		     the subset. -->
-		<a
-			href="/workout"
-			aria-label="Back to workout"
-			class="grid min-h-chrome w-11 place-items-center self-start rounded-full border
-				border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
-				active:bg-surface-2"
-		>
-			‹
-		</a>
+		<BackLink href="/workout" label="Back to workout" class="self-start" />
 
 		<h1 class="px-1 text-2xl font-extrabold tracking-tight">Settings</h1>
 	</header>

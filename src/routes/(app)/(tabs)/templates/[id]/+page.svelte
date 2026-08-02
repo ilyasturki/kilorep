@@ -17,6 +17,7 @@
 		startFrom
 	} from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
+	import BackLink from '$lib/nav/BackLink.svelte';
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { plannedGroups } from '$lib/templates/plan';
@@ -324,16 +325,7 @@
 	     stays at every width, since the app bar has nowhere to put a text field. -->
 	<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:pt-0">
 		<div class="column-content flex items-center gap-2 px-3 py-2">
-			<!-- `‹` is a character, like ListRow's `›` — the subset carries it. -->
-			<a
-				href="/templates"
-				aria-label="Back to templates"
-				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
-					active:bg-surface-2"
-			>
-				‹
-			</a>
+			<BackLink href="/templates" label="Back to templates" />
 
 			<input
 				bind:value={template.name}

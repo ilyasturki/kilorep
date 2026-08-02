@@ -22,6 +22,7 @@
 	import { workoutTitle } from '$lib/history/label';
 	import WorkoutOptionsSheet from '$lib/history/WorkoutOptionsSheet.svelte';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
+	import BackLink from '$lib/nav/BackLink.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
 	import { activeWorkout } from '$lib/workout/active.svelte';
@@ -441,19 +442,12 @@
 	     screenful of vertical space on a screen that is read by scrolling. -->
 	<header class="flex flex-col gap-1 pt-3">
 		<div class="flex items-center gap-2">
-			<!-- `‹` is a character, like ListRow's `›` — the subset carries it. It
-			     stays navigation in both postures: Done is beside it, and a back arrow
-			     that sometimes went back and sometimes did not would be the surprise
-			     DESIGN.md rules out. -->
-			<a
-				href="/history"
-				aria-label="Back to history"
-				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
-					active:bg-surface-2"
-			>
-				‹
-			</a>
+			<!-- It stays navigation in both postures: Done is beside it, and a back
+			     arrow that sometimes went back and sometimes did not would be the
+			     surprise DESIGN.md rules out. This screen is the one the exercise
+			     page links into, which is why `/history` alone was not enough — see
+			     `BackLink`. -->
+			<BackLink href="/history" label="Back to history" />
 
 			<h1 class="min-w-0 flex-1 truncate text-xl font-extrabold tracking-tight">{title}</h1>
 

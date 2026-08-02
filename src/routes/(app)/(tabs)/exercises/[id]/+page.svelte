@@ -5,6 +5,7 @@
 	import { familyOf } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, loadModeNote, ordinal } from '$lib/exercises/label';
+	import BackLink from '$lib/nav/BackLink.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -74,17 +75,11 @@
 <main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
 	<header class="flex flex-col gap-2 pt-3">
 		<div class="flex items-center gap-3">
-			<!-- `‹` is a character, like ListRow's `›` — measured: U+2039 present in
-			     the subset. -->
-			<a
-				href="/exercises"
-				aria-label="Back to exercises"
-				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
-					active:bg-surface-2"
-			>
-				‹
-			</a>
+			<!-- The variant chips below walk exercise to exercise, so the fixed
+			     parent was wrong on this screen before any other: `/exercises` is
+			     the catalog root, not the exercise the user pressed a chip from.
+			     `BackLink` walks history and keeps the root as its fallback. -->
+			<BackLink href="/exercises" label="Back to exercises" />
 
 			<h1 class="min-w-0 text-2xl font-extrabold tracking-tight">{exercise.name}</h1>
 		</div>

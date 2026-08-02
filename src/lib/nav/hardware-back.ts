@@ -3,6 +3,7 @@ import { goto } from '$app/navigation';
 
 import { decideBack } from '$lib/nav/back';
 import { navTabs } from '$lib/nav/bar.svelte';
+import { backDepth } from '$lib/nav/depth';
 import { closeTopOverlay, hasOpenOverlay } from '$lib/ui/overlays';
 
 /**
@@ -41,8 +42,11 @@ async function remove(listener: Promise<{ remove: () => Promise<void> }>): Promi
  * server bundle keeps no dead listener. Same platform-edge placement as
  * `ui/haptics.ts`.
  *
- * `goto` with `replaceState`: popping a detail screen back to its tab root is
- * back, and back does not mint history.
+ * `goto` with `replaceState`: dropping a detail screen onto its tab root is
+ * back, and back does not mint history. It is the fallback now rather than the
+ * rule — a screen inside a tab walks real history whenever there is any — so it
+ * fires on the cold paths, where minting an entry would be worst: a
+ * notification tap has nothing behind it to begin with.
  */
 export function wireHardwareBack(): () => void {
 	if (!import.meta.env.APP_BUILD) {
@@ -56,7 +60,7 @@ export function wireHardwareBack(): () => void {
 			pathname: location.pathname,
 			overlayOpen: hasOpenOverlay(),
 			tabRoots: navTabs().map((tab) => tab.href),
-			historyLength: history.length
+			depth: backDepth()
 		});
 
 		switch (decision.kind) {

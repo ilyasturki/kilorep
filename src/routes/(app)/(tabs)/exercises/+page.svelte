@@ -2,7 +2,7 @@
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
 	import SearchField from '$lib/ui/SearchField.svelte';
 
-	import type { PageProps } from './$types';
+	import type { PageProps, Snapshot } from './$types';
 
 	/**
 	 * The catalog as a place: browse by muscle, search by anything, tap through
@@ -12,6 +12,23 @@
 	let { data }: PageProps = $props();
 
 	let query = $state('');
+
+	/**
+	 * The search survives a trip into an exercise and back.
+	 *
+	 * It is not a nicety here, it is what makes the layout's scroll snapshot
+	 * mean anything: search "row", scroll to the eighth match, tap it, come
+	 * back — and an offset restored against the full catalog points at a
+	 * different exercise entirely. The two have to return together or neither
+	 * should. Restored second, in the same pass, which is why the layout waits
+	 * a `tick` before it writes its offset.
+	 */
+	export const snapshot: Snapshot<string> = {
+		capture: () => query,
+		restore: (value) => {
+			query = value;
+		}
+	};
 </script>
 
 <svelte:head>
