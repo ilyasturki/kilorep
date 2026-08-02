@@ -25,6 +25,6 @@
 	focusable="false"
 >
 	<BodyBack />
-	<rect x="94" y="216" width="31" height="40" rx="15" />
-	<rect x="131" y="216" width="31" height="40" rx="15" />
+	<rect x="102" y="215" width="19" height="32" rx="9.5" />
+	<rect x="135" y="215" width="19" height="32" rx="9.5" />
 </svg>

@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Body map, Chest. The pec block, the widest lit region in the family and
-	// the easiest to read at any size.
+	// Body map, Chest. Two pec mounds meeting at the sternum, spanning nearly
+	// the full chest width so the band still reads at 28px.
 	//
 	// Original geometry, not Phosphor — see README.md for why the family exists
 	// and what a new member has to match. The figure itself lives in
@@ -25,7 +25,6 @@
 	focusable="false"
 >
 	<BodyFront />
-	<path
-		d="M102,54 H154 a24,24 0 0 1 24,24 v16 a30,30 0 0 1 -30,30 h-40 a30,30 0 0 1 -30,-30 v-16 a24,24 0 0 1 24,-24 z"
-	/>
+	<ellipse cx="108" cy="80" rx="19" ry="14" transform="rotate(-6 108 80)" />
+	<ellipse cx="148" cy="80" rx="19" ry="14" transform="rotate(6 148 80)" />
 </svg>

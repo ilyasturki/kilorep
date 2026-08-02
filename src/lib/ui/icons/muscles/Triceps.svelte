@@ -24,6 +24,6 @@
 	focusable="false"
 >
 	<BodyBack />
-	<rect x="32" y="94" width="38" height="60" rx="19" />
-	<rect x="186" y="94" width="38" height="60" rx="19" />
+	<rect x="58" y="72" width="16" height="40" rx="8" transform="rotate(6 66 92)" />
+	<rect x="182" y="72" width="16" height="40" rx="8" transform="rotate(-6 190 92)" />
 </svg>

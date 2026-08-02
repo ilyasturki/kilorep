@@ -346,7 +346,7 @@ describe('last performed', () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 150);
 
 		expect(await store.lastPerformed()).toEqual({
-			'bench-press': { date: 100, sets: [{ weight: 80, reps: 8 }] }
+			'bench-press': { date: 100, workoutId: 'w1', position: 1, sets: [{ weight: 80, reps: 8 }] }
 		});
 	});
 
@@ -356,7 +356,12 @@ describe('last performed', () => {
 
 		const last = await store.lastPerformed();
 
-		expect(last['bench-press']).toEqual({ date: 200, sets: [{ weight: 85, reps: 5 }] });
+		expect(last['bench-press']).toEqual({
+			date: 200,
+			workoutId: 'w2',
+			position: 1,
+			sets: [{ weight: 85, reps: 5 }]
+		});
 	});
 
 	it('is absent for an exercise with nothing completed, the shape a row reads as never trained', async () => {
@@ -393,9 +398,48 @@ describe('past sessions', () => {
 		const past = await store.pastSessions('bench-press');
 
 		expect(past).toEqual([
-			{ date: 100, sets: [{ weight: 80, reps: 8 }] },
-			{ date: 200, sets: [{ weight: 82.5, reps: 6 }] }
+			{ date: 100, workoutId: 'w1', position: 1, sets: [{ weight: 80, reps: 8 }] },
+			{ date: 200, workoutId: 'w2', position: 1, sets: [{ weight: 82.5, reps: 6 }] }
 		]);
+	});
+
+	it('counts the ordinal across every exercise the workout holds, performed or not', async () => {
+		const store = await freshStore();
+
+		// Three exercises in session order, the middle one never completed: the
+		// ordinal must still say "3rd", because that is where the exercise sits
+		// on the workout screen the id links to.
+		const w = workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]);
+		w.entries.push(
+			{
+				id: 'w1-entry-2',
+				exercises: [
+					{
+						id: 'w1-node-2',
+						exerciseId: 'cable-fly',
+						sets: [set({ weight: 20, reps: 12, completed: false }, 'w1-fly-1')]
+					}
+				]
+			},
+			{
+				id: 'w1-entry-3',
+				exercises: [
+					{
+						id: 'w1-node-3',
+						exerciseId: 'pec-deck',
+						sets: [set({ weight: 50, reps: 10 }, 'w1-pec-1')]
+					}
+				]
+			}
+		);
+		await store.finishWorkout(w, 150);
+
+		expect(await store.pastSessions('pec-deck')).toEqual([
+			{ date: 100, workoutId: 'w1', position: 3, sets: [{ weight: 50, reps: 10 }] }
+		]);
+
+		// The projection agrees: same workout, same ordinal.
+		expect((await store.lastPerformed())['pec-deck']?.position).toBe(3);
 	});
 });
 

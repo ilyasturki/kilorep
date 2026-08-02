@@ -44,16 +44,24 @@
 		Glutes,
 		Calves
 	};
+
+	// The same posture as `Chip.svelte`'s resting state, minus the toggle
+	// machinery: these chips navigate or pick, they never stay pressed.
+	const chip =
+		'inline-flex min-h-chip items-center rounded-xl bg-sunken px-3 text-sm font-bold ' +
+		'text-ink-muted select-none focus-ring hover:bg-surface-2 active:bg-surface-2 ' +
+		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
 </script>
 
 <script lang="ts">
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Exercise } from '$lib/domain/exercise';
-	import { lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
+	import type { Family } from '$lib/exercises/browse';
+	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
+	import { lastSetLabel, lastSinceLabel, variantLabel } from '$lib/exercises/label';
 	import type { LastPerformed } from '$lib/store/derive';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
-	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
 
 	/**
@@ -63,15 +71,18 @@
 	 * picked — because the folding rules below are exactly the kind of thing
 	 * that drifts when written twice.
 	 *
-	 * Browsing shows sections by muscle, one row per family; the variants sit
-	 * behind an expander so Lat Pulldown is one row, not three. Searching
-	 * flattens everything into `searchExercises`' ranked order — ranking beats
-	 * shelving once a question has been asked — and variants surface
-	 * individually, which is how "close grip" goes straight to the child.
+	 * Browsing shows sections by muscle, one row per family; the variants ride
+	 * under the parent's row as named chips — "Close-Grip", "Incline" — one tap
+	 * each, nothing folded away. Searching flattens everything into
+	 * `searchExercises`' ranked order — ranking beats shelving once a question
+	 * has been asked — and variants surface individually as full rows, which is
+	 * how "close grip" goes straight to the child.
 	 *
 	 * A row says what it was last lifted at and how long ago, which is what the
 	 * pick actually turns on; an exercise with no past says nothing at all, so
 	 * the list sorts itself by eye into movements trained and movements not.
+	 * Every row also carries its line-art thumb, because a picture answers
+	 * "which machine is that" faster than any name.
 	 *
 	 * Every block of rows here — a muscle's exercises, a search's results, the
 	 * Similar shortcut — is one `list-group` card. Bare rows on the page were
@@ -111,13 +122,9 @@
 	// rule; `searching` only picks which posture the template draws.
 	const searching = $derived(query.trim() !== '');
 	const results = $derived(searchExercises(catalog, query));
-
-	// Collapsed between visits and between families: remembering which family
-	// was open is not worth the state, and an expander is one tap.
-	let expanded = $state<Record<string, boolean>>({});
 </script>
 
-{#snippet row(exercise: Exercise, indented: boolean)}
+{#snippet row(exercise: Exercise)}
 	{@const last = lastPerformed[exercise.id]}
 	{@const since = lastSinceLabel(last, now)}
 
@@ -128,23 +135,51 @@
 	     row that has no past. -->
 	{#snippet recency()}{since}{/snippet}
 
-	<!-- The mark rides the search posture only — browsing asked no question, so
-	     there is nothing to answer for.
+	<!-- The slot is reserved even when the entry has no art (sumo-deadlift
+	     today, every custom later): a missing thumb must not unalign the one
+	     title in the column that lacks it. -->
+	{#snippet thumb()}
+		<span class="size-11 shrink-0">
+			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-full" />
+		</span>
+	{/snippet}
 
-	     A variant is indented with padding rather than a margin, now that the row
-	     sits inside a card: a margin would pull the row off the card's left edge
-	     and take the hairline above it along, leaving a divider that starts a
-	     third of the way in. -->
+	<!-- The mark rides the search posture only — browsing asked no question, so
+	     there is nothing to answer for. -->
 	<ListRow
 		title={exercise.name}
 		match={searching ? matchRange(exercise.name, query) : null}
 		meta={lastSetLabel(last)}
+		leading={thumb}
 		trailing={since === undefined ? undefined : recency}
 		chevron={onpick === undefined}
 		href={onpick === undefined ? `/exercises/${exercise.id}` : undefined}
 		onclick={onpick === undefined ? undefined : () => onpick(exercise)}
-		class={indented ? 'pl-11' : undefined}
 	/>
+{/snippet}
+
+{#snippet variantChips(family: Family)}
+	<!-- Left edge on the title's column, under the thumb's width: the chips
+	     belong to the name above them, not to the card. `aria-label` restores
+	     the full name the chip's stripped label elides. -->
+	<div class="flex flex-wrap gap-1.5 pt-0.5 pr-3 pb-2.5 pl-17">
+		{#each family.variants as variant (variant.id)}
+			{@const label = variantLabel(variant.name, family.parent.name)}
+
+			{#if onpick === undefined}
+				<a href="/exercises/{variant.id}" aria-label={variant.name} class={chip}>{label}</a>
+			{:else}
+				<button
+					type="button"
+					onclick={() => onpick?.(variant)}
+					aria-label={variant.name}
+					class={chip}
+				>
+					{label}
+				</button>
+			{/if}
+		{/each}
+	</div>
 {/snippet}
 
 {#if searching}
@@ -159,23 +194,22 @@
 		     separate cards would draw eleven edges through a single ordered list. -->
 		<div class="list-group">
 			{#each results as exercise (exercise.id)}
-				{@render row(exercise, false)}
+				{@render row(exercise)}
 			{/each}
 		</div>
 	{/if}
 {:else}
 	<div class="flex flex-col gap-5">
-		<!-- Flat, and the variants are not folded: the whole point of this block is
-		     that every row in it is already an answer, and an expander over six
-		     rows would be a fold hiding nothing. The sections below are unchanged
-		     underneath — this is a shortcut past them, never a replacement. -->
+		<!-- Flat, no chips: the whole point of this block is that every row in it
+		     is already an answer. The sections below are unchanged underneath —
+		     this is a shortcut past them, never a replacement. -->
 		{#if similar.length > 0}
 			<section class="flex flex-col gap-2">
 				<h2 class="px-3 label-caps">Similar</h2>
 
 				<div class="list-group">
 					{#each similar as exercise (exercise.id)}
-						{@render row(exercise, false)}
+						{@render row(exercise)}
 					{/each}
 				</div>
 			</section>
@@ -199,32 +233,16 @@
 
 				<div class="list-group">
 					{#each section.families as family (family.parent.id)}
-						{@render row(family.parent, false)}
+						<!-- One wrapper per family, so the card's hairlines fall
+						     between families and the chip strip stays visually the
+						     parent row's own. -->
+						<div>
+							{@render row(family.parent)}
 
-						{#if family.variants.length > 0}
-							{@const open = expanded[family.parent.id] === true}
-
-							<!-- Its own row rather than a control inside the parent's:
-							     ListRow's rule is one element per tap, and the parent row
-							     already spends its tap on the exercise itself. Square, like
-							     every row in the card — the card owns the corners. -->
-							<button
-								type="button"
-								onclick={() => (expanded[family.parent.id] = !open)}
-								class="flex min-h-chrome w-full items-center gap-1.5 pr-3 pl-11 text-left
-									label-caps focus-ring-inset hover:bg-surface-2 active:bg-surface-2"
-							>
-								<CaretDown size={14} class="transition-transform {open ? 'rotate-180' : ''}" />
-								{family.variants.length}
-								{family.variants.length === 1 ? 'variant' : 'variants'}
-							</button>
-
-							{#if open}
-								{#each family.variants as variant (variant.id)}
-									{@render row(variant, true)}
-								{/each}
+							{#if family.variants.length > 0}
+								{@render variantChips(family)}
 							{/if}
-						{/if}
+						</div>
 					{/each}
 				</div>
 			</section>

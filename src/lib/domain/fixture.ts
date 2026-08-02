@@ -28,8 +28,13 @@
 import type { PastSession } from '$lib/domain/stats';
 import type { History, Workout, WorkoutEntry, WorkoutSet } from '$lib/domain/workout';
 
+// `workoutId`/`position` are fabricated: nothing here reads them — the fixture
+// predates both fields, and its consumers only ever project `sets` — but the
+// type requires them because the real derive layer always knows.
 const session = (date: number, sets: [number, number][]): PastSession => ({
 	date,
+	workoutId: `fixture-${date}`,
+	position: 1,
 	sets: sets.map(([weight, reps]) => ({ weight, reps }))
 });
 

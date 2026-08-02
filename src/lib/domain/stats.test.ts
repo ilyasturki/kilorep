@@ -1,6 +1,17 @@
 import { describe, expect, test } from 'vitest';
 
+import type { PastSession } from '$lib/domain/stats';
 import { bestSet, rawPr } from '$lib/domain/stats';
+import type { PerformedSet } from '$lib/domain/workout';
+
+// `rawPr` never reads the workout link or the ordinal; dummies keep the
+// literals below about what the tests are about.
+const session = (date: number, sets: PerformedSet[]): PastSession => ({
+	date,
+	workoutId: `w${date}`,
+	position: 1,
+	sets
+});
 
 describe('bestSet', () => {
 	test('no history is null, not a zero', () => {
@@ -40,8 +51,8 @@ describe('rawPr', () => {
 
 	test('dates the PR to the session that set it, not the latest one', () => {
 		const pr = rawPr([
-			{ date: 1, sets: [{ weight: 100, reps: 3 }] },
-			{ date: 2, sets: [{ weight: 90, reps: 8 }] }
+			session(1, [{ weight: 100, reps: 3 }]),
+			session(2, [{ weight: 90, reps: 8 }])
 		]);
 
 		expect(pr).toEqual({ set: { weight: 100, reps: 3 }, date: 1 });
@@ -49,8 +60,8 @@ describe('rawPr', () => {
 
 	test('matching the PR later does not move its date', () => {
 		const pr = rawPr([
-			{ date: 1, sets: [{ weight: 100, reps: 5 }] },
-			{ date: 2, sets: [{ weight: 100, reps: 5 }] }
+			session(1, [{ weight: 100, reps: 5 }]),
+			session(2, [{ weight: 100, reps: 5 }])
 		]);
 
 		expect(pr!.date).toBe(1);

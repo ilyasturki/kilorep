@@ -10,8 +10,19 @@ import type { PerformedSet } from '$lib/domain/workout';
  * Whole past sessions of one exercise, oldest first — the shape the exercise
  * detail renders and this module's functions read. Derived from finished
  * workouts by the store — see `$lib/store/derive`.
+ *
+ * `workoutId` names the finished workout the session came from — the record
+ * `/history/:id` renders — and `position` is the exercise's 1-based place
+ * among that workout's exercises, in session order. Every exercise the
+ * workout holds counts toward the ordinal, performed or not: "4th exercise"
+ * must mean the 4th thing on the screen the id links to.
  */
-export type PastSession = { date: number; sets: PerformedSet[] };
+export type PastSession = {
+	date: number;
+	workoutId: string;
+	position: number;
+	sets: PerformedSet[];
+};
 
 /**
  * The raw PR: heaviest weight ever lifted, tie-broken by reps at that load.

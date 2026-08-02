@@ -4,7 +4,7 @@
 	import { rawPr } from '$lib/domain/stats';
 	import { familyOf } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
-	import { lastSetLabel, lastSinceLabel, loadModeNote } from '$lib/exercises/label';
+	import { lastSetLabel, lastSinceLabel, loadModeNote, ordinal } from '$lib/exercises/label';
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -14,9 +14,9 @@
 
 	/**
 	 * One exercise, read-only: what it is, the family around it, the raw best,
-	 * the sessions behind it. Purely informational — catalog entries are
-	 * immutable and customs are a later slice, so there is not a single action
-	 * on this screen, and that is correct rather than unfinished.
+	 * the sessions behind it. Catalog entries are immutable and customs are a
+	 * later slice, so the only actions here are navigations — the family links,
+	 * and each history entry through to the workout it came from.
 	 *
 	 * The est-1RM trend is settled but deliberately absent: it is the app's
 	 * first chart, and charting gets decided once, at the Dashboard, not
@@ -72,22 +72,29 @@
 {/snippet}
 
 <main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
-	<header class="flex flex-col gap-3 pt-3">
-		<!-- `‹` is a character, like ListRow's `›` — measured: U+2039 present in
-		     the subset. -->
-		<a
-			href="/exercises"
-			aria-label="Back to exercises"
-			class="grid min-h-chrome w-11 place-items-center self-start rounded-full border
-				border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
-				active:bg-surface-2"
-		>
-			‹
-		</a>
+	<header class="flex flex-col gap-2 pt-3">
+		<div class="flex items-center gap-3">
+			<!-- `‹` is a character, like ListRow's `›` — measured: U+2039 present in
+			     the subset. -->
+			<a
+				href="/exercises"
+				aria-label="Back to exercises"
+				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
+					border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
+					active:bg-surface-2"
+			>
+				‹
+			</a>
 
-		<div class="flex items-start justify-between gap-3 px-1">
-			<div class="flex flex-col gap-1">
-				<h1 class="text-2xl font-extrabold tracking-tight">{exercise.name}</h1>
+			<h1 class="min-w-0 text-2xl font-extrabold tracking-tight">{exercise.name}</h1>
+		</div>
+
+		<!-- The art beside what describes the exercise, vertically centred against
+		     it, so neither column floats in space the other left empty. Absent,
+		     not reserved, when there is no art: the notes column simply takes the
+		     full width. -->
+		<div class="flex items-center justify-between gap-4 px-1">
+			<div class="flex min-w-0 flex-col gap-2">
 				<!-- No equipment: the name already carries it wherever it is not the
 				     default. What survives is the load mode, and only when there is one
 				     — it is the line that says the numbers below count double. -->
@@ -95,7 +102,7 @@
 					<p class="text-md font-bold text-ink-faint">{loadNote}</p>
 				{/if}
 
-				<div class="flex flex-wrap gap-1.5 pt-1">
+				<div class="flex flex-wrap gap-1.5">
 					<Badge tone="accent">{exercise.muscles.primary}</Badge>
 					{#each exercise.muscles.secondary as muscle (muscle)}
 						<Badge>{muscle}</Badge>
@@ -103,9 +110,7 @@
 				</div>
 			</div>
 
-			<!-- Absent, not reserved, when there is no art: the title column
-			     simply takes the full width. -->
-			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-24 shrink-0" />
+			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-36 shrink-0" />
 		</div>
 	</header>
 
@@ -152,22 +157,43 @@
 				{/snippet}
 			</EmptyState>
 		{:else}
-			<!-- The same card the family lists above wear, so the screen reads as
-			     three lists rather than two lists and a loose log. The hairlines are
-			     the group's now — these entries used to draw their own. -->
+			<!-- The same card the family lists above wear. Each entry is one link
+			     into the workout it came from — the ordinal says where in that
+			     session the exercise sat, and the answer to "what else did I do
+			     that day" is one tap, not a hunt through the History tab. -->
 			<div class="list-group">
-				{#each sessions as session (session.date)}
-					<div class="flex flex-col gap-0.5 px-3 py-2.5">
+				{#each sessions as session (session.workoutId)}
+					<a
+						href="/history/{session.workoutId}"
+						data-list-row
+						class="flex flex-col gap-2 px-3 py-2.5 focus-ring hover:bg-surface-2
+							active:bg-surface-2 pointer-fine:transition-[background-color]
+							pointer-fine:duration-100"
+					>
 						<div class="flex items-center gap-2">
-							<span class="text-sm font-bold text-ink-faint">{day.format(session.date)}</span>
+							<span class="text-sm font-bold text-ink-faint">
+								{day.format(session.date)} · {ordinal(session.position)} exercise
+							</span>
 							{#if session.date === pr?.date}
 								<Badge tone="accent">PR</Badge>
 							{/if}
+							<span aria-hidden="true" class="ml-auto text-xl leading-none text-ink-faint">
+								›
+							</span>
 						</div>
-						<p class="text-md font-extrabold tracking-tight">
-							{session.sets.map((set) => `${set.weight} × ${set.reps}`).join('  ·  ')}
-						</p>
-					</div>
+
+						<!-- One pill per set, in session order: the weight is the loud
+						     number, the reps ride it muted — the two stopped sharing a
+						     typeface the day the joined `·` line became unreadable. -->
+						<div class="flex flex-wrap gap-1.5">
+							{#each session.sets as set, index (index)}
+								<span class="inline-flex items-baseline gap-1 rounded-lg bg-sunken px-2.5 py-1.5">
+									<span class="text-md font-extrabold tracking-tight">{set.weight}</span>
+									<span class="text-sm font-bold text-ink-faint">×{set.reps}</span>
+								</span>
+							{/each}
+						</div>
+					</a>
 				{/each}
 			</div>
 		{/if}

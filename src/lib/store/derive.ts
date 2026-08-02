@@ -77,7 +77,12 @@ export function pastSessionsFrom(workouts: FinishedWorkout[], exerciseId: string
 		const sets = performedSets(workout, exerciseId);
 
 		if (sets.length > 0) {
-			out.push({ date: workout.startedAt, sets });
+			out.push({
+				date: workout.startedAt,
+				workoutId: workout.id,
+				position: exercisesIn(workout).indexOf(exerciseId) + 1,
+				sets
+			});
 		}
 	}
 
@@ -101,11 +106,16 @@ export function lastPerformedFrom(workouts: FinishedWorkout[]): LastPerformed {
 	const out: LastPerformed = {};
 
 	for (const workout of sorted) {
-		for (const exerciseId of exercisesIn(workout)) {
+		for (const [index, exerciseId] of exercisesIn(workout).entries()) {
 			const sets = performedSets(workout, exerciseId);
 
 			if (sets.length > 0) {
-				out[exerciseId] = { date: workout.startedAt, sets };
+				out[exerciseId] = {
+					date: workout.startedAt,
+					workoutId: workout.id,
+					position: index + 1,
+					sets
+				};
 			}
 		}
 	}

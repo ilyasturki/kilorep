@@ -66,3 +66,35 @@ export function lastSetLabel(session: PastSession | undefined): string | undefin
 export function lastSinceLabel(session: PastSession | undefined, now: number): string | undefined {
 	return session === undefined ? undefined : formatSince(session.date, now);
 }
+
+// `DB` is the one abbreviation the catalog uses in names, so it must compare
+// equal to the word it stands for — without this, "Incline DB Press" under
+// "Dumbbell Bench Press" keeps a stray "DB" on its chip.
+const normalizeWord = (word: string): string => {
+	const lower = word.toLowerCase();
+
+	return lower === 'db' ? 'dumbbell' : lower;
+};
+
+/**
+ * What a variant's chip says under its parent's row: the words of its name the
+ * parent's name does not already carry — "Close-Grip Bench Press" under
+ * "Bench Press" is just "Close-Grip". A variant sharing no words with its
+ * parent (Chin-Up under Pull-Up) keeps its full name, which is also the honest
+ * fallback for any future naming this rule does not anticipate.
+ */
+export function variantLabel(variant: string, parent: string): string {
+	const parentWords = new Set(parent.split(' ').map(normalizeWord));
+	const kept = variant.split(' ').filter((word) => !parentWords.has(normalizeWord(word)));
+
+	return kept.length === 0 ? variant : kept.join(' ');
+}
+
+const ORDINAL_SUFFIX: Record<string, string> = { one: 'st', two: 'nd', few: 'rd', other: 'th' };
+
+const ordinalRules = new Intl.PluralRules('en', { type: 'ordinal' });
+
+/** `4` → `4th`, with the 21st/22nd/23rd endings `Intl` knows and a lookup would botch. */
+export function ordinal(n: number): string {
+	return `${n}${ORDINAL_SUFFIX[ordinalRules.select(n)]}`;
+}

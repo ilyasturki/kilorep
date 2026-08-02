@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Body map, Glutes. The pelvic block, in its posterior two-half form. The
-	// one region that only exists on the back figure.
+	// Body map, Glutes. Two cheeks straddling the spine channel, their gap
+	// continuing it. The one region that only exists on the back figure.
 	//
 	// Original geometry, not Phosphor — see README.md for why the family exists
 	// and what a new member has to match. The figure itself lives in
@@ -25,6 +25,6 @@
 	focusable="false"
 >
 	<BodyBack />
-	<path d="M92,160 h30 v12 a20,20 0 0 1 -20,20 h-10 z" />
-	<path d="M164,160 h-30 v12 a20,20 0 0 0 20,20 h10 z" />
+	<ellipse cx="111" cy="163" rx="14" ry="13" />
+	<ellipse cx="145" cy="163" rx="14" ry="13" />
 </svg>

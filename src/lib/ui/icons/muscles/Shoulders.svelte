@@ -25,6 +25,6 @@
 	focusable="false"
 >
 	<BodyFront />
-	<ellipse cx="64" cy="86" rx="28" ry="24" />
-	<ellipse cx="192" cy="86" rx="28" ry="24" />
+	<ellipse cx="74" cy="64" rx="14" ry="13" />
+	<ellipse cx="182" cy="64" rx="14" ry="13" />
 </svg>

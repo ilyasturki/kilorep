@@ -25,6 +25,6 @@
 	focusable="false"
 >
 	<BodyFront />
-	<rect x="24" y="148" width="34" height="60" rx="17" />
-	<rect x="198" y="148" width="34" height="60" rx="17" />
+	<rect x="51.5" y="114" width="14" height="42" rx="7" transform="rotate(8 58.5 135)" />
+	<rect x="190.5" y="114" width="14" height="42" rx="7" transform="rotate(-8 197.5 135)" />
 </svg>

@@ -25,5 +25,5 @@
 	focusable="false"
 >
 	<BodyFront />
-	<rect x="96" y="118" width="64" height="46" rx="15" />
+	<rect x="106" y="100" width="44" height="48" rx="12" />
 </svg>
