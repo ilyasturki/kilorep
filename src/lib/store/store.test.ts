@@ -491,7 +491,9 @@ describe('past sessions', () => {
 		]);
 
 		// The projection agrees: same workout, same ordinal.
-		expect((await store.lastPerformed())['pec-deck']?.position).toBe(3);
+		const projected = await store.lastPerformed();
+
+		expect(projected['pec-deck']!.position).toBe(3);
 	});
 });
 

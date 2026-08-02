@@ -29,6 +29,12 @@
 	},
 
 	"ignorePatterns": [
+		// Agent worktrees are whole checkouts of this repo, each carrying its own copy
+		// of this file. oxlint walks into them, finds `options.typeAware` in a config
+		// that is no longer the root one, and dies on the parse before it lints a line —
+		// so without this, `bun run lint` cannot run at all while a worktree exists, and
+		// CI becomes the first place anything is checked.
+		".claude/",
 		".svelte-kit/",
 		"build/",
 		"dist/",
@@ -286,6 +292,19 @@
 			"rules": {
 				"unicorn/require-module-specifiers": "off",
 				"typescript/consistent-type-definitions": "off"
+			}
+		},
+		{
+			// The one test tree outside `src/`, because its subject is: `scripts/seed/`
+			// is dev tooling, reached by `node scripts/…` and by nothing the app bundles,
+			// so it has no `$lib` alias and gets none — an alias into it is an invitation
+			// to import seed data from a screen. That leaves the parent-relative import
+			// the only way in, and the rule's three suggestions all make it worse: moving
+			// the file puts a test in the script tree, injecting the dependency means the
+			// test no longer names what it tests, and a package for one seed is absurd.
+			"files": ["tests/**"],
+			"rules": {
+				"import/no-relative-parent-imports": "off"
 			}
 		},
 		{

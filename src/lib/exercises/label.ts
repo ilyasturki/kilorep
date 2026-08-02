@@ -84,7 +84,7 @@ const normalizeWord = (word: string): string => {
  * fallback for any future naming this rule does not anticipate.
  */
 export function variantLabel(variant: string, parent: string): string {
-	const parentWords = new Set(parent.split(' ').map(normalizeWord));
+	const parentWords = new Set(parent.split(' ').map((word) => normalizeWord(word)));
 	const kept = variant.split(' ').filter((word) => !parentWords.has(normalizeWord(word)));
 
 	return kept.length === 0 ? variant : kept.join(' ');

@@ -4,7 +4,7 @@ import { hintsOf } from '$lib/store/derive';
 import { getStore } from '$lib/store/store';
 import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 
-import type { PageLoad } from './$types';
+import type { PageLoad, PageLoadEvent } from './$types';
 
 /**
  * Everything the loop needs from the store, read once on the way in: the last
@@ -34,8 +34,15 @@ import type { PageLoad } from './$types';
  * browser. And because that state is invisible to SvelteKit, `depends` is what
  * keeps the answer from being served out of a cache a hover-preload filled —
  * `SESSION_DEP` has the failure it costs.
+ *
+ * The event is annotated as well as the load, which `/workout`'s does not need
+ * to be: `PageData` here is inferred back through `proxy+page.js` from this
+ * function's own return, and the type-aware lint pass resolves that circle to
+ * `any` — which silently switches off every rule that reads a type in this file.
+ * `PageLoadEvent` is `Parameters<PageLoad>[0]`, so it states what is already
+ * true. (`svelte-check` infers it correctly either way.)
  */
-export const load: PageLoad = async ({ depends }) => {
+export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 	depends(SESSION_DEP);
 
 	if (activeWorkout.session === null) {

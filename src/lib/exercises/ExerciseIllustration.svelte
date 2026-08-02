@@ -63,12 +63,17 @@
 	$effect(() => {
 		let stale = false;
 
-		// `id` is read before the await, so the effect tracks it.
-		void load(id).then((text) => {
+		// Called here rather than inside the closure below, so `id` is read while the
+		// effect is still running and the effect therefore tracks it.
+		const pending = load(id);
+
+		void (async () => {
+			const text = await pending;
+
 			if (!stale) {
 				svg = text;
 			}
-		});
+		})();
 
 		return () => {
 			stale = true;

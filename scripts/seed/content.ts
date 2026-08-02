@@ -25,7 +25,12 @@
 import type { BodyweightEntry } from '../../src/lib/domain/bodyweight.ts';
 import { localDateOf } from '../../src/lib/domain/bodyweight.ts';
 import type { Template, TemplateEntry } from '../../src/lib/domain/template.ts';
-import type { Workout, WorkoutEntry, WorkoutSet } from '../../src/lib/domain/workout.ts';
+import type {
+	Workout,
+	WorkoutEntry,
+	WorkoutExercise,
+	WorkoutSet
+} from '../../src/lib/domain/workout.ts';
 import type { FinishedWorkout } from '../../src/lib/store/derive.ts';
 
 /**
@@ -294,7 +299,7 @@ const ROTATION = [PUSH, PULL, LEGS];
 const BLOCK = 24;
 
 /** Monday, Wednesday, Friday. */
-const TRAINING_WEEKDAYS = [1, 3, 5];
+const TRAINING_WEEKDAYS = new Set([1, 3, 5]);
 
 /** Sessions start in the evening; only the hour is arbitrary. */
 const START_HOUR = 18;
@@ -330,7 +335,7 @@ function trainingDays(now: number, count: number): number[] {
 	cursor.setDate(cursor.getDate() - 1);
 
 	while (days.length < count) {
-		if (TRAINING_WEEKDAYS.includes(cursor.getDay())) {
+		if (TRAINING_WEEKDAYS.has(cursor.getDay())) {
 			days.push(cursor.getTime());
 		}
 
@@ -449,11 +454,11 @@ function workoutOf(plan: Plan, id: string, startedAt: number, sessionIndex: numb
 }
 
 /** Every exercise node in a workout, flattened — what the planting below edits. */
-function exerciseNodes(workout: Workout) {
+function exerciseNodes(workout: Workout): WorkoutExercise[] {
 	return workout.entries.flatMap((entry) => entry.exercises);
 }
 
-function nodeFor(workout: Workout, exerciseId: string) {
+function nodeFor(workout: Workout, exerciseId: string): WorkoutExercise | undefined {
 	return exerciseNodes(workout).find((node) => node.exerciseId === exerciseId);
 }
 
@@ -465,7 +470,12 @@ function nodeFor(workout: Workout, exerciseId: string) {
  */
 function plantPr(workout: Workout): void {
 	const node = nodeFor(workout, 'bench-press');
-	const top = node?.sets.find((set) => set.type === 'normal');
+
+	if (node === undefined) {
+		return;
+	}
+
+	const top = node.sets.find((set) => set.type === 'normal');
 
 	if (top !== undefined) {
 		top.weight = 82.5;
@@ -482,7 +492,12 @@ function plantPr(workout: Workout): void {
  */
 function plantSkippedSet(workout: Workout): void {
 	const node = nodeFor(workout, 'triceps-pushdown');
-	const last = node?.sets.at(-1);
+
+	if (node === undefined) {
+		return;
+	}
+
+	const last = node.sets.at(-1);
 
 	if (last !== undefined) {
 		last.weight = null;
@@ -503,17 +518,20 @@ function plantSkippedSet(workout: Workout): void {
  */
 function plantDrift(workout: Workout): void {
 	const press = nodeFor(workout, 'leg-press');
-	const last = press?.sets.at(-1);
 
-	if (press !== undefined && last !== undefined) {
-		press.sets.push({
-			id: `${press.id}-s4`,
-			type: 'normal',
-			plannedReps: last.plannedReps,
-			weight: last.weight,
-			reps: 8,
-			completed: true
-		});
+	if (press !== undefined) {
+		const last = press.sets.at(-1);
+
+		if (last !== undefined) {
+			press.sets.push({
+				id: `${press.id}-s4`,
+				type: 'normal',
+				plannedReps: last.plannedReps,
+				weight: last.weight,
+				reps: 8,
+				completed: true
+			});
+		}
 	}
 
 	const curl = nodeFor(workout, 'leg-curl');
@@ -631,21 +649,21 @@ export function seedContent(now: number): SeedContent {
 	const [legacyDay, ...blockDays] = days;
 
 	const workouts: FinishedWorkout[] = [];
-	const finish = (plan: Plan, workout: Workout): FinishedWorkout => ({
-		...workout,
-		finishedAt: workout.startedAt + DURATIONS[plan.id] * MINUTE
-	});
+	// Stamped onto the workout rather than copied into a new object: every caller
+	// below hands in a `workoutOf` result that exists for this one call, and object
+	// spread is linted out of everything but a component.
+	const finish = (plan: Plan, workout: Workout): FinishedWorkout =>
+		Object.assign(workout, { finishedAt: workout.startedAt + DURATIONS[plan.id] * MINUTE });
 
 	workouts.push(finish(UPPER, workoutOf(UPPER, 'seed-workout-00', legacyDay, 0)));
 
-	blockDays.forEach((startedAt, index) => {
+	for (const [index, startedAt] of blockDays.entries()) {
 		const plan = ROTATION[index % ROTATION.length];
 		const id = `seed-workout-${String(index + 1).padStart(2, '0')}`;
+		const cycle = Math.floor(index / ROTATION.length);
 
-		workouts.push(
-			finish(plan, workoutOf(plan, id, startedAt, Math.floor(index / ROTATION.length)))
-		);
-	});
+		workouts.push(finish(plan, workoutOf(plan, id, startedAt, cycle)));
+	}
 
 	const pushes = workouts.filter((workout) => workout.templateId === PUSH.id);
 	const legs = workouts.filter((workout) => workout.templateId === LEGS.id);
@@ -675,6 +693,11 @@ export function seedContent(now: number): SeedContent {
 	// real account grows in: plan, then train.
 	const planned = blockDays[0] - DAY;
 
+	// Third-newest training day — last week rather than yesterday. `at` cannot
+	// actually miss on a list `trainingDays` filled to BLOCK + 1 entries, and
+	// `planned` is the only stand-in that would still read as a plan.
+	const armsWritten = days.at(-3) ?? planned;
+
 	return {
 		templates: [
 			// Deleted the day the rotation started — the split it replaced.
@@ -683,7 +706,7 @@ export function seedContent(now: number): SeedContent {
 			{ template: templateOf(PULL, planned), deletedAt: null },
 			{ template: templateOf(LEGS, planned), deletedAt: null },
 			// Recent, and never started: a plan made last week and not yet run.
-			{ template: templateOf(ARMS, days[days.length - 3]), deletedAt: null }
+			{ template: templateOf(ARMS, armsWritten), deletedAt: null }
 		],
 		workouts,
 		bodyweight: bodyweightLog(now)

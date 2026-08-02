@@ -86,7 +86,19 @@ function plant(db: Database, userId: string, now: number): number {
 		];
 
 		for (const row of rows) {
-			const values = { userId, seq: claimSeq(tx, userId), ...row };
+			// Spelled field by field for the reason `store.finishWorkout` gives: object
+			// spread is linted out of everything but a component, and the explicit shape
+			// means a column added to `records` fails the build here rather than going
+			// quietly unwritten on every seeded row.
+			const values = {
+				userId,
+				seq: claimSeq(tx, userId),
+				id: row.id,
+				kind: row.kind,
+				updatedAt: row.updatedAt,
+				deletedAt: row.deletedAt,
+				payload: row.payload
+			};
 
 			tx.insert(records)
 				.values(values)

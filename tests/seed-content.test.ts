@@ -13,7 +13,9 @@ import { describe, expect, it } from 'vitest';
 import { catalogById } from '$lib/catalog';
 import { driftFrom, hasDrift } from '$lib/domain/drift';
 import { rawPr } from '$lib/domain/stats';
+import type { Template } from '$lib/domain/template';
 import { completedSetCount, workoutTitle } from '$lib/history/label';
+import type { FinishedWorkout } from '$lib/store/derive';
 import { pastSessionsFrom, performedSets } from '$lib/store/derive';
 
 import { seedContent } from '../scripts/seed/content.ts';
@@ -26,7 +28,7 @@ const live = content.templates
 	.filter((entry) => entry.deletedAt === null)
 	.map(({ template }) => template);
 
-function templateNamed(name: string) {
+function templateNamed(name: string): Template {
 	const found = live.find((template) => template.name === name);
 
 	if (found === undefined) {
@@ -36,7 +38,7 @@ function templateNamed(name: string) {
 	return found;
 }
 
-function sessionsOf(templateId: string) {
+function sessionsOf(templateId: string): FinishedWorkout[] {
 	return content.workouts.filter((workout) => workout.templateId === templateId);
 }
 
@@ -122,19 +124,17 @@ describe('the block', () => {
 
 describe('the sets', () => {
 	it('logs both numbers on a completed set and neither on an unchecked one', () => {
-		for (const workout of content.workouts) {
-			for (const entry of workout.entries) {
-				for (const exercise of entry.exercises) {
-					for (const set of exercise.sets) {
-						if (set.completed) {
-							expect(set.weight, set.id).not.toBeNull();
-							expect(set.reps, set.id).not.toBeNull();
-						} else {
-							expect(set.weight, set.id).toBeNull();
-							expect(set.reps, set.id).toBeNull();
-						}
-					}
-				}
+		const sets = content.workouts.flatMap((workout) =>
+			workout.entries.flatMap((entry) => entry.exercises.flatMap((exercise) => exercise.sets))
+		);
+
+		for (const set of sets) {
+			if (set.completed) {
+				expect(set.weight, set.id).not.toBeNull();
+				expect(set.reps, set.id).not.toBeNull();
+			} else {
+				expect(set.weight, set.id).toBeNull();
+				expect(set.reps, set.id).toBeNull();
 			}
 		}
 	});
@@ -182,10 +182,14 @@ describe('the planted states', () => {
 	it('sets the bench PR before the last bench session', () => {
 		const sessions = pastSessionsFrom(content.workouts, 'bench-press');
 		const pr = rawPr(sessions);
+		const last = sessions.at(-1);
 
-		expect(pr).not.toBeNull();
-		expect(pr?.set.weight).toBe(82.5);
-		expect(pr?.date).not.toBe(sessions.at(-1)?.date);
+		if (pr === null || last === undefined) {
+			throw new Error('the seed plants no bench PR');
+		}
+
+		expect(pr.set.weight).toBe(82.5);
+		expect(pr.date).not.toBe(last.date);
 	});
 
 	it('drifts the last leg day against its plan, and nothing else', () => {
