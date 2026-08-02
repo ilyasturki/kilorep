@@ -13,9 +13,12 @@
 	font-display: block;
 }
 
-/* Semantic tokens. Values are Tailwind swatches; components name intent only —
-   `bg-surface`, never `bg-neutral-950`. Dark reassigns which swatch each name
-   points at, so a component cannot be styled for one theme and not the other.
+/* Semantic tokens. Components name intent only — `bg-surface`, never
+   `bg-neutral-950`. Dark reassigns what each name points at, so a component
+   cannot be styled for one theme and not the other.
+
+   Light's values are Tailwind swatches throughout. Dark's four depths are the
+   one exception in this file, and the dark block below carries the reason.
 
    Theme follows the OS and nothing else: no toggle, no persistence, no JS.
    Adding a Light/Dark/System setting later means moving this media query to
@@ -25,8 +28,9 @@
 
 	/* Four depths. `canvas` is the page, `surface` the card that sits on it,
 	   `surface-2` a step up inside that card, `sunken` a well pressed into it
-	   (numpad keys, stepper fields). `sunken` only ever appears inside a
-	   `surface` — it collapses onto `canvas` in dark and that is harmless. */
+	   (numpad keys, stepper fields). Four distinct values in both themes: a Chip
+	   wears `sunken` and sits on `canvas` as often as it sits inside a `surface`,
+	   and the two were the same swatch in dark until the ramp was re-spaced. */
 	--canvas: var(--color-neutral-50);
 	--surface: var(--color-white);
 	--surface-2: var(--color-neutral-100);
@@ -79,29 +83,55 @@
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--canvas: var(--color-neutral-950);
-		--surface: var(--color-neutral-900);
-		--surface-2: var(--color-neutral-800);
-		--sunken: var(--color-neutral-950);
+		/* The depth ramp, lifted off near-black and re-spaced evenly. It used to
+		   start at `neutral-950` — 14.5%, four points off black — with the three
+		   depths above it crammed into the next twelve and `sunken` doubling as
+		   `canvas`. The page read as a void with cards floating in it.
+
+		   These four are the file's one exception to naming a Tailwind swatch,
+		   because the neutral scale has no rung between 800 (26.9%) and 700
+		   (37.1%) and nothing below 950 at all. Forcing the ramp onto the rungs
+		   that exist is what produced both the uneven steps and the collapse.
+
+		   oklch at chroma zero, so the spacing is checkable by reading down the
+		   column rather than by converting hex: steps of 4.5, 4.2 and 4.9. A new
+		   depth, if there is ever a fifth, belongs at that interval too. */
+		--sunken: oklch(17.3% 0 0);
+		--canvas: oklch(21.8% 0 0);
+		--surface: oklch(26% 0 0);
+		--surface-2: oklch(30.9% 0 0);
 
 		--ink: var(--color-neutral-100);
 		--ink-muted: var(--color-neutral-400);
-		--ink-faint: var(--color-neutral-500);
+		/* `neutral-500` measured 4.18:1 on the old canvas — already under AA
+		   before the lift made it worse, and this token carries every caps label
+		   and every placeholder in the app. 65% clears the bar on the new
+		   ground: 5.4:1 on `canvas`, 4.8:1 on `surface`. */
+		--ink-faint: oklch(65% 0 0);
 
-		--line: var(--color-neutral-700);
-		--line-soft: var(--color-neutral-800);
+		/* Both rise with the ramp. `line-soft` was `neutral-800`, which is what
+		   `surface-2` was as well — a divider inside a raised card had nothing to
+		   draw against. */
+		--line: oklch(39% 0 0);
+		--line-soft: oklch(32.1% 0 0);
 
-		--nav-hover: var(--color-neutral-800);
-		--nav-selected: var(--color-neutral-700);
+		/* Still the two even steps up from the bar described on `:root`, now
+		   +4.3 and +8.6 from the lifted `surface`. */
+		--nav-hover: oklch(30.3% 0 0);
+		--nav-selected: oklch(34.6% 0 0);
 
 		--accent: var(--color-lime-500);
 		--on-accent: var(--color-neutral-950);
 		--accent-text: var(--color-lime-500);
-		--accent-soft: var(--color-lime-950);
+		/* The soft fills lift too, keeping their swatch's hue and chroma. Left at
+		   `lime-950` and `red-950` they now sit *below* `surface`, so a badge
+		   reads as a hole punched in the card rather than as a fill on it. */
+		--accent-soft: oklch(31.5% 0.078 132.109);
 
 		--danger: var(--color-red-400);
-		--danger-soft: var(--color-red-950);
-		--scrim: rgb(0 0 0 / 0.6);
+		--danger-soft: oklch(29.5% 0.095 26.042);
+		/* A lighter page needs less dimming to read as dimmed. */
+		--scrim: rgb(0 0 0 / 0.55);
 	}
 }
 
