@@ -21,7 +21,14 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async () => {
 	const store = await getStore();
 
-	const [lastPerformed, resume] = await Promise.all([store.lastPerformed(), store.loadSnapshot()]);
+	// Templates ride along for the idle posture, which lists them as ways to
+	// begin — same order and cap-free read as the Templates tab; the screen
+	// decides how many to show.
+	const [lastPerformed, resume, templates] = await Promise.all([
+		store.lastPerformed(),
+		store.loadSnapshot(),
+		store.listTemplates()
+	]);
 
-	return { store, lastPerformed, history: hintsOf(lastPerformed), resume };
+	return { store, lastPerformed, history: hintsOf(lastPerformed), resume, templates };
 };

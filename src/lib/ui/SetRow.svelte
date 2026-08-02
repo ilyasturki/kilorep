@@ -154,12 +154,17 @@
 	</button>
 
 	{#if onoptions}
+		<!-- `sunken`, not `surface-2`: the shell already hovers `surface-2`, so a
+		     button hovering the same swatch inside it never changed colour at all
+		     and read as part of the row rather than as its own target. The well
+		     is a visible step past the lit row in both themes. -->
 		<button
 			type="button"
 			aria-label="Set options"
 			onclick={onoptions}
 			class="mr-2 hidden size-9 shrink-0 place-items-center rounded-lg text-lg text-ink-faint
-				focus-ring hover:bg-surface-2 pointer-fine:grid"
+				focus-ring hover:bg-sunken hover:text-ink-muted pointer-fine:grid
+				pointer-fine:transition-[background-color,color] pointer-fine:duration-100"
 		>
 			<More size={20} />
 		</button>

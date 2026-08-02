@@ -35,6 +35,7 @@
 	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
+	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	import type { PageProps } from './$types';
 
@@ -525,6 +526,7 @@
 		{/if}
 
 		<Button variant="destructive" class="self-center" onclick={() => (deleteOpen = true)}>
+			<Trash size={18} />
 			Delete workout
 		</Button>
 	</div>

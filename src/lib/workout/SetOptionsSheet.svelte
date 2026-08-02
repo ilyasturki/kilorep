@@ -3,6 +3,7 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
+	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	/**
 	 * What a set can be, besides logged.
@@ -57,7 +58,10 @@
 
 <Sheet bind:open {title}>
 	{#if removable}
-		<Button variant="destructive" class="w-full" onclick={remove}>Remove set</Button>
+		<Button variant="destructive" class="w-full" onclick={remove}>
+			<Trash size={18} />
+			Remove set
+		</Button>
 	{:else}
 		<p class="px-1 text-md font-bold text-ink-faint">An exercise keeps at least one set.</p>
 	{/if}

@@ -155,7 +155,7 @@
 			{/if}
 
 			<Select.ContentStatic class="overlay-panel overlay-sheet">
-				<SheetHeader title={label} onclose={() => (open = false)} />
+				<SheetHeader title={label} />
 				{@render list()}
 			</Select.ContentStatic>
 		</Select.Portal>

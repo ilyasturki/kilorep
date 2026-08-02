@@ -3,6 +3,8 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
+	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
+	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	/**
 	 * What an exercise can be, besides performed: swapped for another, or taken
@@ -75,10 +77,18 @@
 	}
 </script>
 
+<!-- Icons lead the labels: a short stack of verbs is read as a menu, and a
+     menu is scanned by glyph before it is read. -->
 <Sheet bind:open title={name}>
 	<div class="flex flex-col gap-2">
-		<Button variant="secondary" class="w-full" onclick={swap}>Swap exercise</Button>
-		<Button variant="destructive" class="w-full" onclick={remove}>Remove exercise</Button>
+		<Button variant="secondary" class="w-full" onclick={swap}>
+			<ArrowsLeftRight size={18} />
+			Swap exercise
+		</Button>
+		<Button variant="destructive" class="w-full" onclick={remove}>
+			<Trash size={18} />
+			Remove exercise
+		</Button>
 	</div>
 </Sheet>
 

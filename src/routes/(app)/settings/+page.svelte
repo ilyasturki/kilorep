@@ -9,6 +9,7 @@
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
+	import Plugs from '$lib/ui/icons/Plugs.svelte';
 
 	import type { PublicToken } from '$lib/api/auth';
 	import type { PageProps } from './$types';
@@ -269,7 +270,10 @@
 				<div class="flex max-w-sm flex-col gap-3 px-1">
 					<p class="text-md break-all text-ink-muted">{server}</p>
 
-					<Button variant="destructive" onclick={() => (disconnectOpen = true)}>Disconnect</Button>
+					<Button variant="destructive" onclick={() => (disconnectOpen = true)}>
+						<Plugs size={18} />
+						Disconnect
+					</Button>
 				</div>
 
 				<AlertDialog

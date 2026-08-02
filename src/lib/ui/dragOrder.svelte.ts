@@ -27,6 +27,7 @@
  */
 
 import { tapLift } from '$lib/ui/haptics';
+import { scrollParent } from '$lib/ui/scroll';
 
 export type DragOrderOptions = {
 	/** The rendered ids, top to bottom, read live on every frame. */
@@ -42,6 +43,14 @@ export type DragOrderOptions = {
 	 * catching up only if the user taps afterwards.
 	 */
 	lift?: (id: string) => void;
+	/**
+	 * The row is back on the ground — released, or snapped home by Escape.
+	 *
+	 * Fired after the reorder is final, which `lift` is too early for: a screen
+	 * that wants to show where the row landed can only do so once it has landed.
+	 * Not fired by unmount teardown, where there is no list left to show.
+	 */
+	drop?: (id: string) => void;
 };
 
 /** Matches `SetRow`'s long-press: a hold that opens something, not one that accelerates. */
@@ -78,29 +87,6 @@ const SETTLE_MS = 200;
  * frame of transition chasing every frame of drag.
  */
 export const SETTLE = `transform ${SETTLE_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
-
-/**
- * The nearest ancestor that scrolls, so the rail and the sheet both work
- * without either of them being told which one they are. Falls back to the
- * document, which is what a list on an unconstrained page scrolls.
- */
-function scrollParent(node: HTMLElement): HTMLElement {
-	let current: HTMLElement | null = node;
-
-	while (current !== null) {
-		const overflow = getComputedStyle(current).overflowY;
-
-		if (overflow === 'auto' || overflow === 'scroll') {
-			return current;
-		}
-
-		current = current.parentElement;
-	}
-
-	return document.scrollingElement instanceof HTMLElement
-		? document.scrollingElement
-		: document.body;
-}
 
 export class DragOrder {
 	/** The list wrapper. Rows inside it are found by their `data-drag-id`. */
@@ -204,7 +190,14 @@ export class DragOrder {
 		}
 
 		clearTimeout(this.#hold);
+
+		const dropped = this.liftedId;
+
 		this.#end();
+
+		if (dropped !== null) {
+			this.#options.drop?.(dropped);
+		}
 	}
 
 	public move(event: PointerEvent): void {
@@ -222,12 +215,20 @@ export class DragOrder {
 	 * every crossing, undoing is a move rather than a discarded draft.
 	 */
 	public cancel(): void {
-		if (this.liftedId !== null) {
-			this.#options.move(this.liftedId, this.#origin);
+		const dropped = this.liftedId;
+
+		if (dropped !== null) {
+			this.#options.move(dropped, this.#origin);
 		}
 
 		clearTimeout(this.#hold);
 		this.#end();
+
+		// A cancel is a put-down too — the row went home rather than somewhere
+		// new, and home may equally be off screen.
+		if (dropped !== null) {
+			this.#options.drop?.(dropped);
+		}
 	}
 
 	/**

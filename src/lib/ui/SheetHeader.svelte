@@ -1,9 +1,14 @@
 <script lang="ts">
-	import Button from '$lib/ui/Button.svelte';
-
 	/**
 	 * The title row on a panel that is not a dialog — the Select list, the
-	 * DatePicker month. Both were the same four lines, down to the CLOSE button.
+	 * DatePicker month. Both were the same four lines.
+	 *
+	 * Only phone bottom panels render this, and none of them carries a CLOSE
+	 * any more: picking an item is how these panels are almost always left,
+	 * and the scrim tap and the hardware back cover walking away — the same
+	 * dismissals the Sheet's drawer trusts. A title alone is still worth a
+	 * component, because it is the accessible shape two panels must not drift
+	 * apart on.
 	 *
 	 * Sheet and AlertDialog keep their own headers rather than rendering this
 	 * one: their titles are `Dialog.Title` / `AlertDialog.Title`, Bits UI parts
@@ -13,13 +18,11 @@
 	 */
 	type Props = {
 		title: string;
-		onclose: () => void;
 	};
 
-	let { title, onclose }: Props = $props();
+	let { title }: Props = $props();
 </script>
 
-<div class="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
+<div class="px-4 pt-4 pb-2">
 	<h2 class="title-panel">{title}</h2>
-	<Button variant="chrome" caps onclick={onclose}>CLOSE</Button>
 </div>

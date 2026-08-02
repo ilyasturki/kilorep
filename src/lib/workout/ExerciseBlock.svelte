@@ -3,6 +3,7 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
+	import { revealCentered } from '$lib/ui/scroll';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 	import ActiveSet from '$lib/workout/ActiveSet.svelte';
@@ -19,6 +20,8 @@
 		ondraft: (setId: string, weight: number | null, reps: number | null) => void;
 		onselect: (setId: string) => void;
 		onadd: () => void;
+		/** The way in for an exercise the plan did not hold, on the add-set row. */
+		oninsert?: () => void;
 		onoptions: (setId: string) => void;
 		/** The exercise itself: swap it, or take it out of the session. */
 		onexercise: () => void;
@@ -33,6 +36,7 @@
 		ondraft,
 		onselect,
 		onadd,
+		oninsert,
 		onoptions,
 		onexercise
 	}: Props = $props();
@@ -75,6 +79,12 @@
 	 * off the bottom and the next tap is a scroll hunt. Pulling it back to
 	 * centre is the same move Hevy makes for supersets, and it is the price the
 	 * stacked session pays for showing everything at once.
+	 *
+	 * Only when it actually left, though — `revealCentered` holds still for a
+	 * set already fully on screen, so tapping a visible row does not slide the
+	 * page underneath the thumb that just landed on it. The effect runs after
+	 * the editor has expanded, which is the size the visibility test has to be
+	 * made at: a row that fit may not fit as an editor.
 	 */
 	let holder = $state<HTMLElement | null>(null);
 
@@ -83,7 +93,7 @@
 			return;
 		}
 
-		holder.scrollIntoView({ block: 'center', behavior: 'smooth' });
+		revealCentered(holder);
 	});
 </script>
 
@@ -111,8 +121,11 @@
 	{#each cursors as cursor (cursor.set.id)}
 		{#if cursor.set.id === activeSetId}
 			<!-- Keyed on the set id so a commit mounts a fresh editor rather than
-			     mutating the open one underneath the user's thumb. -->
-			<div bind:this={holder}>
+			     mutating the open one underneath the user's thumb.
+			     `data-active-set` marks the one live editor for the screen's own
+			     reveals — a jump to the already-active set changes no state, so
+			     the effect above cannot be the one to answer it. -->
+			<div bind:this={holder} data-active-set>
 				{#key cursor.set.id}
 					<ActiveSet
 						{cursor}
@@ -139,5 +152,10 @@
 		{/if}
 	{/each}
 
-	<AddRow label="Add set" onclick={onadd} />
+	<AddRow
+		label="Add set"
+		onclick={onadd}
+		secondaryLabel={oninsert === undefined ? undefined : 'Exercise'}
+		onsecondary={oninsert}
+	/>
 </section>

@@ -20,6 +20,7 @@
 		onjump: (setId: string) => void;
 		oninsert: () => void;
 		onreorder: (entryId: string, index: number) => void;
+		ondrop?: (entryId: string) => void;
 	};
 
 	let {
@@ -28,7 +29,8 @@
 		activeSetId,
 		onjump,
 		oninsert,
-		onreorder
+		onreorder,
+		ondrop
 	}: Props = $props();
 
 	// Jumping is the whole reason the sheet was opened, so it closes behind the
@@ -57,6 +59,7 @@
 		{groups}
 		{activeSetId}
 		{onreorder}
+		{ondrop}
 		onjump={jump}
 		onfocus={onjump}
 		oninsert={insert}

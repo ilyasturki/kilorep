@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { catalogById } from '$lib/catalog';
+	import { startFrom } from '$lib/domain/template';
+	import { firstUncompleted } from '$lib/domain/workout';
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
@@ -13,11 +16,14 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import ListRow from '$lib/ui/ListRow.svelte';
+	import { revealCentered } from '$lib/ui/scroll';
 	import Barbell from '$lib/ui/icons/Barbell.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import Gear from '$lib/ui/icons/Gear.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 
+	import type { Template } from '$lib/domain/template';
 	import type { PageProps } from './$types';
 
 	/**
@@ -75,6 +81,63 @@
 
 	function startEmpty() {
 		activeWorkout.begin(data.history);
+	}
+
+	/**
+	 * A template row on the idle screen begins the workout there and then —
+	 * the same copy-on-start the editor's Start performs, minus the navigation
+	 * it no longer needs and minus its discard dialog, which guarded a live
+	 * session this screen's idle posture is the proof there isn't.
+	 *
+	 * PRODUCT.md retires tap-to-start on the Templates *tab*, where a row also
+	 * means "open this plan". Here a row can mean nothing else: starting is
+	 * this screen's whole job, and the tab keeps the editor route for reading.
+	 */
+	function startTemplate(template: Template) {
+		const workout = startFrom(template, Date.now(), () => crypto.randomUUID());
+		const first = firstUncompleted(workout);
+
+		activeWorkout.begin(data.history, {
+			workout,
+			activeSetId: first === null ? null : first.set.id
+		});
+	}
+
+	/** The idle list stays a glance, not a page: the tab holds the rest. */
+	const idleTemplates = $derived(data.templates.slice(0, 4));
+
+	// The Templates tab's own wording, so the same plan reads the same on both.
+	function planned(template: Template): string {
+		const count = template.entries.flatMap((entry) => entry.exercises).length;
+
+		if (count === 0) {
+			return 'No exercises yet';
+		}
+
+		return count === 1 ? '1 exercise' : `${count} exercises`;
+	}
+
+	/**
+	 * Centre the live editor in the pane, if it is not already fully on
+	 * screen. For the state-changing paths the block's own effect does this;
+	 * this one exists for the changes no effect sees — a jump to the set that
+	 * is already active, and a drag that moved the active exercise after the
+	 * lift-time scroll had already answered. `tick` first, so the measurement
+	 * is of the layout the change just produced.
+	 */
+	async function revealActive() {
+		await tick();
+
+		const holder = document.querySelector('[data-active-set]');
+
+		if (holder instanceof HTMLElement) {
+			revealCentered(holder);
+		}
+	}
+
+	function jumpTo(setId: string) {
+		activeWorkout.session?.select(setId);
+		void revealActive();
 	}
 
 	/**
@@ -273,13 +336,12 @@
 
 {#if session === null}
 	<!-- The idle posture: home, wearing the header the Start page used to wear.
-	     One act and a route — the templates themselves live on their own tab,
-	     because a list to read standing still does not belong on the screen
-	     pressed mid-stride, but the copy naming them owes the thumb a way there
-	     that is not hunting the tab bar. Nothing begins until the commit says
-	     so; a session minted by navigation was how "Resume workout" appeared
-	     over a workout nobody had started, and the outlined route below it is
-	     only a walk to the list. -->
+	     The templates ride under the start button as the ways a workout begins
+	     rather than as a route to walk — reading and editing them stays the
+	     tab's job, and past the glance-sized few the last row is the walk
+	     there. Nothing begins until a tap says so; a session minted by
+	     navigation was how "Resume workout" appeared over a workout nobody had
+	     started. -->
 	<main class="min-h-0 flex-1 overflow-y-auto">
 		<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
 			<header class="flex items-start justify-between gap-3 pt-10 lg:hidden">
@@ -291,15 +353,37 @@
 			<EmptyState
 				class="pb-16"
 				title="No workout running"
-				description="Start empty and build as you go, or begin from a template."
+				description={data.templates.length === 0
+					? 'Start empty and build as you go.'
+					: 'Start empty and build as you go, or begin from a template.'}
 			>
 				{#snippet icon()}
 					<Barbell size={24} />
 				{/snippet}
 				{#snippet action()}
-					<div class="flex flex-col items-center gap-3">
+					<div class="flex w-full flex-col items-center gap-3">
 						<Button variant="commit" onclick={startEmpty}>Start empty workout</Button>
-						<Button href="/templates">Start from a template</Button>
+
+						{#if idleTemplates.length > 0}
+							<!-- `text-left` undoes the EmptyState's centring: these are the
+							     same rows the Templates tab stacks, and a row is not a
+							     caption. A tap starts — see `startTemplate` for why this
+							     list is exempt from the tab's open-don't-start rule. -->
+							<div class="w-full max-w-sm list-group text-left">
+								{#each idleTemplates as template (template.id)}
+									<ListRow
+										title={template.name.trim() === '' ? 'Untitled' : template.name}
+										meta={planned(template)}
+										chevron={false}
+										onclick={() => startTemplate(template)}
+									/>
+								{/each}
+
+								{#if data.templates.length > idleTemplates.length}
+									<ListRow title="See all templates" href="/templates" />
+								{/if}
+							</div>
+						{/if}
 					</div>
 				{/snippet}
 			</EmptyState>
@@ -366,15 +450,20 @@
 					<SessionList
 						{groups}
 						activeSetId={session.activeSetId}
-						onjump={(id) => session.select(id)}
+						onjump={jumpTo}
 						onfocus={(id) => session.select(id)}
 						oninsert={() => (insertOpen = true)}
 						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
+						ondrop={() => void revealActive()}
 					/>
 				</div>
 			</aside>
 
-			<main class="min-h-0 flex-1 overflow-y-auto py-3 pb-safe-b">
+			<!-- `max(…)` and not `pb-safe-b` alone: on the many devices whose inset
+		     is zero the bare token put FINISH flush against the screen's edge,
+		     and the floor of a page deserves the air the drawers already claim
+		     the same way. -->
+			<main class="min-h-0 flex-1 overflow-y-auto py-3 pb-[max(1.5rem,var(--spacing-safe-b))]">
 				<!-- Capped and centred in the window, which is where the bar centres
 			     its tabs — so the tabs land over the set rows, and Exercises'
 			     column lands under them too. The mark and FINISH pin to the
@@ -399,6 +488,7 @@
 							ondraft={(id, w, r) => session.draft(id, w, r)}
 							onselect={(id) => session.select(id)}
 							onadd={() => session.addSet(group.cursors[0].exercise.id)}
+							oninsert={() => (insertOpen = true)}
 							onoptions={options}
 							onexercise={() => exerciseOptions(group.entryId)}
 						/>
@@ -425,6 +515,12 @@
 
 					     It carries no button of its own any more: Finish is below, always,
 					     and two of them stacked would be the screen asking twice. -->
+						<!-- Add-exercise, meanwhile, rides every block's add-set row as the
+					     narrow second segment: the rail from `lg` and the overview sheet
+					     below it still carry the act, but a full-width row of its own at
+					     the pane's foot was retired once for crowding the end of the
+					     session, and the segment is how the pane gets the act back
+					     without asking for that spot again. -->
 						{#if session.finished}
 							<EmptyState title="Every set logged" description="Nothing left in this session.">
 								{#snippet icon()}
@@ -449,11 +545,15 @@
 					     header's 13px and this button's are the same label at two scales
 					     rather than two different labels.
 
-					     Filled only once nothing is left owed, because `Button`'s standing
-					     rule is one filled button per screen and while the loop is running
-					     that button is `Log set`. -->
+					     Always filled, the standing exception to `Button`'s one-filled-
+					     button rule — the end of a session is a commit wherever the
+					     session stands. Compact while sets are owed, so `Log set` keeps
+					     the gym scale to itself; the full slab arrives when nothing is
+					     left, which is the same size change the button already made and
+					     the moment it stops competing with anything. -->
 						<Button
-							variant={session.finished ? 'commit' : 'secondary'}
+							variant="commit"
+							compact={!session.finished}
 							caps
 							class="w-full"
 							onclick={() => (finishing = true)}
@@ -470,9 +570,10 @@
 		bind:open={overview}
 		{groups}
 		activeSetId={session.activeSetId}
-		onjump={(id) => session.select(id)}
+		onjump={jumpTo}
 		oninsert={() => (insertOpen = true)}
 		onreorder={(entryId, index) => session.moveEntry(entryId, index)}
+		ondrop={() => void revealActive()}
 	/>
 
 	<ExercisePickerSheet

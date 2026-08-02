@@ -30,6 +30,7 @@
 	import Input from '$lib/ui/Input.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
+	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	import type { PageProps } from './$types';
 
@@ -372,14 +373,24 @@
 						</div>
 					{/each}
 
-					<AddRow label="Add set" onclick={() => addSet(template, group.id, crypto.randomUUID())} />
+					<AddRow
+						label="Add set"
+						onclick={() => addSet(template, group.id, crypto.randomUUID())}
+						secondaryLabel="Exercise"
+						onsecondary={() => (insertOpen = true)}
+					/>
 				</section>
 			</div>
 		{/each}
 
+		<!-- With blocks on screen, add-exercise rides each add-set row as its
+		     second segment — the same split the workout pane makes — so the
+		     full-width row that used to close the list is gone. The empty plan
+		     keeps the centred ask, which is also where a plan lands when its
+		     last exercise is removed. -->
 		{#if groups.length === 0}
-			<!-- Centred in the pane, the CTA inside. Outlined, not commit: the
-			     screen's one filled button is the sticky Start below. -->
+			<!-- Outlined, not commit: the screen's one filled button is the
+			     sticky Start below. -->
 			<EmptyState title="Nothing planned" description="Add an exercise to shape the session.">
 				{#snippet icon()}
 					<Stack size={24} />
@@ -388,12 +399,11 @@
 					<Button onclick={() => (insertOpen = true)}>Add exercise</Button>
 				{/snippet}
 			</EmptyState>
-		{:else}
-			<AddRow label="Add exercise" onclick={() => (insertOpen = true)} />
 		{/if}
 
 		{#if persisted}
 			<Button variant="destructive" class="self-center" onclick={() => (deleteOpen = true)}>
+				<Trash size={18} />
 				Delete template
 			</Button>
 		{/if}

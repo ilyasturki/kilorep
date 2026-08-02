@@ -41,9 +41,15 @@
 		oninsert: () => void;
 		/** Put the entry at `index`. The screen hands this straight to the domain. */
 		onreorder: (entryId: string, index: number) => void;
+		/**
+		 * The drag is over and the order is final. Where the screen behind checks
+		 * that the exercise it followed at the lift is still on screen — the
+		 * reorder happened after that scroll, and may have carried it back off.
+		 */
+		ondrop?: (entryId: string) => void;
 	};
 
-	let { groups, activeSetId, onjump, onfocus, oninsert, onreorder }: Props = $props();
+	let { groups, activeSetId, onjump, onfocus, oninsert, onreorder, ondrop }: Props = $props();
 
 	/**
 	 * The draggable units are entries, not rows.
@@ -90,7 +96,8 @@
 			if (group !== undefined) {
 				target(group, onfocus);
 			}
-		}
+		},
+		drop: (entryId) => ondrop?.(entryId)
 	});
 
 	// A long-press that lifted a row still ends in a click, and the row under it

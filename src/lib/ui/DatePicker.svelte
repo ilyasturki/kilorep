@@ -200,7 +200,7 @@
 			<Popover.Overlay class="overlay-scrim" />
 
 			<Popover.ContentStatic class="overlay-panel overlay-sheet">
-				<SheetHeader title={label} onclose={() => (open = false)} />
+				<SheetHeader title={label} />
 				{@render body()}
 			</Popover.ContentStatic>
 		</Popover.Portal>

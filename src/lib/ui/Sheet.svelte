@@ -58,7 +58,11 @@
 	});
 </script>
 
-{#snippet header()}
+<!-- CLOSE belongs to the dialog branch alone: the drawer wears the handle and
+     answers the flick it teaches, and a button restating what the gesture,
+     the scrim and the hardware back all already do was chrome on a surface
+     that has none to spare. -->
+{#snippet header(closable: boolean)}
 	<div class="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
 		<div class="min-w-0">
 			<Dialog.Title class="title-panel">{title}</Dialog.Title>
@@ -68,11 +72,13 @@
 				</Dialog.Description>
 			{/if}
 		</div>
-		<Dialog.Close>
-			{#snippet child({ props })}
-				<Button {...props} variant="chrome" caps>CLOSE</Button>
-			{/snippet}
-		</Dialog.Close>
+		{#if closable}
+			<Dialog.Close>
+				{#snippet child({ props })}
+					<Button {...props} variant="chrome" caps>CLOSE</Button>
+				{/snippet}
+			</Dialog.Close>
+		{/if}
 	</div>
 {/snippet}
 
@@ -94,7 +100,7 @@
 			<Dialog.Overlay class="overlay-scrim" />
 
 			<Dialog.Content class={['overlay-panel overlay-sheet', klass]}>
-				{@render header()}
+				{@render header(true)}
 				{@render body()}
 			</Dialog.Content>
 		</Dialog.Portal>
@@ -112,7 +118,7 @@
 
 			<Drawer.Content class={['overlay-panel overlay-drawer', klass]}>
 				<Drawer.Handle class="mt-3" />
-				{@render header()}
+				{@render header(false)}
 				{@render body()}
 			</Drawer.Content>
 		</Drawer.Portal>

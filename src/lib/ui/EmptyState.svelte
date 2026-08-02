@@ -12,6 +12,9 @@
 	 * of the app, and the action it carries is the one thing a new user is
 	 * meant to do next. The action lives here, in the slot, never as a second
 	 * affordance below: an empty screen is one decision, and it asks once.
+	 * The slot spans the pane — the idle Workout screen stacks a template list
+	 * in it, and a list cannot take a width from a wrapper sized to fit — while
+	 * the inherited `text-center` keeps a lone button exactly where it was.
 	 *
 	 * It grows and centres itself: on a screen whose column is `min-h-full`, an
 	 * empty list leaves this the only child with height to claim, so the state
@@ -51,6 +54,6 @@
 	</div>
 
 	{#if action}
-		<div class="pt-1">{@render action()}</div>
+		<div class="w-full pt-1">{@render action()}</div>
 	{/if}
 </div>
