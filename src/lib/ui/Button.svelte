@@ -38,9 +38,17 @@
 
 	// The paint is split from the box it goes on, because both of these come in
 	// two sizes and only the box changes between them.
+	//
+	// Hover is a fill and not a filter, which is what every outlined variant
+	// above already does — one mechanism for "the pointer is on this", and a
+	// named colour per theme rather than a percentage of whatever the accent
+	// happens to be. The press stays a filter deliberately: it has to darken the
+	// hover colour under a mouse and the accent under a thumb, and only a filter
+	// is agnostic about which one it lands on. Both values are theme-paired in
+	// `app.css` — see the `--accent-hover` block.
 	const filled =
 		'bg-accent text-on-accent ' +
-		'hover:brightness-[0.97] active:brightness-[0.94] active:translate-y-px';
+		'hover:bg-accent-hover active:[filter:var(--accent-press)] active:translate-y-px';
 
 	const well = 'border-[1.5px] border-dashed border-line text-ink-faint';
 

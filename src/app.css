@@ -73,6 +73,23 @@
 	--accent-text: var(--color-lime-700);
 	--accent-soft: var(--color-lime-200);
 
+	/* The two states a filled accent wears under a mouse. Both are per-theme
+	   pairs even though `--accent` itself is one colour in both, and that is not
+	   a contradiction: the resting fill is judged against `on-accent`, which is
+	   dark in both themes, while an interaction fill is judged against the
+	   surface it is sitting on. Darkening in dark reads as dimmed rather than
+	   touched, so each theme steps away from its own canvas in the direction it
+	   already treats as raised — the same reasoning as `nav-hover` above.
+
+	   `--accent-press` is a whole filter and not a colour, because the press is
+	   still a filter: it lands on top of whichever fill is underneath, which on
+	   a mouse is the hover colour and on a thumb — where `hover:` never fires —
+	   is the accent itself. It stays out of `@theme` for that reason; it is
+	   consumed as `var()` directly, the way `focus-ring` consumes
+	   `--accent-text`. */
+	--accent-hover: var(--color-lime-600);
+	--accent-press: brightness(0.94);
+
 	--danger: var(--color-red-600);
 	/* The soft danger fill, a per-theme pair for the same reason `accent-soft`
 	   is one: `--danger` is red-600 in light and red-400 in dark, so a single
@@ -127,6 +144,8 @@
 		   `lime-950` and `red-950` they now sit *below* `surface`, so a badge
 		   reads as a hole punched in the card rather than as a fill on it. */
 		--accent-soft: oklch(31.5% 0.078 132.109);
+		--accent-hover: var(--color-lime-400);
+		--accent-press: brightness(1.06);
 
 		--danger: var(--color-red-400);
 		--danger-soft: oklch(29.5% 0.095 26.042);
@@ -183,6 +202,7 @@
 
 	--color-accent: var(--accent);
 	--color-on-accent: var(--on-accent);
+	--color-accent-hover: var(--accent-hover);
 	--color-accent-text: var(--accent-text);
 	--color-accent-soft: var(--accent-soft);
 

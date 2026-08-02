@@ -9,8 +9,8 @@
 		// Scoped to the off state so it cannot race the selected fill: Tailwind
 		// resolves conflicts by stylesheet order, not by which variant is "more
 		// specific" in the class attribute.
-		'data-[state=off]:hover:bg-surface-2 data-[state=on]:hover:brightness-[0.97] ' +
-		'pointer-fine:transition-[background-color,color,filter] pointer-fine:duration-100 ' +
+		'data-[state=off]:hover:bg-surface-2 data-[state=on]:hover:bg-accent-hover ' +
+		'pointer-fine:transition-[background-color,color] pointer-fine:duration-100 ' +
 		'disabled:pointer-events-none disabled:opacity-50';
 </script>
 
