@@ -252,6 +252,31 @@ describe('draftSet', () => {
 		});
 	});
 
+	// The claim only ever moves down, and only here: a set stripped of a number
+	// is a set that can no longer say what happened, and `markSet` would refuse
+	// to make that claim in the first place.
+	test('a set that loses a value stops claiming it happened', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 82.5, 6);
+
+		draftSet(workout, 'bench-1', { weight: null, reps: 6 });
+
+		expect(at(workout, 'bench-1').set).toMatchObject({
+			weight: null,
+			reps: 6,
+			completed: false
+		});
+	});
+
+	test('a claim survives an edit that leaves both numbers standing', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 82.5, 6);
+
+		draftSet(workout, 'bench-1', { weight: 85, reps: 6 });
+
+		expect(at(workout, 'bench-1').set).toMatchObject({ weight: 85, completed: true });
+	});
+
 	test('an unknown set is refused rather than silently ignored', () => {
 		expect(draftSet(freshWorkout(0), 'nope', { weight: 60, reps: 8 })).toBe(false);
 	});

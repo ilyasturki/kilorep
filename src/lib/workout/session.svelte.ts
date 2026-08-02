@@ -71,6 +71,27 @@ export class WorkoutSession {
 	private readonly history: History;
 
 	/**
+	 * Sets the user has taken a number back out of, which are the sets seeding
+	 * must leave alone from then on.
+	 *
+	 * `prefillFor` reaches for the hint whenever a slot is null, and it cannot
+	 * tell "never filled" from "emptied on purpose" — so without this, clearing
+	 * a weight and tapping another set put the old weight straight back the
+	 * moment you returned. The rule is the narrowest one that fixes it: a clear
+	 * is the only thing that ever adds an id here, so no other route into a set
+	 * changes behaviour at all.
+	 *
+	 * In memory and deliberately not in the snapshot: this is a decision about
+	 * the set on screen, not a fact about the workout, and it has no business in
+	 * a record that syncs. A reload seeds the resumed set once more, which is
+	 * the price of keeping it out of the wire format.
+	 *
+	 * Ids of sets since removed are never pruned. They are UUIDs — nothing will
+	 * ever ask about one again.
+	 */
+	readonly #cleared = new Set<string>();
+
+	/**
 	 * Resuming replaces the field initialiser's empty tree with the snapshot,
 	 * cursor and all — always and without asking, because a prompt in front of
 	 * the logging loop is what rule 7 forbids, and a stale session is cleared
@@ -120,11 +141,16 @@ export class WorkoutSession {
 	 * set, so the row shows them while the cursor is elsewhere — uncompleted, in
 	 * its pending dress, because `completed` is the only thing that says a set
 	 * happened and `draftSet` never touches it.
+	 *
+	 * The one set it will not seed is one the user has emptied a field on. See
+	 * `#cleared`: idempotence is what makes seeding safe to repeat, and a slot
+	 * deliberately left empty is the single case where repeating it would undo
+	 * something rather than restate it.
 	 */
 	#focus(setId: string | null): void {
 		this.activeSetId = setId;
 
-		if (setId === null) {
+		if (setId === null || this.#cleared.has(setId)) {
 			return;
 		}
 
@@ -144,8 +170,25 @@ export class WorkoutSession {
 	 * Not a commit and not a partial one: `draftSet` leaves `completed` alone, so
 	 * everything typed before the check is pressed is visible and survives a jump
 	 * away, and none of it claims the set was performed.
+	 *
+	 * An edit that takes a slot from a number to nothing is the user clearing a
+	 * field, and it is noted rather than merely written: seeding would otherwise
+	 * put the number back on the next visit. Read off the set as it stands a line
+	 * before the write, which is the only moment the previous value still exists
+	 * — the editor sends the whole pair every time and says nothing about which
+	 * half moved.
 	 */
 	public draft(setId: string, weight: number | null, reps: number | null): void {
+		const cursor = cursorFor(this.workout, setId);
+
+		if (
+			cursor !== null &&
+			((weight === null && cursor.set.weight !== null) ||
+				(reps === null && cursor.set.reps !== null))
+		) {
+			this.#cleared.add(setId);
+		}
+
 		draftSet(this.workout, setId, { weight, reps });
 	}
 

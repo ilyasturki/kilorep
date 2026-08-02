@@ -28,6 +28,10 @@
 		 * card holds nothing of its own: what it renders is the set, so leaving
 		 * this exercise and coming back finds the numbers still there, and the row
 		 * shows them meanwhile in its pending dress.
+		 *
+		 * A null slot is a field the user emptied, and it travels the same road as
+		 * any other edit — the session is what makes it stick, by declining to
+		 * seed a set someone has taken a number out of.
 		 */
 		ondraft: (weight: number | null, reps: number | null) => void;
 		/**
@@ -190,12 +194,15 @@
 				step={2.5}
 				onchange={(v) => ondraft(v, reps)}
 			/>
+			<!-- Null passes straight through rather than being rounded: it is the
+			     field emptied, and `Math.round(null)` is a rep count of zero the
+			     user never entered. -->
 			<StepperField
 				label="reps"
 				value={reps}
 				recalled={opened.reps}
 				step={1}
-				onchange={(v) => ondraft(weight, Math.round(v))}
+				onchange={(v) => ondraft(weight, v === null ? null : Math.round(v))}
 			/>
 		</div>
 

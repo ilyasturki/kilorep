@@ -4,7 +4,10 @@ import type { BackDecision } from './back';
 
 import { decideBack } from './back';
 
-const tabRoots = ['/workout', '/templates', '/exercises', '/history'];
+// `/workout/live` is a root the bar does not carry — it is the live session,
+// which sits under the Workout tab but is a place to leave the app from rather
+// than a screen to pop out of. `hardware-back.ts` appends it for that reason.
+const tabRoots = ['/workout', '/templates', '/exercises', '/history', '/workout/live'];
 
 function decide(
 	pathname: string,
@@ -52,6 +55,14 @@ describe('decideBack', () => {
 			kind: 'goto',
 			path: '/exercises'
 		});
+	});
+
+	// A root wins over the tab it sits under, whichever order the list is in.
+	// Popped to `/workout` instead, the live session would land on the idle
+	// screen, whose load bounces it straight back — a back press that visibly
+	// does nothing.
+	it('minimizes from the live session rather than popping it to the idle screen', () => {
+		expect(decide('/workout/live')).toEqual({ kind: 'minimize' });
 	});
 
 	it('matches tab roots on segments, not prefixes', () => {

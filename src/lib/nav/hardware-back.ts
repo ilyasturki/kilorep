@@ -47,6 +47,16 @@ async function remove(listener: Promise<{ remove: () => Promise<void> }>): Promi
  * rule — a screen inside a tab walks real history whenever there is any — so it
  * fires on the cold paths, where minting an entry would be worst: a
  * notification tap has nothing behind it to begin with.
+ *
+ * `/workout/live` is passed as a root alongside the bar's own, which is the one
+ * address the tab list cannot supply. It sits under `/workout`, so without this
+ * it would be a screen *inside* a tab: back would walk real history out of a
+ * live session — to whatever page happened to precede it — and, with nothing
+ * behind it, fall back to `/workout`, the idle screen, which bounces a live
+ * session straight back here for a keypress that visibly does nothing. As a
+ * root it minimizes, which is what back does from every other tab and what it
+ * should do from the middle of a set: the way out of a workout is FINISH, not
+ * a hardware button.
  */
 export function wireHardwareBack(): () => void {
 	if (!import.meta.env.APP_BUILD) {
@@ -59,7 +69,7 @@ export function wireHardwareBack(): () => void {
 		const decision = decideBack({
 			pathname: location.pathname,
 			overlayOpen: hasOpenOverlay(),
-			tabRoots: navTabs().map((tab) => tab.href),
+			tabRoots: [...navTabs().map((tab) => tab.href), '/workout/live'],
 			depth: backDepth()
 		});
 

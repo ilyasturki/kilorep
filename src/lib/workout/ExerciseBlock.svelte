@@ -3,7 +3,7 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
-	import { revealCentered } from '$lib/ui/scroll';
+	import { revealNearest } from '$lib/ui/scroll';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 	import ActiveSet from '$lib/workout/ActiveSet.svelte';
@@ -76,15 +76,16 @@
 
 	/**
 	 * The active set marches down a growing page, so after a few commits it is
-	 * off the bottom and the next tap is a scroll hunt. Pulling it back to
-	 * centre is the same move Hevy makes for supersets, and it is the price the
-	 * stacked session pays for showing everything at once.
+	 * off the bottom and the next tap is a scroll hunt. Pulling it back into
+	 * view is the price the stacked session pays for showing everything at once.
 	 *
-	 * Only when it actually left, though — `revealCentered` holds still for a
-	 * set already fully on screen, so tapping a visible row does not slide the
-	 * page underneath the thumb that just landed on it. The effect runs after
-	 * the editor has expanded, which is the size the visibility test has to be
-	 * made at: a row that fit may not fit as an editor.
+	 * Only when it actually left, and only by the shortfall — `revealNearest`
+	 * holds still for a set already fully on screen, so tapping a visible row
+	 * does not slide the page underneath the thumb that just landed on it, and
+	 * a set that has half left the bottom rises half a card rather than
+	 * travelling to the middle of the pane. The effect runs after the editor has
+	 * expanded, which is the size the visibility test has to be made at: a row
+	 * that fit may not fit as an editor.
 	 */
 	let holder = $state<HTMLElement | null>(null);
 
@@ -93,7 +94,7 @@
 			return;
 		}
 
-		revealCentered(holder);
+		revealNearest(holder);
 	});
 </script>
 

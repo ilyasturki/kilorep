@@ -63,7 +63,7 @@
      the scrim and the hardware back all already do was chrome on a surface
      that has none to spare. -->
 {#snippet header(closable: boolean)}
-	<div class="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
+	<div class="flex items-start justify-between gap-3 px-4 pt-4 pb-0.5">
 		<div class="min-w-0">
 			<Dialog.Title class="title-panel">{title}</Dialog.Title>
 			{#if description}
@@ -82,8 +82,17 @@
 	</div>
 {/snippet}
 
+<!-- The 6px of `pt` is not spacing — the header's `pb` was cut by the same
+     amount, so the gap under the title is the 8px it always was. A scroll box
+     clips at its padding edge, and `focus-ring` draws 2px of outline 2px
+     *outside* the control's box, so a focusable sitting flush at the top of
+     this one lost the whole top edge of its ring: the picker's search field
+     lit up on three sides. Padding is what buys the outline room to exist,
+     which is why it belongs here rather than on any one sheet's first child —
+     every sheet in the app has a first child, and several of them are
+     focusable. -->
 {#snippet body()}
-	<div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+	<div class="min-h-0 flex-1 overflow-y-auto px-4 pt-1.5 pb-4">
 		{@render children()}
 	</div>
 {/snippet}

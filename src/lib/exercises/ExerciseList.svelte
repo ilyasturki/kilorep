@@ -16,7 +16,7 @@
 
 <script lang="ts">
 	import { matchRange, searchExercises } from '$lib/domain/search';
-	import type { Exercise } from '$lib/domain/exercise';
+	import type { Exercise, Muscle } from '$lib/domain/exercise';
 	import type { Family } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, variantLabel } from '$lib/exercises/label';
@@ -31,6 +31,10 @@
 	 * navigates to the detail, and the mid-workout insert sheet, where a row is
 	 * picked — because the folding rules below are exactly the kind of thing
 	 * that drifts when written twice.
+	 *
+	 * Either posture can be narrowed to one muscle — see `muscle`, which the
+	 * picker sheets drive from a chip rail and the Exercises screen leaves alone,
+	 * that screen being shelved by muscle already.
 	 *
 	 * Browsing shows sections by muscle, one row per family; the variants ride
 	 * under the parent's row as named chips — "Close-Grip", "Incline" — one tap
@@ -53,6 +57,19 @@
 	type Props = {
 		query: string;
 		/**
+		 * One muscle to narrow to, or null for the whole catalog.
+		 *
+		 * Applied to whichever posture is on screen, and to the thing that posture
+		 * shows. Browsing, it picks the section — so a family stays whole and a
+		 * close-grip bench keeps standing under Bench Press, where the fold already
+		 * puts it. Searching, the list is flat and a row is one exercise, so the
+		 * test is that exercise's own primary and the same close-grip bench answers
+		 * to Triceps. Two answers to "which muscle", because there are two things
+		 * being asked about; a search that re-shelved its results by family would
+		 * be answering a question nobody asked.
+		 */
+		muscle?: Muscle | null;
+		/**
 		 * Every exercise's last session. Passed in rather than read here: this
 		 * component stays store-free, and all three consumers already load from
 		 * the store on the way in.
@@ -70,7 +87,7 @@
 		similar?: Exercise[];
 	};
 
-	let { query, lastPerformed, onpick, similar = [] }: Props = $props();
+	let { query, muscle = null, lastPerformed, onpick, similar = [] }: Props = $props();
 
 	/**
 	 * Read once per mount, not per render: nothing on screen is worth a ticking
@@ -82,7 +99,24 @@
 	// The empty-query answer ("the pool, untouched") is `searchExercises`' own
 	// rule; `searching` only picks which posture the template draws.
 	const searching = $derived(query.trim() !== '');
-	const results = $derived(searchExercises(catalog, query));
+
+	// Filtered after ranking rather than before it: `searchExercises` scores a
+	// pool, and scoring a pool of nine produces the same order as scoring the
+	// whole catalog and dropping the rest. Doing it this way keeps the one
+	// ranking every consumer sees.
+	const results = $derived(
+		searchExercises(catalog, query).filter(
+			(exercise) => muscle === null || exercise.muscles.primary === muscle
+		)
+	);
+
+	// The sections are built once for the app; narrowing is picking one of them
+	// out, never rebuilding them for a filter. Filtering the *pool* first and
+	// re-folding would split families apart — a triceps-primary close-grip bench
+	// would be promoted to a row of its own the moment Triceps was lit.
+	const shelves = $derived(
+		muscle === null ? browse : browse.filter((section) => section.muscle === muscle)
+	);
 </script>
 
 {#snippet row(exercise: Exercise)}
@@ -145,7 +179,15 @@
 
 {#if searching}
 	{#if results.length === 0}
-		<EmptyState title="Nothing found" description="No exercise answers to that.">
+		<!-- Named when a muscle is lit, because that is the likelier culprit: the
+		     query may well match something the filter is holding back, and
+		     "nothing answers to that" would read as the catalog lacking it. -->
+		<EmptyState
+			title="Nothing found"
+			description={muscle === null
+				? 'No exercise answers to that.'
+				: `No ${muscle} exercise answers to that.`}
+		>
 			{#snippet icon()}
 				<MagnifyingGlass size={24} />
 			{/snippet}
@@ -163,8 +205,13 @@
 	<div class="flex flex-col gap-5">
 		<!-- Flat, no chips: the whole point of this block is that every row in it
 		     is already an answer. The sections below are unchanged underneath —
-		     this is a shortcut past them, never a replacement. -->
-		{#if similar.length > 0}
+		     this is a shortcut past them, never a replacement.
+
+		     Withheld under a lit muscle for the reason it is withheld under a
+		     query: a filter is a question asked, and Similar answers a different
+		     one. Left standing it would shelve chest substitutes above a section
+		     the user had just narrowed to Back. -->
+		{#if similar.length > 0 && muscle === null}
 			<section class="flex flex-col gap-2">
 				<h2 class="px-3 label-caps">Similar</h2>
 
@@ -176,7 +223,7 @@
 			</section>
 		{/if}
 
-		{#each browse as section (section.muscle)}
+		{#each shelves as section (section.muscle)}
 			<section class="flex flex-col gap-2">
 				<!-- Above the card rather than inside it: a header row would spend a
 				     whole tappable-height slot on something that is not tappable. -->

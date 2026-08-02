@@ -1,6 +1,12 @@
 <script lang="ts" module>
+	// `shrink-0` because a chip is a token and not a column: in the scrolling
+	// `row` layout a flex item would otherwise give up its width to fit, and
+	// eleven muscles would arrive squeezed to the `min-w` floor with the longer
+	// names broken across two lines instead of scrolling. Nothing to the grid,
+	// where flex sizing does not apply, and nothing to `wrap`, where a chip that
+	// does not fit moves to the next line rather than narrowing.
 	const chip =
-		'inline-flex min-h-chip min-w-14 items-center justify-center rounded-xl px-3 ' +
+		'inline-flex min-h-chip min-w-14 shrink-0 items-center justify-center rounded-xl px-3 ' +
 		'text-base font-extrabold select-none focus-ring ' +
 		'bg-sunken text-ink-muted ' +
 		// Selected is the one place a chip carries the accent as a fill, so it

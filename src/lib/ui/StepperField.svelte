@@ -25,7 +25,10 @@
 	 * has nothing more interesting to do with it.
 	 */
 	type Props = {
-		/** Null is a field with nothing in it — no history to recall, nothing typed yet. */
+		/**
+		 * Null is a field with nothing in it — no history to recall, nothing typed
+		 * yet, or a number the user has since taken back out.
+		 */
 		value: number | null;
 		/**
 		 * What the field opened at, and the only thing the tint is measured
@@ -39,7 +42,8 @@
 		label: string;
 		step?: number;
 		min?: number;
-		onchange?: (value: number) => void;
+		/** Null is the field emptied — see `commit`, which is the only caller that sends one. */
+		onchange?: (value: number | null) => void;
 		class?: ClassValue;
 	};
 
@@ -186,9 +190,26 @@
 	// not from the one it replaced — and so Enter, which blurs, logs the value
 	// just typed. Anything unparseable is not an affirmative claim, so the field
 	// keeps what it had rather than guessing.
+	//
+	// An emptied field is the exception, and it is not the same thing at all: a
+	// number deleted is a decision, so it is sent on as null and the field goes
+	// back to `–`. `parseEntry` answers null for both cases — nothing typed and
+	// nothing sensible typed — which is why emptiness is tested here rather than
+	// read off that null. The field used to restore what it had either way, so
+	// a weight the user cleared reappeared under the thumb that had just cleared
+	// it, and no keystroke could take it back out.
 	function commit() {
-		const parsed = parseEntry(draft);
 		editing = false;
+
+		if (draft.trim() === '') {
+			if (value !== null) {
+				value = null;
+				onchange?.(null);
+			}
+			return;
+		}
+
+		const parsed = parseEntry(draft);
 		if (parsed === null) {
 			return;
 		}

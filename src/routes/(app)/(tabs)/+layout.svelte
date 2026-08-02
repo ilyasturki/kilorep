@@ -25,14 +25,17 @@
 	 * of the card each floats in its left gutter depends on the pane being the
 	 * full width of the window and scrolling at its edge — so those two render
 	 * straight into the flex column while every other tab sits inside the scroll
-	 * box this layout owns.
+	 * box this layout owns. Both of Workout's addresses do: the idle screen
+	 * scrolls its own `main` too, and a tab whose two halves scrolled in
+	 * different boxes would jump on the way between them.
 	 *
 	 * Glyph over label, and the bar is ~59px rather than the 40 a row of words
 	 * needed. Two words were legible at arm's length, which is why this was text
 	 * for a while, but legible is not the same as *found*: a glyph is what the
 	 * eye lands on before it reads anything, and at arm's length between sets
-	 * that is the whole job. The label stays under it — Start and Workout are
-	 * the same slot in two states, and the word is what tells them apart.
+	 * that is the whole job. The label stays under it as the word for the glyph,
+	 * one word in every state — Workout is Workout whether one is running or
+	 * not, and the accent dot is what says which.
 	 *
 	 * The selected tab is a capsule behind the glyph alone, not a pill around the
 	 * whole tab: with two tabs in a 384px group a full-tab pill is a 192px slab,
@@ -52,10 +55,12 @@
 	 */
 	let { children }: LayoutProps = $props();
 
-	// `/templates/` and not `/templates`: the tab's own list is an ordinary
-	// scrolling page, and only the editor under it owns a pane.
+	// `isActive` for Workout, because the tab is two addresses now — the idle
+	// screen and the loop under it — and both own a pane. `/templates/` with the
+	// slash and no helper, because there the tab's own list is an ordinary
+	// scrolling page and only the editor under it owns one.
 	const ownsPane = $derived(
-		page.url.pathname === '/workout' || page.url.pathname.startsWith('/templates/')
+		isActive(page.url.pathname, '/workout') || page.url.pathname.startsWith('/templates/')
 	);
 
 	let pane = $state<HTMLElement | null>(null);

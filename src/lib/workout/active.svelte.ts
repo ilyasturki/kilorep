@@ -28,6 +28,23 @@ import type { Resume } from '$lib/workout/session.svelte';
  * split falls where the dependency already pointed: this imports the session,
  * the session knows nothing of the holder.
  */
+/**
+ * The name the two workout loads register against this holder, and the one
+ * anything that fills or empties it invalidates.
+ *
+ * They guard on `session` below, which is module state SvelteKit cannot see —
+ * so without a declared dependency it is free to cache what a load decided, and
+ * it does. `app.html` preloads on hover, so passing the mouse over the Workout
+ * tab on the way to FINISH runs `/workout`'s load while the session is still
+ * live, caches the redirect it produces, and hands that same redirect back to
+ * the `goto` that FINISH makes a moment later — landing back in a workout that
+ * had just ended. Declared, the entry is stale the moment this holder changes.
+ *
+ * A string constant rather than each side spelling its own: two loads and four
+ * call sites have to agree on it, and a typo would silently reinstate the bug.
+ */
+export const SESSION_DEP = 'kilorep:active-workout';
+
 class ActiveWorkout {
 	public session: WorkoutSession | null = $state(null);
 

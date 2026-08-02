@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import { goto } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
 	import { driftFrom, hasDrift, hasSetDrift } from '$lib/domain/drift';
@@ -25,7 +25,7 @@
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
-	import { activeWorkout } from '$lib/workout/active.svelte';
+	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import ExerciseOptionsSheet from '$lib/workout/ExerciseOptionsSheet.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
@@ -377,6 +377,10 @@
 			activeSetId: first === null ? null : first.set.id
 		});
 
+		// The holder just changed, so the workout loads' cached answers are stale
+		// — including any the hover-preloader took while a session was still
+		// live. `active.svelte.ts` has the whole story.
+		await invalidate(SESSION_DEP);
 		await goto('/workout');
 	}
 

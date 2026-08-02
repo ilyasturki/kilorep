@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import { goto } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
 	import {
@@ -23,13 +23,13 @@
 	import { plannedGroups } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanList from '$lib/templates/PlanList.svelte';
-	import { activeWorkout } from '$lib/workout/active.svelte';
+	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import { revealCentered } from '$lib/ui/scroll';
+	import { revealNearest } from '$lib/ui/scroll';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
@@ -172,7 +172,7 @@
 		const card = pane?.querySelector(`[data-drag-id="${entryId}"]`);
 
 		if (card instanceof HTMLElement) {
-			revealCentered(card);
+			revealNearest(card);
 		}
 	}
 
@@ -232,6 +232,10 @@
 			activeSetId: first === null ? null : first.set.id
 		});
 
+		// The holder just changed, so the workout loads' cached answers are stale
+		// — including any the hover-preloader took while a session was still
+		// live. `active.svelte.ts` has the whole story.
+		await invalidate(SESSION_DEP);
 		await goto('/workout');
 	}
 

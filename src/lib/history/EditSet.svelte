@@ -129,12 +129,15 @@
 				step={2.5}
 				onchange={(v) => ondraft(v, reps)}
 			/>
+			<!-- Null passes straight through rather than being rounded: it is the
+			     field emptied, and `Math.round(null)` is a rep count of zero the
+			     user never entered. -->
 			<StepperField
 				label="reps"
 				value={reps}
 				recalled={opened.reps}
 				step={1}
-				onchange={(v) => ondraft(weight, Math.round(v))}
+				onchange={(v) => ondraft(weight, v === null ? null : Math.round(v))}
 			/>
 		</div>
 

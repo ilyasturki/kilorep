@@ -343,15 +343,11 @@ export function canCommit(weight: number | null, reps: number | null): boolean {
 }
 
 /**
- * Writes exactly what it is given. PRODUCT.md is explicit that the check is an
- * affirmative claim rather than a silent acceptance of the hint, so the values
- * arrive from the caller — this function never reaches for a hint of its own.
+ * Writes values onto a set without claiming them.
  *
- * Mutates in place. The reactive shell holds the tree in a deep `$state` proxy
- * and sees the write; a test holds a plain object and sees it too.
- */
-/**
- * Writes values onto a set without claiming them: `completed` is untouched.
+ * Exactly what it is given, never a hint of its own: PRODUCT.md is explicit
+ * that the check is an affirmative claim rather than a silent acceptance of the
+ * recall, so the values arrive from the caller.
  *
  * The set is what holds the numbers being worked on, not the editor. A set the
  * cursor has reached opens on its prefill and keeps whatever was nudged into
@@ -362,9 +358,15 @@ export function canCommit(weight: number | null, reps: number | null): boolean {
  * Both slots every time, nulls included: the caller holds the pair, and a patch
  * that skipped nulls could never take a value back out of a set.
  *
- * The one thing this must never do is set `completed`. That flag is the
- * affirmative claim, and `commitSet` below is the only thing allowed to make
- * it.
+ * Which is the one case where `completed` moves, and it only ever moves *down*.
+ * A set that no longer holds both numbers cannot go on saying it happened — it
+ * would be a claim about nothing, and `markSet` already refuses to make that
+ * claim on the way in, so allowing one out through here would leave the tree
+ * holding a state nothing else in the app can produce. Claiming stays
+ * `commitSet`'s alone.
+ *
+ * Mutates in place. The reactive shell holds the tree in a deep `$state` proxy
+ * and sees the write; a test holds a plain object and sees it too.
  */
 export function draftSet(workout: Workout, setId: string, values: Prefill): boolean {
 	const cursor = cursorFor(workout, setId);
@@ -375,6 +377,10 @@ export function draftSet(workout: Workout, setId: string, values: Prefill): bool
 
 	cursor.set.weight = values.weight;
 	cursor.set.reps = values.reps;
+
+	if (!canCommit(values.weight, values.reps)) {
+		cursor.set.completed = false;
+	}
 
 	return true;
 }
