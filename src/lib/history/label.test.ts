@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { catalog } from '$lib/catalog';
-import { completedSetCount, formatDuration, formatSince, workoutTitle } from '$lib/history/label';
+import { completedSetCount, exerciseCount, formatSince, workoutTitle } from '$lib/history/label';
 import type { Workout, WorkoutSet } from '$lib/domain/workout';
 
 /**
@@ -79,15 +79,38 @@ describe('completedSetCount', () => {
 	});
 });
 
-describe('formatDuration', () => {
-	test('never a zero', () => {
-		expect(formatDuration(0, 10_000)).toBe('1 min');
+describe('exerciseCount', () => {
+	test('counts every block, superset legs and repeats included', () => {
+		const paired: Workout = {
+			id: 'w',
+			templateId: null,
+			startedAt: 0,
+			entries: [
+				// A superset: one entry, two exercises, two blocks on screen.
+				{
+					id: 'e0',
+					exercises: [
+						{ id: 'x0', exerciseId: first.id, sets: [] },
+						{ id: 'x1', exerciseId: second.id, sets: [] }
+					]
+				},
+				// The same exercise again, later in the session.
+				{ id: 'e1', exercises: [{ id: 'x2', exerciseId: first.id, sets: [] }] }
+			]
+		};
+
+		expect(exerciseCount(paired)).toBe(3);
 	});
 
-	test('minutes under the hour, hours past it', () => {
-		expect(formatDuration(0, 45 * 60_000)).toBe('45 min');
-		expect(formatDuration(0, 60 * 60_000)).toBe('1 h');
-		expect(formatDuration(0, 85 * 60_000)).toBe('1 h 25 min');
+	test('an exercise with nothing logged still counts', () => {
+		const sets = [set({ completed: false, weight: null, reps: null }, 's1')];
+
+		expect(exerciseCount(workout(null, [first.id], sets))).toBe(1);
+		expect(completedSetCount(workout(null, [first.id], sets))).toBe(0);
+	});
+
+	test('an emptied record counts nothing', () => {
+		expect(exerciseCount(workout(null, [], []))).toBe(0);
 	});
 });
 

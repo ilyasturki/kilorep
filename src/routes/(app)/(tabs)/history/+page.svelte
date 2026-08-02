@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { completedSetCount, formatDuration, workoutTitle } from '$lib/history/label';
+	import { completedSetCount, exerciseCount, workoutTitle } from '$lib/history/label';
 	import type { FinishedWorkout } from '$lib/store/derive';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -24,11 +24,21 @@
 
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
 
+	/**
+	 * How big the session was, in the two numbers a lifter scans for: how much
+	 * was trained, and how much work it took. How long it took is deliberately
+	 * absent — a session is a day in this app, not a stopwatch reading, and the
+	 * clock a record carries is plumbing (the sort key, the finished marker)
+	 * rather than something to answer for.
+	 */
 	function meta(workout: FinishedWorkout): string {
-		const count = completedSetCount(workout);
-		const sets = count === 1 ? '1 set' : `${count} sets`;
+		const exercises = exerciseCount(workout);
+		const sets = completedSetCount(workout);
 
-		return `${sets} · ${formatDuration(workout.startedAt, workout.finishedAt)}`;
+		return [
+			exercises === 1 ? '1 exercise' : `${exercises} exercises`,
+			sets === 1 ? '1 set' : `${sets} sets`
+		].join(' · ');
 	}
 </script>
 

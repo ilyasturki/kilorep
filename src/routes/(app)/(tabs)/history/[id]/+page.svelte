@@ -19,7 +19,8 @@
 		repeatFrom,
 		replaceEntry
 	} from '$lib/domain/workout';
-	import { formatDuration, workoutTitle } from '$lib/history/label';
+	import { workoutTitle } from '$lib/history/label';
+	import WorkoutOptionsSheet from '$lib/history/WorkoutOptionsSheet.svelte';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
@@ -35,7 +36,7 @@
 	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
-	import Trash from '$lib/ui/icons/Trash.svelte';
+	import More from '$lib/ui/icons/More.svelte';
 
 	import type { PageProps } from './$types';
 
@@ -48,13 +49,13 @@
 	 * workout", the record as a plan for today — structure only, see
 	 * `repeatFrom`.
 	 *
-	 * And corrected, behind Edit. A logged number can be wrong — the wrong bar
-	 * typed, a set checked that was never lifted, an exercise left in that was
-	 * abandoned — and the app's only answer used to be deleting the whole
-	 * session. What edit mode reaches is what the gym floor reaches: the values,
-	 * the claim, the sets, the exercises and their order. What it never touches is
-	 * when the session happened or which plan it counts against; a set fixed on
-	 * Sunday must not move a Thursday workout's clock.
+	 * And corrected, behind the `⋯` menu's Edit. A logged number can be wrong —
+	 * the wrong bar typed, a set checked that was never lifted, an exercise left
+	 * in that was abandoned — and the app's only answer used to be deleting the
+	 * whole session. What edit mode reaches is what the gym floor reaches: the
+	 * values, the claim, the sets, the exercises and their order. What it never
+	 * touches is when the session happened or which plan it counts against; a set
+	 * fixed on Sunday must not move a Thursday workout's clock.
 	 *
 	 * Everything downstream is derived on read — hints, records, the exercise
 	 * detail's history, the drift badges above — so a correction lands everywhere
@@ -340,6 +341,13 @@
 		return hasSetDrift(setDrift) ? driftMarks(setDrift) : [];
 	}
 
+	/**
+	 * The record's own `⋯`: what this workout can be besides read. Edit is a
+	 * mode, delete is a confirm, and neither happens from inside the sheet — see
+	 * `WorkoutOptionsSheet`.
+	 */
+	let menuOpen = $state(false);
+
 	let deleteOpen = $state(false);
 
 	async function deleteWorkout() {
@@ -419,10 +427,20 @@
 {/snippet}
 
 <!-- No bottom padding of its own: the sticky Repeat bar carries the foot of
-     the page, the same bargain the template editor strikes. -->
-<main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t lg:pt-0">
-	<header class="flex flex-col gap-3 pt-3">
-		<div class="flex items-center justify-between gap-3">
+     the page, the same bargain the template editor strikes — and pays it back
+     for the stretch where editing takes that bar away. -->
+<main
+	class={[
+		'column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t lg:pt-0',
+		editing && 'pb-4'
+	]}
+>
+	<!-- Back, name and actions on one line. The title pays for it — `text-xl` and
+	     truncated, where it used to have a row of its own at `text-2xl` — and that
+	     is the trade: what a bar of chrome above a heading was spending was a
+	     screenful of vertical space on a screen that is read by scrolling. -->
+	<header class="flex flex-col gap-1 pt-3">
+		<div class="flex items-center gap-2">
 			<!-- `‹` is a character, like ListRow's `›` — the subset carries it. It
 			     stays navigation in both postures: Done is beside it, and a back arrow
 			     that sometimes went back and sometimes did not would be the surprise
@@ -430,25 +448,46 @@
 			<a
 				href="/history"
 				aria-label="Back to history"
-				class="grid min-h-chrome w-11 place-items-center rounded-full border
+				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
 					border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
 					active:bg-surface-2"
 			>
 				‹
 			</a>
 
-			<Button variant="chrome" caps onclick={() => (editing ? stopEditing() : (editing = true))}>
-				{editing ? 'DONE' : 'EDIT'}
-			</Button>
+			<h1 class="min-w-0 flex-1 truncate text-xl font-extrabold tracking-tight">{title}</h1>
+
+			<!-- Editing swaps both actions for the one way out. Repeating a session
+			     mid-correction is not a gesture anyone means, and DONE landing in the
+			     slot the thumb just left is what makes edit mode feel like a mode
+			     rather than a place. -->
+			{#if editing}
+				<Button variant="chrome" caps onclick={stopEditing}>DONE</Button>
+			{:else}
+				<!-- Outlined, not the accent: the lit Repeat is the one pinned at the
+				     foot, and Button's rule is one filled button per screen. This is the
+				     same act within reach of the eye rather than the thumb. -->
+				<Button variant="chrome" caps onclick={() => void repeat()}>REPEAT</Button>
+
+				<button
+					type="button"
+					aria-label="Workout options"
+					onclick={() => (menuOpen = true)}
+					class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full
+						text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+				>
+					<More size={20} />
+				</button>
+			{/if}
 		</div>
 
-		<div class="flex flex-col gap-1 px-1">
-			<h1 class="text-2xl font-extrabold tracking-tight">{title}</h1>
-			<p class="text-md font-bold text-ink-faint">
-				{when.format(workout.startedAt)} · {formatDuration(workout.startedAt, workout.finishedAt)}
-				{#if drift !== null && !hasDrift(drift)}· as planned{/if}
-			</p>
-		</div>
+		<!-- The date and nothing about the clock: a session is a day here, and how
+		     many minutes it ran was a number the record happened to be able to
+		     compute rather than one anybody came to read. -->
+		<p class="px-1 text-md font-bold text-ink-faint">
+			{when.format(workout.startedAt)}
+			{#if drift !== null && !hasDrift(drift)}· as planned{/if}
+		</p>
 	</header>
 
 	<div class="flex flex-1 flex-col gap-3">
@@ -524,22 +563,23 @@
 				{/each}
 			</section>
 		{/if}
-
-		<Button variant="destructive" class="self-center" onclick={() => (deleteOpen = true)}>
-			<Trash size={18} />
-			Delete workout
-		</Button>
 	</div>
 
 	<!-- Pinned like the editor's Start, because it is the same act from a
 	     different door: this record, begun again. Structure only — see
 	     `repeatFrom` — so today's numbers arrive from the hints, not from a
-	     prefill nobody entered today. -->
-	<div class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3">
-		<Button variant="commit" class="w-full" onclick={() => void repeat()}>
-			Repeat this workout
-		</Button>
-	</div>
+	     prefill nobody entered today.
+
+	     Gone while editing, with the top bar's REPEAT — `main` grows the foot
+	     padding back for the stretch, so the last section never sits flush on the
+	     tab bar. -->
+	{#if !editing}
+		<div class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3">
+			<Button variant="commit" class="w-full" onclick={() => void repeat()}>
+				Repeat this workout
+			</Button>
+		</div>
+	{/if}
 </main>
 
 <ExercisePickerSheet
@@ -564,6 +604,13 @@
 	group={exerciseGroup}
 	onswap={() => (swapOpen = true)}
 	onremove={dropExercise}
+/>
+
+<WorkoutOptionsSheet
+	bind:open={menuOpen}
+	{title}
+	onedit={() => (editing = true)}
+	ondelete={() => (deleteOpen = true)}
 />
 
 <SetOptionsSheet

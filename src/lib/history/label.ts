@@ -67,21 +67,25 @@ export function completedSetCount(workout: Workout): number {
 }
 
 /**
- * A session length in gym terms: whole minutes under an hour, hours and
- * minutes past it, and never a zero — "0 min" reads as a broken record, and a
- * session shorter than a minute was still a session.
+ * The exercises a session held, counted the way the detail screen draws them:
+ * every exercise node, so a superset of two counts two and the same exercise
+ * performed twice in one session counts twice. What the number promises is how
+ * many blocks are behind the row, and a tally that deduplicated would promise
+ * something the screen then contradicts.
+ *
+ * Unlike the set count this takes no completion gate: an exercise that was
+ * opened and abandoned is still one of the things that happened that day, and
+ * the record keeps it — see the detail screen, which shows unchecked sets for
+ * the same reason.
  */
-export function formatDuration(startedAt: number, finishedAt: number): string {
-	const minutes = Math.max(1, Math.round((finishedAt - startedAt) / 60_000));
+export function exerciseCount(workout: Workout): number {
+	let count = 0;
 
-	if (minutes < 60) {
-		return `${minutes} min`;
+	for (const entry of workout.entries) {
+		count += entry.exercises.length;
 	}
 
-	const hours = Math.floor(minutes / 60);
-	const rest = minutes % 60;
-
-	return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+	return count;
 }
 
 const DAY = 86_400_000;
