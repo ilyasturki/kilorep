@@ -6,8 +6,18 @@
 	 * A disabled `commit` is not a dimmed commit: it becomes the dashed inert
 	 * well the design draws for "Enter a weight to log". Same slot, same height,
 	 * unmistakably not pressable.
+	 *
+	 * `raised` is the one look filled with something, and it does not break that
+	 * rule: it is painted `surface`, the colour a card already is, so it reads as
+	 * a piece of the list it grows rather than as a thing that logs anything. It
+	 * exists because the dashed grow-by-one row is the right silhouette *inside*
+	 * a card and the wrong one alone on the canvas — on the Templates tab it sat
+	 * under a solid card of rows and read as a hairline nobody could find. Only
+	 * for a row standing on `canvas`: on `surface` it disappears into what it is
+	 * standing on, which is why the session rail and the workout blocks keep the
+	 * dashed `AddRow`.
 	 */
-	type Variant = 'commit' | 'secondary' | 'destructive' | 'chrome';
+	type Variant = 'commit' | 'secondary' | 'destructive' | 'chrome' | 'raised';
 
 	/**
 	 * A disabled commit is its own look, not a state of `commit`, so it is a
@@ -74,6 +84,16 @@
 				'min-h-chrome rounded-full px-4 border border-line text-ink-muted ' +
 				'hover:bg-surface-2 active:bg-surface-2',
 			text: 'text-md font-extrabold',
+			caps: 'text-sm font-extrabold tracking-caps'
+		},
+		// `line-soft`, not `line`: this sits beside `list-group` cards and has to
+		// be bounded exactly as they are, or the row reads as a heavier object
+		// than the list it belongs to.
+		raised: {
+			shape:
+				'min-h-row rounded-xl px-5 border border-line-soft bg-surface text-ink-muted ' +
+				'hover:bg-surface-2 active:bg-surface-2',
+			text: 'text-md font-bold',
 			caps: 'text-sm font-extrabold tracking-caps'
 		},
 		inert: {

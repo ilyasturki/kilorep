@@ -8,6 +8,7 @@ import {
 	moveEntry,
 	removeExercise,
 	removeSet,
+	setExerciseReps,
 	setPlannedReps,
 	startFrom
 } from '$lib/domain/template';
@@ -40,6 +41,15 @@ function plan(template: Template, exerciseId: string, count: number): void {
 		exercise: `${exerciseId}-node`,
 		sets: Array.from({ length: count }, (_, i) => `${exerciseId}-set-${i + 1}`)
 	});
+}
+
+/** Every planned target under one exercise node, in order. */
+function targetsOf(template: Template, exerciseId: string): (number | null)[] {
+	const exercise = template.entries
+		.flatMap((entry) => entry.exercises)
+		.find((candidate) => candidate.id === exerciseId);
+
+	return exercise === undefined ? [] : exercise.sets.map((set) => set.plannedReps);
 }
 
 /** Session order by exercise, which is the thing a reorder is judged on. */
@@ -177,6 +187,36 @@ describe('planning sets', () => {
 		expect(setPlannedReps(template, 'bench-press-set-1', 8)).toBe(true);
 		expect(setPlannedReps(template, 'bench-press-set-1', null)).toBe(true);
 		expect(template.entries[0].exercises[0].sets[0].plannedReps).toBeNull();
+	});
+
+	test('the shared target writes every set of one exercise, and only that one', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 3);
+		plan(template, 'cable-fly', 2);
+
+		expect(setExerciseReps(template, 'bench-press-node', 8)).toBe(true);
+
+		expect(targetsOf(template, 'bench-press-node')).toEqual([8, 8, 8]);
+		expect(targetsOf(template, 'cable-fly-node')).toEqual([null, null]);
+	});
+
+	test('the shared target clears to open, and refuses a target below one', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 2);
+		setExerciseReps(template, 'bench-press-node', 8);
+
+		expect(setExerciseReps(template, 'bench-press-node', 0)).toBe(false);
+		expect(targetsOf(template, 'bench-press-node')).toEqual([8, 8]);
+
+		expect(setExerciseReps(template, 'bench-press-node', null)).toBe(true);
+		expect(targetsOf(template, 'bench-press-node')).toEqual([null, null]);
+	});
+
+	test('the shared target reports an unknown exercise rather than writing nothing quietly', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 1);
+
+		expect(setExerciseReps(template, 'nope', 8)).toBe(false);
 	});
 });
 

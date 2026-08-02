@@ -19,9 +19,11 @@
 	 * the bar. Decided on the floor; the accent dot on the Workout tab is what
 	 * says the session is still there.
 	 *
-	 * Workout also keeps its own scroll pane — the rail's geometry depends on it
-	 * — so it renders straight into the flex column while every other tab sits
-	 * inside the scroll box this layout owns.
+	 * Workout and the template editor keep their own scroll panes — the geometry
+	 * of the card each floats in its left gutter depends on the pane being the
+	 * full width of the window and scrolling at its edge — so those two render
+	 * straight into the flex column while every other tab sits inside the scroll
+	 * box this layout owns.
 	 *
 	 * Glyph over label, and the bar is ~59px rather than the 40 a row of words
 	 * needed. Two words were legible at arm's length, which is why this was text
@@ -48,11 +50,15 @@
 	 */
 	let { children }: LayoutProps = $props();
 
-	const onWorkout = $derived(page.url.pathname === '/workout');
+	// `/templates/` and not `/templates`: the tab's own list is an ordinary
+	// scrolling page, and only the editor under it owns a pane.
+	const ownsPane = $derived(
+		page.url.pathname === '/workout' || page.url.pathname.startsWith('/templates/')
+	);
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
-	{#if onWorkout}
+	{#if ownsPane}
 		{@render children()}
 	{:else}
 		<div class="min-h-0 flex-1 overflow-y-auto">

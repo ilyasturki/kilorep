@@ -72,6 +72,14 @@ export function isBlank(template: Template): boolean {
 /** How many sets a planned exercise arrives with. The gym's default shape. */
 export const PLANNED_SET_COUNT = 3;
 
+/**
+ * What the first + on an open target proposes, rather than a 1 nobody ever
+ * planned. Its sibling above, and here for the same reason: the editor's
+ * exercise-wide stepper and its per-set steppers both propose it, and two
+ * copies of the gym's default rep shape would drift.
+ */
+export const PLANNED_REPS = 8;
+
 /** Every node a planned exercise needs, minted by the caller — see `blankTemplate`. */
 export type NewExerciseIds = { entry: string; exercise: string; sets: string[] };
 
@@ -228,6 +236,41 @@ export function setPlannedReps(template: Template, setId: string, reps: number |
 	}
 
 	return false;
+}
+
+/**
+ * Writes one rep target across every set of an exercise.
+ *
+ * The editor's card prescribes at the exercise level — most plans want the same
+ * number on all three sets, and stepping each of them to 8 in turn was the bulk
+ * of what that screen asked for. Per-set targets are still writable one at a
+ * time through `setPlannedReps`; this is the shared arm, and the editor only
+ * offers it while the sets already agree, so it can never quietly flatten a
+ * 12/10/8 the user built on purpose.
+ *
+ * Same refusal as `setPlannedReps` — a target below one is not a plan — and
+ * null is the open target, applied to every set alike.
+ */
+export function setExerciseReps(
+	template: Template,
+	exerciseId: string,
+	reps: number | null
+): boolean {
+	if (reps !== null && reps < 1) {
+		return false;
+	}
+
+	const exercise = exerciseIn(template, exerciseId);
+
+	if (exercise === null) {
+		return false;
+	}
+
+	for (const set of exercise.sets) {
+		set.plannedReps = reps;
+	}
+
+	return true;
 }
 
 /**

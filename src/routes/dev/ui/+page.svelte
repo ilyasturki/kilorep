@@ -224,6 +224,10 @@
 					<Button variant="commit" class="w-full">82.5 × 7</Button>
 					<span class={caption}>variant="commit"</span>
 				</div>
+				<div class={specimen}>
+					<Button variant="raised" class="w-full">+ New template</Button>
+					<span class={caption}>variant="raised" — surface-filled, for a row on the canvas</span>
+				</div>
 				<div class="flex flex-wrap gap-x-4 gap-y-3">
 					{#each outlined as button (button.variant)}
 						<div class={specimen}>

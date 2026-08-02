@@ -2,7 +2,6 @@
 	import { goto } from '$app/navigation';
 
 	import type { Template } from '$lib/domain/template';
-	import AddRow from '$lib/ui/AddRow.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -70,9 +69,9 @@
 		</EmptyState>
 	{:else}
 		<section class="flex flex-col gap-3">
-			<!-- The card stops at the templates: the AddRow below grows the list
-			     rather than belonging to it, and inside the group its dashed edge
-			     would read as a row that had lost its title. -->
+			<!-- The card stops at the templates: the row below grows the list rather
+			     than belonging to it, and inside the group it would read as a row
+			     that had lost its title. -->
 			<div class="list-group">
 				{#each data.templates as template (template.id)}
 					<!-- A persisted template can be nameless — named-nothing but planned-
@@ -86,7 +85,14 @@
 				{/each}
 			</div>
 
-			<AddRow label="New template" onclick={newTemplate} />
+			<!-- `raised` and not the dashed `AddRow` this used to be: standing on the
+			     canvas under a solid card of rows, a dashed hairline was the quietest
+			     thing on a screen whose whole job is starting a new plan. Filled with
+			     `surface` — the colour the card above it already is — it weighs what
+			     the rows weigh, and the accent stays out of it: nothing on this screen
+			     logs a set. See `Button`'s `raised` for why the dashed silhouette is
+			     still right everywhere it sits *inside* a card. -->
+			<Button variant="raised" class="w-full" onclick={newTemplate}>+ New template</Button>
 		</section>
 	{/if}
 </main>

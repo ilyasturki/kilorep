@@ -12,22 +12,23 @@
 		PLANNED_SET_COUNT,
 		removeExercise,
 		removeSet,
+		setExerciseReps,
 		setPlannedReps,
 		startFrom
 	} from '$lib/domain/template';
-	import type { TemplateExercise, TemplateSet } from '$lib/domain/template';
-	import type { Exercise } from '$lib/domain/exercise';
-	import { loadModeNote } from '$lib/exercises/label';
 	import { firstUncompleted } from '$lib/domain/workout';
+	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
+	import { plannedGroups } from '$lib/templates/plan';
+	import PlanCard from '$lib/templates/PlanCard.svelte';
+	import PlanList from '$lib/templates/PlanList.svelte';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
-	import AddRow from '$lib/ui/AddRow.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import Input from '$lib/ui/Input.svelte';
+	import { revealCentered } from '$lib/ui/scroll';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
@@ -46,6 +47,18 @@
 	 * Start. And an existing template edited back to blank is deleted on the
 	 * way out by the same rule: an empty plan in the list is junk whichever
 	 * door it came in through.
+	 *
+	 * The screen borrows the workout's desk layout: from `lg` the plan is a card
+	 * floating in the left gutter beside the pane being edited, on the same
+	 * pixels and for the same reasons — which is why this route, like `/workout`,
+	 * owns its own scroll pane rather than sitting in the `(tabs)` scroll box.
+	 * See that layout, and the geometry note on the `<aside>` below.
+	 *
+	 * Below `lg` there is no sheet holding a second copy of that list. The
+	 * workout needs one because its pane is a stack of set editors and the list
+	 * is the only place the whole session is legible at once; a plan is already
+	 * one short card per exercise, so a drawer over it would list the thing it is
+	 * covering. The cards keep their own grips at every width instead.
 	 */
 	let { data }: PageProps = $props();
 
@@ -100,36 +113,20 @@
 		}
 	});
 
-	type Planned = {
-		/** The exercise node id — what a `{#each}` keys on and a removal names. */
-		id: string;
-		entryId: string;
-		meta: Exercise;
-		exercise: TemplateExercise;
-	};
+	const groups = $derived(plannedGroups(template, catalogById));
 
-	const groups = $derived<Planned[]>(
-		template.entries.flatMap((entry) =>
-			entry.exercises.map((exercise) => ({
-				id: exercise.id,
-				entryId: entry.id,
-				meta: catalogById[exercise.exerciseId],
-				exercise
-			}))
-		)
-	);
-
-	// Deduplicated for the same superset reason as SessionList's, even though
-	// this build's UI only ever makes one-exercise entries.
+	// Deduplicated for the same superset reason as PlanList's, even though this
+	// build's UI only ever makes one-exercise entries.
 	const entryIds = $derived([...new Set(groups.map((group) => group.entryId))]);
 
-	// Handle-only lift, unlike SessionList's hold-anywhere: these cards are
-	// full of controls, and a long-press that lifts the card out from under a
-	// rep target being held would fight the very gesture it shares a row with.
+	// Handle-only lift, unlike PlanList's hold-anywhere: these cards are full of
+	// controls, and a long-press that lifted the card out from under a rep target
+	// being held would fight the very gesture it shares a row with.
 	//
-	// The cards vary in height with set count, which is fine: DragOrder
-	// measures each row's own height at lift and computes the slots from them,
-	// so the thresholds land where the cards actually are.
+	// The cards vary in height — a card with its per-set targets open is twice
+	// the one beside it — which is fine: DragOrder measures each row's own height
+	// at lift and computes the slots from them, so the thresholds land where the
+	// cards actually are.
 	const drag = new DragOrder({
 		order: () => entryIds,
 		move: (id, index) => {
@@ -151,28 +148,58 @@
 		});
 	}
 
-	/**
-	 * The first + on an open target proposes 8 — the gym's default rep shape,
-	 * the same spirit as three default sets — rather than a 1 nobody ever
-	 * planned. From there the arms step by one, and stepping down through 1
-	 * clears back to open, so the whole range is reachable from either end.
-	 */
-	const DEFAULT_TARGET = 8;
+	/** Drop the last set of an exercise — the sets stepper's `−`. */
+	function shrink(exerciseId: string) {
+		const group = groups.find((candidate) => candidate.id === exerciseId);
+		const last = group?.exercise.sets.at(-1);
 
-	function raise(set: TemplateSet) {
-		setPlannedReps(
-			template,
-			set.id,
-			set.plannedReps === null ? DEFAULT_TARGET : set.plannedReps + 1
-		);
+		if (last !== undefined) {
+			removeSet(template, last.id);
+		}
 	}
 
-	function lower(set: TemplateSet) {
-		if (set.plannedReps === null) {
-			return;
-		}
+	/**
+	 * The pane, so a tap in the sidebar can find the card it names.
+	 *
+	 * Scoped to the pane on purpose: the sidebar's own rows carry the same
+	 * `data-drag-id`, and a document-wide lookup would keep finding the row that
+	 * was just tapped instead of the card it points at.
+	 */
+	let pane = $state<HTMLElement | null>(null);
 
-		setPlannedReps(template, set.id, set.plannedReps === 1 ? null : set.plannedReps - 1);
+	function jumpTo(entryId: string) {
+		const card = pane?.querySelector(`[data-drag-id="${entryId}"]`);
+
+		if (card instanceof HTMLElement) {
+			revealCentered(card);
+		}
+	}
+
+	/**
+	 * Removing a planned exercise asks first.
+	 *
+	 * The workout's own removal does not, unless sets have been logged — nothing
+	 * is lost there but an empty row. Here the card *is* the work: the sets, the
+	 * targets and the order someone sat down to decide, and there is no undo
+	 * anywhere in the app. Held as an id and resolved live rather than
+	 * snapshotted, for the reason the workout's option sheets give: a dialog
+	 * naming a row that has since moved is worse than one naming nothing.
+	 */
+	let removeOpen = $state(false);
+	let removing = $state<string | null>(null);
+
+	const removingGroup = $derived(groups.find((group) => group.id === removing) ?? null);
+
+	function askRemove(exerciseId: string) {
+		removing = exerciseId;
+		removeOpen = true;
+	}
+
+	function confirmRemove() {
+		if (removing !== null) {
+			removeExercise(template, removing);
+			removing = null;
+		}
 	}
 
 	let deleteOpen = $state(false);
@@ -213,8 +240,8 @@
 	 * Exactly one workout is active at a time, and this button must not make a
 	 * second one silently: a live session, or a snapshot waiting to be resumed
 	 * after a reload, may hold logged sets that overwriting would destroy. The
-	 * dialog is the only honest gate — this is a planning surface, not the
-	 * gym floor, so the in-gym rule has nothing to say about it.
+	 * dialog is the only honest gate — this is a planning surface, not the gym
+	 * floor, so the in-gym rule has nothing to say about it.
 	 */
 	async function start() {
 		if (activeWorkout.session !== null || (await data.store.loadSnapshot()) !== null) {
@@ -225,7 +252,60 @@
 
 		await launch();
 	}
+
+	/**
+	 * The bar's right-hand slot from `lg`, given back on the way out.
+	 *
+	 * Start and delete both live up here on a desk, where there is a bar to hold
+	 * them: the pane keeps its own Start under the thumb, and delete has left the
+	 * foot of the plan entirely rather than sitting under the last exercise
+	 * competing with it. On a phone there is no bar, so the header carries Start
+	 * and the plan's foot keeps the trash — the same control, anchored where each
+	 * device has room for it, which is the split the nav bars already make.
+	 *
+	 * The body reads nothing reactive, so this runs once and the snippet
+	 * re-renders itself; `persisted` inside it is read where it is rendered.
+	 */
+	const bar = appBarSlot();
+
+	$effect(() => {
+		bar.action = deskActions;
+
+		return () => {
+			bar.action = null;
+		};
+	});
 </script>
+
+{#snippet trash(size: number)}
+	<button
+		type="button"
+		aria-label="Delete template"
+		onclick={() => (deleteOpen = true)}
+		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line
+			text-danger focus-ring hover:bg-surface-2 active:bg-surface-2"
+	>
+		<Trash {size} />
+	</button>
+{/snippet}
+
+<!-- START, not "Start workout": the same word the pane's button says, in the
+     register a 44px pill can carry — `Button`'s caps size follows the box, so
+     the two are one label at two scales rather than two labels. Same shape the
+     workout screen's FINISH wears in this slot. -->
+{#snippet go()}
+	<Button variant="chrome" caps onclick={() => void start()}>START</Button>
+{/snippet}
+
+{#snippet deskActions()}
+	<div class="flex items-center gap-2">
+		{#if persisted}
+			{@render trash(20)}
+		{/if}
+
+		{@render go()}
+	</div>
+{/snippet}
 
 <svelte:head>
 	<title>{template.name.trim() === '' ? 'New template' : template.name} | Kilorep</title>
@@ -233,194 +313,188 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
-<main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t lg:pt-0">
-	<header class="flex flex-col gap-3 pt-3">
-		<!-- `‹` is a character, like ListRow's `›` — the subset carries it. -->
-		<a
-			href="/templates"
-			aria-label="Back to templates"
-			class="grid min-h-chrome w-11 place-items-center self-start rounded-full border
-				border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
-				active:bg-surface-2"
-		>
-			‹
-		</a>
+<div class="flex min-h-0 flex-1 flex-col">
+	<!-- Back, the name and Start on one line. The name is the page's title and
+	     its one field at once, so it is a bare input with no caps label over it:
+	     a label here would push the field onto a second row and say "Name" above
+	     a box that already reads "Push day".
 
-		<Input label="Name" placeholder="Push day" bind:value={template.name} />
+	     Bordered and opaque because the pane below scrolls under it. START is
+	     gone from `lg` up, where the bar overhead holds it — the header itself
+	     stays at every width, since the app bar has nowhere to put a text field. -->
+	<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:pt-0">
+		<div class="column-content flex items-center gap-2 px-3 py-2">
+			<!-- `‹` is a character, like ListRow's `›` — the subset carries it. -->
+			<a
+				href="/templates"
+				aria-label="Back to templates"
+				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
+					border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2
+					active:bg-surface-2"
+			>
+				‹
+			</a>
+
+			<input
+				bind:value={template.name}
+				aria-label="Template name"
+				placeholder="Push day"
+				autocomplete="off"
+				class="field-box min-h-chrome min-w-0 flex-1 border-line focus-ring"
+			/>
+
+			<div class="lg:hidden">
+				{@render go()}
+			</div>
+		</div>
 	</header>
 
-	<div bind:this={drag.root} class="flex flex-1 flex-col gap-3">
-		{#each groups as group, index (group.id)}
-			{@const lifted = drag.isLifted(group.entryId)}
-			{@const settling = drag.settlingId === group.entryId}
+	<div class="relative flex min-h-0 flex-1">
+		<!-- The plan, floating in the margin the window has left over. The geometry
+		     is the workout rail's, to the pixel, and the reasoning lives there in
+		     full: `left` is half the window, back the column's half-cap, back 16px
+		     of air, back the card; 32rem at `lg` and 37rem at `xl` are those three
+		     added up. Restated here rather than shared because a utility class
+		     spanning two screens is a number nobody can change for one of them.
 
-			<!-- Outer element for flip and slot measurement, inner for the finger —
-			     the same split as SessionList, for the same reason. And as there,
-			     the outer's box is the vacated slot while the card is airborne, so
-			     the sunken fill is the landing shown at the card's exact size. -->
-			<div
-				data-drag-id={group.entryId}
-				animate:flip={{ duration: slide }}
-				class={lifted ? 'relative z-10 rounded-2xl bg-sunken' : ''}
-			>
-				<section
-					style:transform={lifted ? `translateY(${drag.offset}px) scale(1.01)` : null}
-					style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
-					class={[
-						'flex flex-col gap-2 rounded-2xl border border-line-soft bg-surface p-3',
-						lifted && 'shadow-lg'
-					]}
-				>
-					<div class="flex items-center gap-1">
-						<div class="min-w-0 flex-1 px-1">
-							<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">
-								{group.meta.name}
-							</h2>
-							{#if loadModeNote(group.meta.loadMode)}
-								<p class="truncate text-sm font-bold text-ink-faint">
-									{loadModeNote(group.meta.loadMode)}
-								</p>
-							{/if}
-						</div>
-
-						<!-- An edit, not a loss of data — the plan is not history — so no
-						     dialog. `×` is a character the subset carries (the hint label
-						     spells 80 × 8 with it). -->
-						<button
-							type="button"
-							aria-label="Remove {group.meta.name}"
-							onclick={() => removeExercise(template, group.id)}
-							class="grid size-11 shrink-0 place-items-center rounded-full text-xl leading-none
-								text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2"
-						>
-							×
-						</button>
-
-						<!-- Same non-focusable grip as SessionList, same reason. -->
-						<span
-							role="presentation"
-							aria-hidden="true"
-							onpointerdown={(event) => drag.handleDown(event, group.entryId)}
-							onpointermove={(event) => drag.move(event)}
-							onpointerup={(event) => drag.up(event)}
-							onpointercancel={(event) => drag.up(event)}
-							class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
-								text-ink-faint select-none"
-						>
-							<DotsSixVertical size={18} />
-						</span>
-					</div>
-
-					{#each group.exercise.sets as set, setIndex (set.id)}
-						<div class="flex items-center gap-2">
-							<span class="w-11 shrink-0 px-1 label-caps text-ink-faint">Set {setIndex + 1}</span>
-
-							<div
-								class="flex min-h-11 flex-1 items-stretch rounded-xl bg-sunken"
-								role="group"
-								aria-label="Set {setIndex + 1} rep target"
-							>
-								<button
-									type="button"
-									aria-label="Lower rep target"
-									onclick={() => lower(set)}
-									class="grid w-11 shrink-0 place-items-center rounded-l-xl text-xl font-semibold
-										text-ink-muted focus-ring-inset select-none hover:bg-surface-2
-										active:bg-surface-2 active:text-ink"
-								>
-									−
-								</button>
-
-								{#if set.plannedReps === null}
-									<span
-										class="flex min-w-0 flex-1 items-center justify-center text-md font-bold
-											text-ink-faint"
-									>
-										Open
-									</span>
-								{:else}
-									<span
-										class="flex min-w-0 flex-1 items-center justify-center text-md font-extrabold
-											tracking-numeral text-ink"
-									>
-										{set.plannedReps} reps
-									</span>
-								{/if}
-
-								<button
-									type="button"
-									aria-label="Raise rep target"
-									onclick={() => raise(set)}
-									class="grid w-11 shrink-0 place-items-center rounded-r-xl text-xl font-semibold
-										text-ink-muted focus-ring-inset select-none hover:bg-surface-2
-										active:bg-surface-2 active:text-ink"
-								>
-									+
-								</button>
-							</div>
-
-							<button
-								type="button"
-								aria-label="Remove set {setIndex + 1}"
-								disabled={group.exercise.sets.length === 1}
-								onclick={() => removeSet(template, set.id)}
-								class="grid size-11 shrink-0 place-items-center rounded-full text-xl leading-none
-									text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2
-									disabled:opacity-40"
-							>
-								×
-							</button>
-						</div>
-					{/each}
-
-					<AddRow
-						label="Add set"
-						onclick={() => addSet(template, group.id, crypto.randomUUID())}
-						secondaryLabel="Exercise"
-						onsecondary={() => (insertOpen = true)}
+		     Taken out of the flow so the pane below is the full width of the window
+		     and scrolls at its edge exactly as every other screen does — a rail
+		     with a width would move the cards off the column every other screen
+		     lands on. `inset-y-0` is the pane's height and nothing more, so
+		     `max-h-full` on the card is exact: a plan longer than the window
+		     scrolls inside the card rather than off the bottom of it. -->
+		<aside
+			class="absolute inset-y-0 left-[calc(50%-32rem)] hidden w-52 py-3
+				lg:block xl:left-[calc(50%-37rem)] xl:w-72"
+		>
+			{#if groups.length > 0}
+				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
+					<PlanList
+						{groups}
+						onjump={jumpTo}
+						oninsert={() => (insertOpen = true)}
+						onreorder={(entryId, index) => moveEntry(template, entryId, index)}
 					/>
-				</section>
+				</div>
+			{/if}
+		</aside>
+
+		<main bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
+			<div class="column-content flex min-h-full flex-col gap-3 px-3 pt-3">
+				{#each groups as group (group.id)}
+					{@const lifted = drag.isLifted(group.entryId)}
+					{@const settling = drag.settlingId === group.entryId}
+
+					<!-- Outer element for flip and slot measurement, inner for the finger —
+					     the same split as PlanList, for the same reason. And as there, the
+					     outer's box is the vacated slot while the card is airborne, so the
+					     sunken fill is the landing shown at the card's exact size. -->
+					<div
+						data-drag-id={group.entryId}
+						animate:flip={{ duration: slide }}
+						class={lifted ? 'relative z-10 rounded-2xl bg-sunken' : ''}
+					>
+						<div
+							style:transform={lifted ? `translateY(${drag.offset}px) scale(1.01)` : null}
+							style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
+							class={lifted ? 'shadow-lg' : ''}
+						>
+							<PlanCard
+								meta={group.meta}
+								exercise={group.exercise}
+								onremove={() => askRemove(group.id)}
+								onaddset={() => addSet(template, group.id, crypto.randomUUID())}
+								onremoveset={() => shrink(group.id)}
+								onreps={(reps) => setExerciseReps(template, group.id, reps)}
+								onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
+							>
+								{#snippet grip()}
+									<!-- Same non-focusable grip as PlanList, same reason. -->
+									<span
+										role="presentation"
+										aria-hidden="true"
+										onpointerdown={(event) => drag.handleDown(event, group.entryId)}
+										onpointermove={(event) => drag.move(event)}
+										onpointerup={(event) => drag.up(event)}
+										onpointercancel={(event) => drag.up(event)}
+										class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
+											text-ink-faint select-none"
+									>
+										<DotsSixVertical size={18} />
+									</span>
+								{/snippet}
+							</PlanCard>
+						</div>
+					</div>
+				{/each}
+
+				{#if groups.length === 0}
+					<!-- Outlined, not commit: the screen's one filled button is the sticky
+					     Start below. No add row under this — the ask is already centred in
+					     the pane, and a second way to do the only thing on screen is not a
+					     second choice. -->
+					<EmptyState title="Nothing planned" description="Add an exercise to shape the session.">
+						{#snippet icon()}
+							<Stack size={24} />
+						{/snippet}
+						{#snippet action()}
+							<Button onclick={() => (insertOpen = true)}>Add exercise</Button>
+						{/snippet}
+					</EmptyState>
+				{:else}
+					<!-- Add-exercise gets its row back. It used to ride each add-set row as
+					     a narrow second segment, which was the right home while every card
+					     ended in one — the sets stepper does that job now, so the segment
+					     had nothing left to ride on.
+
+					     `raised` and not the dashed `AddRow`: this stands on the canvas
+					     between cards, where a dashed hairline is the thing nobody finds.
+					     Same variant the Templates tab grows its list with, which is the
+					     point — the two planning surfaces add one the same way. -->
+					<Button variant="raised" class="w-full" onclick={() => (insertOpen = true)}>
+						+ Add exercise
+					</Button>
+				{/if}
+
+				<!-- The phone's delete. On a desk it is in the bar overhead; here there
+				     is no bar, and the foot of the plan is the one place a destructive
+				     act can sit without being under a thumb that is aiming at Start.
+				     Icon alone: the dialog behind it does the spelling out. -->
+				{#if persisted}
+					<div class="flex justify-center pt-2 pb-1 lg:hidden">
+						{@render trash(18)}
+					</div>
+				{/if}
+
+				<!-- Pinned inside the scroll pane, so Start is under the thumb however
+				     long the plan grows. The tab bar below carries the gesture-bar
+				     clearance on a phone; from `lg` the pane's own floor is the window's. -->
+				<div
+					class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3
+						lg:pb-[max(0.75rem,var(--spacing-safe-b))]"
+				>
+					<Button variant="commit" class="w-full" onclick={() => void start()}>
+						Start workout
+					</Button>
+				</div>
 			</div>
-		{/each}
-
-		<!-- With blocks on screen, add-exercise rides each add-set row as its
-		     second segment — the same split the workout pane makes — so the
-		     full-width row that used to close the list is gone. The empty plan
-		     keeps the centred ask, which is also where a plan lands when its
-		     last exercise is removed. -->
-		{#if groups.length === 0}
-			<!-- Outlined, not commit: the screen's one filled button is the
-			     sticky Start below. -->
-			<EmptyState title="Nothing planned" description="Add an exercise to shape the session.">
-				{#snippet icon()}
-					<Stack size={24} />
-				{/snippet}
-				{#snippet action()}
-					<Button onclick={() => (insertOpen = true)}>Add exercise</Button>
-				{/snippet}
-			</EmptyState>
-		{/if}
-
-		{#if persisted}
-			<Button variant="destructive" class="self-center" onclick={() => (deleteOpen = true)}>
-				<Trash size={18} />
-				Delete template
-			</Button>
-		{/if}
+		</main>
 	</div>
-
-	<!-- Pinned inside the scroll pane, so Start is under the thumb however long
-	     the plan grows. The tab bar below carries the gesture-bar clearance. -->
-	<div class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3">
-		<Button variant="commit" class="w-full" onclick={() => void start()}>Start workout</Button>
-	</div>
-</main>
+</div>
 
 <ExercisePickerSheet
 	bind:open={insertOpen}
 	title="Add exercise"
 	lastPerformed={data.lastPerformed}
 	onpick={plan}
+/>
+
+<AlertDialog
+	bind:open={removeOpen}
+	title="Remove {removingGroup === null ? 'this exercise' : removingGroup.meta.name}?"
+	description="Its sets and rep targets go with it. Workouts already logged from this plan keep theirs."
+	confirmLabel="Remove"
+	onconfirm={confirmRemove}
 />
 
 <AlertDialog
