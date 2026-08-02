@@ -393,6 +393,38 @@ export function commitSet(workout: Workout, setId: string, weight: number, reps:
 	return true;
 }
 
+/**
+ * Sets or clears the affirmative claim, leaving the numbers where they are.
+ *
+ * The correction `commitSet` cannot make, because it only ever claims — and a
+ * set checked by mistake is exactly as ordinary a mistake as a number typed
+ * wrong. Nothing in the live loop calls this: the gym has no un-log gesture,
+ * and PRODUCT.md is explicit that an unwanted set is removed rather than
+ * demoted. It exists for a session already written to history, where the tap
+ * that fixes it is the disc itself.
+ *
+ * Claiming needs both numbers — `canCommit`'s rule, the same one that holds the
+ * check inert. A set saying it happened without saying what happened is a
+ * record of nothing, and it would count toward volume as a bodyweight zero.
+ * Clearing never refuses: whatever the set holds stays on it, uncompleted, the
+ * way a drafted set has always looked.
+ */
+export function markSet(workout: Workout, setId: string, completed: boolean): boolean {
+	const cursor = cursorFor(workout, setId);
+
+	if (cursor === null) {
+		return false;
+	}
+
+	if (completed && !canCommit(cursor.set.weight, cursor.set.reps)) {
+		return false;
+	}
+
+	cursor.set.completed = completed;
+
+	return true;
+}
+
 /** The exercise `id` names a node of this tree, not a catalog entry. */
 function exerciseIn(workout: Workout, exerciseId: string): WorkoutExercise | null {
 	for (const entry of workout.entries) {

@@ -11,8 +11,14 @@ import type { PageLoad } from './$types';
  *
  * The template rides along when it still exists; null when it never did or is
  * gone since, which the screen reads as "no plan to drift from" rather than an
- * error. The store rides along for the one write this screen can make — the
- * delete.
+ * error. The store rides along for the writes this screen makes — every
+ * correction under Edit, and the delete.
+ *
+ * `lastPerformed` is the insert sheet's, not this screen's: an exercise added
+ * to a past workout is picked from the same catalog list as one added
+ * mid-session, and those rows spell out when each was last performed. Nothing
+ * on the record itself reads it — a session that has already happened takes no
+ * hints.
  */
 export const load: PageLoad = async ({ params }) => {
 	const store = await getStore();
@@ -28,7 +34,11 @@ export const load: PageLoad = async ({ params }) => {
 	// the screen shows as a bare 500. The type says `string | null`; the storage
 	// boundary's assertion is what lets an older shape through it.
 	const templateId = workout.templateId ?? null;
-	const template = templateId === null ? null : await store.getTemplate(templateId);
 
-	return { store, workout, template };
+	const [template, lastPerformed] = await Promise.all([
+		templateId === null ? null : store.getTemplate(templateId),
+		store.lastPerformed()
+	]);
+
+	return { store, workout, template, lastPerformed };
 };

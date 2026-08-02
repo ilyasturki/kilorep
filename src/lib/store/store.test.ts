@@ -132,6 +132,66 @@ describe('workouts', () => {
 		expect(await store.getWorkout('w1')).toBeNull();
 	});
 
+	it('updates in place: new tree, same ending, dirty again', async () => {
+		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
+		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
+
+		const stored = await store.getWorkout('w1');
+
+		if (stored === null) {
+			throw new Error('the workout just written is missing');
+		}
+
+		stored.entries[0].exercises[0].sets[0].weight = 100;
+
+		await store.updateWorkout(stored, 400);
+
+		const listed = await store.listWorkouts();
+
+		expect(listed[0].entries[0].exercises[0].sets[0].weight).toBe(100);
+		// The correction is not a second ending, and it does not move the session.
+		expect(listed[0].finishedAt).toBe(200);
+		expect(listed[0].startedAt).toBe(100);
+
+		const dirty = await store.dirtyRecords();
+
+		expect(dirty).toHaveLength(1);
+		expect(dirty[0]).toMatchObject({ id: 'w1', updatedAt: 400, deletedAt: null });
+	});
+
+	// The whole reason the write reads the record first: blind, it would put
+	// `deletedAt: null` over a tombstone that arrived while the screen was open.
+	it('an update never resurrects a tombstoned workout', async () => {
+		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
+
+		const stored = await store.getWorkout('w1');
+
+		if (stored === null) {
+			throw new Error('the workout just written is missing');
+		}
+
+		await store.applyRemote([Object.assign(wire('w1', 300, null), { deletedAt: 300 })]);
+		await store.updateWorkout(stored, 400);
+
+		expect(await store.getWorkout('w1')).toBeNull();
+		expect(await store.listWorkouts()).toEqual([]);
+	});
+
+	it('updating an unknown or wrong-kind id writes nothing', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		await store.acknowledge([{ id: 't1', updatedAt: 150 }]);
+
+		const absent = Object.assign(workout('missing', 100, 'bench-press', []), { finishedAt: 200 });
+		const wrongKind = Object.assign(workout('t1', 100, 'bench-press', []), { finishedAt: 200 });
+
+		await store.updateWorkout(absent, 400);
+		await store.updateWorkout(wrongKind, 400);
+
+		expect(await store.getWorkout('missing')).toBeNull();
+		expect(await store.getTemplate('t1')).not.toBeNull();
+		expect(await store.dirtyRecords()).toEqual([]);
+	});
+
 	it('deletes by tombstone: dirty, stamped, and gone from every read', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
 		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);

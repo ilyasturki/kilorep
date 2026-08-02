@@ -15,6 +15,7 @@ import {
 	hintFor,
 	hintLabel,
 	insertedSetCount,
+	markSet,
 	moveEntry,
 	parseEntry,
 	prefillFor,
@@ -252,6 +253,61 @@ describe('draftSet', () => {
 
 	test('an unknown set is refused rather than silently ignored', () => {
 		expect(draftSet(freshWorkout(0), 'nope', { weight: 60, reps: 8 })).toBe(false);
+	});
+});
+
+describe('markSet', () => {
+	test('takes the claim back without touching the numbers', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 82.5, 6);
+
+		expect(markSet(workout, 'bench-1', false)).toBe(true);
+		expect(at(workout, 'bench-1').set).toMatchObject({
+			weight: 82.5,
+			reps: 6,
+			completed: false
+		});
+	});
+
+	test('claims a set that already holds both numbers', () => {
+		const workout = freshWorkout(0);
+		draftSet(workout, 'bench-1', { weight: 80, reps: 8 });
+
+		expect(markSet(workout, 'bench-1', true)).toBe(true);
+		expect(at(workout, 'bench-1').set.completed).toBe(true);
+	});
+
+	// The rule that keeps the volume tally honest: a set claiming it happened
+	// without saying what happened would count as a bodyweight zero.
+	test('refuses to claim a set with nothing in it', () => {
+		const workout = freshWorkout(0);
+		draftSet(workout, 'bench-1', { weight: null, reps: null });
+
+		expect(markSet(workout, 'bench-1', true)).toBe(false);
+		expect(at(workout, 'bench-1').set.completed).toBe(false);
+	});
+
+	test('refuses to claim a set with no reps, and one with no weight', () => {
+		const workout = freshWorkout(0);
+
+		draftSet(workout, 'bench-1', { weight: 80, reps: null });
+		expect(markSet(workout, 'bench-1', true)).toBe(false);
+
+		draftSet(workout, 'bench-1', { weight: null, reps: 8 });
+		expect(markSet(workout, 'bench-1', true)).toBe(false);
+	});
+
+	// Clearing has no such gate: whatever the set holds stays on it, which is
+	// what makes the disc a toggle rather than a one-way door.
+	test('clearing a blank set is allowed', () => {
+		const workout = freshWorkout(0);
+		draftSet(workout, 'bench-1', { weight: null, reps: null });
+
+		expect(markSet(workout, 'bench-1', false)).toBe(true);
+	});
+
+	test('an unknown set is refused rather than silently ignored', () => {
+		expect(markSet(freshWorkout(0), 'nope', false)).toBe(false);
 	});
 });
 

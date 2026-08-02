@@ -112,6 +112,48 @@ export class Store {
 	}
 
 	/**
+	 * A correction to a session already recorded: the tree as the edit left it,
+	 * `updatedAt` stamped afresh, dirty again so the next sync carries it.
+	 *
+	 * `finishWorkout` cannot serve. It stamps `finishedAt` from its argument, and
+	 * an edit is not a second ending — a set fixed on Sunday must not move a
+	 * Thursday session's clock. `startedAt` and `templateId` are equally untouched
+	 * here, and the caller has no gesture that changes either.
+	 *
+	 * Read-modify-write rather than a straight `put`, and that is the whole
+	 * reason for the transaction: writing the envelope blind would set
+	 * `deletedAt: null` over a tombstone that arrived from another device while
+	 * this screen was open, resurrecting a workout the user deleted there. An
+	 * unknown, tombstoned or wrong-kind id is silently no-op'd, which is what the
+	 * screen wants — it has nowhere to put an error, and the record it was
+	 * editing is already gone.
+	 */
+	public async updateWorkout(workout: FinishedWorkout, updatedAt: number): Promise<void> {
+		// Spelled field by field, the same bargain `finishWorkout` strikes: a
+		// field added to `Workout` fails the build here rather than silently
+		// dropping out of an edited record.
+		const payload: FinishedWorkout = {
+			id: workout.id,
+			templateId: workout.templateId,
+			startedAt: workout.startedAt,
+			entries: workout.entries,
+			finishedAt: workout.finishedAt
+		};
+
+		const tx = this.db.transaction('records', 'readwrite');
+		const record = await tx.store.get(workout.id);
+
+		if (record !== undefined && record.kind === 'workout' && record.deletedAt === null) {
+			record.payload = payload;
+			record.updatedAt = updatedAt;
+			record.dirty = true;
+			await tx.store.put(record);
+		}
+
+		await tx.done;
+	}
+
+	/**
 	 * A delete is a tombstone, not a removal — the same bargain as
 	 * `deleteTemplate`, and the derivations need no telling: every read path
 	 * filters tombstones, so the workout leaves history, hints and PRs in the
