@@ -8,6 +8,7 @@
 	import { planShape, repsLabel, setsLabel } from '$lib/templates/plan';
 	import MiniStepper from '$lib/ui/MiniStepper.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
+	import More from '$lib/ui/icons/More.svelte';
 
 	/**
 	 * One planned exercise: what it is, how many sets, and the reps they ask for.
@@ -37,7 +38,8 @@
 		meta: Exercise;
 		exercise: TemplateExercise;
 		grip: Snippet;
-		onremove: () => void;
+		/** The exercise itself: view it, swap it, or take it out of the plan. */
+		onoptions: () => void;
 		onaddset: () => void;
 		/** Drop the last set. Never offered while one is left — that is a removal. */
 		onremoveset: () => void;
@@ -46,7 +48,7 @@
 		onsetreps: (setId: string, reps: number | null) => void;
 	};
 
-	let { meta, exercise, grip, onremove, onaddset, onremoveset, onreps, onsetreps }: Props =
+	let { meta, exercise, grip, onoptions, onaddset, onremoveset, onreps, onsetreps }: Props =
 		$props();
 
 	const shape = $derived(planShape(exercise));
@@ -122,16 +124,25 @@
 			</a>
 		</h2>
 
-		<!-- `×` is a character the subset carries. It asks first now — see the
-		     screen's dialog for why the plan earned one. -->
+		<!-- Everything that happens to the exercise rather than to its plan, behind
+		     one button: view it, swap it, remove it. It was a bare `×` for removal
+		     alone, which left a swap nowhere to go — a third 44px control in this
+		     header would have eaten the name it sits beside, on a card that is 327px
+		     wide on a phone.
+
+		     `More` and not a `×`, because this is the app's options glyph: the same
+		     one a set row, an active set and a history section all wear for the same
+		     gesture. The removal it used to be is two taps deeper now and asks
+		     nothing on arrival — the menu naming the exercise is the deliberation
+		     the dialog used to supply. -->
 		<button
 			type="button"
-			aria-label="Remove {meta.name}"
-			onclick={onremove}
-			class="grid size-11 shrink-0 place-items-center rounded-full text-xl leading-none
-				text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2"
+			aria-label="Options for {meta.name}"
+			onclick={onoptions}
+			class="grid size-11 shrink-0 place-items-center rounded-full text-ink-faint focus-ring
+				hover:bg-surface-2 active:bg-surface-2"
 		>
-			×
+			<More size={20} />
 		</button>
 
 		{@render grip()}

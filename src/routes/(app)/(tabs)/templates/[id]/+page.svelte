@@ -12,6 +12,7 @@
 		PLANNED_SET_COUNT,
 		removeExercise,
 		removeSet,
+		replaceExercise,
 		setExerciseReps,
 		setPlannedReps,
 		startFrom
@@ -23,6 +24,7 @@
 	import { plannedGroups } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanList from '$lib/templates/PlanList.svelte';
+	import PlanOptionsSheet from '$lib/templates/PlanOptionsSheet.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -177,29 +179,45 @@
 	}
 
 	/**
-	 * Removing a planned exercise asks first.
+	 * The exercise-level sheet, and the picker a swap opens behind it. The
+	 * workout screen's pair, one tree over — same names, same handover.
 	 *
-	 * The workout's own removal does not, unless sets have been logged — nothing
-	 * is lost there but an empty row. Here the card *is* the work: the sets, the
-	 * targets and the order someone sat down to decide, and there is no undo
-	 * anywhere in the app. Held as an id and resolved live rather than
-	 * snapshotted, for the reason the workout's option sheets give: a dialog
-	 * naming a row that has since moved is worse than one naming nothing.
+	 * Addressed by the exercise node's id, which is what `PlanCard` is drawn per
+	 * and what a swap leaves untouched, and resolved out of the live tree on
+	 * every read rather than snapshotted on open: a sheet naming a card that has
+	 * since been dragged elsewhere is worse than one naming nothing.
+	 *
+	 * `acting` outlives the options sheet on purpose — it is what the picker's
+	 * answer is applied to, and the options sheet has closed by then. It is not
+	 * cleared after a swap: the card is still there, still under the same id, and
+	 * the picker's `replacing` reads it to shelve substitutes.
+	 *
+	 * Removal asks nothing. It used to, back when it was a bare `×` in the card's
+	 * header and the plan is genuinely the work — but it is two taps behind a
+	 * sheet naming the exercise now, and a dialog after that is a third gate on
+	 * one decision.
 	 */
-	let removeOpen = $state(false);
-	let removing = $state<string | null>(null);
+	let optionsOpen = $state(false);
+	let swapOpen = $state(false);
+	let acting = $state<string | null>(null);
 
-	const removingGroup = $derived(groups.find((group) => group.id === removing) ?? null);
+	const actingGroup = $derived(groups.find((group) => group.id === acting) ?? null);
 
-	function askRemove(exerciseId: string) {
-		removing = exerciseId;
-		removeOpen = true;
+	function options(exerciseId: string) {
+		acting = exerciseId;
+		optionsOpen = true;
 	}
 
-	function confirmRemove() {
-		if (removing !== null) {
-			removeExercise(template, removing);
-			removing = null;
+	function swapPick(exerciseId: string) {
+		if (acting !== null) {
+			replaceExercise(template, acting, exerciseId);
+		}
+	}
+
+	function removePlanned() {
+		if (acting !== null) {
+			removeExercise(template, acting);
+			acting = null;
 		}
 	}
 
@@ -424,7 +442,7 @@
 							<PlanCard
 								meta={group.meta}
 								exercise={group.exercise}
-								onremove={() => askRemove(group.id)}
+								onoptions={() => options(group.id)}
 								onaddset={() => addSet(template, group.id, crypto.randomUUID())}
 								onremoveset={() => shrink(group.id)}
 								onreps={(reps) => setExerciseReps(template, group.id, reps)}
@@ -511,12 +529,28 @@
 	onpick={plan}
 />
 
-<AlertDialog
-	bind:open={removeOpen}
-	title="Remove {removingGroup === null ? 'this exercise' : removingGroup.meta.name}?"
-	description="Its sets and rep targets go with it. Workouts already logged from this plan keep theirs."
-	confirmLabel="Remove"
-	onconfirm={confirmRemove}
+<!-- The same picker, asking a different question — the workout screen's second
+     opening of it, verbatim. `replacing` is what makes it a different question
+     rather than the same list under another title: the sheet shelves substitutes
+     for this exercise above the muscle sections, which is most of why a swap is
+     faster than a remove and an add.
+
+     What it answers to is a plan that survives the swap whole: the sets and the
+     targets stay exactly as they were, so a 3 × 8 bench becomes a 3 × 8 incline
+     press. Nothing is destroyed, so nothing is confirmed. -->
+<ExercisePickerSheet
+	bind:open={swapOpen}
+	title="Swap exercise"
+	replacing={actingGroup === null ? null : actingGroup.meta}
+	lastPerformed={data.lastPerformed}
+	onpick={swapPick}
+/>
+
+<PlanOptionsSheet
+	bind:open={optionsOpen}
+	group={actingGroup}
+	onswap={() => (swapOpen = true)}
+	onremove={removePlanned}
 />
 
 <AlertDialog

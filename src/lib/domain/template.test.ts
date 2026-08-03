@@ -8,6 +8,7 @@ import {
 	moveEntry,
 	removeExercise,
 	removeSet,
+	replaceExercise,
 	setExerciseReps,
 	setPlannedReps,
 	startFrom
@@ -145,6 +146,45 @@ describe('planning exercises', () => {
 
 		expect(removeExercise(template, 'nope')).toBe(false);
 		expect(template.entries).toHaveLength(1);
+	});
+
+	test('a swap keeps the plan and every id, and stays where it stood', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 3);
+		plan(template, 'cable-fly', 2);
+
+		setPlannedReps(template, 'bench-press-set-1', 12);
+		setPlannedReps(template, 'bench-press-set-2', 10);
+		setPlannedReps(template, 'bench-press-set-3', 8);
+
+		const before = idsIn(template);
+
+		expect(replaceExercise(template, 'bench-press-node', 'incline-press')).toBe(true);
+
+		// The pyramid is the user's, not the barbell's: it survives whole.
+		expect(targetsOf(template, 'bench-press-node')).toEqual([12, 10, 8]);
+		// First still, not shuffled to the end the way a remove-and-add would.
+		expect(orderOf(template)).toEqual(['incline-press', 'cable-fly']);
+		expect(idsIn(template)).toEqual(before);
+	});
+
+	test('a swap to what is already planned, and one to an unknown node, are no-ops', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 3);
+
+		expect(replaceExercise(template, 'bench-press-node', 'bench-press')).toBe(false);
+		expect(replaceExercise(template, 'nope', 'incline-press')).toBe(false);
+
+		expect(orderOf(template)).toEqual(['bench-press']);
+	});
+
+	test('the same exercise may be planned twice, swapped into or added', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 3);
+		plan(template, 'cable-fly', 2);
+
+		expect(replaceExercise(template, 'cable-fly-node', 'bench-press')).toBe(true);
+		expect(orderOf(template)).toEqual(['bench-press', 'bench-press']);
 	});
 });
 

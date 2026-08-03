@@ -158,6 +158,46 @@ function exerciseIn(template: Template, exerciseId: string): TemplateExercise | 
 }
 
 /**
+ * Swaps what a planned exercise prescribes, leaving the plan around it alone.
+ *
+ * The rack will be taken, so the slot is filled with something else — and the
+ * slot here is more than a position: it is three sets of eight, or the 12/10/8
+ * somebody sat down to build. All of it survives, because a template
+ * prescribes a *shape* and the shape was never a fact about the old exercise.
+ * Which is where this parts company with the workout's `replaceEntry`, whose
+ * sets are rebuilt from scratch: there the sets are logged performances of one
+ * specific lift, and carrying an 82.5 × 7 across would file it under something
+ * nobody did. Nothing is performed here, so nothing is misfiled.
+ *
+ * Every id survives too — the exercise node's and each set's — so this takes
+ * no minted ids at all. The node is the same slot holding a different lift,
+ * the editor's `{#each}` keys straight through it, and a card mid-swap keeps
+ * whatever its user had open.
+ *
+ * The exercise node, not the entry: an entry holding two of them is a
+ * superset, and swapping one half of it is a swap of that half. `catalogId`
+ * names a catalog exercise; `exerciseId` names a node of this tree.
+ *
+ * False for an unknown node, and false for a swap to what is already there —
+ * the same honest no-op `moveEntry` reports.
+ */
+export function replaceExercise(
+	template: Template,
+	exerciseId: string,
+	catalogId: string
+): boolean {
+	const exercise = exerciseIn(template, exerciseId);
+
+	if (exercise === null || exercise.exerciseId === catalogId) {
+		return false;
+	}
+
+	exercise.exerciseId = catalogId;
+
+	return true;
+}
+
+/**
  * Appends a planned set, carrying the target of the set above it.
  *
  * A copy and not the blank the workout's added set arrives as, because the
