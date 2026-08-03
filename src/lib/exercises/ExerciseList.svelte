@@ -23,6 +23,7 @@
 	import type { LastPerformed } from '$lib/store/derive';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
+	import Check from '$lib/ui/icons/Check.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
 
 	/**
@@ -78,16 +79,27 @@
 		/** Row action. Absent, rows navigate to the exercise detail instead. */
 		onpick?: (exercise: Exercise) => void;
 		/**
-		 * A short list to shelve above the sections, for a caller that arrived
-		 * with a question the muscle order cannot answer — today that is the swap
-		 * picker and `similarTo`. Browse posture only: a search has already been
-		 * asked and answered, and a pinned block above its results would be the
-		 * screen ignoring what was typed.
+		 * A short list to shelve above the sections under its own heading, for a
+		 * caller that arrived with a question the muscle order cannot answer — the
+		 * swap picker's substitutes, the insert picker's what-you-actually-train.
+		 * Browse posture only: a search has already been asked and answered, and a
+		 * pinned block above its results would be the screen ignoring what was
+		 * typed.
+		 *
+		 * The heading travels with the list rather than being chosen here, because
+		 * the two shelves are two different claims — "these are like it" and "these
+		 * are yours" — and only the caller knows which it just made.
 		 */
-		similar?: Exercise[];
+		shelf?: { title: string; exercises: Exercise[] } | null;
+		/**
+		 * The picks so far, when the caller is collecting several before it acts.
+		 * Undefined for the single-answer callers, whose rows fire and close — see
+		 * `ListRow`'s `pressed` for what the difference costs a screen reader.
+		 */
+		selected?: ReadonlySet<string>;
 	};
 
-	let { query, muscle = null, lastPerformed, onpick, similar = [] }: Props = $props();
+	let { query, muscle = null, lastPerformed, onpick, shelf = null, selected }: Props = $props();
 
 	/**
 	 * Read once per mount, not per render: nothing on screen is worth a ticking
@@ -122,13 +134,34 @@
 {#snippet row(exercise: Exercise)}
 	{@const last = lastPerformed[exercise.id]}
 	{@const since = lastSinceLabel(last, now)}
+	{@const picked = selected !== undefined && selected.has(exercise.id)}
 
 	<!-- Declared inside the row rather than beside it so the snippet closes over
 	     this exercise, and so `trailing` can be withheld entirely on an untrained
 	     row: an always-passed snippet rendering nothing would still open
 	     ListRow's trailing span, and its gap would shift the chevron on every
-	     row that has no past. -->
-	{#snippet recency()}{since}{/snippet}
+	     row that has no past.
+
+	     The mark rides in the same span while a caller is collecting picks, on
+	     the right where the chevron would be — the one place in a row a status
+	     has ever lived. `aria-hidden`, because `ListRow`'s `pressed` has already
+	     said it, and a disc announcing "selected" beside a button announcing
+	     "pressed" is one fact read twice. -->
+	{#snippet recency()}
+		{since}
+
+		{#if selected !== undefined}
+			<span
+				aria-hidden="true"
+				class={[
+					'grid size-6 place-items-center rounded-full',
+					picked ? 'bg-accent text-on-accent' : 'border-[1.5px] border-line text-transparent'
+				]}
+			>
+				<Check size={14} />
+			</span>
+		{/if}
+	{/snippet}
 
 	<!-- The slot is reserved even when the entry has no art (sumo-deadlift
 	     today, every custom later): a missing thumb must not unalign the one
@@ -146,8 +179,9 @@
 		match={searching ? matchRange(exercise.name, query) : null}
 		meta={lastSetLabel(last)}
 		leading={thumb}
-		trailing={since === undefined ? undefined : recency}
+		trailing={since === undefined && selected === undefined ? undefined : recency}
 		chevron={onpick === undefined}
+		pressed={selected === undefined ? undefined : picked}
 		href={onpick === undefined ? `/exercises/${exercise.id}` : undefined}
 		onclick={onpick === undefined ? undefined : () => onpick(exercise)}
 	/>
@@ -164,11 +198,17 @@
 			{#if onpick === undefined}
 				<a href="/exercises/{variant.id}" aria-label={variant.name} class={chip}>{label}</a>
 			{:else}
+				<!-- The accent fill is `Chip`'s selected dress, and it hangs off the
+				     `aria-pressed` the row states rather than a class of its own —
+				     the attribute selector outranks the resting `text-ink-muted` in
+				     `chip` above, which a bare `text-on-accent` beside it would not:
+				     Tailwind resolves that by stylesheet order, as `Chip` says. -->
 				<button
 					type="button"
 					onclick={() => onpick?.(variant)}
 					aria-label={variant.name}
-					class={chip}
+					aria-pressed={selected === undefined ? undefined : selected.has(variant.id)}
+					class={[chip, 'aria-pressed:bg-accent aria-pressed:text-on-accent']}
 				>
 					{label}
 				</button>
@@ -208,15 +248,16 @@
 		     this is a shortcut past them, never a replacement.
 
 		     Withheld under a lit muscle for the reason it is withheld under a
-		     query: a filter is a question asked, and Similar answers a different
+		     query: a filter is a question asked, and the shelf answers a different
 		     one. Left standing it would shelve chest substitutes above a section
-		     the user had just narrowed to Back. -->
-		{#if similar.length > 0 && muscle === null}
+		     the user had just narrowed to Back — and, once the insert picker took
+		     the same slot, a shelf of leg movements over a lit Chest. -->
+		{#if shelf !== null && shelf.exercises.length > 0 && muscle === null}
 			<section class="flex flex-col gap-2">
-				<h2 class="px-3 label-caps">Similar</h2>
+				<h2 class="px-3 label-caps">{shelf.title}</h2>
 
 				<div class="list-group">
-					{#each similar as exercise (exercise.id)}
+					{#each shelf.exercises as exercise (exercise.id)}
 						{@render row(exercise)}
 					{/each}
 				</div>

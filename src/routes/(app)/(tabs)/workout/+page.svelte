@@ -6,9 +6,7 @@
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
-	import Barbell from '$lib/ui/icons/Barbell.svelte';
 	import Gear from '$lib/ui/icons/Gear.svelte';
 
 	import type { Template } from '$lib/domain/template';
@@ -30,6 +28,16 @@
 	 * of the other. This one is a start button and a glance of templates; the
 	 * loop is the loop. Nothing in either is behind a branch on which one you
 	 * meant.
+	 *
+	 * And it is written as a screen rather than as an empty state, which it was.
+	 * `EmptyState` is what a screen shows *before it has anything to show*, and
+	 * this one always has the only thing it is for: a way to begin. Drawn as one
+	 * it centred a title reading "No workout running" — home introducing itself
+	 * by what is absent — and the templates had to ride inside the action slot,
+	 * a left-aligned list inside a centred block, undoing the centring on the way
+	 * past. The start is at the foot now, where the template editor's Start and
+	 * History's Repeat already are: the same act in the same corner, under the
+	 * thumb, however far the list above it grows.
 	 *
 	 * Nothing begins until a tap says so. A session minted by navigation was how
 	 * "Resume workout" appeared over a workout nobody had started, and the rule
@@ -59,7 +67,8 @@
 	 *
 	 * PRODUCT.md retires tap-to-start on the Templates *tab*, where a row also
 	 * means "open this plan". Here a row can mean nothing else: starting is this
-	 * screen's whole job, and the tab keeps the editor route for reading.
+	 * screen's whole job, the heading over the list says so, and the tab keeps
+	 * the editor route for reading.
 	 */
 	async function startTemplate(template: Template) {
 		const workout = startFrom(template, Date.now(), () => crypto.randomUUID());
@@ -118,53 +127,63 @@
 	<title>Workout | Kilorep</title>
 </svelte:head>
 
-<!-- The templates ride under the start button as the ways a workout begins
-     rather than as a route to walk — reading and editing them stays the tab's
-     job, and past the glance-sized few the last row is the walk there. -->
 <main class="min-h-0 flex-1 overflow-y-auto">
-	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
+	<!-- `lg:pt-3` is the Templates and Exercises tabs' own: the phone header is
+	     gone at that width and the first thing on the page is a section heading,
+	     which flush under the bar's hairline reads as part of the bar. -->
+	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-3">
 		<header class="flex items-start justify-between gap-3 pt-10 lg:hidden">
 			<h1 class="text-2xl font-extrabold tracking-tight">Kilorep</h1>
 
 			{@render gear()}
 		</header>
 
-		<EmptyState
-			class="pb-16"
-			title="No workout running"
-			description={data.templates.length === 0
-				? 'Start empty and build as you go.'
-				: 'Start empty and build as you go, or begin from a template.'}
-		>
-			{#snippet icon()}
-				<Barbell size={24} />
-			{/snippet}
-			{#snippet action()}
-				<div class="flex w-full flex-col items-center gap-3">
-					<Button variant="commit" onclick={() => void startEmpty()}>Start empty workout</Button>
+		{#if data.templates.length === 0}
+			<!-- The whole of what this screen has to say before there is a plan to
+			     name: one line, no icon, no second button. The act is at the foot
+			     where it always is, and a graphic over an empty pane would be
+			     decoration on the one screen that opens every session. -->
+			<p class="px-3 text-md font-bold text-ink-faint">Start empty and build as you go.</p>
+		{:else}
+			<section class="flex flex-col gap-2">
+				<!-- The heading is what makes a tap on a row unambiguous. On the
+				     Templates tab the same row opens a plan, and PRODUCT.md is
+				     deliberate that one row cannot honestly carry both meanings —
+				     here it carries one, and this says which. -->
+				<h2 class="px-3 label-caps">Start from a template</h2>
 
-					{#if idleTemplates.length > 0}
-						<!-- `text-left` undoes the EmptyState's centring: these are the
-						     same rows the Templates tab stacks, and a row is not a
-						     caption. A tap starts — see `startTemplate` for why this
-						     list is exempt from the tab's open-don't-start rule. -->
-						<div class="w-full max-w-sm list-group text-left">
-							{#each idleTemplates as template (template.id)}
-								<ListRow
-									title={template.name.trim() === '' ? 'Untitled' : template.name}
-									meta={planned(template)}
-									chevron={false}
-									onclick={() => void startTemplate(template)}
-								/>
-							{/each}
-
-							{#if data.templates.length > idleTemplates.length}
-								<ListRow title="See all templates" href="/templates" />
-							{/if}
-						</div>
-					{/if}
+				<div class="list-group">
+					{#each idleTemplates as template (template.id)}
+						<ListRow
+							title={template.name.trim() === '' ? 'Untitled' : template.name}
+							meta={planned(template)}
+							chevron={false}
+							onclick={() => void startTemplate(template)}
+						/>
+					{/each}
 				</div>
-			{/snippet}
-		</EmptyState>
+
+				<!-- Outside the card on purpose, the arrangement the Templates tab
+				     already uses: inside it this would be a fifth row that looked
+				     like a plan and started nothing. -->
+				{#if data.templates.length > idleTemplates.length}
+					<ListRow title="See all templates" href="/templates" />
+				{/if}
+			</section>
+		{/if}
+
+		<!-- Pinned inside the scroll pane, the template editor's Start verbatim:
+		     the act stays under the thumb however long the glance above it grows,
+		     and the two screens that begin a workout begin it in the same corner.
+		     The tab bar below carries the gesture-bar clearance on a phone; from
+		     `lg` the pane's own floor is the window's. -->
+		<div
+			class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3
+				lg:pb-[max(0.75rem,var(--spacing-safe-b))]"
+		>
+			<Button variant="commit" class="w-full" onclick={() => void startEmpty()}>
+				Start empty workout
+			</Button>
+		</div>
 	</div>
 </main>

@@ -15,7 +15,7 @@
  * a commit would put a frame of latency inside the one-tap loop.
  */
 
-// The list rules arrive aliased: this class exposes `addSet`, `addExercise`
+// The list rules arrive aliased: this class exposes `addSet`, `addExercises`
 // and `removeSet` of its own, and a bare call to the domain one from inside
 // them would read like recursion.
 import {
@@ -226,28 +226,42 @@ export class WorkoutSession {
 	}
 
 	/**
-	 * Mid-workout insert: a new entry at the end of the session, sets and ids
-	 * minted here for the same reason `addSet`'s is. How many is
-	 * `insertedSetCount`'s rule, read against the store-derived history the
-	 * session was constructed with.
+	 * Mid-workout insert: a new entry per exercise at the end of the session, in
+	 * the order they were picked, sets and ids minted here for the same reason
+	 * `addSet`'s are. How many sets each gets is `insertedSetCount`'s rule, read
+	 * against the store-derived history the session was constructed with.
 	 *
-	 * The cursor goes to it, always. Adding an exercise mid-session is a
-	 * statement about what is being done next, and it is the one insertion the
-	 * user has to go looking for otherwise: the entry lands at the end of a
-	 * session that is scrolled somewhere else entirely, so leaving the cursor
-	 * behind means the answer to "add exercise" is a scroll.
+	 * A list rather than one at a time because the sheet answers in lists now —
+	 * an empty session is built by checking off a day's worth of movements and
+	 * committing once, and a method taking one would have the caller loop and
+	 * the cursor land on the last pick.
+	 *
+	 * The cursor goes to the first of them, always. Adding an exercise
+	 * mid-session is a statement about what is being done next, and it is the one
+	 * insertion the user has to go looking for otherwise: the entries land at the
+	 * end of a session that is scrolled somewhere else entirely, so leaving the
+	 * cursor behind means the answer to "add exercise" is a scroll. First and not
+	 * last because the picks are in the order they will be performed.
 	 */
-	public addExercise(exerciseId: string): void {
-		const count = insertedSetCount(this.history, exerciseId);
+	public addExercises(exerciseIds: string[]): void {
+		let first: string | null = null;
 
-		const entry = insertExercise(this.workout, exerciseId, {
-			entry: crypto.randomUUID(),
-			exercise: crypto.randomUUID(),
-			sets: Array.from({ length: count }, () => crypto.randomUUID())
-		});
+		for (const exerciseId of exerciseIds) {
+			const count = insertedSetCount(this.history, exerciseId);
 
-		if (entry !== null) {
-			this.#focus(entry.exercises[0].sets[0].id);
+			const entry = insertExercise(this.workout, exerciseId, {
+				entry: crypto.randomUUID(),
+				exercise: crypto.randomUUID(),
+				sets: Array.from({ length: count }, () => crypto.randomUUID())
+			});
+
+			if (entry !== null && first === null) {
+				first = entry.exercises[0].sets[0].id;
+			}
+		}
+
+		if (first !== null) {
+			this.#focus(first);
 		}
 	}
 
@@ -255,7 +269,7 @@ export class WorkoutSession {
 	 * Swapping what is performed in an entry: the rack was taken.
 	 *
 	 * Set count from the incoming exercise's history, ids minted here, both for
-	 * the same reasons `addExercise` above has them.
+	 * the same reasons `addExercises` above has them.
 	 *
 	 * The cursor follows only if it was inside the entry — where it has to, the
 	 * set it was on having just left the tree — or if the session had nothing

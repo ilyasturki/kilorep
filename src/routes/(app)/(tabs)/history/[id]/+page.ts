@@ -14,11 +14,11 @@ import type { PageLoad } from './$types';
  * error. The store rides along for the writes this screen makes — every
  * correction under Edit, and the delete.
  *
- * `lastPerformed` is the insert sheet's, not this screen's: an exercise added
- * to a past workout is picked from the same catalog list as one added
- * mid-session, and those rows spell out when each was last performed. Nothing
- * on the record itself reads it — a session that has already happened takes no
- * hints.
+ * `lastPerformed` and `frequent` are the insert sheet's, not this screen's: an
+ * exercise added to a past workout is picked from the same catalog list as one
+ * added mid-session, and those rows spell out when each was last performed
+ * under the same shelf of what is trained most. Nothing on the record itself
+ * reads either — a session that has already happened takes no hints.
  */
 export const load: PageLoad = async ({ params }) => {
 	const store = await getStore();
@@ -35,10 +35,10 @@ export const load: PageLoad = async ({ params }) => {
 	// boundary's assertion is what lets an older shape through it.
 	const templateId = workout.templateId ?? null;
 
-	const [template, lastPerformed] = await Promise.all([
+	const [template, { lastPerformed, frequent }] = await Promise.all([
 		templateId === null ? null : store.getTemplate(templateId),
-		store.lastPerformed()
+		store.pickerData()
 	]);
 
-	return { store, workout, template, lastPerformed };
+	return { store, workout, template, lastPerformed, frequent };
 };

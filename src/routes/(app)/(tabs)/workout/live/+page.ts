@@ -8,14 +8,16 @@ import type { PageLoad, PageLoadEvent } from './$types';
 
 /**
  * Everything the loop needs from the store, read once on the way in: the last
- * session of every exercise, and the hint map projected from it. The store
- * itself rides along because the page keeps writing to it — every mutation
- * persists the snapshot, and FINISH writes the record.
+ * session of every exercise, the shelf of what is trained most, and the hint
+ * map projected from the first of those. The store itself rides along because
+ * the page keeps writing to it — every mutation persists the snapshot, and
+ * FINISH writes the record.
  *
- * The hint map is projected from those sessions rather than read separately:
- * the screen needs both — hints for the prefill, whole sessions for the insert
- * sheet's rows — and asking the store twice would walk every stored workout
- * again to reach the same answer.
+ * One read for all three: the screen needs hints for the prefill, whole
+ * sessions for the insert sheet's rows and the counts for the block above them,
+ * and asking the store three times would walk every stored workout three times
+ * to reach the same answer. `pickerData` bundles the two the sheet reads;
+ * `hintsOf` projects the third here rather than walking again.
  *
  * A `load` rather than an `onMount` so the screen never renders a frame
  * without its hints — the prefill the one-tap loop opens on is made of them.
@@ -50,7 +52,7 @@ export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 	}
 
 	const store = await getStore();
-	const lastPerformed = await store.lastPerformed();
+	const { lastPerformed, frequent } = await store.pickerData();
 
-	return { store, lastPerformed, history: hintsOf(lastPerformed) };
+	return { store, lastPerformed, frequent, history: hintsOf(lastPerformed) };
 };

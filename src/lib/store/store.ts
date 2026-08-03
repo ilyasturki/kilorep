@@ -18,7 +18,7 @@ import type { SyncAck, WireRecord } from '$lib/sync/protocol';
 import type { KilorepDatabase } from './db.ts';
 import { openDatabase } from './db.ts';
 import type { FinishedWorkout, LastPerformed } from './derive.ts';
-import { historyFrom, lastPerformedFrom, pastSessionsFrom } from './derive.ts';
+import { frequentFrom, historyFrom, lastPerformedFrom, pastSessionsFrom } from './derive.ts';
 
 /**
  * The in-flight session, exactly as the screen holds it: the tree plus where
@@ -188,6 +188,22 @@ export class Store {
 	 */
 	public async lastPerformed(): Promise<LastPerformed> {
 		return lastPerformedFrom(await this.listWorkouts());
+	}
+
+	/**
+	 * Everything an exercise picker is made of, from one walk: the last session
+	 * under every row, and the shelf of what is actually trained that sits above
+	 * the muscle sections.
+	 *
+	 * One method rather than two calls for the same reason `lastPerformed` asks
+	 * screens not to call `history` alongside it — both answers come out of the
+	 * same records, and every consumer needs both, so asking twice would read
+	 * every stored workout twice to fill one sheet.
+	 */
+	public async pickerData(): Promise<{ lastPerformed: LastPerformed; frequent: string[] }> {
+		const workouts = await this.listWorkouts();
+
+		return { lastPerformed: lastPerformedFrom(workouts), frequent: frequentFrom(workouts) };
 	}
 
 	/** One exercise's past for the detail screen, oldest first. */

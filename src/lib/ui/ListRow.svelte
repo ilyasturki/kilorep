@@ -32,6 +32,16 @@
 		onclick?: () => void;
 		/** Suppress the chevron on a row that acts in place rather than navigating. */
 		chevron?: boolean;
+		/**
+		 * A row whose tap toggles rather than fires, and where it stands — the
+		 * picker's multi-select. Left undefined the row is an action, which is what
+		 * every other row in the app is, and nothing is announced.
+		 *
+		 * The state itself is drawn by the caller in `trailing`: this is the button's
+		 * half of it, and a row that looked selected without saying so is exactly
+		 * the failure the attribute exists to prevent.
+		 */
+		pressed?: boolean;
 		leading?: Snippet;
 		trailing?: Snippet;
 		class?: ClassValue;
@@ -44,6 +54,7 @@
 		href,
 		onclick,
 		chevron = true,
+		pressed,
 		leading,
 		trailing,
 		class: klass
@@ -105,7 +116,9 @@
 {#if href}
 	<a {href} data-list-row class={shape}>{@render body()}</a>
 {:else if onclick}
-	<button type="button" data-list-row {onclick} class={shape}>{@render body()}</button>
+	<button type="button" data-list-row aria-pressed={pressed} {onclick} class={shape}>
+		{@render body()}
+	</button>
 {:else}
 	<div data-list-row class={shape}>{@render body()}</div>
 {/if}

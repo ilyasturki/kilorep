@@ -151,12 +151,17 @@
 
 	let insertOpen = $state(false);
 
-	function plan(exerciseId: string) {
-		addExercise(template, exerciseId, {
-			entry: crypto.randomUUID(),
-			exercise: crypto.randomUUID(),
-			sets: Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID())
-		});
+	// A list, because the picker answers in lists: a plan is written by checking
+	// off a day's movements at once, which is the act this editor exists for.
+	// Order preserved — the picks land in the plan in the order they were made.
+	function plan(exerciseIds: string[]) {
+		for (const exerciseId of exerciseIds) {
+			addExercise(template, exerciseId, {
+				entry: crypto.randomUUID(),
+				exercise: crypto.randomUUID(),
+				sets: Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID())
+			});
+		}
 	}
 
 	/** Drop the last set of an exercise — the sets stepper's `−`. */
@@ -534,6 +539,8 @@
 <ExercisePickerSheet
 	bind:open={insertOpen}
 	title="Add exercise"
+	multiple
+	frequent={data.frequent}
 	lastPerformed={data.lastPerformed}
 	onpick={plan}
 />
@@ -552,7 +559,7 @@
 	title="Swap exercise"
 	replacing={actingGroup === null ? null : actingGroup.meta}
 	lastPerformed={data.lastPerformed}
-	onpick={swapPick}
+	onpick={([id]) => swapPick(id)}
 />
 
 <PlanOptionsSheet

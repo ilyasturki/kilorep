@@ -497,11 +497,18 @@
 		ondrop={() => void revealActive()}
 	/>
 
+	<!-- `multiple`, because this sheet is how an empty session becomes a session:
+	     checking off a day's movements and committing once beats reopening the
+	     panel per exercise, and mid-session the same bar costs a tap nobody
+	     making a single insert would notice. The cursor lands on the first of
+	     what arrives — see `addExercises`. -->
 	<ExercisePickerSheet
 		bind:open={insertOpen}
 		title="Add exercise"
+		multiple
+		frequent={data.frequent}
 		lastPerformed={data.lastPerformed}
-		onpick={(id) => session.addExercise(id)}
+		onpick={(ids) => session.addExercises(ids)}
 	/>
 
 	<!-- The same picker, asking a different question. It opens as the options sheet
@@ -518,7 +525,7 @@
 		title="Swap exercise"
 		replacing={exerciseGroup === null ? null : exerciseGroup.meta}
 		lastPerformed={data.lastPerformed}
-		onpick={swapPick}
+		onpick={([id]) => swapPick(id)}
 	/>
 
 	<ExerciseOptionsSheet

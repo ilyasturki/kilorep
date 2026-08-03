@@ -35,6 +35,17 @@
 		description?: string;
 		trigger?: Snippet;
 		children: Snippet;
+		/**
+		 * A bar pinned below the scroll box — the picker's `Add 3 exercises`, and
+		 * nothing else so far.
+		 *
+		 * Outside `body` rather than the last thing inside it, which is the whole
+		 * point: a commit that scrolls away with the list is a commit the user has
+		 * to go and find after checking the eighth row. The panel is already a flex
+		 * column with the body taking the slack, so this costs no geometry of its
+		 * own.
+		 */
+		footer?: Snippet;
 		class?: ClassValue;
 	};
 
@@ -44,6 +55,7 @@
 		description,
 		trigger,
 		children,
+		footer,
 		class: klass
 	}: Props = $props();
 
@@ -95,6 +107,16 @@
 	<div class="min-h-0 flex-1 overflow-y-auto px-4 pt-1.5 pb-4">
 		{@render children()}
 	</div>
+
+	<!-- The hairline is the scroll box's edge, drawn only when something sits
+	     below it: it says the list continues under the bar rather than ending
+	     there. `shrink-0` because the body above it is what gives, always — a
+	     panel at its 85dvh ceiling must lose list, never the commit. -->
+	{#if footer}
+		<div class="shrink-0 border-t border-line-soft px-4 pt-3">
+			{@render footer()}
+		</div>
+	{/if}
 {/snippet}
 
 {#if wideViewport.current}

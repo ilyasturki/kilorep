@@ -173,3 +173,71 @@ export function hintsOf(last: LastPerformed): History {
 export function historyFrom(workouts: FinishedWorkout[]): History {
 	return hintsOf(lastPerformedFrom(workouts));
 }
+
+/**
+ * How many finished workouts back the shelf below looks.
+ *
+ * A count of sessions rather than a calendar window, which was the other
+ * candidate. A window in weeks measures the calendar, and what the shelf is
+ * actually asking is "what do you train" — so a fortnight away from the gym
+ * would blank it for someone whose routine had not changed at all, and someone
+ * training five times a week would be judged on the same span as someone
+ * training twice. Ten is roughly a training block either way: long enough that
+ * an upper/lower split shows both halves, short enough that a movement dropped
+ * two months ago has fallen out.
+ */
+const RECENT_SESSIONS = 10;
+
+/** As many as the picker shelves before the muscle sections start. */
+const SHELF = 8;
+
+/**
+ * The exercises trained most across the recent sessions, most-trained first —
+ * what the insert picker pins above the catalog.
+ *
+ * Counted in *sessions*, never in sets: an exercise is on the shelf because it
+ * keeps coming back, and counting sets would let one twelve-set arm day
+ * outrank the squat trained every week. Which is also why an exercise
+ * performed twice in one workout counts once — `exercisesIn` already dedupes,
+ * and the second appearance is one session's shape, not a second session.
+ *
+ * "Performed" means what it means everywhere else in this module: a workout
+ * where the exercise was on screen but nothing was completed contributes
+ * nothing. A row this shelf carries is a claim about training done, and the
+ * whole point of the tie-break below is that the claim can be trusted.
+ *
+ * Ties go to the more recent, so a rotation that has just changed sorts ahead
+ * of the one it replaced while both still count the same. Below that the order
+ * is the sessions' own, which is stable across reads — nothing here consults a
+ * clock.
+ *
+ * Ids rather than exercises, because this module knows nothing of the catalog
+ * and should not start now: the sheet joins them, and drops any it cannot
+ * resolve.
+ */
+export function frequentFrom(workouts: FinishedWorkout[], limit: number = SHELF): string[] {
+	const recent = workouts.toSorted((a, b) => b.startedAt - a.startedAt).slice(0, RECENT_SESSIONS);
+	const counts = new Map<string, { sessions: number; last: number }>();
+
+	for (const workout of recent) {
+		for (const exerciseId of exercisesIn(workout)) {
+			if (performedSets(workout, exerciseId).length === 0) {
+				continue;
+			}
+
+			const seen = counts.get(exerciseId);
+
+			if (seen === undefined) {
+				counts.set(exerciseId, { sessions: 1, last: workout.startedAt });
+			} else {
+				seen.sessions += 1;
+				seen.last = Math.max(seen.last, workout.startedAt);
+			}
+		}
+	}
+
+	return [...counts]
+		.toSorted(([, a], [, b]) => b.sessions - a.sessions || b.last - a.last)
+		.slice(0, limit)
+		.map(([exerciseId]) => exerciseId);
+}

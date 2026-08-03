@@ -188,15 +188,23 @@
 		}
 	}
 
-	function insert(exerciseId: string) {
-		const entry = addExercise(workout, exerciseId, {
-			entry: crypto.randomUUID(),
-			exercise: crypto.randomUUID(),
-			sets: ids()
-		});
+	// A list, the picker's shape everywhere. The editor opens on the first of
+	// them for the reason it opens at all: the sets arrived blank, and the first
+	// is where filling them in starts.
+	function insert(exerciseIds: string[]) {
+		let opened = false;
 
-		if (entry !== null) {
-			openSetId = entry.exercises[0].sets[0].id;
+		for (const exerciseId of exerciseIds) {
+			const entry = addExercise(workout, exerciseId, {
+				entry: crypto.randomUUID(),
+				exercise: crypto.randomUUID(),
+				sets: ids()
+			});
+
+			if (entry !== null && !opened) {
+				openSetId = entry.exercises[0].sets[0].id;
+				opened = true;
+			}
 		}
 	}
 
@@ -583,6 +591,8 @@
 <ExercisePickerSheet
 	bind:open={insertOpen}
 	title="Add exercise"
+	multiple
+	frequent={data.frequent}
 	lastPerformed={data.lastPerformed}
 	onpick={insert}
 />
@@ -594,7 +604,7 @@
 	title="Swap exercise"
 	replacing={exerciseGroup === null ? null : exerciseGroup.meta}
 	lastPerformed={data.lastPerformed}
-	onpick={swap}
+	onpick={([id]) => swap(id)}
 />
 
 <ExerciseOptionsSheet

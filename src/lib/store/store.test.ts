@@ -7,7 +7,7 @@ import type { Workout, WorkoutSet } from '$lib/domain/workout';
 import type { WireRecord } from '$lib/sync/protocol';
 
 import { openDatabase } from './db.ts';
-import { hintsOf } from './derive.ts';
+import { frequentFrom, hintsOf } from './derive.ts';
 import { Store } from './store.ts';
 
 /**
@@ -494,6 +494,103 @@ describe('past sessions', () => {
 		const projected = await store.lastPerformed();
 
 		expect(projected['pec-deck']!.position).toBe(3);
+	});
+});
+
+describe('frequent exercises', () => {
+	/**
+	 * One workout, one exercise per entry, one completed set each — the shelf
+	 * counts sessions, so what those sets hold never matters. `done: false`
+	 * leaves the whole session logged but uncompleted, which is the state that
+	 * must not count as training.
+	 */
+	function session(id: string, startedAt: number, exerciseIds: string[], done = true): Workout {
+		return {
+			id,
+			templateId: null,
+			startedAt,
+			entries: exerciseIds.map((exerciseId, i) => ({
+				id: `${id}-entry-${i}`,
+				exercises: [
+					{
+						id: `${id}-node-${i}`,
+						exerciseId,
+						sets: [set({ weight: 80, reps: 8, completed: done }, `${id}-set-${i}`)]
+					}
+				]
+			}))
+		};
+	}
+
+	it('ranks by how many sessions hold the exercise, most first', async () => {
+		const store = await freshStore();
+
+		await store.finishWorkout(session('w1', 100, ['bench-press', 'cable-fly']), 150);
+		await store.finishWorkout(session('w2', 200, ['bench-press', 'pec-deck']), 250);
+		await store.finishWorkout(session('w3', 300, ['bench-press']), 350);
+
+		expect(frequentFrom(await store.listWorkouts())).toEqual([
+			'bench-press',
+			'pec-deck',
+			'cable-fly'
+		]);
+	});
+
+	it('breaks a tie towards the more recent', async () => {
+		const store = await freshStore();
+
+		await store.finishWorkout(session('w1', 100, ['cable-fly']), 150);
+		await store.finishWorkout(session('w2', 200, ['pec-deck']), 250);
+
+		expect(frequentFrom(await store.listWorkouts())).toEqual(['pec-deck', 'cable-fly']);
+	});
+
+	it('counts an exercise performed twice in one session once', async () => {
+		const store = await freshStore();
+
+		// Two entries, same exercise — a session that came back to the rack, not
+		// two sessions.
+		await store.finishWorkout(session('w1', 100, ['bench-press', 'bench-press']), 150);
+		await store.finishWorkout(session('w2', 200, ['cable-fly']), 250);
+
+		expect(frequentFrom(await store.listWorkouts())).toEqual(['cable-fly', 'bench-press']);
+	});
+
+	it('ignores an exercise nothing was completed on', async () => {
+		const store = await freshStore();
+
+		await store.finishWorkout(session('w1', 100, ['bench-press'], false), 150);
+		await store.finishWorkout(session('w2', 200, ['cable-fly']), 250);
+
+		expect(frequentFrom(await store.listWorkouts())).toEqual(['cable-fly']);
+	});
+
+	it('looks ten sessions back and no further', async () => {
+		const store = await freshStore();
+
+		// Eleven workouts, the oldest the only one holding the fly: it falls out
+		// of the window the eleventh pushes it past.
+		await store.finishWorkout(session('w0', 100, ['cable-fly']), 150);
+
+		for (let i = 1; i <= 10; i += 1) {
+			await store.finishWorkout(session(`w${i}`, 100 + i * 100, ['bench-press']), 150 + i * 100);
+		}
+
+		expect(frequentFrom(await store.listWorkouts())).toEqual(['bench-press']);
+	});
+
+	it('shelves nothing on a fresh install', async () => {
+		const store = await freshStore();
+
+		expect(frequentFrom(await store.listWorkouts())).toEqual([]);
+	});
+
+	it('caps the shelf', async () => {
+		const store = await freshStore();
+
+		await store.finishWorkout(session('w1', 100, ['a', 'b', 'c']), 150);
+
+		expect(frequentFrom(await store.listWorkouts(), 2)).toEqual(['a', 'b']);
 	});
 });
 

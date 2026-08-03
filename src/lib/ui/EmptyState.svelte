@@ -11,10 +11,14 @@
 	 * immediately, empty and serverless", so this is literally the first screen
 	 * of the app, and the action it carries is the one thing a new user is
 	 * meant to do next. The action lives here, in the slot, never as a second
-	 * affordance below: an empty screen is one decision, and it asks once.
-	 * The slot spans the pane — the idle Workout screen stacks a template list
-	 * in it, and a list cannot take a width from a wrapper sized to fit — while
+	 * affordance below: an empty screen is one decision, and it asks once. The
+	 * slot spans the pane, so a wider action than a button can stand in it, while
 	 * the inherited `text-center` keeps a lone button exactly where it was.
+	 *
+	 * What it is not is a screen that always has something to show. The idle
+	 * Workout screen was drawn with this for a while and stacked its template
+	 * list in the slot; it is written as itself now, because "no workout running"
+	 * described the one page in the app that is never empty of its purpose.
 	 *
 	 * It grows and centres itself: on a screen whose column is `min-h-full`, an
 	 * empty list leaves this the only child with height to claim, so the state
