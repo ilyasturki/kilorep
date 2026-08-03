@@ -76,9 +76,10 @@
 	 * `history.scrollRestoration = 'manual'` at boot, so the browser's own
 	 * restoration is switched off underneath it and there is nothing to fall
 	 * back on. A snapshot is the sanctioned way to say what the framework
-	 * cannot see, and one on the layout covers all four tabs that share this
-	 * box — Exercises, History, Templates, Weight — because the box is one
-	 * element that outlives the navigations between them.
+	 * cannot see, and one on the layout covers every screen that shares this
+	 * box — Dashboard, Exercises, History, Templates, and Weight, off the bar
+	 * now but still a screen — because the box is one element that outlives
+	 * the navigations between them.
 	 *
 	 * Back and forward only, which is the whole contract of a snapshot: it is
 	 * keyed to the history entry being returned to. Tapping a tab is a new
@@ -115,7 +116,7 @@
 	/**
 	 * And the other half: a tab tapped is a tab opened at the top.
 	 *
-	 * The box below is one element for all four tabs, and nothing was resetting
+	 * The box below is one element for every tab in it, and nothing was resetting
 	 * it — SvelteKit zeroes `pageYOffset`, which this app does not use. So the
 	 * offset leaked across every tap and arrived clamped to whatever the next
 	 * tab happened to be tall enough to hold: measured on a phone, Exercises at

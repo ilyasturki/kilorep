@@ -58,5 +58,5 @@ The app opens into Workout, always.
 
 ## Unresolved — settle on the phone
 
-- The tab bar exists and gains a slot as each screen lands (Workout, Templates, Exercises and History so far; the workout screen goes full-bleed, no bar, while a session is live). The final allocation among Dashboard / Weight still gets judged on the phone.
+- The tab bar's final order gets judged on the phone; History lands last until then. The Dashboard / Weight allocation shipped as: Dashboard holds the slot, Weight leaves the bar and is reached through the Dashboard's weight card — on the phone to be judged like the rest.
 - Set extras: type, RPE, note, and the per-set load-mode override riding with them. The row stays `weight | reps | check` and the long-press sheet that holds Remove is where they go; what they look like in it is open.

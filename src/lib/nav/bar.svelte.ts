@@ -2,9 +2,9 @@ import { getContext, setContext } from 'svelte';
 
 import Barbell from '$lib/ui/icons/Barbell.svelte';
 import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
+import ChartBar from '$lib/ui/icons/ChartBar.svelte';
+import ChartBarFill from '$lib/ui/icons/ChartBarFill.svelte';
 import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
-import Gauge from '$lib/ui/icons/Gauge.svelte';
-import GaugeFill from '$lib/ui/icons/GaugeFill.svelte';
 import ListBullets from '$lib/ui/icons/ListBullets.svelte';
 import Stack from '$lib/ui/icons/Stack.svelte';
 
@@ -80,9 +80,11 @@ export function navTabs(): NavTab[] {
 		},
 		{ href: '/templates', label: 'Templates', icon: Stack },
 		{ href: '/exercises', label: 'Exercises', icon: ListBullets },
-		// The gauge is the closest glyph Phosphor has to a scale's dial; its
-		// fill is a true solid of the same object, so the pair holds.
-		{ href: '/weight', label: 'Weight', icon: Gauge, iconActive: GaugeFill },
+		// The Dashboard holds the slot Weight used to: six capsules do not fit
+		// a 360px bar, and the Weight screen is one tap inside the Dashboard's
+		// own weight card — the allocation PRODUCT.md left to be judged on the
+		// phone, shipped this way to be judged.
+		{ href: '/dashboard', label: 'Dashboard', icon: ChartBar, iconActive: ChartBarFill },
 		// Bold alone, like Exercises — see the glyph's own header for why the
 		// fill is no partner. PRODUCT.md still owes the bar its final order,
 		// judged on the phone; History lands last until then.

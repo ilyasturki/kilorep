@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import type { PastSession } from '$lib/domain/stats';
-import { bestSet, rawPr } from '$lib/domain/stats';
+import { bestSet, estimated1Rm, rawPr } from '$lib/domain/stats';
 import type { PerformedSet } from '$lib/domain/workout';
 
 // `rawPr` never reads the workout link or the ordinal; dummies keep the
@@ -41,6 +41,16 @@ describe('bestSet', () => {
 		const first = { weight: 100, reps: 5 };
 
 		expect(bestSet([first, { weight: 100, reps: 5 }])).toBe(first);
+	});
+});
+
+describe('estimated1Rm', () => {
+	test('Epley: weight × (1 + reps ⁄ 30)', () => {
+		expect(estimated1Rm({ weight: 100, reps: 5 })).toBeCloseTo(116.67, 2);
+	});
+
+	test('a single estimates the weight itself, not weight × 31⁄30', () => {
+		expect(estimated1Rm({ weight: 140, reps: 1 })).toBe(140);
 	});
 });
 

@@ -8,8 +8,8 @@
  *
  * Deliberately narrow: only what the workout screen needs. Volume and raw-PR
  * math are absent because PRODUCT.md gives this screen no running total and no
- * finish ceremony — that math answers to History and Dashboard, and writing it
- * here would be guessing at surfaces that have not been designed.
+ * finish ceremony — that math answers to History and the Dashboard, and lives
+ * where they read it: `$lib/domain/stats` and `$lib/domain/dashboard`.
  */
 
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';

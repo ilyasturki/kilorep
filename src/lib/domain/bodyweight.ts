@@ -96,6 +96,27 @@ export function rollingAverage(entries: BodyweightEntry[], windowDays = 7): Body
 }
 
 /**
+ * The trend's slope as the Dashboard's weight card states it: kilograms per
+ * week, signed, read first-point-to-last off whatever slice of the rolling
+ * average the caller passes — the average, never the raw entries, for the
+ * same reason the chart's line is the signal. Null under fourteen calendar
+ * days of span: a weekly rate extrapolated from less than two weeks answers
+ * with noise, and the card would rather say "keep logging" than guess.
+ */
+export function weeklyRate(line: BodyweightEntry[]): number | null {
+	const first = line.at(0);
+	const last = line.at(-1);
+
+	if (first === undefined || last === undefined) {
+		return null;
+	}
+
+	const days = dayNumber(last.date) - dayNumber(first.date);
+
+	return days < 14 ? null : ((last.kg - first.kg) / days) * 7;
+}
+
+/**
  * The entries inside the chart's window: the last `days` calendar days ending
  * on `today`, inclusive. ISO dates order lexicographically, so the cut is a
  * string comparison — no parsing, no clock.

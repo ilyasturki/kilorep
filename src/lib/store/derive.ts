@@ -90,6 +90,34 @@ export function pastSessionsFrom(workouts: FinishedWorkout[], exerciseId: string
 }
 
 /**
+ * Every exercise's past in one walk — the Dashboard's read, which needs all
+ * of them at once where the exercise detail needs one. Entry by entry it is
+ * exactly what `pastSessionsFrom` returns for that exercise: sessions oldest
+ * first, a workout where nothing was completed contributing none.
+ */
+export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, PastSession[]> {
+	const sorted = workouts.toSorted((a, b) => a.startedAt - b.startedAt);
+	const out: Record<string, PastSession[]> = {};
+
+	for (const workout of sorted) {
+		for (const [index, exerciseId] of exercisesIn(workout).entries()) {
+			const sets = performedSets(workout, exerciseId);
+
+			if (sets.length > 0) {
+				(out[exerciseId] ??= []).push({
+					date: workout.startedAt,
+					workoutId: workout.id,
+					position: index + 1,
+					sets
+				});
+			}
+		}
+	}
+
+	return out;
+}
+
+/**
  * For every exercise ever performed, its last session — the working sets, and
  * the day they were lifted. `PastSession` rather than a shape of its own: it
  * is one entry of what `pastSessionsFrom` returns, and the catalog rows that

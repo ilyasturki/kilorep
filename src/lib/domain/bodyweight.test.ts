@@ -5,6 +5,7 @@ import {
 	bodyweightId,
 	localDateOf,
 	rollingAverage,
+	weeklyRate,
 	windowed
 } from '$lib/domain/bodyweight';
 
@@ -96,5 +97,28 @@ describe('windowed', () => {
 			{ date: '2026-05-10', kg: 84 },
 			{ date: '2026-05-11', kg: 83.6 }
 		]);
+	});
+});
+
+describe('weeklyRate', () => {
+	test('under fourteen days of span the answer is null, not a guess', () => {
+		expect(weeklyRate([])).toBeNull();
+		expect(
+			weeklyRate([
+				{ date: '2026-07-01', kg: 80 },
+				{ date: '2026-07-13', kg: 79 }
+			])
+		).toBeNull();
+	});
+
+	test('kilograms per week, signed, first point to last', () => {
+		// −1.2 kg over 28 days is −0.3 a week.
+		expect(
+			weeklyRate([
+				{ date: '2026-07-01', kg: 80 },
+				{ date: '2026-07-15', kg: 79.4 },
+				{ date: '2026-07-29', kg: 78.8 }
+			])
+		).toBeCloseTo(-0.3, 5);
 	});
 });

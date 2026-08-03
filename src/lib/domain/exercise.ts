@@ -19,6 +19,11 @@
  */
 export type LoadMode = 'total' | 'per-hand' | 'unilateral';
 
+/** The multiplier above, as volume math reads it. */
+export function loadFactor(mode: LoadMode): number {
+	return mode === 'total' ? 1 : 2;
+}
+
 /**
  * A closed union rather than a free string, so the browse screen can filter
  * and group without a normalisation pass, and so two catalog entries cannot
@@ -53,10 +58,10 @@ export type Muscle = (typeof MUSCLES)[number];
 
 /**
  * One primary and any number of secondaries, rather than a flat list: the
- * distinction is how lifters describe an exercise, it is what shelves the
- * browse list (an exercise sits in its primary's section), and it leaves the
- * Balanced? card free to count primaries only or weight secondaries — an
- * attribution rule that gets decided when that card is built, not here.
+ * distinction is how lifters describe an exercise, and it is what shelves the
+ * browse list (an exercise sits in its primary's section). The Balanced? card
+ * settled its side when it was built: volume counts toward the primary alone
+ * — see `muscleVolume` in `$lib/domain/dashboard` for the reasoning.
  */
 export type MuscleTargets = { primary: Muscle; secondary: Muscle[] };
 

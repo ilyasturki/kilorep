@@ -1,7 +1,8 @@
 /**
- * The stats the exercise detail carries. Deliberately this small: volume math
- * and the est-1RM trend answer to Dashboard, which has not been designed, and
- * writing them here would be guessing at its questions.
+ * Per-exercise stats: the raw PR the exercise detail headlines, and the
+ * estimated 1RM the Dashboard reads as a trend signal. The Dashboard's own
+ * derivations — main lifts, the habit, muscle balance — live in
+ * `$lib/domain/dashboard`; this module stays about one exercise at a time.
  */
 
 import type { PerformedSet } from '$lib/domain/workout';
@@ -48,6 +49,17 @@ export function bestSet(sets: PerformedSet[]): PerformedSet | null {
 	}
 
 	return best;
+}
+
+/**
+ * Epley: weight × (1 + reps ⁄ 30). PRODUCT.md's one formula, and a trend
+ * signal only — the headline stays `rawPr`'s raw number, no formula. A single
+ * estimates the weight itself: the formula's +1⁄30 on one rep is an artifact
+ * of its shape, not an estimate of anything — you lifted it once, that is
+ * what a 1RM is.
+ */
+export function estimated1Rm(set: PerformedSet): number {
+	return set.reps <= 1 ? set.weight : set.weight * (1 + set.reps / 30);
 }
 
 /**

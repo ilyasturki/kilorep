@@ -19,9 +19,9 @@
 	 * later slice, so the only actions here are navigations — the family links,
 	 * and each history entry through to the workout it came from.
 	 *
-	 * The est-1RM trend is settled but deliberately absent: it is the app's
-	 * first chart, and charting gets decided once, at the Dashboard, not
-	 * smuggled in here as a one-off.
+	 * The est-1RM trend is settled but still absent: charting is decided now
+	 * — the Dashboard's sparklines, drawn from the same `estTrend` — and the
+	 * trend lands here as its own change, not smuggled into another one.
 	 *
 	 * History is the store's, derived from finished workouts on the way in.
 	 */
