@@ -595,4 +595,72 @@ describe('sync bookkeeping', () => {
 		expect(await store.claimOwner('user-a')).toBe(true);
 		expect(await store.claimOwner('user-b')).toBe(false);
 	});
+
+	it('owner reports the stamp without making one', async () => {
+		expect(await store.owner()).toBeNull();
+		// Asking must not be answering: the sign-in screen reads this before it
+		// knows whether it has a choice to offer.
+		expect(await store.owner()).toBeNull();
+
+		await store.claimOwner('user-a');
+		expect(await store.owner()).toBe('user-a');
+	});
+});
+
+describe('changing hands', () => {
+	let store: Store;
+
+	beforeEach(async () => {
+		store = await freshStore();
+
+		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
+		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
+		await store.setWatermark(42);
+		await store.claimOwner('user-a');
+	});
+
+	it('adopt re-dirties everything the old account had settled', async () => {
+		expect(await store.dirtyRecords()).toEqual([]);
+
+		await store.adopt('user-b');
+
+		// The ack that settled this record was the other account's and means
+		// nothing here, so the push has to happen again.
+		const dirty = await store.dirtyRecords();
+		expect(dirty).toHaveLength(1);
+		expect(dirty[0].id).toBe('w1');
+	});
+
+	it('adopt keeps the records and re-stamps the owner from zero', async () => {
+		await store.adopt('user-b');
+
+		expect(await store.listWorkouts()).toHaveLength(1);
+		expect(await store.owner()).toBe('user-b');
+		// Counted on the old account's counter, so it names nothing on the new one.
+		expect(await store.watermark()).toBe(0);
+		expect(await store.claimOwner('user-b')).toBe(true);
+	});
+
+	it('wipe empties the device, snapshot included', async () => {
+		await store.saveSnapshot({
+			workout: workout('live', 900, 'squat', [{ weight: 100, reps: 5 }]),
+			activeSetId: null
+		});
+
+		await store.wipe('user-b');
+
+		expect(await store.listWorkouts()).toEqual([]);
+		expect(await store.dirtyRecords()).toEqual([]);
+		expect(await store.loadSnapshot()).toBeNull();
+		expect(await store.watermark()).toBe(0);
+		expect(await store.owner()).toBe('user-b');
+	});
+
+	it('either way the store syncs as the new account afterwards', async () => {
+		expect(await store.claimOwner('user-b')).toBe(false);
+
+		await store.adopt('user-b');
+		expect(await store.claimOwner('user-b')).toBe(true);
+		expect(await store.claimOwner('user-a')).toBe(false);
+	});
 });

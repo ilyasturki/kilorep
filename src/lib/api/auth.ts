@@ -1,10 +1,11 @@
-import { ApiError, NO_SERVER, apiBase, request } from './client.ts';
+import { ApiError, NO_SERVER, apiBase, request, setDeviceToken } from './client.ts';
 import { GOOGLE_ENABLED_PATH, GOOGLE_START_PATH } from './routes.ts';
 
 /**
- * The auth calls the web surface makes, spelled once — plus the one thing here
- * that is not a call at all: `googleSignInUrl` builds a link the browser
- * *navigates* to, because signing in with Google means leaving this origin.
+ * The auth calls both surfaces make, spelled once — plus the one thing here
+ * that is not a call at all: `googleStartUrl` builds a URL that is *navigated*
+ * to rather than fetched, because signing in with Google means leaving this
+ * origin.
  *
  * `client: 'web'` is the reason this file exists rather than three `request`
  * calls at three call sites. The login route branches on it and the branches
@@ -51,6 +52,18 @@ export type PublicToken = {
 	current: boolean;
 };
 
+/**
+ * What every endpoint that mints a credential returns: the secret itself, which
+ * is the only time it is ever legible, and the row describing it.
+ *
+ * Spelled once because three call sites send it — device login, the Google
+ * claim, and `createToken` — and only the last of them reads `credential`.
+ */
+export type MintedToken = {
+	token: string;
+	credential: PublicToken;
+};
+
 type Fetch = typeof globalThis.fetch;
 
 /**
@@ -67,9 +80,38 @@ export async function login(email: string, password: string, fetch?: Fetch): Pro
 	});
 }
 
-/** Revokes the credential the request arrives with, and only that one. */
+/**
+ * The name a device token wears in the token list, which nobody types.
+ *
+ * Generated rather than asked for, because the phone's sign-in sits directly in
+ * front of the logging loop and a label field is a question with no interesting
+ * answer. A date is what actually distinguishes two entries in that list — the
+ * old phone and the new one — and it needs no `@capacitor/device` to produce.
+ */
+export function deviceLabel(): string {
+	const day = new Intl.DateTimeFormat('en-GB', {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric'
+	});
+
+	return `Kilorep on Android · ${day.format(new Date())}`;
+}
+
+/**
+ * Revokes the credential the request arrives with, and only that one.
+ *
+ * The local token goes whatever the server said. A revocation that failed to
+ * reach the server leaves a row the token list can still kill; a device that
+ * kept its copy because the network was down is a phone that looks signed in
+ * and is not.
+ */
 export async function logout(fetch?: Fetch): Promise<void> {
-	await request<undefined>('/api/auth/logout', { method: 'POST', fetch });
+	try {
+		await request<undefined>('/api/auth/logout', { method: 'POST', fetch });
+	} finally {
+		setDeviceToken(null);
+	}
 }
 
 /**
@@ -79,6 +121,50 @@ export async function logout(fetch?: Fetch): Promise<void> {
 export async function session(fetch?: Fetch): Promise<Session> {
 	const result = await request<Session>('/api/auth/session', { fetch });
 	return result;
+}
+
+/**
+ * Keeps a freshly minted device token and reports whose it is — the tail both
+ * ways in share, and the reason neither of them can be half-done.
+ *
+ * The token is set before the session read, which is the first call it
+ * authenticates. Minting one and forgetting to keep it revokes nothing and
+ * signs nobody in — it leaves a live row on the server that this device cannot
+ * use and cannot name — so the storing and the asking are one function.
+ */
+export async function adoptToken(token: string, fetch?: Fetch): Promise<Account> {
+	setDeviceToken(token);
+
+	const { user } = await session(fetch);
+
+	return user;
+}
+
+/**
+ * The phone's way in: a credential returned in the body and held by this
+ * client, rather than a cookie it could neither read nor be sent.
+ *
+ * Stored here rather than by the caller. Minting a token and forgetting to keep
+ * it revokes nothing and signs nobody in — it leaves a live row on the server
+ * that this device cannot use and cannot name — so the two halves are one
+ * function and there is no way to do only the first.
+ *
+ * The account comes back because the caller needs its id before anything else
+ * happens: the device store belongs to exactly one account, and whether this is
+ * that one is the next question asked.
+ */
+export async function signInDevice(
+	email: string,
+	password: string,
+	fetch?: Fetch
+): Promise<Account> {
+	const { token } = await request<MintedToken>('/api/auth/login', {
+		method: 'POST',
+		body: { email, password, client: 'device', label: deviceLabel() },
+		fetch
+	});
+
+	return adoptToken(token, fetch);
 }
 
 /** Every credential on the account, the caller's own marked `current`. */
@@ -94,11 +180,8 @@ export async function listTokens(fetch?: Fetch): Promise<PublicToken[]> {
  * Always `api`: `device` is the shell sign-in's kind to mint when that flow
  * exists, and `web` is a cookie the server refuses to hand out as a string.
  */
-export async function createToken(
-	label: string,
-	fetch?: Fetch
-): Promise<{ token: string; credential: PublicToken }> {
-	const minted = await request<{ token: string; credential: PublicToken }>('/api/auth/tokens', {
+export async function createToken(label: string, fetch?: Fetch): Promise<MintedToken> {
+	const minted = await request<MintedToken>('/api/auth/tokens', {
 		method: 'POST',
 		body: { label, kind: 'api' },
 		fetch
@@ -133,8 +216,11 @@ export async function googleEnabled(fetch?: Fetch): Promise<boolean> {
 }
 
 /**
- * The href behind "Continue with Google" — a destination to navigate to, never
- * something to `fetch`.
+ * Where a Google sign-in begins, for both surfaces: the href behind the web's
+ * "Continue with Google" — a destination to navigate to, never something to
+ * `fetch` — and the URL the phone hands its Custom Tab. They differ only in
+ * which parameter they carry, `redirectTo` or `challenge`, so the rule below is
+ * stated once rather than at each of them.
  *
  * Built through `apiBase()` rather than written as a relative `/api/…`, because
  * a relative one works on the web surface and 404s in the APK, where the origin
@@ -150,7 +236,7 @@ export async function googleEnabled(fetch?: Fetch): Promise<boolean> {
  * malformed path and which names nothing about the cause. `NO_SERVER` says
  * what happened, and says it in the one type the callers already catch.
  */
-export function googleSignInUrl(redirectTo: string): string {
+export function googleStartUrl(params: Record<string, string>): string {
 	const base = apiBase();
 
 	if (base === null) {
@@ -158,6 +244,10 @@ export function googleSignInUrl(redirectTo: string): string {
 	}
 
 	const url = new URL(GOOGLE_START_PATH, base);
-	url.searchParams.set('redirectTo', redirectTo);
+
+	for (const [key, value] of Object.entries(params)) {
+		url.searchParams.set(key, value);
+	}
+
 	return url.toString();
 }

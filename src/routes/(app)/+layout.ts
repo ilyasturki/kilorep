@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 
 import { session } from '$lib/api/auth';
-import { ApiError, NO_SERVER } from '$lib/api/client';
+import { ApiError, NO_SERVER, deviceToken } from '$lib/api/client';
 import { getStore } from '$lib/store/store';
 import { syncNow } from '$lib/sync/client';
 import { activeWorkout } from '$lib/workout/active.svelte';
@@ -63,6 +63,16 @@ async function restoreSession(): Promise<void> {
 export const load: LayoutLoad = async ({ url, fetch }) => {
 	await restoreSession();
 
+	// The phone answers "signed in" from what it holds, before it asks the
+	// network anything. A connected server with no token is the local-only state
+	// a sign-out or a revocation leaves behind — ordinary, per PRODUCT.md, and
+	// indistinguishable here from having no server at all. Skipping the call is
+	// not just an optimisation: a boot on gym signal would otherwise wait out a
+	// round-trip to be told what localStorage already knew.
+	if (import.meta.env.APP_BUILD && deviceToken() === null) {
+		return { user: null };
+	}
+
 	try {
 		const { user } = await session(fetch);
 
@@ -80,6 +90,14 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
 		}
 
 		if (error instanceof ApiError && error.status === 401) {
+			// On the phone the credential is already gone — `request` drops a
+			// Bearer the server just refused — so this is the cheap local-only
+			// path above, one boot early. Never a redirect: the door out of
+			// local-only is a row in Settings, not a wall in front of a workout.
+			if (import.meta.env.APP_BUILD) {
+				return { user: null };
+			}
+
 			// The whole attempted URL, so a deep link survives the detour. The
 			// form validates it again on the way back out — this side is not
 			// trusted to have written it, because anyone can send the link.

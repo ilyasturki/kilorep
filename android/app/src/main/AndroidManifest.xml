@@ -30,6 +30,32 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+                The way back in from a Google sign-in, which has to happen in a
+                Custom Tab because Google refuses OAuth inside a WebView. The
+                scheme is the applicationId verbatim, taken from the string
+                resource Capacitor already generates for it rather than written
+                out again; `DEVICE_REDIRECT` in src/lib/api/routes.ts is the
+                same string on the other side, and the server redirects to it.
+
+                A custom scheme is claimed, not owned — any app may register
+                this one and Android will offer the user a choice. That is why
+                the URL carries a single-use code bound to a PKCE challenge
+                rather than the token itself; see `googleCodes` in the schema.
+                An https App Link would be exclusive, but it needs an
+                assetlinks.json on a domain we control, and the server's domain
+                belongs to whoever self-hosted it.
+
+                `singleTask` above is what makes this arrive at the running
+                instance as `appUrlOpen` rather than starting a second one.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/custom_url_scheme" android:host="auth" />
+            </intent-filter>
+
         </activity>
 
         <provider

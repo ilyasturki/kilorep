@@ -1,18 +1,22 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 
-	import { createToken, logout, revokeToken } from '$lib/api/auth';
-	import { ApiError, apiBase, checkServer, setApiBase } from '$lib/api/client';
+	import { createToken, logout, revokeToken, signInDevice } from '$lib/api/auth';
+	import { ApiError, apiBase, checkServer, deviceToken, setApiBase } from '$lib/api/client';
+	import { signInWithGoogle } from '$lib/api/google-device';
 	import BackLink from '$lib/nav/BackLink.svelte';
+	import { getStore } from '$lib/store/store';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
+	import GoogleLogo from '$lib/ui/icons/GoogleLogo.svelte';
 	import Plugs from '$lib/ui/icons/Plugs.svelte';
+	import { activeWorkout } from '$lib/workout/active.svelte';
 
-	import type { PublicToken } from '$lib/api/auth';
+	import type { Account, PublicToken } from '$lib/api/auth';
 	import type { PageProps } from './$types';
 
 	/**
@@ -27,11 +31,31 @@
 	 *
 	 * Local-only in the app is all three collapsed to the connect form — the
 	 * layout reads "no server" as an ordinary state and hands `user: null`, so
-	 * this screen is where that state can end.
+	 * this screen is where that state can end. It is also the only place the
+	 * phone signs in: `/login` is a card centred in a viewport, which DESIGN.md
+	 * names as an anti-goal on a phone, and the credential it mints is a cookie
+	 * the WebView could not use. Address, then account, in the section that owns
+	 * both.
 	 */
 	let { data }: PageProps = $props();
 
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+	// Whether this device holds a credential, which on the phone is the whole of
+	// "signed in". Read from the client rather than from `data.user`, because the
+	// two answer different questions: `data.user` is null for an unreachable
+	// server too, and a sign-in form is not what that state needs.
+	//
+	// Derived on `data.user` because a load is what can change the answer behind
+	// this screen's back: `request` drops a credential the server refused, and the
+	// layout re-runs. The handlers below assign it directly for the window between
+	// an action and the load it triggers — a derived value takes an override and
+	// goes back to computing itself once its dependency moves.
+	let credentialled = $derived.by(() => {
+		void data.user;
+
+		return deviceToken() !== null;
+	});
 
 	// ——— Account ———
 
@@ -50,6 +74,17 @@
 			await logout();
 		} catch (error) {
 			signOutError = error instanceof ApiError ? error.message : 'could not sign out, try again';
+			signOutPending = false;
+			return;
+		}
+
+		// The phone has nowhere to be sent. Signing out there drops the device
+		// token and leaves the app local-only — the state PRODUCT.md calls the
+		// ordinary one — with the sign-in form appearing in this same section.
+		// Navigating to `/login` would draw the web's card over a working app.
+		if (import.meta.env.APP_BUILD) {
+			credentialled = false;
+			await invalidateAll();
 			signOutPending = false;
 			return;
 		}
@@ -103,9 +138,9 @@
 		setApiBase(base);
 		server = base;
 
-		// The guard takes it from here: re-reading the session against the new
-		// server answers 401, and the layout's redirect carries this page along
-		// as `redirectTo` — sign in, land back here, sections filled in.
+		// Connected, and not signed in — which is a complete state, not a
+		// half-finished one. The section below turns into the sign-in form, and
+		// `invalidateAll` is what asks the new server whether it offers Google.
 		await invalidateAll();
 		connectPending = false;
 	}
@@ -126,6 +161,158 @@
 
 		await invalidateAll();
 	}
+
+	// ——— Signing in (app build only) ———
+
+	let email = $state('');
+	let password = $state('');
+	let emailError = $state('');
+	let passwordError = $state('');
+	let signInError = $state('');
+	let signInPending = $state(false);
+	let googlePending = $state(false);
+
+	/**
+	 * The account a sign-in just produced, held only while the store's owner is
+	 * being resolved. Non-null exactly while the sheet below is the screen's
+	 * business.
+	 */
+	let arriving = $state<Account | null>(null);
+	let mismatchOpen = $state(false);
+	let wipeOpen = $state(false);
+
+	/**
+	 * What every sign-in path ends in, whichever credential it used.
+	 *
+	 * The store is tied to one account — `claimOwner` refuses to sync a store
+	 * that belongs to somebody else, silently, because there is no screen down in
+	 * the sync layer to say so. This is that screen: the one moment the mismatch
+	 * is visible and someone is present to decide about it. Everything else is
+	 * the ordinary case, where the store is unowned or already theirs and the
+	 * launch sync in the layout takes it from here.
+	 */
+	async function settle(user: Account) {
+		credentialled = true;
+
+		const store = await getStore();
+		const owner = await store.owner();
+
+		if (owner !== null && owner !== user.id) {
+			arriving = user;
+			mismatchOpen = true;
+			return;
+		}
+
+		await invalidateAll();
+	}
+
+	function reportSignIn(error: unknown): void {
+		signInError = error instanceof ApiError ? error.message : 'could not sign in, try again';
+	}
+
+	async function signIn() {
+		emailError = email.trim() === '' ? 'enter your email' : '';
+		passwordError = password === '' ? 'enter your password' : '';
+		if (emailError !== '' || passwordError !== '') {
+			return;
+		}
+
+		signInError = '';
+		signInPending = true;
+
+		try {
+			const user = await signInDevice(email.trim(), password);
+			// Cleared on success only. A wrong password is retyped, not the address.
+			password = '';
+			await settle(user);
+		} catch (error) {
+			reportSignIn(error);
+		}
+
+		signInPending = false;
+	}
+
+	async function withGoogle() {
+		signInError = '';
+		googlePending = true;
+
+		try {
+			await settle(await signInWithGoogle());
+		} catch (error) {
+			reportSignIn(error);
+		}
+
+		googlePending = false;
+	}
+
+	// ——— Whose device is this (app build only) ———
+
+	/**
+	 * The two answers to the mismatch, which differ only in what happens to the
+	 * records — everything around that is the same handover.
+	 *
+	 * `adopt`: everything logged on this phone becomes the new account's, and
+	 * nothing is lost on either side. The server keys records per account, so
+	 * these arrive as new rows and the previous account keeps its own copies.
+	 *
+	 * `wipe`: the phone changed hands. Everything local goes, then a full pull.
+	 */
+	async function handOver(mode: 'adopt' | 'wipe') {
+		if (arriving === null) {
+			return;
+		}
+
+		const { id } = arriving;
+
+		// Cleared before the sheet closes, so the dismissal effect below reads
+		// this as a decision already made rather than as a cancellation.
+		arriving = null;
+		mismatchOpen = false;
+
+		const store = await getStore();
+
+		if (mode === 'wipe') {
+			await store.wipe(id);
+
+			// The holder outlives the snapshot it was restored from, so a session
+			// left running would survive its own records and write itself back on
+			// finish.
+			activeWorkout.finish();
+		} else {
+			await store.adopt(id);
+		}
+
+		await invalidateAll();
+	}
+
+	/**
+	 * Backing out: the credential is given up and the phone stays local-only,
+	 * exactly as it was a moment ago.
+	 *
+	 * Reached by the sheet's Cancel and by dismissing it, which are the same
+	 * decision — leaving a token in place after refusing to answer the question
+	 * would sync nothing and explain nothing.
+	 */
+	async function abandon() {
+		arriving = null;
+		mismatchOpen = false;
+		credentialled = false;
+
+		try {
+			await logout();
+		} catch {
+			// The credential is dropped locally regardless; the token list on the
+			// server is where a row that outlived this gets revoked.
+		}
+
+		await invalidateAll();
+	}
+
+	$effect(() => {
+		if (!mismatchOpen && arriving !== null) {
+			void abandon();
+		}
+	});
 
 	// ——— API tokens ———
 
@@ -261,11 +448,104 @@
 				<div class="flex max-w-sm flex-col gap-3 px-1">
 					<p class="text-md break-all text-ink-muted">{server}</p>
 
+					{#if !credentialled}
+						<!-- Connected and signed out, which is a state the app runs in
+						     rather than a door it stands behind: everything logged here
+						     still works, and this form is how sync starts. -->
+						<p class="text-md text-pretty text-ink-muted">
+							Sign in to sync this phone with that server.
+						</p>
+
+						{#if data.google}
+							<Button
+								variant="secondary"
+								disabled={googlePending || signInPending}
+								onclick={withGoogle}
+							>
+								<GoogleLogo size={18} />
+								{googlePending ? 'Waiting for Google…' : 'Continue with Google'}
+							</Button>
+						{/if}
+
+						<Input
+							label="Email"
+							name="email"
+							type="email"
+							autocapitalize="none"
+							autocorrect="off"
+							spellcheck="false"
+							inputmode="email"
+							autocomplete="email"
+							bind:value={email}
+							error={emailError}
+						/>
+
+						<Input
+							label="Password"
+							name="password"
+							type="password"
+							autocomplete="current-password"
+							bind:value={password}
+							error={passwordError}
+						/>
+
+						<Button variant="secondary" disabled={signInPending || googlePending} onclick={signIn}>
+							{signInPending ? 'Signing in…' : 'Sign in'}
+						</Button>
+
+						<div aria-live="polite">
+							{#if signInError !== ''}
+								<p class="text-sm font-bold text-danger">{signInError}</p>
+							{/if}
+						</div>
+					{/if}
+
 					<Button variant="destructive" onclick={() => (disconnectOpen = true)}>
 						<Plugs size={18} />
 						Disconnect
 					</Button>
 				</div>
+
+				<!-- Three-way, so a Sheet rather than the AlertDialog the rest of this
+				     screen uses: the destructive option is one of the choices, not the
+				     whole question, and it keeps its own confirm below. -->
+				<Sheet
+					bind:open={mismatchOpen}
+					title="This phone belongs to another account"
+					description="Everything logged here was synced as somebody else. Choose what happens to it before {arriving?.email ??
+						'the new account'} takes over."
+				>
+					<div class="flex flex-col gap-5 pt-2">
+						<div class="flex flex-col gap-2">
+							<Button variant="secondary" onclick={() => void handOver('adopt')}>
+								Move it to this account
+							</Button>
+							<p class="px-1 text-sm text-pretty text-ink-muted">
+								Every workout, template and weight on this phone is copied across. The other account
+								keeps its own.
+							</p>
+						</div>
+
+						<div class="flex flex-col gap-2">
+							<Button variant="destructive" onclick={() => (wipeOpen = true)}>
+								Erase this phone
+							</Button>
+							<p class="px-1 text-sm text-pretty text-ink-muted">
+								Local data is deleted and replaced with whatever the new account has on the server.
+							</p>
+						</div>
+
+						<Button variant="chrome" caps onclick={() => void abandon()}>CANCEL</Button>
+					</div>
+				</Sheet>
+
+				<AlertDialog
+					bind:open={wipeOpen}
+					title="Erase everything on this phone?"
+					description="Every workout, template and body weight held here is deleted, including any that never reached a server. There is no undo."
+					confirmLabel="Erase"
+					onconfirm={() => void handOver('wipe')}
+				/>
 
 				<AlertDialog
 					bind:open={disconnectOpen}

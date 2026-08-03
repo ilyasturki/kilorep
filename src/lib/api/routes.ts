@@ -23,3 +23,22 @@ export const GOOGLE_ENABLED_PATH = GOOGLE_BASE;
 export const GOOGLE_START_PATH = `${GOOGLE_BASE}/start`;
 
 export const GOOGLE_CALLBACK_PATH = `${GOOGLE_BASE}/callback`;
+
+/** Where the phone trades its single-use code for a device token. */
+export const GOOGLE_CLAIM_PATH = `${GOOGLE_BASE}/claim`;
+
+/**
+ * Where the callback sends the phone when the sign-in it finished was a
+ * device's — the shell's own scheme, so Android hands the URL to the app rather
+ * than to a browser.
+ *
+ * The `applicationId` verbatim, which is what makes it unlikely to collide;
+ * `android/app/build.gradle` and `capacitor.config.ts` are the two places that
+ * must agree with it, and the intent-filter in `AndroidManifest.xml` is what
+ * actually claims it. Unlikely is not the same as exclusive, which is the whole
+ * reason what travels on this URL is a code and not a token — see `googleCodes`.
+ *
+ * Here rather than under `$lib/server` because it is a fact about the app that
+ * the server has to know, and this module already exists to hold exactly that.
+ */
+export const DEVICE_REDIRECT = 'io.github.ilyasturki.kilorep://auth';

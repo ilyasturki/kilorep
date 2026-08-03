@@ -105,6 +105,47 @@ export type AuthToken = typeof authTokens.$inferSelect;
 export type NewAuthToken = typeof authTokens.$inferInsert;
 
 /**
+ * A Google sign-in that has finished on the server but not yet reached the app
+ * — the seconds between the OAuth callback and the phone claiming its token.
+ *
+ * It exists because the app cannot be handed the token directly. The callback
+ * returns to the phone through a custom-scheme deep link, and on Android any
+ * installed app may register the same scheme; whatever rides on that URL should
+ * be assumed interceptable. So the URL carries a single-use code, and the token
+ * is fetched over TLS by whoever can prove they started the sign-in.
+ *
+ * `challenge` is what makes that proof possible: the app minted a verifier
+ * before opening the browser and sent only its SHA-256, so an app that steals
+ * the deep link holds a code it cannot spend. Same construction as the PKCE
+ * exchange with Google in `authorizationUrl`, applied to our own leg — the
+ * threat is the same one, one hop closer.
+ *
+ * A table rather than a map in the process, for the reason the handshake cookie
+ * gives for staying out of server memory: `adapter-node` is one process today,
+ * and a restart mid-sign-in would fail for one person, once, in a way nobody
+ * can reproduce.
+ *
+ * Rows are short-lived by construction — spent on claim, swept on the next
+ * insert — so this never grows into a table anyone has to think about.
+ */
+export const googleCodes = sqliteTable(
+	'google_codes',
+	{
+		/** SHA-256 of the cleartext, never the code itself. Same rule as `tokenHash`. */
+		codeHash: text('code_hash').notNull(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		/** The app's PKCE challenge: base64url SHA-256 of a verifier only it holds. */
+		challenge: text('challenge').notNull(),
+		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull()
+	},
+	(table) => [primaryKey({ columns: [table.codeHash] })]
+);
+
+export type GoogleCode = typeof googleCodes.$inferSelect;
+
+/**
  * The sync watermark source. Every write to a user's data claims the next
  * value inside the same transaction and stamps it on the row's `seq`, so a
  * pull is `where user_id = ? and seq > ?`.

@@ -58,6 +58,18 @@ export const NO_SERVER = -1;
 let configured: string | null = null;
 
 /**
+ * The device token, or null when the phone holds no credential for the server
+ * it is pointed at.
+ *
+ * A separate axis from `configured`, and the two are genuinely independent: a
+ * connected server with no token is the local-only fallback the app runs in
+ * after a sign-out or a revocation, and it is an ordinary state rather than a
+ * locked door. Nothing on the web ever sets this — the browser is same-origin
+ * with its server and authenticates with the cookie it cannot read.
+ */
+let credential: string | null = null;
+
+/**
  * Where the app build keeps the URL between launches. localStorage and not the
  * IndexedDB store: `db.ts` holds records, and this single string has to be
  * readable synchronously, before the first request of the boot — the guard's
@@ -65,20 +77,63 @@ let configured: string | null = null;
  */
 const SERVER_KEY = 'kilorep.server';
 
-/** The stored URL has been consulted; `configured` is now the truth either way. */
+/**
+ * And where it keeps the credential, for the same reason and with the same
+ * timing: the guard asks whether there is a token before it asks anything of
+ * the network.
+ *
+ * localStorage rather than a secure-storage plugin. The WebView's storage is
+ * private to the app, so the threat this would defend against is a rooted
+ * device with the screen unlocked — at which point the IndexedDB holding every
+ * workout is open to the same attacker.
+ */
+const TOKEN_KEY = 'kilorep.token';
+
+/** The stored values have been consulted; the two above are now the truth either way. */
 let restored = false;
 
 /**
- * A function, and the fallback read deferred to call time rather than resolved
- * at module scope: the marketing page at `/` is prerendered under Node, where
- * `location` does not exist, and a module-scope read would run during the build
- * for any route that transitively imported this file.
+ * Deferred to call time rather than resolved at module scope: the marketing
+ * page at `/` is prerendered under Node, where `localStorage` does not exist,
+ * and a module-scope read would run during the build for any route that
+ * transitively imported this file.
  */
-export function apiBase(): string | null {
+function restore(): void {
 	if (import.meta.env.APP_BUILD && !restored) {
 		restored = true;
 		configured = localStorage.getItem(SERVER_KEY);
+		credential = localStorage.getItem(TOKEN_KEY);
 	}
+}
+
+/**
+ * Writes one of the two through to disk, or forgets it — the app-build rule
+ * spelled once for both.
+ *
+ * `restored` is stamped whichever value moved: a setter has just made the
+ * in-memory pair authoritative, and a later `restore()` reading disk over the
+ * top of it would undo the write.
+ */
+function persist(key: string, value: string | null): void {
+	restored = true;
+
+	if (!import.meta.env.APP_BUILD) {
+		return;
+	}
+
+	if (value === null) {
+		localStorage.removeItem(key);
+	} else {
+		localStorage.setItem(key, value);
+	}
+}
+
+/**
+ * A function, and the fallback read deferred for the reason above — `location`
+ * is the one that does not exist during the prerender.
+ */
+export function apiBase(): string | null {
+	restore();
 
 	if (configured !== null) {
 		return configured;
@@ -97,15 +152,33 @@ export function apiBase(): string | null {
  */
 export function setApiBase(base: string | null): void {
 	configured = base;
-	restored = true;
+	persist(SERVER_KEY, base);
+}
 
-	if (import.meta.env.APP_BUILD) {
-		if (base === null) {
-			localStorage.removeItem(SERVER_KEY);
-		} else {
-			localStorage.setItem(SERVER_KEY, base);
-		}
-	}
+/**
+ * The credential this device holds, or null.
+ *
+ * Read by the guard before it asks the server anything: on the phone "signed
+ * in" is a local fact, and answering it with a round-trip would put the network
+ * in front of a boot that has no need of one.
+ */
+export function deviceToken(): string | null {
+	restore();
+
+	return credential;
+}
+
+/**
+ * Takes a minted device token, or forgets the one held — a sign-out, a
+ * disconnect, or a 401 that proved the stored one is dead.
+ *
+ * Persisted under the same rule as the address, and for a sharper version of
+ * the same reason: a token written on the web would be a second credential
+ * shadowing the cookie, sent as a Bearer to the origin that just set one.
+ */
+export function setDeviceToken(token: string | null): void {
+	credential = token;
+	persist(TOKEN_KEY, token);
 }
 
 /**
@@ -195,11 +268,30 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 		throw new ApiError(NO_SERVER, 'no server connected');
 	}
 
+	// Built rather than passed as an object literal because both entries are
+	// conditional: the phone has a token and no body on most calls, the browser
+	// has a body and no token on some.
+	const headers = new Headers();
+
+	if (body !== undefined) {
+		headers.set('content-type', 'application/json');
+	}
+
+	// The phone's whole identity. The browser reaches this with `token` null and
+	// authenticates with the HttpOnly cookie it never sees — which is also why
+	// `credentials` is left alone: the cookie rides a same-origin request by
+	// default, and asking for it cross-origin is exactly what `cors.ts` refuses
+	// to allow.
+	const token = deviceToken();
+	if (token !== null) {
+		headers.set('authorization', `Bearer ${token}`);
+	}
+
 	let response: Response;
 	try {
 		response = await fetch(`${base}${path}`, {
 			method,
-			headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+			headers,
 			body: body === undefined ? undefined : JSON.stringify(body)
 		});
 	} catch {
@@ -224,6 +316,16 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 	}
 
 	if (!response.ok) {
+		// A 401 on a request that carried a Bearer is that Bearer's death
+		// certificate — revoked from the token list, or belonging to an account
+		// that is gone — and forgetting it here is what stops every later caller
+		// re-asking a server that has already said no. Guarded on `token` rather
+		// than on the status alone: login's own 401 and claim's carry no
+		// credential, so neither can clear the one this device holds.
+		if (response.status === 401 && token !== null) {
+			setDeviceToken(null);
+		}
+
 		throw new ApiError(
 			response.status,
 			messageFrom(payload, `request failed (${response.status})`)

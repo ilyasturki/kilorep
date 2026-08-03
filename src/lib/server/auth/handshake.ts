@@ -30,7 +30,22 @@ const COOKIE_PATH = GOOGLE_BASE;
  */
 const MAX_AGE_SECONDS = 10 * 60;
 
-export type Handshake = { state: string; verifier: string; redirectTo: string };
+export type Handshake = {
+	state: string;
+	verifier: string;
+	redirectTo: string;
+	/**
+	 * Set exactly when the sign-in was started by the phone: the app's PKCE
+	 * challenge, which the callback copies onto the code it issues.
+	 *
+	 * Its presence *is* the device branch. Carrying it here rather than in the
+	 * callback's query is the same argument `state` makes — the round trip goes
+	 * through Google and comes back on a URL anyone can forge, and only what
+	 * this cookie says was ever ours. A forged `?client=device` on the callback
+	 * would otherwise redirect a browser session's token into a scheme handler.
+	 */
+	challenge?: string;
+};
 
 /**
  * `sameSite: 'lax'` is load-bearing rather than copied: the callback arrives as
@@ -81,10 +96,18 @@ export function takeHandshake(cookies: Cookies, url: URL): Handshake | undefined
 
 	// A missing key destructures to `undefined`, which is not a string — so the
 	// one check below covers both "absent" and "wrong type".
-	const { state, verifier, redirectTo } = parsed;
+	const { state, verifier, redirectTo, challenge } = parsed;
 	if (typeof state !== 'string' || typeof verifier !== 'string' || typeof redirectTo !== 'string') {
 		return undefined;
 	}
 
-	return { state, verifier, redirectTo };
+	// The optional one is narrowed rather than required, and a non-string is
+	// dropped rather than refused: what that produces is a web sign-in, which is
+	// the safe reading of a cookie this process wrote and cannot now recognise.
+	return {
+		state,
+		verifier,
+		redirectTo,
+		challenge: typeof challenge === 'string' ? challenge : undefined
+	};
 }

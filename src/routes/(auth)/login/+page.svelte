@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 
-	import { googleSignInUrl, login } from '$lib/api/auth';
+	import { googleStartUrl, login } from '$lib/api/auth';
 	import { ApiError } from '$lib/api/client';
 	import { resolveRedirect } from '$lib/api/redirect';
 	import favicon from '$lib/assets/favicon.svg';
@@ -175,9 +175,9 @@
 			{#if data.google}
 				<!-- An anchor, not a button with a handler: this leaves the origin, and
 				     a full navigation is what carries the browser to Google. The href
-				     goes through `googleSignInUrl` so it is built on `apiBase()` rather
+				     goes through `googleStartUrl` so it is built on `apiBase()` rather
 				     than written relative — hard rule 4. -->
-				<Button href={googleSignInUrl(destination)} variant="commit" compact>
+				<Button href={googleStartUrl({ redirectTo: destination })} variant="commit" compact>
 					<GoogleLogo size={20} />
 					Continue with Google
 				</Button>

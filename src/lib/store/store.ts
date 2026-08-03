@@ -447,6 +447,77 @@ export class Store {
 
 		return true;
 	}
+
+	/**
+	 * Which account this store belongs to, asked without claiming it.
+	 *
+	 * `claimOwner` cannot answer this: asking it on an unowned store *makes* it
+	 * owned, which is right for sync and wrong for a sign-in that has not yet
+	 * found out whether it needs to offer a choice.
+	 */
+	public async owner(): Promise<string | null> {
+		const value = await this.db.get('meta', OWNER_KEY);
+
+		return typeof value === 'string' ? value : null;
+	}
+
+	/**
+	 * Moves everything on this device into `userId`'s account — the merge half
+	 * of what a sign-in offers when the store belongs to somebody else.
+	 *
+	 * Three writes that only make sense together. Every record goes dirty,
+	 * including the ones a previous account already settled, because their acks
+	 * were that account's and mean nothing here. The watermark drops to zero, so
+	 * the first pull walks the new account's history from the start rather than
+	 * from a `seq` counted on another tenant's counter. The owner is overwritten
+	 * last.
+	 *
+	 * Nothing is destroyed, on either side. Records are keyed `(userId, id)` on
+	 * the server, so these arrive as the new account's own rows and the old
+	 * account keeps its copies untouched — which is what makes this the
+	 * non-destructive option of the two.
+	 */
+	public async adopt(userId: string): Promise<void> {
+		const tx = this.db.transaction('records', 'readwrite');
+
+		let cursor = await tx.store.openCursor();
+		while (cursor !== null) {
+			const record = cursor.value;
+
+			if (!record.dirty) {
+				record.dirty = true;
+				await cursor.update(record);
+			}
+
+			cursor = await cursor.continue();
+		}
+
+		await tx.done;
+
+		await this.setWatermark(0);
+		await this.db.put('meta', userId, OWNER_KEY);
+	}
+
+	/**
+	 * Empties the device and hands it to `userId` — the wipe half, for the phone
+	 * that changed hands.
+	 *
+	 * Records first and the owner last, so an interruption anywhere in the middle
+	 * leaves a store that is emptier than it was but still stamped with the old
+	 * account. That direction is the survivable one: the sign-in can be tried
+	 * again, and the alternative ordering would leave the new owner's stamp over
+	 * records that were never theirs.
+	 *
+	 * The snapshot goes with them. A half-logged session belongs to whoever was
+	 * lifting, and resuming someone else's sets into a new account is the exact
+	 * confusion this option was chosen to end.
+	 */
+	public async wipe(userId: string): Promise<void> {
+		await this.db.clear('records');
+		await this.clearSnapshot();
+		await this.setWatermark(0);
+		await this.db.put('meta', userId, OWNER_KEY);
+	}
 }
 
 async function openStore(): Promise<Store> {

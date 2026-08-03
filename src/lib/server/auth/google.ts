@@ -69,6 +69,17 @@ export function newSecret(): string {
 }
 
 /**
+ * PKCE's `S256`: the one spelling of a challenge that both legs must agree on.
+ *
+ * Here rather than beside either caller because there are two — the exchange
+ * with Google below, and our own leg between the phone and `device-codes.ts`.
+ * Same construction, same threat, one hop apart.
+ */
+export function challengeFor(verifier: string): string {
+	return createHash('sha256').update(verifier).digest('base64url');
+}
+
+/**
  * Where to send the browser.
  *
  * PKCE is included even though this is a confidential client exchanging with a
@@ -90,10 +101,7 @@ export function authorizationUrl(options: {
 	url.searchParams.set('response_type', 'code');
 	url.searchParams.set('scope', SCOPE);
 	url.searchParams.set('state', options.state);
-	url.searchParams.set(
-		'code_challenge',
-		createHash('sha256').update(options.verifier).digest('base64url')
-	);
+	url.searchParams.set('code_challenge', challengeFor(options.verifier));
 	url.searchParams.set('code_challenge_method', 'S256');
 	// No refresh token, so no consent screen on every return visit: this asks who
 	// you are once and never acts on your behalf afterwards.
