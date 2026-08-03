@@ -119,7 +119,16 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
-<div bind:this={drag.root} class="flex flex-col gap-1">
+<!-- `data-vaul-no-drag`: in the overview sheet this list stands inside a vaul
+     drawer, whose drag-to-dismiss reads the same pointer moves the reorder
+     does — and vaul latches its claim on the first pixel of travel, long
+     before a 500ms hold has lifted anything, so by the time a row was in hand
+     the sheet was already following the finger down. The attribute is vaul's
+     own refusal: every move whose target sits under it is declined, so the
+     latch never sets. Rows and grips stop dismissing the sheet; the handle,
+     the header, the scrim and hardware back all still do. Inert in the rail,
+     where there is no drawer to refuse. -->
+<div bind:this={drag.root} data-vaul-no-drag class="flex flex-col gap-1">
 	{#each groups as group (group.id)}
 		{@const here = group.cursors.some((c) => c.set.id === activeSetId)}
 		<!-- A predicate, not a count. Done/total came out of the app for restating

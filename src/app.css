@@ -629,6 +629,19 @@
 	background-color: var(--scrim);
 }
 
+/* Stamped on <html> by DragOrder for exactly the length of a lift. The first
+   crossing relocates the row's node and clears pointer capture, so from then
+   on the cursor is hit-tested against whatever the row is passing — a drag
+   that flickers through text-beams and pointers. This holds it at `grabbing`
+   for the duration, and the selection rule keeps a mouse that lifted
+   mid-sentence from painting a selection under the travelling row. Unlayered
+   on purpose: it has to win over the grip's own `cursor-grab` utility. */
+.drag-in-hand,
+.drag-in-hand * {
+	cursor: grabbing;
+	user-select: none;
+}
+
 /* vaul's base stylesheet, cut to what the app renders: a bottom drawer with no
    snap points. vaul-svelte ships no CSS — the drag is inline style, but the
    enter and exit ride these `data-vaul-*` attributes and are left to the

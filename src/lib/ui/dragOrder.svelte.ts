@@ -9,7 +9,13 @@
  * Two ways in, one lift. A handle lifts on contact, because a control whose
  * only job is dragging has nothing to disambiguate. Anywhere else on the row
  * lifts on a 500ms hold — the same threshold `SetRow` uses, since both are a
- * hold that opens something rather than a hold that accelerates.
+ * hold that opens something rather than a hold that accelerates. Under a
+ * mouse the row also lifts on the first few pixels of travel with the button
+ * down: a pressed button being dragged is the drag being asked for, and half
+ * a second of stillness is a touch idiom no desktop list observes. A touch
+ * that travels does the opposite and cancels the hold — a finger that moved
+ * was scrolling, and a lift landing on it would yank the row to wherever the
+ * scroll had got to.
  *
  * The list reorders live, on every crossing, so the drop has nothing left to
  * do. What that costs is a cancel path: the index the row started at is
@@ -51,10 +57,50 @@ export type DragOrderOptions = {
 	 * Not fired by unmount teardown, where there is no list left to show.
 	 */
 	drop?: (id: string) => void;
+	/**
+	 * Chrome laid over the scroller's bottom edge, in px — the template
+	 * screen's sticky Start bar. The auto-scroll band is measured from the
+	 * scroller's rect, and the strip behind an overlay is one the finger can
+	 * never reach: without the allowance, a drag toward the bar stalls at its
+	 * top instead of scrolling. Read every frame, so a bar that resizes is
+	 * simply followed.
+	 */
+	covered?: () => number;
 };
 
 /** Matches `SetRow`'s long-press: a hold that opens something, not one that accelerates. */
 const HOLD_LIFT = 500;
+
+/**
+ * Travel that promotes a pressed mouse button to a lift, in px. Small,
+ * because with the button down there is nothing else the movement could mean
+ * — a click that wanders less than this still lands as a click.
+ */
+const MOUSE_SLOP = 4;
+
+/**
+ * Travel that cancels a touch hold, in px. Looser than the mouse's, because
+ * a finger holding still isn't: a few pixels of tremor are the hold, and
+ * only past this is it a scroll that should never lift.
+ */
+const TOUCH_SLOP = 12;
+
+/**
+ * How far past a resident's centre the dragged entry's leading edge must
+ * reach before the two trade places, in px. The trade itself leaves the
+ * resident's centre only a gap short of where the edge crossed it, and a
+ * seam that thin would trade the rows straight back on tremor.
+ */
+const HYSTERESIS = 8;
+
+/**
+ * Stamped on `<html>` for the length of a lift. The first crossing clears
+ * pointer capture and hit-testing resumes over whatever the row is passing,
+ * so without it the cursor flickers through text-beams and pointers mid-drag
+ * — and the selection rule keeps a mouse that lifted mid-sentence from
+ * painting a selection under the travelling row. The rule lives in app.css.
+ */
+const IN_HAND = 'drag-in-hand';
 
 /**
  * Registered on the document for the length of a lift, non-passive so it can
@@ -130,6 +176,14 @@ export class DragOrder {
 	#lifted = false;
 
 	/**
+	 * A press on the row body that has not become anything yet — the window
+	 * where movement decides between a lift (mouse), a cancelled hold (touch)
+	 * and, by staying still, the hold itself.
+	 */
+	#pending: { event: PointerEvent; id: string; x: number; y: number; mouse: boolean } | null =
+		null;
+
+	/**
 	 * Construct during component initialisation — the teardown below is an
 	 * `$effect`, and a drag left running past its list would keep calling `move`
 	 * against a tree nobody is rendering.
@@ -167,14 +221,25 @@ export class DragOrder {
 		this.#lift(event, id);
 	}
 
-	/** A press on the row, which lifts only if it is still held at 500ms. */
+	/**
+	 * A press on the row, which lifts if it is still held at 500ms — or, under
+	 * a mouse, the moment it travels `MOUSE_SLOP`. See `move` for the split.
+	 */
 	public rowDown(event: PointerEvent, id: string): void {
 		if (this.liftedId !== null) {
 			return;
 		}
 
 		this.#arm(event);
+		this.#pending = {
+			event,
+			id,
+			x: event.clientX,
+			y: event.clientY,
+			mouse: event.pointerType === 'mouse'
+		};
 		this.#hold = setTimeout(() => {
+			this.#pending = null;
 			this.#lift(event, id);
 		}, HOLD_LIFT);
 	}
@@ -206,6 +271,27 @@ export class DragOrder {
 		}
 
 		this.#pointerY = event.clientY;
+
+		// The pending press resolves on travel, and which way depends on what
+		// the pointer could have meant: a mouse with the button down has nothing
+		// to say but "drag", so it lifts; a finger that moved was scrolling, so
+		// the hold is cancelled before it can lift a row out from under a pan.
+		const pending = this.#pending;
+
+		if (pending === null || this.liftedId !== null) {
+			return;
+		}
+
+		const travel = Math.hypot(event.clientX - pending.x, event.clientY - pending.y);
+
+		if (travel > (pending.mouse ? MOUSE_SLOP : TOUCH_SLOP)) {
+			this.#pending = null;
+			clearTimeout(this.#hold);
+
+			if (pending.mouse) {
+				this.#lift(pending.event, pending.id);
+			}
+		}
 	}
 
 	/**
@@ -357,6 +443,8 @@ export class DragOrder {
 		// and by then the user has already started guessing.
 		tapLift();
 
+		document.documentElement.classList.add(IN_HAND);
+
 		// After the lift is fully built, so a handler that reaches back into this
 		// list — the workout screen jumps to the exercise it just picked up — finds
 		// a drag already in hand rather than one half-assembled.
@@ -409,9 +497,11 @@ export class DragOrder {
 		const bounds = scroller.getBoundingClientRect();
 
 		// Auto-scroll, ramping with proximity so the last few pixels of travel are
-		// the fast ones and a pointer parked just inside the band crawls.
+		// the fast ones and a pointer parked just inside the band crawls. The
+		// floor backs off by whatever `covered` says is laid over it — a band
+		// behind the Start bar is a band the finger can never reach.
 		const above = this.#pointerY - bounds.top;
-		const below = bounds.bottom - this.#pointerY;
+		const below = bounds.bottom - (this.#options.covered?.() ?? 0) - this.#pointerY;
 
 		if (above < EDGE) {
 			scroller.scrollTop -= EDGE_SPEED * (1 - Math.max(above, 0) / EDGE);
@@ -453,19 +543,28 @@ export class DragOrder {
 			} else {
 				// Walked one slot at a time against a simulated order, the centres
 				// recomputed after every step: with heights varying, each crossing
-				// changes the very layout the next threshold is read from. Going
-				// down it takes the next slot on passing that resident's centre,
-				// and going up it does the mirror image.
+				// changes the very layout the next threshold is read from.
+				//
+				// The trigger is the dragged entry's *leading edge* passing the
+				// resident's centre — the trade happens once the row covers the
+				// neighbour's half. It used to be centre meeting centre, which
+				// reads the same on paper and drags a full slot behind the finger
+				// in the hand: from rest, a centre has a whole pitch to travel
+				// before it reaches the next one, so every first swap arrived a
+				// beat late. The trade moves the resident's centre a gap past
+				// where the edge crossed it — hysteresis, but only a gap of it,
+				// which is what `HYSTERESIS` widens to more than tremor.
 				const work = [...order];
 				let centres = this.#centres(work);
+				const edge = this.#height / 2;
 
-				while (target > 0 && centre <= centres[target - 1]) {
+				while (target > 0 && centre - edge <= centres[target - 1] - HYSTERESIS) {
 					[work[target - 1], work[target]] = [work[target], work[target - 1]];
 					target -= 1;
 					centres = this.#centres(work);
 				}
 
-				while (target < work.length - 1 && centre >= centres[target + 1]) {
+				while (target < work.length - 1 && centre + edge >= centres[target + 1] + HYSTERESIS) {
 					[work[target + 1], work[target]] = [work[target], work[target + 1]];
 					target += 1;
 					centres = this.#centres(work);
@@ -513,6 +612,8 @@ export class DragOrder {
 			this.#frame = undefined;
 		}
 
+		this.#pending = null;
+		document.documentElement.classList.remove(IN_HAND);
 		document.removeEventListener('touchmove', refuse);
 		document.removeEventListener('pointermove', this.#docMove);
 		document.removeEventListener('pointerup', this.#docUp);

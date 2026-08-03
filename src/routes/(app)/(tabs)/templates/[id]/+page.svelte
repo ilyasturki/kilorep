@@ -130,13 +130,21 @@
 	// the one beside it — which is fine: DragOrder measures each row's own height
 	// at lift and computes the slots from them, so the thresholds land where the
 	// cards actually are.
+	/** The sticky Start bar, measured for the drag's `covered` allowance. */
+	let startBar = $state<HTMLElement | null>(null);
+
 	const drag = new DragOrder({
 		order: () => entryIds,
 		move: (id, index) => {
 			moveEntry(template, id, index);
 
 			return true;
-		}
+		},
+		// The sticky Start bar lies over the pane's last rows, and with it the
+		// strip where the drag's auto-scroll band would sit — unannounced, a
+		// card dragged toward it stalls at the bar's top edge instead of
+		// scrolling under it.
+		covered: () => startBar?.offsetHeight ?? 0
 	});
 
 	const slide = $derived(prefersReducedMotion.current ? 0 : 200);
@@ -510,6 +518,7 @@
 				     long the plan grows. The tab bar below carries the gesture-bar
 				     clearance on a phone; from `lg` the pane's own floor is the window's. -->
 				<div
+					bind:this={startBar}
 					class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3
 						lg:pb-[max(0.75rem,var(--spacing-safe-b))]"
 				>
