@@ -38,6 +38,7 @@ const set = (spec: SetSpec, id: string): WorkoutSet => ({
 	plannedReps: null,
 	weight: spec.weight,
 	reps: spec.reps,
+	rpe: null,
 	completed: spec.completed ?? true
 });
 
@@ -399,6 +400,83 @@ describe('main variants', () => {
 	});
 });
 
+describe('exertion scale', () => {
+	let store: Store;
+
+	beforeEach(async () => {
+		store = await freshStore();
+	});
+
+	it('is RPE for an account that has never said, without writing a record', async () => {
+		expect(await store.exertionScale()).toBe('rpe');
+		// The default is a read-side rule, not a row: a fresh device must not push
+		// a preference nobody chose and win last-write-wins against one they did.
+		expect(await store.dirtyRecords()).toEqual([]);
+	});
+
+	it('round-trips a choice as a record born dirty and syncable', async () => {
+		await store.setExertionScale('rir', 100);
+
+		expect(await store.exertionScale()).toBe('rir');
+
+		expect(await store.dirtyRecords()).toEqual([
+			{
+				id: 'exertion-scale',
+				kind: 'preference',
+				updatedAt: 100,
+				deletedAt: null,
+				payload: { scale: 'rir' }
+			}
+		]);
+	});
+
+	it('re-choosing overwrites in place: there is only ever one', async () => {
+		await store.setExertionScale('rir', 100);
+		await store.setExertionScale('rpe', 200);
+
+		expect(await store.exertionScale()).toBe('rpe');
+		expect(await store.dirtyRecords()).toHaveLength(1);
+	});
+
+	it('falls back rather than widening to a scale it cannot render', async () => {
+		// A newer app version's third name, arriving over sync. Reading it through
+		// would leave every label on every screen with a word this build has no
+		// rendering for.
+		await store.applyRemote([
+			{
+				id: 'exertion-scale',
+				kind: 'preference',
+				updatedAt: 50,
+				deletedAt: null,
+				payload: { scale: 'borg' }
+			}
+		]);
+
+		expect(await store.exertionScale()).toBe('rpe');
+	});
+
+	it('reads a tombstoned choice as never chosen', async () => {
+		await store.applyRemote([
+			{
+				id: 'exertion-scale',
+				kind: 'preference',
+				updatedAt: 50,
+				deletedAt: 60,
+				payload: { scale: 'rir' }
+			}
+		]);
+
+		expect(await store.exertionScale()).toBe('rpe');
+	});
+
+	// The two preference shapes share a kind and are told apart by id alone.
+	it('does not leak into the main-variant map', async () => {
+		await store.setExertionScale('rir', 100);
+
+		expect(await store.mainVariants()).toEqual({});
+	});
+});
+
 describe('history derivation', () => {
 	let store: Store;
 
@@ -420,8 +498,8 @@ describe('history derivation', () => {
 		const history = await store.history();
 
 		expect(history['bench-press']).toEqual([
-			{ weight: 80, reps: 8 },
-			{ weight: 77.5, reps: 8 }
+			{ weight: 80, reps: 8, rpe: null },
+			{ weight: 77.5, reps: 8, rpe: null }
 		]);
 	});
 
@@ -431,7 +509,7 @@ describe('history derivation', () => {
 
 		const history = await store.history();
 
-		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8 }]);
+		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
 	});
 
 	it('treats an exercise with nothing completed as never performed', async () => {
@@ -452,7 +530,46 @@ describe('history derivation', () => {
 
 		const history = await store.history();
 
-		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8 }]);
+		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
+	});
+
+	it('reads a record written before ratings existed as unrated', async () => {
+		// A payload with no `rpe` key at all, which is every workout this app ever
+		// wrote before today and every one an older device still writes. It has to
+		// derive as an honest null rather than carry `undefined` into a label.
+		await store.applyRemote([
+			wire('legacy', 100, {
+				id: 'legacy',
+				templateId: null,
+				startedAt: 100,
+				finishedAt: 150,
+				entries: [
+					{
+						id: 'legacy-entry',
+						exercises: [
+							{
+								id: 'legacy-node',
+								exerciseId: 'bench-press',
+								sets: [
+									{
+										id: 'legacy-set',
+										type: 'normal',
+										plannedReps: null,
+										weight: 80,
+										reps: 8,
+										completed: true
+									}
+								]
+							}
+						]
+					}
+				]
+			})
+		]);
+
+		const history = await store.history();
+
+		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
 	});
 });
 
@@ -467,7 +584,12 @@ describe('last performed', () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 150);
 
 		expect(await store.lastPerformed()).toEqual({
-			'bench-press': { date: 100, workoutId: 'w1', position: 1, sets: [{ weight: 80, reps: 8 }] }
+			'bench-press': {
+				date: 100,
+				workoutId: 'w1',
+				position: 1,
+				sets: [{ weight: 80, reps: 8, rpe: null }]
+			}
 		});
 	});
 
@@ -481,7 +603,7 @@ describe('last performed', () => {
 			date: 200,
 			workoutId: 'w2',
 			position: 1,
-			sets: [{ weight: 85, reps: 5 }]
+			sets: [{ weight: 85, reps: 5, rpe: null }]
 		});
 	});
 
@@ -519,8 +641,8 @@ describe('past sessions', () => {
 		const past = await store.pastSessions('bench-press');
 
 		expect(past).toEqual([
-			{ date: 100, workoutId: 'w1', position: 1, sets: [{ weight: 80, reps: 8 }] },
-			{ date: 200, workoutId: 'w2', position: 1, sets: [{ weight: 82.5, reps: 6 }] }
+			{ date: 100, workoutId: 'w1', position: 1, sets: [{ weight: 80, reps: 8, rpe: null }] },
+			{ date: 200, workoutId: 'w2', position: 1, sets: [{ weight: 82.5, reps: 6, rpe: null }] }
 		]);
 	});
 
@@ -556,7 +678,7 @@ describe('past sessions', () => {
 		await store.finishWorkout(w, 150);
 
 		expect(await store.pastSessions('pec-deck')).toEqual([
-			{ date: 100, workoutId: 'w1', position: 3, sets: [{ weight: 50, reps: 10 }] }
+			{ date: 100, workoutId: 'w1', position: 3, sets: [{ weight: 50, reps: 10, rpe: null }] }
 		]);
 
 		// The projection agrees: same workout, same ordinal.

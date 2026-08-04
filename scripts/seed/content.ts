@@ -383,6 +383,30 @@ function repsFor(exercise: PlannedExercise, sessionIndex: number, setIndex: numb
 	return goodDay ? base + 1 : base;
 }
 
+/**
+ * How hard the seeded set was, or null — which is most of them.
+ *
+ * The top set of an exercise and nothing else, because that is how the field is
+ * actually used: a lifter rates the set that decides next week's load and
+ * ignores the rest. Rating everything would seed a database that says the
+ * opposite of what MARKET.md refuses, and rating nothing would leave the
+ * picker, the row slot and the recall suffix with no seeded example to render.
+ *
+ * It climbs with the block and stops at 9.5 — the last week before a deload
+ * feels like the last week before a deload.
+ */
+function exertionFor(
+	exercise: PlannedExercise,
+	sessionIndex: number,
+	setIndex: number
+): number | null {
+	if (setIndex !== exercise.sets - 1) {
+		return null;
+	}
+
+	return Math.min(9.5, 8 + Math.floor(sessionIndex / 2) * 0.5);
+}
+
 function workingSet(
 	id: string,
 	exercise: PlannedExercise,
@@ -395,6 +419,7 @@ function workingSet(
 		plannedReps: exercise.plannedReps,
 		weight: weightFor(exercise, sessionIndex, setIndex),
 		reps: repsFor(exercise, sessionIndex, setIndex),
+		rpe: exertionFor(exercise, sessionIndex, setIndex),
 		completed: true
 	};
 }
@@ -436,6 +461,7 @@ function workoutOf(plan: Plan, id: string, startedAt: number, sessionIndex: numb
 				plannedReps: null,
 				weight: exercise.warmup,
 				reps: 10,
+				rpe: null,
 				completed: true
 			});
 		}
@@ -529,6 +555,7 @@ function plantDrift(workout: Workout): void {
 				plannedReps: last.plannedReps,
 				weight: last.weight,
 				reps: 8,
+				rpe: null,
 				completed: true
 			});
 		}
@@ -559,6 +586,7 @@ function plantDrift(workout: Workout): void {
 					plannedReps: null,
 					weight: 25,
 					reps: 15 - index,
+					rpe: null,
 					completed: true
 				}))
 			}

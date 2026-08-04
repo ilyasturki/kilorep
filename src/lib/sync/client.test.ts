@@ -98,6 +98,7 @@ function lift(): Workout {
 								plannedReps: null,
 								weight: 80,
 								reps: 8,
+								rpe: null,
 								completed: true
 							}
 						]

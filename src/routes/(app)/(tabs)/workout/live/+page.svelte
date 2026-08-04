@@ -518,6 +518,7 @@
 								activeSetId={session.activeSetId}
 								oncommit={(w, r) => session.commit(w, r)}
 								ondraft={(id, w, r) => session.draft(id, w, r)}
+								onrate={(id, rpe) => session.rate(id, rpe)}
 								onselect={(id) => session.select(id)}
 								onadd={() => session.addSet(group.cursors[0].exercise.id)}
 								oninsert={() => insertFrom(group.entryId)}

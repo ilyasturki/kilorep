@@ -364,6 +364,9 @@ export function startFrom(template: Template, startedAt: number, mint: () => str
 				id: mint(),
 				type: 'normal' as const,
 				plannedReps: set.plannedReps,
+				// A plan cannot prescribe how a set will feel, so a session always
+				// starts unrated — the same reason weight arrives null below.
+				rpe: null,
 				weight: null,
 				reps: null,
 				completed: false

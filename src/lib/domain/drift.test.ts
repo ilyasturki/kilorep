@@ -51,6 +51,7 @@ function session(...exercises: PerformedShape[]): Workout {
 						plannedReps,
 						weight: 100,
 						reps: 5,
+						rpe: null,
 						completed: true
 					}))
 				}

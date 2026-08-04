@@ -10,8 +10,14 @@
 
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
 import { bodyweightId } from '$lib/domain/bodyweight';
-import type { MainVariant, MainVariants } from '$lib/domain/preference';
-import { isMainVariant, mainVariantId } from '$lib/domain/preference';
+import type { ExertionScale } from '$lib/domain/exertion';
+import type { ExertionScalePreference, MainVariant, MainVariants } from '$lib/domain/preference';
+import {
+	EXERTION_SCALE_ID,
+	isExertionScalePreference,
+	isMainVariant,
+	mainVariantId
+} from '$lib/domain/preference';
 import type { PastSession } from '$lib/domain/stats';
 import type { Template } from '$lib/domain/template';
 import type { History, Workout } from '$lib/domain/workout';
@@ -405,6 +411,47 @@ export class Store {
 		}
 
 		return mains;
+	}
+
+	/**
+	 * The one exertion-scale choice, upserted on a constant id — there is only
+	 * ever one, so unlike `setMainVariant` there is no family to key it by.
+	 *
+	 * A blind put, same as that one: choosing a scale is an affirmative claim
+	 * and whatever was there is exactly what it replaces.
+	 */
+	public async setExertionScale(scale: ExertionScale, updatedAt: number): Promise<void> {
+		// Spelled field by field, same bargain as `finishWorkout`: a field added
+		// to `ExertionScalePreference` fails the build here instead of silently
+		// syncing.
+		const payload: ExertionScalePreference = { scale };
+
+		await this.db.put('records', {
+			id: EXERTION_SCALE_ID,
+			kind: 'preference',
+			updatedAt,
+			deletedAt: null,
+			payload,
+			dirty: true
+		});
+	}
+
+	/**
+	 * The chosen scale, defaulting to RPE for an account that has never said.
+	 *
+	 * Guarded rather than asserted, for `mainVariants`' reason: another app
+	 * version is a writer of this kind too. A tombstoned or unrecognisable
+	 * record falls back to the default rather than leaving the picker with no
+	 * name to wear.
+	 */
+	public async exertionScale(): Promise<ExertionScale> {
+		const record = await this.db.get('records', EXERTION_SCALE_ID);
+
+		if (record === undefined || record.deletedAt !== null) {
+			return 'rpe';
+		}
+
+		return isExertionScalePreference(record.payload) ? record.payload.scale : 'rpe';
 	}
 
 	// --- the active session -------------------------------------------------

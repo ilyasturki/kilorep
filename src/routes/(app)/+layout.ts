@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 
 import { session } from '$lib/api/auth';
 import { ApiError, NO_SERVER, deviceToken } from '$lib/api/client';
+import { exertionScale } from '$lib/settings/exertion.svelte';
 import { getStore } from '$lib/store/store';
 import { syncNow } from '$lib/sync/client';
 import { activeWorkout } from '$lib/workout/active.svelte';
@@ -61,7 +62,11 @@ async function restoreSession(): Promise<void> {
 }
 
 export const load: LayoutLoad = async ({ url, fetch }) => {
-	await restoreSession();
+	// Both above the routes and for the same reason: the readers are everywhere
+	// and none of them owns the fact. Awaited so no screen paints a rating in the
+	// wrong language and then swaps it out from under the eye — it is one
+	// indexed read of one record, on a connection the resume above just opened.
+	await Promise.all([restoreSession(), exertionScale.load(await getStore())]);
 
 	// The phone answers "signed in" from what it holds, before it asks the
 	// network anything. A connected server with no token is the local-only state

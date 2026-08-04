@@ -42,6 +42,12 @@
 		label: string;
 		step?: number;
 		min?: number;
+		/**
+		 * The ceiling, open by default — a weight has none. The one caller that
+		 * passes it is the exertion picker, whose scale ends at 10 and whose arm
+		 * must go inert there rather than propose a rating the record refuses.
+		 */
+		max?: number;
 		/** Null is the field emptied — see `commit`, which is the only caller that sends one. */
 		onchange?: (value: number | null) => void;
 		/**
@@ -68,6 +74,7 @@
 		label,
 		step = 2.5,
 		min = 0,
+		max = Infinity,
 		onchange,
 		onpreview,
 		class: klass
@@ -77,17 +84,17 @@
 
 	// `–` for an empty field, the same glyph `SetRow` shows for a set with no
 	// numbers in it yet. Zero is a real weight, so it is never spelled this way.
-	const display = $derived(value === null ? '–' : String(settle(value, min)));
+	const display = $derived(value === null ? '–' : String(settle(value, min, max)));
 
 	// An empty field steps from `min`, so the first + on a blank weight lands on
 	// one step rather than on nothing.
 	//
-	// Reports whether it moved. At `min` a step down changes nothing, and a
+	// Reports whether it moved. At either end a step changes nothing, and a
 	// silent no-op is the honest answer — the same rule `commit` already keeps,
 	// and it is what stops a hold from firing twenty identical `onchange` a
 	// second into the floor.
 	function nudge(direction: number) {
-		const next = settle((value ?? min) + direction * step, min);
+		const next = settle((value ?? min) + direction * step, min, max);
 		if (next === value) {
 			return false;
 		}
@@ -224,7 +231,7 @@
 
 		const parsed = parseEntry(draft);
 
-		return parsed === null ? value : settle(parsed, min);
+		return parsed === null ? value : settle(parsed, min, max);
 	}
 
 	// Blur commits, so tapping ± while typing steps from the typed number and

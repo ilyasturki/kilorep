@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { canCommit, hintLabel } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
+	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import ExertionPicker from '$lib/ui/ExertionPicker.svelte';
 	import { tapCommit } from '$lib/ui/haptics';
 	import { revealEnd } from '$lib/ui/scroll';
 	import SetMark from '$lib/ui/SetMark.svelte';
@@ -44,6 +46,14 @@
 		 */
 		ondraft: (weight: number | null, reps: number | null) => void;
 		/**
+		 * How hard it was, on its way to the set — null when the rating is taken
+		 * back off. Its own channel and not a third slot on `ondraft`, because it
+		 * answers to none of that rule's care: it cannot empty the check, it
+		 * cannot un-complete a set, and a set holding nothing but a rating is
+		 * ordinary rather than a claim about nothing.
+		 */
+		onrate: (rpe: number | null) => void;
+		/**
 		 * The same sheet every other row reaches, from the one row that could not.
 		 *
 		 * Expanding a set used to take its ⋯ away with the row it replaced, which
@@ -55,9 +65,12 @@
 		onoptions: (anchor: HTMLElement) => void;
 	};
 
-	let { cursor, history, step, oncommit, ondraft, onoptions }: Props = $props();
+	let { cursor, history, step, oncommit, ondraft, onrate, onoptions }: Props = $props();
 
-	const hint = $derived(hintLabel(history, cursor));
+	// The recall line grows how last time felt, where last time said: `82.5 × 7 ·
+	// RPE 8`. Read from the holder rather than passed down, because the word is a
+	// preference and every screen that prints it reads the same one.
+	const hint = $derived(hintLabel(history, cursor, exertionScale.current));
 
 	/**
 	 * Live values, read straight off the set. Null means there was nothing to
@@ -305,6 +318,8 @@
 				onpreview={(v) => (previewReps = v)}
 			/>
 		</div>
+
+		<ExertionPicker value={cursor.set.rpe} scale={exertionScale.current} onchange={onrate} />
 
 		<Button variant="commit" disabled={!live} class="w-full" onclick={commit}>
 			{#if live}

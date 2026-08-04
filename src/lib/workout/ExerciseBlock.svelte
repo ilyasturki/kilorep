@@ -2,8 +2,10 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { slide } from 'svelte/transition';
 
+	import { exertionLabel } from '$lib/domain/exertion';
 	import { hintLabel } from '$lib/domain/workout';
 	import { weightStep } from '$lib/domain/exercise';
+	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
@@ -23,6 +25,7 @@
 		activeSetId: string | null;
 		oncommit: (weight: number, reps: number) => void;
 		ondraft: (setId: string, weight: number | null, reps: number | null) => void;
+		onrate: (setId: string, rpe: number | null) => void;
 		onselect: (setId: string) => void;
 		onadd: () => void;
 		/**
@@ -47,6 +50,7 @@
 		activeSetId,
 		oncommit,
 		ondraft,
+		onrate,
 		onselect,
 		onadd,
 		oninsert,
@@ -84,7 +88,20 @@
 			return null;
 		}
 
-		return hintLabel(history, cursor);
+		return hintLabel(history, cursor, exertionScale.current);
+	}
+
+	/**
+	 * What the row's one right-hand slot says. The recall while the row is empty,
+	 * and how the set felt once it holds numbers — never both, because there is
+	 * one slot and `SetRow` is explicit that it carries one fact.
+	 *
+	 * That ordering is what makes the rating visible at all without costing a
+	 * column: by the time a set has a rating on it, the recall has already been
+	 * suppressed by the numbers sitting on the row, so the slot is free.
+	 */
+	function rowRight(cursor: SetCursor): string {
+		return rowHint(cursor) ?? exertionLabel(cursor.set.rpe, exertionScale.current) ?? '';
 	}
 
 	/**
@@ -202,6 +219,7 @@
 						step={weightStep(meta.equipment)}
 						{oncommit}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
+						onrate={(rpe) => onrate(cursor.set.id, rpe)}
 						onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
 					/>
 				{/key}
@@ -219,7 +237,7 @@
 					onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
 				>
 					{#snippet right()}
-						{rowHint(cursor) ?? ''}
+						{rowRight(cursor)}
 					{/snippet}
 				</SetRow>
 			</div>

@@ -19,6 +19,7 @@ import {
 	moveEntry,
 	parseEntry,
 	prefillFor,
+	rateSet,
 	removeEntry,
 	removeSet,
 	repeatFrom,
@@ -48,7 +49,15 @@ function orderOf(workout: Workout): string[] {
 
 /** A bare uncompleted set, for the shapes the fixture deliberately does not have. */
 function openSet(id: string): WorkoutSet {
-	return { id, type: 'normal', plannedReps: 10, weight: null, reps: null, completed: false };
+	return {
+		id,
+		type: 'normal',
+		plannedReps: 10,
+		weight: null,
+		reps: null,
+		rpe: null,
+		completed: false
+	};
 }
 
 /** A missing cursor is a broken fixture, so it fails loudly instead of widening every type. */
@@ -100,8 +109,8 @@ describe('cursors', () => {
 
 describe('hintFor', () => {
 	test('reads last time by working index', () => {
-		expect(hintFor(history, 'bench-press', 0)).toEqual({ weight: 80, reps: 8 });
-		expect(hintFor(history, 'bench-press', 3)).toEqual({ weight: 77.5, reps: 7 });
+		expect(hintFor(history, 'bench-press', 0)).toEqual({ weight: 80, reps: 8, rpe: null });
+		expect(hintFor(history, 'bench-press', 3)).toEqual({ weight: 77.5, reps: 7, rpe: null });
 	});
 
 	test('an exercise never performed has no hint', () => {
@@ -302,6 +311,68 @@ describe('draftSet', () => {
 	});
 });
 
+describe('rateSet', () => {
+	test('writes the rating without touching anything else on the set', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 82.5, 7);
+
+		expect(rateSet(workout, 'bench-1', 8)).toBe(true);
+
+		const set = at(workout, 'bench-1').set;
+
+		expect(set.rpe).toBe(8);
+		// The claim and the numbers are none of this function's business.
+		expect(set.completed).toBe(true);
+		expect(set.weight).toBe(82.5);
+		expect(set.reps).toBe(7);
+	});
+
+	test('rates a set nothing has been logged on, and the check stays inert', () => {
+		const workout = freshWorkout(0);
+		const set = at(workout, 'bench-1').set;
+		draftSet(workout, 'bench-1', { weight: null, reps: null });
+
+		rateSet(workout, 'bench-1', 9);
+
+		expect(set.rpe).toBe(9);
+		expect(set.completed).toBe(false);
+		// The whole point of the field being optional: it is invisible to the check.
+		expect(canCommit(set.weight, set.reps)).toBe(false);
+	});
+
+	test('null takes the rating back off', () => {
+		const workout = freshWorkout(0);
+		rateSet(workout, 'bench-1', 8);
+		rateSet(workout, 'bench-1', null);
+
+		expect(at(workout, 'bench-1').set.rpe).toBeNull();
+	});
+
+	test('settles on the way in, wherever the number came from', () => {
+		const workout = freshWorkout(0);
+
+		rateSet(workout, 'bench-1', 8.3);
+		expect(at(workout, 'bench-1').set.rpe).toBe(8.5);
+
+		rateSet(workout, 'bench-1', 40);
+		expect(at(workout, 'bench-1').set.rpe).toBe(10);
+	});
+
+	// A rating read off an untrusted payload can arrive as NaN, and settling one
+	// would clamp it to the floor and file it as a deliberate RPE 1.
+	test('a NaN is unrated, not the bottom of the scale', () => {
+		const workout = freshWorkout(0);
+
+		rateSet(workout, 'bench-1', Number.NaN);
+
+		expect(at(workout, 'bench-1').set.rpe).toBeNull();
+	});
+
+	test('an unknown set is refused rather than silently ignored', () => {
+		expect(rateSet(freshWorkout(0), 'nope', 8)).toBe(false);
+	});
+});
+
 describe('markSet', () => {
 	test('takes the claim back without touching the numbers', () => {
 		const workout = freshWorkout(0);
@@ -368,6 +439,7 @@ describe('addSet', () => {
 			plannedReps: null,
 			weight: null,
 			reps: null,
+			rpe: null,
 			completed: false
 		});
 		// At the foot of its own exercise, not the foot of the session.
@@ -419,6 +491,7 @@ describe('addExercise', () => {
 			plannedReps: null,
 			weight: null,
 			reps: null,
+			rpe: null,
 			completed: false
 		});
 	});
@@ -555,6 +628,7 @@ describe('replaceEntry', () => {
 			plannedReps: null,
 			weight: null,
 			reps: null,
+			rpe: null,
 			completed: false
 		});
 	});
@@ -819,6 +893,20 @@ describe('hintLabel', () => {
 
 		expect(hintLabel(history, cursor)).toBeNull();
 	});
+
+	test('grows how last time felt, in whichever scale it is asked for', () => {
+		const cursor = at(freshWorkout(0), 'bench-1');
+		const rated = { 'bench-press': [{ weight: 80, reps: 8, rpe: 8 }] };
+
+		expect(hintLabel(rated, cursor, 'rpe')).toBe('80 × 8 · RPE 8');
+		expect(hintLabel(rated, cursor, 'rir')).toBe('80 × 8 · RIR 2');
+	});
+
+	test('an unrated recall is the bare numbers, scale or no scale', () => {
+		const cursor = at(freshWorkout(0), 'bench-4');
+
+		expect(hintLabel(history, cursor, 'rpe')).toBe('77.5 × 7');
+	});
 });
 
 describe('parseEntry', () => {
@@ -846,6 +934,13 @@ describe('settle', () => {
 	test('floors at min rather than going negative', () => {
 		expect(settle(-5)).toBe(0);
 		expect(settle(1, 2.5)).toBe(2.5);
+	});
+
+	// Open by default, because a weight has no ceiling. The rating field is the
+	// one caller that passes one.
+	test('caps at max when it is given one, and never otherwise', () => {
+		expect(settle(999)).toBe(999);
+		expect(settle(12, 1, 10)).toBe(10);
 	});
 });
 
@@ -900,6 +995,16 @@ describe('copy-on-repeat', () => {
 		expect(
 			sets.every((s) => s.type === 'normal' && !s.completed && s.weight === null && s.reps === null)
 		).toBe(true);
+	});
+
+	test('how a set felt is performance, so it does not repeat either', () => {
+		const past = freshWorkout(5000);
+		completeAll(past);
+		rateSet(past, 'bench-1', 9);
+
+		const next = repeatFrom(past, 9000, mint('r'));
+
+		expect(cursors(next).every((c) => c.set.rpe === null)).toBe(true);
 	});
 
 	test('every id is fresh — nothing from the record survives into the session', () => {

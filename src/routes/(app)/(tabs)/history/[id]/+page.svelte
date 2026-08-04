@@ -14,6 +14,7 @@
 		firstUncompleted,
 		markSet,
 		moveEntry,
+		rateSet,
 		removeEntry,
 		removeSet,
 		repeatFrom,
@@ -165,6 +166,14 @@
 
 	function draft(setId: string, weight: number | null, reps: number | null) {
 		draftSet(workout, setId, { weight, reps });
+	}
+
+	/**
+	 * How hard it was, corrected after the fact. The autosave effect above sees
+	 * this like any other leaf, so there is nothing to save here by hand.
+	 */
+	function rate(setId: string, rpe: number | null) {
+		rateSet(workout, setId, rpe);
 	}
 
 	/**
@@ -548,6 +557,7 @@
 							onopen={(setId) => (openSetId = setId)}
 							onclose={() => (openSetId = null)}
 							ondraft={draft}
+							onrate={rate}
 							ontoggle={toggle}
 							onoptions={setOptions}
 							onexercise={(anchor) => exerciseOptions(group.entryId, anchor)}

@@ -5,8 +5,10 @@
 	import { weightStep } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { SetCursor } from '$lib/domain/workout';
+	import { exertionLabel } from '$lib/domain/exertion';
 	import EditSet from '$lib/history/EditSet.svelte';
 	import { loadModeNote } from '$lib/exercises/label';
+	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
@@ -44,6 +46,7 @@
 		onopen: (setId: string) => void;
 		onclose: () => void;
 		ondraft: (setId: string, weight: number | null, reps: number | null) => void;
+		onrate: (setId: string, rpe: number | null) => void;
 		/** The disc: claim this set, or take the claim back. */
 		ontoggle: (setId: string) => void;
 		/** Handed the element that asked as well, so the desktop menu can hang from it. */
@@ -71,6 +74,7 @@
 		onopen,
 		onclose,
 		ondraft,
+		onrate,
 		ontoggle,
 		onoptions,
 		onexercise,
@@ -98,6 +102,9 @@
      `—` for a set that holds neither, which is every set added while editing
      until it is answered. -->
 {#snippet numbers(cursor: SetCursor)}
+	<!-- How hard the set was, in whichever of the two names this account reads. -->
+	{@const felt = exertionLabel(cursor.set.rpe, exertionScale.current)}
+
 	<span
 		class={[
 			'flex-1 text-md tracking-numeral',
@@ -108,6 +115,13 @@
 			? `${cursor.set.weight} × ${cursor.set.reps}`
 			: '—'}
 	</span>
+
+	<!-- How it felt, where it was said. Beside the numbers rather than under them:
+	     it is a fact about this set, and the row already reads left to right as
+	     what happened, then what was planned. -->
+	{#if felt !== null}
+		<span class="shrink-0 text-sm font-bold text-ink-faint">{felt}</span>
+	{/if}
 
 	{#if cursor.set.plannedReps !== null && cursor.set.reps !== cursor.set.plannedReps}
 		<span class="shrink-0 text-sm font-bold text-ink-faint">
@@ -168,6 +182,7 @@
 						{cursor}
 						step={weightStep(meta.equipment)}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
+						onrate={(rpe) => onrate(cursor.set.id, rpe)}
 						ondone={onclose}
 						onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
 					/>

@@ -5,6 +5,7 @@
  * reason the fixture derived its hint map instead of authoring it twice.
  */
 
+import { isExertion } from '$lib/domain/exertion';
 import type { PastSession } from '$lib/domain/stats';
 import type { History, PerformedSet, Workout } from '$lib/domain/workout';
 
@@ -41,7 +42,15 @@ export function performedSets(workout: Workout, exerciseId: string): PerformedSe
 				// wrote, but the type cannot say so; checked rather than asserted,
 				// because these records also arrive from other devices over sync.
 				if (set.completed && set.type !== 'warmup' && set.weight !== null && set.reps !== null) {
-					out.push({ weight: set.weight, reps: set.reps });
+					// `rpe` gets the same treatment one level down: a record written
+					// before rating existed carries no such field at all, which reads
+					// as `undefined` here and has to land as an honest null rather
+					// than travel on as a value nothing can render.
+					out.push({
+						weight: set.weight,
+						reps: set.reps,
+						rpe: isExertion(set.rpe) ? set.rpe : null
+					});
 				}
 			}
 		}

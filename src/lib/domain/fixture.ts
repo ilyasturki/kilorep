@@ -35,7 +35,9 @@ const session = (date: number, sets: [number, number][]): PastSession => ({
 	date,
 	workoutId: `fixture-${date}`,
 	position: 1,
-	sets: sets.map(([weight, reps]) => ({ weight, reps }))
+	// Unrated throughout: rating is optional and the fixture's job is the hint
+	// path, which the presence or absence of one changes nothing about.
+	sets: sets.map(([weight, reps]) => ({ weight, reps, rpe: null }))
 });
 
 /**
@@ -147,6 +149,7 @@ const working = (key: string, count: number, plannedReps: number | null): Workou
 		plannedReps,
 		weight: null,
 		reps: null,
+		rpe: null,
 		completed: false
 	}));
 
@@ -179,6 +182,7 @@ export function freshWorkout(startedAt: number): Workout {
 					plannedReps: null,
 					weight: 40,
 					reps: 10,
+					rpe: null,
 					completed: true
 				},
 				...working('bench', 4, 8)

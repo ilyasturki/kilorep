@@ -33,8 +33,7 @@
 		'pointer-fine:transition-[background-color,color,filter] pointer-fine:duration-100 ' +
 		'disabled:pointer-events-none';
 
-	const outlined =
-		'min-h-14 rounded-xl px-5 border border-line hover:bg-hover active:bg-surface-2';
+	const outlined = 'min-h-14 rounded-xl px-5 border border-line hover:bg-hover active:bg-surface-2';
 
 	// The paint is split from the box it goes on, because both of these come in
 	// two sizes and only the box changes between them.

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { SetCursor } from '$lib/domain/workout';
+	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import ExertionPicker from '$lib/ui/ExertionPicker.svelte';
 	import { revealEnd } from '$lib/ui/scroll';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
@@ -39,13 +41,19 @@
 		 * unclaimed as it was.
 		 */
 		ondraft: (weight: number | null, reps: number | null) => void;
+		/**
+		 * How hard it was, corrected a day later. The gym card's own channel, and
+		 * it belongs here for the reason the numbers do: a set is correctable in
+		 * full or the correction is a half-truth.
+		 */
+		onrate: (rpe: number | null) => void;
 		/** The bar. Nothing is written by it — the numbers are already on the set. */
 		ondone: () => void;
 		/** Handed the ⋯ itself, so the desktop menu can hang from it. */
 		onoptions: (anchor: HTMLElement) => void;
 	};
 
-	let { cursor, step, ondraft, ondone, onoptions }: Props = $props();
+	let { cursor, step, ondraft, onrate, ondone, onoptions }: Props = $props();
 
 	const weight = $derived(cursor.set.weight);
 	const reps = $derived(cursor.set.reps);
@@ -149,6 +157,8 @@
 				onchange={(v) => ondraft(weight, v === null ? null : Math.round(v))}
 			/>
 		</div>
+
+		<ExertionPicker value={cursor.set.rpe} scale={exertionScale.current} onchange={onrate} />
 
 		<!-- Outlined, not filled. `Button`'s standing rule is one filled button per
 		     screen and this one claims nothing — the numbers landed on the set as

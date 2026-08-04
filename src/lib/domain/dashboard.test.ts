@@ -11,7 +11,7 @@ const session = (date: number, sets: [number, number][]): PastSession => ({
 	date,
 	workoutId: `w${date}`,
 	position: 1,
-	sets: sets.map(([weight, reps]) => ({ weight, reps }))
+	sets: sets.map(([weight, reps]) => ({ weight, reps, rpe: null }))
 });
 
 const one = (): number => 1;
@@ -39,7 +39,7 @@ const set = (
 	reps: number,
 	type: SetType = 'normal',
 	completed = true
-): WorkoutSet => ({ id: 's', type, plannedReps: null, weight, reps, completed });
+): WorkoutSet => ({ id: 's', type, plannedReps: null, weight, reps, rpe: null, completed });
 
 const workout = (startedAt: number, exerciseId: string, sets: WorkoutSet[]): Workout => ({
 	id: `w${startedAt}`,
@@ -55,7 +55,9 @@ describe('recentPrs', () => {
 			50
 		);
 
-		expect(prs).toEqual([{ exerciseId: 'bench-press', set: { weight: 102.5, reps: 5 }, date: 90 }]);
+		expect(prs).toEqual([
+			{ exerciseId: 'bench-press', set: { weight: 102.5, reps: 5, rpe: null }, date: 90 }
+		]);
 	});
 
 	test('a first-ever session sets a best, not news', () => {

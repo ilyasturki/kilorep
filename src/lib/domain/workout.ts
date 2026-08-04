@@ -12,9 +12,19 @@
  * where they read it: `$lib/domain/stats` and `$lib/domain/dashboard`.
  */
 
+import { exertionSuffix, isExertion, settleExertion } from './exertion.ts';
+import type { ExertionScale } from './exertion.ts';
+
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
 
-export type PerformedSet = { weight: number; reps: number };
+/**
+ * A set as it was performed. `rpe` rides along null far more often than not —
+ * rating is optional and nothing ever fills it in — and it is here rather than
+ * only on `WorkoutSet` because the recall line quotes it: "last time" is a
+ * `PerformedSet`, and a recall that could not say how the set felt would have
+ * to go back to the tree for it.
+ */
+export type PerformedSet = { weight: number; reps: number; rpe: number | null };
 
 /**
  * The working sets of the last time each exercise was performed, in order.
@@ -34,6 +44,21 @@ export type WorkoutSet = {
 	plannedReps: number | null;
 	weight: number | null;
 	reps: number | null;
+	/**
+	 * How hard it was, on the stored RPE scale — null for the vast majority of
+	 * sets, which is the point.
+	 *
+	 * Optional in the only sense that matters: nothing prompts for it, nothing
+	 * waits on it, and `canCommit` does not read it. MARKET.md refuses mandatory
+	 * subjective input by name, so a rating exists only where a thumb put one
+	 * there. RIR is the same number spoken from the other end — see
+	 * `$lib/domain/exertion`, which owns the scale and never lets the record
+	 * hold a unit.
+	 *
+	 * Readers tolerate records written before the field existed: absent reads as
+	 * unrated, the same tolerance `templateId` has.
+	 */
+	rpe: number | null;
 	completed: boolean;
 };
 
@@ -221,11 +246,27 @@ export function hintFor(
  * The `×` is a character rather than an `x` because the vendored font subset
  * carries it, and the phrasing is shown in two places at once — beside the
  * active set and down the pending rows. One owner, so they cannot disagree.
+ *
+ * `scale` grows the line by how the set felt, where last time carried a rating:
+ * `82.5 × 7 · RPE 8`. Passed in rather than read from anywhere, because which
+ * of the two names it wears is a preference and this module is plain domain —
+ * and null is the honest way to ask for the numbers alone, which is what a
+ * caller with no user in front of it (a test, an export) wants.
  */
-export function hintLabel(history: History, cursor: SetCursor): string | null {
+export function hintLabel(
+	history: History,
+	cursor: SetCursor,
+	scale: ExertionScale | null = null
+): string | null {
 	const hint = hintFor(history, cursor.exercise.exerciseId, cursor.workingIndex);
 
-	return hint === null ? null : `${hint.weight} × ${hint.reps}`;
+	if (hint === null) {
+		return null;
+	}
+
+	const felt = scale === null ? '' : exertionSuffix(hint.rpe, scale);
+
+	return `${hint.weight} × ${hint.reps}${felt}`;
 }
 
 /** What the fields open at. Null in either slot means there is nothing to recall. */
@@ -314,15 +355,20 @@ export function parseEntry(raw: string): number | null {
 }
 
 /**
- * A number the fields can show and the log can hold: floored at `min`, rounded
- * to the 0.01 that is the finest weight anything here displays.
+ * A number the fields can show and the log can hold: held between `min` and
+ * `max`, rounded to the 0.01 that is the finest weight anything here displays.
  *
  * Shared because there are two ways into the same field — the ± arms and the
  * numpad — and a rule applied by one and not the other would let the field
  * disagree with itself about what the user just entered.
+ *
+ * `max` defaults to open, because a weight has no ceiling and never did. It is
+ * here for the one field that does: a rating cannot exceed the top of its
+ * scale, and a stepper that would carry it past 10 is offering a value the
+ * record refuses.
  */
-export function settle(value: number, min = 0): number {
-	return Math.max(min, Math.round(value * 100) / 100);
+export function settle(value: number, min = 0, max = Infinity): number {
+	return Math.min(max, Math.max(min, Math.round(value * 100) / 100));
 }
 
 /**
@@ -399,6 +445,40 @@ export function commitSet(workout: Workout, setId: string, weight: number, reps:
 }
 
 /**
+ * Rates a set, or takes the rating back off it with null.
+ *
+ * Its own function and not a slot in `draftSet` or an argument to `commitSet`,
+ * because it answers to none of their rules: it can be applied before the check
+ * or long after it, it never touches `completed` in either direction, and a set
+ * holding nothing but a rating is an ordinary uncompleted set rather than a
+ * claim about nothing. The check is deliberately blind to it — MARKET.md
+ * refuses mandatory subjective input, so nothing here can ever hold the loop up.
+ *
+ * `settleExertion` on the way in, applied to every route rather than trusted to
+ * the picker: the chips can only produce rungs, but the stepper arms and a
+ * payload from another device can produce anything, and a record is forever.
+ *
+ * Mutates in place, like every other writer here — the reactive shell holds the
+ * tree in a deep `$state` proxy and sees the write, and a test holds a plain
+ * object and sees it too.
+ */
+export function rateSet(workout: Workout, setId: string, rpe: number | null): boolean {
+	const cursor = cursorFor(workout, setId);
+
+	if (cursor === null) {
+		return false;
+	}
+
+	// `isExertion` and not a bare null test: a caller reading a rating off an
+	// untrusted payload can hand this a NaN, and `settleExertion` would clamp
+	// that to the floor and file it as a deliberate RPE 1. It answers false for
+	// null too, so there is no second test to keep in step with it.
+	cursor.set.rpe = isExertion(rpe) ? settleExertion(rpe) : null;
+
+	return true;
+}
+
+/**
  * Sets or clears the affirmative claim, leaving the numbers where they are.
  *
  * The correction `commitSet` cannot make, because it only ever claims — and a
@@ -452,6 +532,7 @@ const blankSet = (id: string): WorkoutSet => ({
 	plannedReps: null,
 	weight: null,
 	reps: null,
+	rpe: null,
 	completed: false
 });
 
@@ -750,6 +831,9 @@ export function repeatFrom(past: Workout, startedAt: number, mint: () => string)
 					plannedReps: set.plannedReps,
 					weight: null,
 					reps: null,
+					// Dropped with the weight and the reps, and for the same reason:
+					// how a set felt is what happened that day, not what was planned.
+					rpe: null,
 					completed: false
 				}))
 			});

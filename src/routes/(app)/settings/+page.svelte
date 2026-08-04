@@ -5,10 +5,14 @@
 	import { ApiError, apiBase, checkServer, deviceToken, setApiBase } from '$lib/api/client';
 	import { signInWithGoogle } from '$lib/api/google-device';
 	import BackLink from '$lib/nav/BackLink.svelte';
+	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { getStore } from '$lib/store/store';
+	import { syncSoon } from '$lib/sync/client';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Chip from '$lib/ui/Chip.svelte';
+	import ChipGroup from '$lib/ui/ChipGroup.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
@@ -38,6 +42,30 @@
 	 * both.
 	 */
 	let { data }: PageProps = $props();
+
+	/**
+	 * The rating's name, written to the holder and to the record behind it.
+	 *
+	 * The chips are a `single` toggle group, so a tap on the lit one answers with
+	 * an empty string — which here would mean "no scale at all", a state nothing
+	 * downstream can render. Ignored rather than guarded against in the markup:
+	 * the group is a choice between two, and re-tapping the chosen one is a
+	 * no-op by intent.
+	 *
+	 * `syncSoon` for the reason the main-variant choice fires it: a preference is
+	 * a record, and taste that only reached one device is worse than none.
+	 */
+	async function chooseScale(next: string) {
+		if (next !== 'rpe' && next !== 'rir') {
+			return;
+		}
+
+		await exertionScale.choose(await getStore(), next);
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+	}
 
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -399,6 +427,31 @@
 
 		<h1 class="px-1 text-2xl font-extrabold tracking-tight">Settings</h1>
 	</header>
+
+	<!-- First, and above the account: it is the only section here that answers to
+	     the gym rather than to plumbing, and it exists whether or not a server
+	     was ever connected. -->
+	<section class="flex flex-col gap-3">
+		<h2 class="px-1 label-caps text-ink-faint">Sets</h2>
+
+		<div class="flex max-w-sm flex-col gap-3 px-1">
+			<p class="text-md text-pretty text-ink-muted">
+				How a set's optional rating is named. One number either way — the same set reads
+				<span class="font-bold text-ink">RPE 8</span>
+				or <span class="font-bold text-ink">RIR 2</span>, and changing this re-reads every set you
+				have ever rated.
+			</p>
+
+			<ChipGroup
+				bind:value={() => exertionScale.current, (next) => void chooseScale(next)}
+				layout="row"
+				label="Rating scale"
+			>
+				<Chip value="rpe">RPE</Chip>
+				<Chip value="rir">RIR</Chip>
+			</ChipGroup>
+		</div>
+	</section>
 
 	{#if data.user}
 		<section class="flex flex-col gap-3">

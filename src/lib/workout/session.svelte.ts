@@ -31,6 +31,7 @@ import {
 	markSet,
 	moveEntry as relocateEntry,
 	prefillFor,
+	rateSet,
 	removeEntry as dropEntry,
 	removeSet as dropSet,
 	replaceEntry
@@ -191,6 +192,20 @@ export class WorkoutSession {
 		}
 
 		draftSet(this.workout, setId, { weight, reps });
+	}
+
+	/**
+	 * How hard it was, landing on the set the moment it is picked.
+	 *
+	 * No `#cleared` bookkeeping and no seeding to fight, unlike `draft`: nothing
+	 * ever proposes a rating, so there is no proposal for a clear to have to
+	 * survive. Taking one back off is just a write of null.
+	 *
+	 * Not tied to the active set either — it takes an id like `draft` does, so a
+	 * rating can be corrected on a set the cursor has already moved past.
+	 */
+	public rate(setId: string, rpe: number | null): void {
+		rateSet(this.workout, setId, rpe);
 	}
 
 	/**

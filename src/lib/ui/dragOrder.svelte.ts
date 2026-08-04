@@ -180,8 +180,7 @@ export class DragOrder {
 	 * where movement decides between a lift (mouse), a cancelled hold (touch)
 	 * and, by staying still, the hold itself.
 	 */
-	#pending: { event: PointerEvent; id: string; x: number; y: number; mouse: boolean } | null =
-		null;
+	#pending: { event: PointerEvent; id: string; x: number; y: number; mouse: boolean } | null = null;
 
 	/**
 	 * Construct during component initialisation — the teardown below is an

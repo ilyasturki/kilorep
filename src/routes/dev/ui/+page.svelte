@@ -12,6 +12,7 @@
 	import DatePicker from '$lib/ui/DatePicker.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import ExertionPicker from '$lib/ui/ExertionPicker.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
@@ -163,7 +164,9 @@
 	const dragSlide = $derived(prefersReducedMotion.current ? 0 : 200);
 
 	let setType = $state('normal');
-	let rpe = $state('8');
+	// The stored value, always RPE — the two specimens below share it, which is
+	// how the page shows that RIR is a label and not a second field.
+	let rpe = $state<number | null>(8);
 	let overviewOpen = $state(false);
 	let optionsOpen = $state(false);
 
@@ -212,14 +215,18 @@
 		<Chip value="fail">Fail</Chip>
 	</ChipGroup>
 	<div class="flex items-baseline gap-2">
-		<h3 class="label-caps">RPE</h3>
-		{#if annotated}<span class={caption}>layout="wrap"</span>{/if}
+		<h3 class="label-caps">Exertion</h3>
+		{#if annotated}<span class={caption}>collapsed · chips · Other</span>{/if}
 	</div>
-	<ChipGroup bind:value={rpe} label="RPE">
-		{#each ['—', '7', '7.5', '8', '9', '10'] as value (value)}
-			<Chip {value}>{value}</Chip>
-		{/each}
-	</ChipGroup>
+	<!-- The real control rather than a row of chips standing in for one: what the
+	     rungs are, how the row collapses and where an off-ladder value is entered
+	     are the component's business now, and a specimen restating them by hand
+	     would be the first thing to go stale. Both scales are shown because the
+	     conversion is the part worth being able to eyeball. -->
+	<div class="flex flex-col gap-2">
+		<ExertionPicker value={rpe} scale="rpe" onchange={(next) => (rpe = next)} />
+		<ExertionPicker value={rpe} scale="rir" onchange={(next) => (rpe = next)} />
+	</div>
 {/snippet}
 
 <div class="min-h-dvh bg-canvas px-6 pt-safe-t pb-16 text-ink">
@@ -308,13 +315,7 @@
 					</div>
 					<div class="flex flex-col gap-1">
 						<span class={caption}>status="active"</span>
-						<SetRow
-							status="active"
-							index={3}
-							weight={85}
-							reps={8}
-							onoptions={openMenu}
-						>
+						<SetRow status="active" index={3} weight={85} reps={8} onoptions={openMenu}>
 							{#snippet right()}<span class="font-extrabold tracking-wider text-accent-text"
 									>NOW</span
 								>{/snippet}
@@ -322,12 +323,7 @@
 					</div>
 					<div class="flex flex-col gap-1">
 						<span class={caption}>status="pending"</span>
-						<SetRow
-							status="pending"
-							index={4}
-							onselect={() => {}}
-							onoptions={openMenu}
-						>
+						<SetRow status="pending" index={4} onselect={() => {}} onoptions={openMenu}>
 							{#snippet right()}80 × 7{/snippet}
 						</SetRow>
 					</div>

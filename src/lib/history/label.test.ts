@@ -31,6 +31,7 @@ const set = (spec: SetSpec, id: string): WorkoutSet => ({
 	plannedReps: null,
 	weight: spec.weight === undefined ? 100 : spec.weight,
 	reps: spec.reps === undefined ? 5 : spec.reps,
+	rpe: null,
 	completed: spec.completed ?? true
 });
 
