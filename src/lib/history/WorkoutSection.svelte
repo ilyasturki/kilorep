@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { prefersReducedMotion } from 'svelte/motion';
+	import { slide } from 'svelte/transition';
 	import { weightStep } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { SetCursor } from '$lib/domain/workout';
@@ -152,16 +154,24 @@
 	{#each cursors as cursor (cursor.set.id)}
 		{#if editing && cursor.set.id === openSetId}
 			<!-- Keyed on the set id so a different row mounts a fresh editor rather
-			     than mutating the open one underneath the user's thumb. -->
-			{#key cursor.set.id}
-				<EditSet
-					{cursor}
-					step={weightStep(meta.equipment)}
-					ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
-					ondone={onclose}
-					onoptions={() => onoptions(cursor.set.id)}
-				/>
-			{/key}
+			     than mutating the open one underneath the user's thumb.
+
+			     The editor alone slides — height only, the app's 200ms, zero under
+			     reduced motion. The rows around it stay snap-swapped on purpose:
+			     entering edit mode is animated by the page-level slide (see
+			     `pageSlide` on the screen), and rows that also grew during it would
+			     be two animations disagreeing about one flip. -->
+			<div transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}>
+				{#key cursor.set.id}
+					<EditSet
+						{cursor}
+						step={weightStep(meta.equipment)}
+						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
+						ondone={onclose}
+						onoptions={() => onoptions(cursor.set.id)}
+					/>
+				{/key}
+			</div>
 		{:else if editing}
 			<div class="flex min-h-11 items-center gap-1">
 				<!-- The disc is the claim, so in this posture it is the control that

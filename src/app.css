@@ -184,6 +184,53 @@
 	}
 }
 
+/* Glyphs, one step up under a thumb. The touch targets above already split on
+   pointer; this is the same split for what sits inside them — an 18px mark
+   read at arm's length between sets is smaller than the job asks. Call sites
+   keep writing the desk size (`size={18}`), and the thumb's step lives here
+   in one table rather than as a second number in fifty call sites.
+
+   `[width='…']` works because the icon contract renders `size` as the SVG's
+   width/height *attributes* — presentational hints, which any stylesheet
+   outranks — and every vendored icon carries `data-glyph` so nothing else
+   with a width attribute is caught. `(pointer: coarse)` rather than
+   `not (pointer: fine)` because a step *up* should need a thumb attested,
+   not merely a mouse unproven. */
+@media (pointer: coarse) {
+	svg[data-glyph][width='14'] {
+		width: 16px;
+		height: 16px;
+	}
+	svg[data-glyph][width='16'] {
+		width: 18px;
+		height: 18px;
+	}
+	svg[data-glyph][width='17'] {
+		width: 20px;
+		height: 20px;
+	}
+	svg[data-glyph][width='18'] {
+		width: 22px;
+		height: 22px;
+	}
+	svg[data-glyph][width='20'] {
+		width: 24px;
+		height: 24px;
+	}
+	svg[data-glyph][width='22'] {
+		width: 28px;
+		height: 28px;
+	}
+	svg[data-glyph][width='24'] {
+		width: 28px;
+		height: 28px;
+	}
+	svg[data-glyph][width='30'] {
+		width: 34px;
+		height: 34px;
+	}
+}
+
 @theme inline {
 	--color-canvas: var(--canvas);
 	--color-surface: var(--surface);
@@ -618,6 +665,33 @@
 	padding-bottom: max(1.25rem, var(--spacing-safe-b));
 }
 
+/* The session overview docked to the left edge, below `lg` — the same
+   `SessionList` the rail holds above it, arriving from the side the rail
+   lives on. Still vaul, still a drawer: `direction="left"` makes the drag
+   horizontal and the flick leftward, so the gesture the bottom sheets teach
+   works here rotated a quarter turn.
+
+   Width is most of the phone but never all of it — the sliver of workout
+   left showing is what says the session is still behind this. The cap keeps
+   a tablet from serving a half-metre list.
+
+   `max-height: none` unsets `overlay-panel`'s 85dvh: that ceiling exists so
+   a bottom sheet cannot swallow the screen, and a side drawer's whole job is
+   the full height. Safe insets are the drawer's own problem — it stands
+   under the status bar where page content never does. */
+@utility overlay-drawer-left {
+	inset-block: 0;
+	left: 0;
+	width: min(80vw, 20rem);
+	max-height: none;
+	border-right: 1px solid var(--line);
+	border-start-end-radius: var(--radius-sheet);
+	border-end-end-radius: var(--radius-sheet);
+	padding-top: var(--spacing-safe-t);
+	padding-bottom: max(1rem, var(--spacing-safe-b));
+	padding-left: var(--spacing-safe-l);
+}
+
 /* The scrim under the drawer. `overlay-scrim`'s 180ms opacity transition would
    turn every drag frame — vaul writes the overlay's opacity inline as the
    panel moves — into a tween running behind the finger. Static color; the
@@ -668,6 +742,14 @@
 	animation-name: vaul-slide-to-bottom;
 }
 
+[data-vaul-drawer][data-vaul-snap-points='false'][data-vaul-drawer-direction='left'][data-state='open'] {
+	animation-name: vaul-slide-from-left;
+}
+
+[data-vaul-drawer][data-vaul-snap-points='false'][data-vaul-drawer-direction='left'][data-state='closed'] {
+	animation-name: vaul-slide-to-left;
+}
+
 [data-vaul-overlay][data-vaul-snap-points='false'] {
 	animation-duration: 0.5s;
 	animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
@@ -694,6 +776,19 @@
 	left: 0;
 	right: 0;
 	height: 200%;
+	background: inherit;
+	background-color: inherit;
+}
+
+/* The left drawer's tail, same argument rotated: an overdrag rightward must
+   not open a gap along the screen's left edge. */
+[data-vaul-drawer][data-vaul-drawer-direction='left']::after {
+	content: '';
+	position: absolute;
+	right: 100%;
+	top: 0;
+	bottom: 0;
+	width: 200%;
 	background: inherit;
 	background-color: inherit;
 }
@@ -749,6 +844,90 @@
 @keyframes vaul-slide-to-bottom {
 	to {
 		transform: translate3d(0, var(--initial-transform, 100%), 0);
+	}
+}
+
+/* Plain -100% where the bottom pair reads `--initial-transform`: that
+   variable is vaul's nested-drawer offset, always phrased for the positive
+   axis, and the app nests nothing. */
+@keyframes vaul-slide-from-left {
+	from {
+		transform: translate3d(-100%, 0, 0);
+	}
+	to {
+		transform: translate3d(0, 0, 0);
+	}
+}
+
+@keyframes vaul-slide-to-left {
+	to {
+		transform: translate3d(-100%, 0, 0);
+	}
+}
+
+/* Route changes slide; `nav/transitions.ts` decides which way and stamps it
+   on <html>. The box that travels is whichever element wears `vt-page` — one
+   per screen, the content between the bars — and the two snapshots move in
+   lockstep, edge to edge, so no fade is needed to cover a seam: same
+   distance, same curve, no gap. `root` is pinned still because its two
+   snapshots are the chrome, identical on both sides of the navigation, and
+   the UA's default is to crossfade them anyway — the one fade this app has
+   no use for.
+
+   No reduced-motion rule here because none is needed: the JS never opens a
+   transition when the preference is set, per the app's existing idiom. */
+.vt-page {
+	view-transition-name: page;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+}
+
+::view-transition-old(page),
+::view-transition-new(page) {
+	animation-duration: 250ms;
+	animation-timing-function: var(--ease-sheet);
+}
+
+html[data-nav='push'] ::view-transition-old(page) {
+	animation-name: vt-page-exit-left;
+}
+
+html[data-nav='push'] ::view-transition-new(page) {
+	animation-name: vt-page-enter-right;
+}
+
+html[data-nav='pop'] ::view-transition-old(page) {
+	animation-name: vt-page-exit-right;
+}
+
+html[data-nav='pop'] ::view-transition-new(page) {
+	animation-name: vt-page-enter-left;
+}
+
+@keyframes vt-page-enter-right {
+	from {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes vt-page-exit-left {
+	to {
+		transform: translateX(-100%);
+	}
+}
+
+@keyframes vt-page-enter-left {
+	from {
+		transform: translateX(-100%);
+	}
+}
+
+@keyframes vt-page-exit-right {
+	to {
+		transform: translateX(100%);
 	}
 }
 

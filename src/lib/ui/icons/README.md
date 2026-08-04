@@ -16,7 +16,8 @@ Phosphor's `fill` weight is the intended partner for active/selected states — 
 
 - **Characters first.** `×` `−` `+` `·` are in Nunito and stay characters. An icon is what you reach for when the font can't supply the glyph (`⌫` and `⋯` are absent from our latin subset — measured in Chrome) or when there was never a character to begin with.
 - **One file per icon, no `<Icon name="…">` dispatcher.** A dispatcher defeats tree-shaking and adds a runtime branch; a shared wrapper component doubles the component instances on a screen that renders one icon per set row.
-- **Keep the contract**: `size` (number, default 24) and `class`, `viewBox="0 0 256 256"`, `fill="currentColor"`, `aria-hidden="true"`, `focusable="false"`. Colour always inherits from the parent's `text-*`; the accessible name lives on the wrapping control.
+- **Keep the contract**: `size` (number, default 24) and `class`, `data-glyph`, `viewBox="0 0 256 256"`, `fill="currentColor"`, `aria-hidden="true"`, `focusable="false"`. Colour always inherits from the parent's `text-*`; the accessible name lives on the wrapping control.
+- **`size` is the desk size.** Under a coarse pointer every glyph steps up one size — the table lives in `app.css` next to the touch-target tokens, keyed off `data-glyph` and the rendered `width` attribute. Write the size for a mouse and let the stylesheet answer for the thumb; never hand-pick a "mobile size" at a call site.
 - **Nothing dynamic but `width` / `height` / `class`.** Everything else static so Svelte hoists the template.
 
 ## Adding one

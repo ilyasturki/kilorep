@@ -135,13 +135,20 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
-	{#if ownsPane}
-		{@render children()}
-	{:else}
-		<div bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
+	<!-- `vt-page` is the box the route transitions slide — the content and
+	     nothing else. The bar below stays out of it on purpose: it is the same
+	     bar on both sides of every navigation, and chrome that travels with the
+	     page it belongs *over* reads as the whole screen tearing away. See
+	     `nav/transitions.ts`. -->
+	<div class="vt-page flex min-h-0 flex-1 flex-col">
+		{#if ownsPane}
 			{@render children()}
-		</div>
-	{/if}
+		{:else}
+			<div bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
+				{@render children()}
+			</div>
+		{/if}
+	</div>
 
 	<nav aria-label="Main" class="shrink-0 border-t border-line-soft bg-surface pb-safe-b lg:hidden">
 		<div class="mx-auto flex max-w-sm">
@@ -158,9 +165,14 @@
 						active ? 'text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
 					]}
 				>
+					<!-- `h-9` under a thumb: the glyph steps 22→28 there (see the
+					     `data-glyph` table in app.css) and 28 in a 32px capsule left a
+					     2px halo pretending to be a fit. The bar grows the 4px and
+					     nothing else moves. -->
 					<span
 						class={[
 							'flex h-8 w-16 items-center justify-center rounded-full transition-colors',
+							'pointer-coarse:h-9',
 							active ? 'bg-nav-selected' : 'pointer-fine:group-hover:bg-nav-hover'
 						]}
 					>

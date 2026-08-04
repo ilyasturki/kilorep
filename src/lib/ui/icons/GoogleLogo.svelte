@@ -15,6 +15,7 @@
 </script>
 
 <svg
+	data-glyph
 	viewBox="0 0 256 256"
 	width={size}
 	height={size}

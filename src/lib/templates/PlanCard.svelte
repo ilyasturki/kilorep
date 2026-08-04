@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { prefersReducedMotion } from 'svelte/motion';
+	import { slide } from 'svelte/transition';
 
 	import { PLANNED_REPS } from '$lib/domain/template';
 	import type { TemplateExercise, TemplateSet } from '$lib/domain/template';
@@ -52,6 +54,11 @@
 		$props();
 
 	const shape = $derived(planShape(exercise));
+
+	// The caret's panel grows open rather than appearing — height only, no
+	// fade, the same 200ms every expansion in the app settles on. Zero under
+	// reduced motion, the standing idiom.
+	const grow = $derived(prefersReducedMotion.current ? 0 : 200);
 
 	// Live only while one number can honestly speak for every set. `open` counts:
 	// the first + proposes the gym's default rather than a 1 nobody planned, and
@@ -224,7 +231,11 @@
 		<!-- Two up wherever the column has the width for it, which from `sm` it
 		     always does: these are short controls and a single file of them is the
 		     stack this card was built to retire. -->
-		<div id={panelId} class="grid gap-2 px-1 pt-1 sm:grid-cols-2">
+		<div
+			id={panelId}
+			transition:slide={{ duration: grow }}
+			class="grid gap-2 px-1 pt-1 sm:grid-cols-2"
+		>
 			{#each exercise.sets as set, index (set.id)}
 				<div class="flex items-center gap-2">
 					<span class="w-11 shrink-0 label-caps">Set {index + 1}</span>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppBar from '$lib/nav/AppBar.svelte';
 	import { createAppBarSlot } from '$lib/nav/bar.svelte';
+	import { slideNavigation } from '$lib/nav/transitions';
 
 	import type { LayoutProps } from './$types';
 
@@ -20,6 +21,12 @@
 	let { children }: LayoutProps = $props();
 
 	createAppBarSlot();
+
+	// Route changes slide — the direction logic and the reason it lives on this
+	// group are in `nav/transitions.ts`. Here for the same reason the bar is:
+	// every app route belongs to `(app)`, so a screen added later slides
+	// without its author having to remember.
+	slideNavigation();
 </script>
 
 <div class="flex h-dvh flex-col bg-canvas text-ink">

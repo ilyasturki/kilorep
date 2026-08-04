@@ -23,6 +23,7 @@
 	import WorkoutOptionsSheet from '$lib/history/WorkoutOptionsSheet.svelte';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
 	import BackLink from '$lib/nav/BackLink.svelte';
+	import { pageSlide } from '$lib/nav/transitions';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
@@ -134,9 +135,18 @@
 	/** The set expanded into an editor, or null. Only ever set while editing. */
 	let openSetId = $state<string | null>(null);
 
+	// Edit mode is a place — entered with the same rightward slide a deeper
+	// route gets, left with the same pop, address unchanged. `pageSlide` falls
+	// back to a bare flip where transitions are unsupported or unwanted.
+	function startEditing() {
+		pageSlide('push', () => (editing = true));
+	}
+
 	function stopEditing() {
-		editing = false;
-		openSetId = null;
+		pageSlide('pop', () => {
+			editing = false;
+			openSetId = null;
+		});
 	}
 
 	/**
@@ -617,7 +627,7 @@
 <WorkoutOptionsSheet
 	bind:open={menuOpen}
 	{title}
-	onedit={() => (editing = true)}
+	onedit={startEditing}
 	ondelete={() => (deleteOpen = true)}
 />
 

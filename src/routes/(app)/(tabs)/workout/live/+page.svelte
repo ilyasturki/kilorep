@@ -2,6 +2,7 @@
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { goto, invalidate } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
@@ -12,7 +13,7 @@
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsSheet from '$lib/workout/ExerciseOptionsSheet.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
-	import OverviewSheet from '$lib/workout/OverviewSheet.svelte';
+	import OverviewDrawer from '$lib/workout/OverviewDrawer.svelte';
 	import SessionList from '$lib/workout/SessionList.svelte';
 	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -180,6 +181,66 @@
 
 	let overview = $state(false);
 
+	/**
+	 * A swipe rightward across the pane opens the overview drawer — the drawer
+	 * arrives from the left, so the gesture pulls it in from the side it lives
+	 * on. Anywhere on the pane, not the screen's left edge: Android's gesture
+	 * navigation owns edge swipes as back, and an edge-only gesture would be
+	 * mostly dead on the phones this exists for.
+	 *
+	 * Observation only — no capture, no preventDefault — so nothing the pane
+	 * already answers is taxed: a vertical wander past a horizontal one is a
+	 * scroll and abandons the read, and the whole travel must land inside
+	 * 400ms, safely under the 500ms after which a still-ish press on a set row
+	 * is a long-press opening options. The horizontal-dominance test (twice the
+	 * drift) is what keeps a sloppy scroll from opening a panel nobody asked
+	 * for. Nothing here is `$state`: read and written in handlers, rendered by
+	 * none.
+	 */
+	// `lg` written out, the same way `viewport.ts` writes `sm` out and for the
+	// same reason: from `lg` the rail is permanently open and the gesture would
+	// be pulling at a drawer that does not exist.
+	const railed = new MediaQuery('min-width: 64rem', false);
+
+	let swipe: { x: number; y: number; at: number } | null = null;
+
+	function swipeStart(event: PointerEvent) {
+		if (railed.current || !event.isPrimary) {
+			swipe = null;
+			return;
+		}
+
+		swipe = { x: event.clientX, y: event.clientY, at: performance.now() };
+	}
+
+	function swipeMove(event: PointerEvent) {
+		if (swipe === null) {
+			return;
+		}
+
+		if (performance.now() - swipe.at > 400) {
+			swipe = null;
+			return;
+		}
+
+		const dx = event.clientX - swipe.x;
+		const dy = Math.abs(event.clientY - swipe.y);
+
+		if (dy > 24 && dy > dx) {
+			swipe = null;
+			return;
+		}
+
+		if (dx > 48 && dx > 2 * dy) {
+			swipe = null;
+			overview = true;
+		}
+	}
+
+	function swipeEnd() {
+		swipe = null;
+	}
+
 	// One insert sheet for the screen, reached from the rail and from the
 	// overview alike — the overview closes itself first, so the two are never
 	// open at once.
@@ -330,7 +391,20 @@
 			</div>
 		</header>
 
-		<div class="relative flex min-h-0 flex-1">
+		<!-- The swipe listeners ride the pane's wrapper — every set row, every gap —
+		     because the gesture belongs to the screen, not to a strip of it. See
+		     `swipeStart` for why they observe rather than claim the pointer. The
+		     a11y ignore is honest: this is not an interaction, it is a shortcut to
+		     the header's own Session-overview button, which keyboards and screen
+		     readers already have. -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="relative flex min-h-0 flex-1"
+			onpointerdown={swipeStart}
+			onpointermove={swipeMove}
+			onpointerup={swipeEnd}
+			onpointercancel={swipeEnd}
+		>
 			<!-- The session list, floating in the margin the window has left over.
 		     Taken out of the flow on purpose: the pane below is the full width of
 		     the window and scrolls at its edge exactly as every other screen does,
@@ -484,7 +558,7 @@
 		</div>
 	</div>
 
-	<OverviewSheet
+	<OverviewDrawer
 		bind:open={overview}
 		{groups}
 		activeSetId={session.activeSetId}

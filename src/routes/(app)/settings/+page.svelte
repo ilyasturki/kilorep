@@ -390,7 +390,10 @@
 	<title>Settings | Kilorep</title>
 </svelte:head>
 
-<main class="column-content flex min-h-full flex-col gap-6 px-3 pt-safe-t pb-4 lg:pt-0">
+<!-- `vt-page`: Settings sits outside `(tabs)` and so outside the box that
+     layout slides — without its own name here it would be the one screen that
+     blinks into place while every other one travels. -->
+<main class="vt-page column-content flex min-h-full flex-col gap-6 px-3 pt-safe-t pb-4 lg:pt-0">
 	<header class="flex flex-col gap-3 pt-3">
 		<BackLink href="/workout" label="Back to workout" class="self-start" />
 

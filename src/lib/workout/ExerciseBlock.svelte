@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { prefersReducedMotion } from 'svelte/motion';
+	import { slide } from 'svelte/transition';
+
 	import { hintLabel } from '$lib/domain/workout';
 	import { weightStep } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
@@ -97,6 +100,20 @@
 
 		revealNearest(holder);
 	});
+
+	/**
+	 * The row-to-editor swap grows instead of snapping: `slide` animates the
+	 * height and only the height — no fade, per the design's rule that a panel
+	 * travels rather than dissolves. The rail's 200ms again, same argument as
+	 * the pane's flip: one gesture, one speed. Zero under reduced motion, the
+	 * app's standing idiom.
+	 *
+	 * The reveal effect above measures at intro start, when the editor is still
+	 * a sliver — `onintroend` below re-checks at full height. `revealNearest`
+	 * holds still for a set already on screen, so the second pass costs nothing
+	 * when the first was enough.
+	 */
+	const grow = $derived(prefersReducedMotion.current ? 0 : 200);
 </script>
 
 <section class="flex flex-col gap-2">
@@ -127,7 +144,12 @@
 			     `data-active-set` marks the one live editor for the screen's own
 			     reveals — a jump to the already-active set changes no state, so
 			     the effect above cannot be the one to answer it. -->
-			<div bind:this={holder} data-active-set>
+			<div
+				bind:this={holder}
+				data-active-set
+				transition:slide={{ duration: grow }}
+				onintroend={() => holder !== null && revealNearest(holder)}
+			>
 				{#key cursor.set.id}
 					<ActiveSet
 						{cursor}
@@ -140,18 +162,22 @@
 				{/key}
 			</div>
 		{:else}
-			<SetRow
-				status={statusOf(cursor)}
-				index={cursor.workingIndex + 1}
-				weight={cursor.set.weight}
-				reps={cursor.set.reps}
-				onselect={cursor.set.type === 'warmup' ? undefined : () => onselect(cursor.set.id)}
-				onoptions={() => onoptions(cursor.set.id)}
-			>
-				{#snippet right()}
-					{rowHint(cursor) ?? ''}
-				{/snippet}
-			</SetRow>
+			<!-- The wrapper exists for the transition alone: `transition:` goes on
+			     an element, and `SetRow` is a component. -->
+			<div transition:slide={{ duration: grow }}>
+				<SetRow
+					status={statusOf(cursor)}
+					index={cursor.workingIndex + 1}
+					weight={cursor.set.weight}
+					reps={cursor.set.reps}
+					onselect={cursor.set.type === 'warmup' ? undefined : () => onselect(cursor.set.id)}
+					onoptions={() => onoptions(cursor.set.id)}
+				>
+					{#snippet right()}
+						{rowHint(cursor) ?? ''}
+					{/snippet}
+				</SetRow>
+			</div>
 		{/if}
 	{/each}
 
