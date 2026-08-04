@@ -37,6 +37,11 @@ node_modules
 # Database (the SQLite file, plus WAL and shared-memory sidecars)
 /.data
 
+# Illustration sources — megabytes of PNG per exercise, and the model can make
+# them again from scripts/illustrations/PROMPTS.md. The traced SVGs are the
+# artefact worth keeping.
+/scripts/illustrations/raw
+
 # OS
 .DS_Store
 Thumbs.db

@@ -308,6 +308,18 @@
 			}
 		},
 		{
+			// Ambient declarations are scripts, not modules. `declare module 'potrace'`
+			// only declares an untyped package from a file with no top-level import or
+			// export; adding one to satisfy the rule turns the block into a module
+			// augmentation, which TypeScript rejects against a package that ships no
+			// types of its own. `src/app.d.ts` has imports, is a module, and passes the
+			// rule without this.
+			"files": ["**/*.d.ts"],
+			"rules": {
+				"import/unambiguous": "off"
+			}
+		},
+		{
 			// vitest — jest-compatible API, so the jest rules apply.
 			"files": ["**/*.test.ts", "**/*.spec.ts", "**/*.test.js", "**/*.spec.js"],
 			"plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "node", "jest"],
