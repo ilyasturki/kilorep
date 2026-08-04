@@ -25,6 +25,10 @@
 	 * rated or not. Collapsed, a lifter who never rates a set pays nothing at all
 	 * — the card is the height it always was — and one who does pays two taps.
 	 *
+	 * Both callers stand the pill on the commit bar's own line, which is why the
+	 * two open views carry `basis-full`: in a wrapping row that is what puts an
+	 * expanded control back on a line of its own and pushes the bar below it.
+	 *
 	 * Three views, one control: the pill, the chips, and the stepper for a value
 	 * off the ladder. `mode` is local and resets with the component, which is
 	 * keyed on the set id by both callers — so a new set always opens collapsed
@@ -58,7 +62,21 @@
 	const rating = $derived(isExertion(value) ? value : null);
 
 	const name = $derived(scaleName(scale));
-	const label = $derived(exertionLabel(rating, scale) ?? `${name} –`);
+
+	/**
+	 * The pill wears the number and the scale on two lines, the dress the two
+	 * fields beside it wear — so what it shows is the bare value, and `–` for a
+	 * set nobody rated.
+	 *
+	 * Which leaves the accessible name to put the two halves back together, and
+	 * to say what the button *does*: read aloud, `8.5` over `RPE` is two labels
+	 * on a control with no verb.
+	 */
+	const shown = $derived(rating === null ? '–' : String(shownExertion(rating, scale)));
+	const rated = $derived(exertionLabel(rating, scale));
+	const pillLabel = $derived(
+		rated === null ? `Rate this set in ${name}` : `Rated ${rated}, change it`
+	);
 
 	/**
 	 * The rungs in the language the user reads them in. Stored order is kept —
@@ -99,22 +117,36 @@
 </script>
 
 {#if mode === 'pill'}
-	<!-- Left-aligned and only as wide as its words: this is a control the eye
-	     should be able to skip, not a bar across the card. The value goes
-	     accent-*text* rather than an accent fill — `Button`'s standing rule is one
-	     filled control per screen and that is the commit button, which on this
-	     card is directly underneath. -->
+	<!-- A third slab in the card's own grammar: the value over its caps name, the
+	     shape and the fill `StepperField` already uses, one fixed width so the
+	     commit button beside it never shifts under the thumb when the number
+	     gains a half step. Narrower than a field and without arms, because it is
+	     the optional number of the three and must not read as a fourth thing to
+	     answer.
+
+	     A step down in type from the fields, too — 22 against their 28. The value
+	     goes accent-*text* rather than an accent fill: `Button`'s standing rule is
+	     one filled control per screen, and that is the commit bar sharing this
+	     line. -->
 	<button
 		type="button"
+		aria-label={pillLabel}
 		onclick={() => (mode = 'chips')}
 		class={[
-			'inline-flex min-h-11 w-fit items-center rounded-xl bg-sunken px-3 text-base font-extrabold',
-			'focus-ring hover:bg-hover active:bg-surface-2',
-			'pointer-fine:transition-[background-color] pointer-fine:duration-100',
-			rating === null ? 'text-ink-faint' : 'text-accent-text'
+			'flex min-h-11 w-20 shrink-0 flex-col items-center justify-center gap-0.5',
+			'rounded-2xl bg-sunken focus-ring hover:bg-hover active:bg-surface-2',
+			'pointer-fine:transition-[background-color] pointer-fine:duration-100'
 		]}
 	>
-		{label}
+		<span
+			class={[
+				'text-xl leading-none font-extrabold tracking-numeral',
+				rating === null ? 'text-ink-faint' : 'text-accent-text'
+			]}
+		>
+			{shown}
+		</span>
+		<span class="label-caps">{name}</span>
 	</button>
 {:else if mode === 'chips'}
 	<!-- `wrap` and not the scrolling `row`: nine chips scroll to about a screen
@@ -125,7 +157,7 @@
 		bind:value={() => selected, pick}
 		layout="wrap"
 		label="{name} for this set"
-		class="py-0.5"
+		class="basis-full py-0.5"
 	>
 		<!-- The one clear that works from everywhere. Tapping the lit rung clears
 		     too, but a value off the ladder lights no rung and would otherwise be
@@ -144,7 +176,7 @@
 		<Chip value="custom">Other</Chip>
 	</ChipGroup>
 {:else}
-	<div class="flex items-stretch gap-2">
+	<div class="flex basis-full items-stretch gap-2">
 		<!-- `‹` is a character, like `BackLink`'s and the month arrows' — measured
 		     present in the shipped subset, and the icons README's first rule is that
 		     a glyph the font carries never becomes a component. -->

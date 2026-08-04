@@ -158,11 +158,17 @@
 			/>
 		</div>
 
-		<ExertionPicker value={cursor.set.rpe} scale={exertionScale.current} onchange={onrate} />
+		<!-- The rating shares the bar's line, the way the gym card carries it: one
+		     optional number does not earn a line of its own in either card, and the
+		     two are the same card in two places. The row wraps for the same reason
+		     that one does — see `ActiveSet`. -->
+		<div class="flex flex-wrap items-stretch gap-2">
+			<ExertionPicker value={cursor.set.rpe} scale={exertionScale.current} onchange={onrate} />
 
-		<!-- Outlined, not filled. `Button`'s standing rule is one filled button per
-		     screen and this one claims nothing — the numbers landed on the set as
-		     they were typed, and all this does is put the row back. -->
-		<Button variant="secondary" class="w-full" onclick={ondone}>Done</Button>
+			<!-- Outlined, not filled. `Button`'s standing rule is one filled button per
+			     screen and this one claims nothing — the numbers landed on the set as
+			     they were typed, and all this does is put the row back. -->
+			<Button variant="secondary" class="flex-1" onclick={ondone}>Done</Button>
+		</div>
 	</div>
 </div>

@@ -319,15 +319,26 @@
 			/>
 		</div>
 
-		<ExertionPicker value={cursor.set.rpe} scale={exertionScale.current} onchange={onrate} />
+		<!-- The rating rides on the commit bar's line rather than owning one of its
+		     own. A line to itself cost the card 56px and spent them pushing the
+		     target of the very next tap that much further down — rule 7's exact
+		     complaint, paid on every set whether or not anyone rates it — and left
+		     the pill stranded on a line that was otherwise empty.
 
-		<Button variant="commit" disabled={!live} class="w-full" onclick={commit}>
-			{#if live}
-				<Check size={30} />
-				{commitLabel}
-			{:else}
-				{inertLabel}
-			{/if}
-		</Button>
+		     Wrapping, because the picker opens into a full-width control: the chips
+		     and the stepper carry `basis-full`, which takes the line and puts the
+		     bar back underneath while they are up. -->
+		<div class="flex flex-wrap items-stretch gap-2">
+			<ExertionPicker value={cursor.set.rpe} scale={exertionScale.current} onchange={onrate} />
+
+			<Button variant="commit" disabled={!live} class="flex-1" onclick={commit}>
+				{#if live}
+					<Check size={30} />
+					{commitLabel}
+				{:else}
+					{inertLabel}
+				{/if}
+			</Button>
+		</div>
 	</div>
 </div>
