@@ -71,10 +71,11 @@ export type WorkoutExercise = {
 /**
  * An entry holding more than one exercise is a superset.
  *
- * The level is modelled even though supersets are out of this build's UI. It
- * is the shape PRODUCT.md fixes (session → entries → exercises → sets) and the
- * shape the server schema is waiting on; adding it later means reshaping the
- * tree everything else has already been written against.
+ * The level PRODUCT.md fixes (session → entries → exercises → sets), and the
+ * one every gesture above a set acts on: an entry is what reorder moves, what a
+ * drag lifts whole, and what `entryCursors` performs a round at a time. Two
+ * exercises here are lifted in turn; taking one out is a superset edit, not a
+ * removal of the entry.
  */
 export type WorkoutEntry = {
 	id: string;
@@ -119,24 +120,89 @@ export type SetCursor = {
 	workingIndex: number;
 };
 
-/** Every set in session order, flattened. */
-export function cursors(workout: Workout): SetCursor[] {
-	const out: SetCursor[] = [];
+/**
+ * One exercise's sets as cursors, in the order the exercise holds them. The
+ * unit both walks below are built from: a block stacks one of these, and the
+ * session walk splices several together.
+ *
+ * Exported because the screens build the same legs to render blocks from, and
+ * a caller that had both the legs and the entry order could otherwise only
+ * reach the round sequence by asking `entryCursors` to walk the tree a second
+ * time — see `interleave`, which takes the legs it already has.
+ */
+export function legCursors(entry: WorkoutEntry, exercise: WorkoutExercise): SetCursor[] {
+	// Warmups are excluded from the count rather than merely skipped: the hint
+	// for working set 1 is last time's working set 1, and a warmup sitting above
+	// it must not push that lookup off by one.
+	let working = 0;
 
-	for (const entry of workout.entries) {
-		for (const exercise of entry.exercises) {
-			// Warmups are excluded from the count rather than merely skipped: the
-			// hint for working set 1 is last time's working set 1, and a warmup
-			// sitting above it must not push that lookup off by one.
-			let working = 0;
+	return exercise.sets.map((set) => ({
+		set,
+		exercise,
+		entry,
+		workingIndex: set.type === 'warmup' ? -1 : working++
+	}));
+}
 
-			for (const set of exercise.sets) {
-				out.push({ set, exercise, entry, workingIndex: set.type === 'warmup' ? -1 : working++ });
+/**
+ * A set of legs spliced into the order they are performed.
+ *
+ * Takes the legs rather than the entry, because the screens have already built
+ * them: a block renders one leg's cursors, and the entry needs the round order
+ * over the very same objects. Walking the tree again to produce a second copy
+ * of every cursor is the thing this signature exists to avoid.
+ *
+ * A lone exercise is its own sets, untouched. An entry holding several is a
+ * superset, and a superset is performed one set of each in turn — so the legs
+ * are spliced round by round: leg A's working set 1, leg B's, then leg A's
+ * second. That order is the whole of what supersetting *is*, and it lives here
+ * rather than inside the advance rule so that every walker agrees — the commit
+ * advance, the resume cursor and the earliest-gap fallback all read this one
+ * sequence, and two of them disagreeing would send the cursor somewhere nobody
+ * asked for.
+ *
+ * Warmups never round-robin. They sit ahead of the rounds, in leg order,
+ * because ramping into a movement happens before the circuit starts rather than
+ * between two of its legs. Inside a lone exercise they keep their place in the
+ * array instead — a warmup between two working sets is a thing a lifter can
+ * write, and hoisting it would be this walk quietly editing the session.
+ *
+ * Ragged legs are ordinary and nothing here evens them up: three sets against
+ * four leaves the fourth round holding only the longer leg, which is exactly
+ * how it gets lifted.
+ */
+export function interleave(legs: SetCursor[][]): SetCursor[] {
+	if (legs.length < 2) {
+		return legs.length === 0 ? [] : legs[0];
+	}
+
+	const warmups = legs.flatMap((leg) => leg.filter((cursor) => cursor.workingIndex === -1));
+	const working = legs.map((leg) => leg.filter((cursor) => cursor.workingIndex !== -1));
+	const rounds = Math.max(...working.map((leg) => leg.length));
+
+	const out = [...warmups];
+
+	for (let round = 0; round < rounds; round += 1) {
+		for (const leg of working) {
+			const cursor = leg[round];
+
+			if (cursor !== undefined) {
+				out.push(cursor);
 			}
 		}
 	}
 
 	return out;
+}
+
+/** The same order, walked from the entry — `interleave` over its own legs. */
+export function entryCursors(entry: WorkoutEntry): SetCursor[] {
+	return interleave(entry.exercises.map((exercise) => legCursors(entry, exercise)));
+}
+
+/** Every set in session order, flattened. */
+export function cursors(workout: Workout): SetCursor[] {
+	return workout.entries.flatMap((entry) => entryCursors(entry));
 }
 
 /**
@@ -158,32 +224,32 @@ export type SetGroup = {
 };
 
 /**
- * Cursors grouped per exercise.
+ * Cursors grouped per exercise: one group per exercise node, session order
+ * preserved, each holding its own sets in its own order.
  *
- * Grouped by walking rather than by a map, because session order is the one
- * thing that must survive — an entry can hold two exercises (a superset) and
- * they belong adjacent, not merged. The same exercise performed twice in one
- * session is therefore two groups, not one.
+ * Walked over the tree, where it used to be folded out of `cursors`. The two
+ * parted company the day a superset began interleaving — the session walk
+ * spells one A₁ B₁ A₂ B₂, and a fold reading that sequence would cut a new
+ * group at every crossing and hand the screen four blocks of one set each. The
+ * tree is what knows how many exercises there are; the sequence only knows what
+ * order they are lifted in.
+ *
+ * Which is also why a group's cursors are the leg's own, unspliced: a block
+ * lists the sets of the exercise it names, and the round order is the session's
+ * business rather than any one block's.
+ *
+ * The same exercise performed twice in one session is still two groups — two
+ * nodes, and only the node id can tell them apart.
  */
 export function groupsOf(workout: Workout): SetGroup[] {
-	const out: SetGroup[] = [];
-
-	for (const cursor of cursors(workout)) {
-		const last = out.at(-1);
-
-		if (last !== undefined && last.id === cursor.exercise.id) {
-			last.cursors.push(cursor);
-		} else {
-			out.push({
-				id: cursor.exercise.id,
-				exerciseId: cursor.exercise.exerciseId,
-				entryId: cursor.entry.id,
-				cursors: [cursor]
-			});
-		}
-	}
-
-	return out;
+	return workout.entries.flatMap((entry) =>
+		entry.exercises.map((exercise) => ({
+			id: exercise.id,
+			exerciseId: exercise.exerciseId,
+			entryId: entry.id,
+			cursors: legCursors(entry, exercise)
+		}))
+	);
 }
 
 export function cursorFor(workout: Workout, setId: string): SetCursor | null {
@@ -580,8 +646,15 @@ export function insertedSetCount(history: History, exerciseId: string): number {
 	return performed === undefined ? 3 : performed.length;
 }
 
-/** Every node an inserted exercise needs, minted by the caller — see `addSet`. */
-export type NewExerciseIds = { entry: string; exercise: string; sets: string[] };
+/**
+ * Every node an exercise needs below the entry, minted by the caller — see
+ * `addSet`. What a swap puts in a slot, and what a fresh leg joining a superset
+ * arrives as: neither of them creates an entry, so neither names one.
+ */
+export type ExerciseIds = { exercise: string; sets: string[] };
+
+/** The same, plus the entry an inserted exercise stands in on its own. */
+export type NewExerciseIds = ExerciseIds & { entry: string };
 
 /**
  * Inserts an exercise as a new entry. Null when no set ids were provided: an
@@ -604,9 +677,8 @@ export type NewExerciseIds = { entry: string; exercise: string; sets: string[] }
  * last row. Nothing here can fail for a placement the caller half-remembered.
  *
  * The entry and not the exercise, because an entry holding two of them is a
- * superset performed together: landing between the halves of one would be a
- * superset edit, a different gesture against a level of the tree the UI does not
- * expose.
+ * superset performed together: landing between the legs of one would be a
+ * superset edit, which is `joinEntry`'s gesture and not insertion's.
  *
  * The sets arrive blank with `plannedReps: null`, not copied from anywhere:
  * nothing prescribed them — plans live in templates, and this exercise joined
@@ -614,8 +686,10 @@ export type NewExerciseIds = { entry: string; exercise: string; sets: string[] }
  * working set resolves its prefill from history by index, so an exercise
  * performed last week opens on last week's numbers untouched.
  *
- * A new entry rather than a slot in an existing one, for the superset reason
- * above read from the other side: inserting into one is that same edit.
+ * A new entry of its own, always. Adding *into* an entry is a different act
+ * with a different name — see `addExerciseTo` — and an insert that sometimes
+ * made a superset because of where it was asked from would be the surprise
+ * DESIGN.md rules out.
  */
 export function addExercise(
 	workout: Workout,
@@ -649,74 +723,265 @@ export function addExercise(
 	return entry;
 }
 
-/** The nodes a replacement needs. No entry id: the entry itself survives a swap. */
-export type ReplacementIds = { exercise: string; sets: string[] };
-
 /**
- * Swaps what is performed in an entry, leaving the entry where it is.
+ * Adds an exercise as another leg of an entry that already exists — the fresh
+ * half of "superset this with…", where the answer was something not yet in the
+ * session.
  *
- * The rack was taken, so you do something else in the slot you had. The entry
- * is that slot: its id and its position in the session both survive, which is
- * what keeps a swap out of reorder's business — the alternative, remove and
- * add, drops the exercise at the end of the session and makes the user drag it
- * back.
+ * The leg lands at the end of the entry, which is where the round order picks
+ * it up: an entry of two becomes an entry of three, lifted in turn. Sets arrive
+ * blank and counted by the caller for the reasons `addExercise` gives, and the
+ * entry's own id and position are untouched — supersetting something *with* an
+ * exercise is a statement about that exercise, not a request to move it.
  *
- * Everything below the entry is new. The sets are blank and counted by the
- * *incoming* exercise's history, exactly as if it had been added fresh, because
- * the sets that were there answered to a different exercise: four sets of bench
- * is not a prescription for four sets of incline press, and a logged 82.5 × 7
- * carried across would be the app filing a set under something nobody
- * performed. Callers with logged sets in hand are expected to have asked first.
- *
- * Null for an unknown entry and null for no set ids, the same refusals
- * `addExercise` makes.
+ * Null for an unknown entry and null for no set ids, `addExercise`'s refusals.
  */
-export function replaceEntry(
+export function addExerciseTo(
 	workout: Workout,
 	entryId: string,
-	exerciseId: string,
-	ids: ReplacementIds
-): WorkoutEntry | null {
+	catalogId: string,
+	ids: ExerciseIds
+): WorkoutExercise | null {
 	const entry = workout.entries.find((e) => e.id === entryId);
 
 	if (entry === undefined || ids.sets.length === 0) {
 		return null;
 	}
 
-	entry.exercises = [
-		{
-			id: ids.exercise,
-			exerciseId,
-			sets: ids.sets.map((id) => blankSet(id))
-		}
-	];
+	const exercise: WorkoutExercise = {
+		id: ids.exercise,
+		exerciseId: catalogId,
+		sets: ids.sets.map((id) => blankSet(id))
+	};
 
-	return entry;
+	entry.exercises.push(exercise);
+
+	return exercise;
 }
 
 /**
- * Removes an entry and everything under it, logged or not.
+ * Moves an exercise already in the session into `entryId`, making the two a
+ * superset — the other half of "superset this with…", where the answer was a
+ * movement already on the list.
  *
- * No floor, unlike `removeSet`: a session with no entries left is an ordinary
- * state — it is what every session starts as before the first exercise is
- * added — so there is nothing here to refuse. What a *set* cannot do is leave
- * its exercise empty, because an exercise with no sets is not a shorter
- * exercise; an empty session is just an empty session.
+ * Moved rather than copied, and its sets ride along logged or not: this is the
+ * same exercise, now performed in a circuit instead of on its own, and a lifter
+ * who supersets after three sets of curls has not un-done those curls. The
+ * round order picks up wherever both legs stand, which is why the rounds are
+ * counted per leg and never assumed level.
  *
- * The entry and not the exercise, for the reason `moveEntry` gives: an entry
- * holding two of them is a superset, and taking one half out is a superset edit
- * against a level of the tree the UI does not expose.
+ * The entry it came from goes with it when nothing is left there — the same
+ * husk rule `removeExercise` keeps, and for the same reason: an entry holding
+ * no exercises is an invisible row a reorder would still drag around.
+ *
+ * False for an unknown entry, an unknown exercise, and an exercise already
+ * standing in this entry — the honest no-op `moveEntry` reports for a move that
+ * lands where it started.
  */
-export function removeEntry(workout: Workout, entryId: string): boolean {
-	const at = workout.entries.findIndex((e) => e.id === entryId);
+export function joinEntry(workout: Workout, entryId: string, exerciseId: string): boolean {
+	const target = workout.entries.find((e) => e.id === entryId);
 
-	if (at === -1) {
+	if (target === undefined) {
 		return false;
 	}
 
-	workout.entries.splice(at, 1);
+	for (const [at, entry] of workout.entries.entries()) {
+		const index = entry.exercises.findIndex((e) => e.id === exerciseId);
+
+		if (index === -1) {
+			continue;
+		}
+
+		if (entry === target) {
+			return false;
+		}
+
+		const [exercise] = entry.exercises.splice(index, 1);
+
+		target.exercises.push(exercise);
+
+		if (entry.exercises.length === 0) {
+			workout.entries.splice(at, 1);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * "Superset this with…", answered: one picked catalog id becomes another leg of
+ * `entryId`, whichever way it has to.
+ *
+ * The choice is the whole of this function. A pick naming a movement already
+ * standing somewhere else in the session is that node moving in, its logged
+ * sets riding along — `joinEntry`. Anything else arrives fresh — `addExerciseTo`
+ * with the ids the caller minted. Which one a pick means is read off the tree
+ * and never off the row it came from, so the band a sheet pins above the
+ * catalog and a search result three sections down do the same thing when they
+ * name the same exercise.
+ *
+ * "Somewhere else" excludes this entry's own legs. An exercise already standing
+ * here has nothing to move, and the honest reading of naming it again is a
+ * second leg of it — so it takes the fresh path rather than reporting the no-op
+ * `joinEntry` would.
+ *
+ * The first match wins when a session holds the same exercise twice: two nodes
+ * under one name, and the nearest thing to "the one you meant" that an id can
+ * express.
+ *
+ * Ids are minted eagerly by the caller and simply go unused on the join path —
+ * the set count a fresh leg would need is the caller's rule (`insertedSetCount`
+ * here, a flat count in the plan), and threading a lazy mint through would buy
+ * nothing but a discarded UUID.
+ */
+export function supersetWith(
+	workout: Workout,
+	entryId: string,
+	catalogId: string,
+	ids: ExerciseIds
+): boolean {
+	const standing = workout.entries
+		.filter((entry) => entry.id !== entryId)
+		.flatMap((entry) => entry.exercises)
+		.find((exercise) => exercise.exerciseId === catalogId);
+
+	if (standing !== undefined) {
+		return joinEntry(workout, entryId, standing.id);
+	}
+
+	return addExerciseTo(workout, entryId, catalogId, ids) !== null;
+}
+
+/**
+ * Breaks a superset back into one entry per exercise, in place and in the order
+ * the legs stood in.
+ *
+ * Nothing is destroyed and nothing is renumbered: every set stays on the
+ * exercise that holds it, logged or not, and what changes is only that the
+ * rounds stop interleaving. Which is why no caller confirms this — there is
+ * nothing to take back that a second join would not restore.
+ *
+ * The first leg keeps the entry, so an id the screen is holding stays valid and
+ * the block the gesture was made from does not jump. The rest get fresh entries
+ * from `mint`, immediately below, because ids key records and sync and a
+ * re-used one would let the store confuse two rows.
+ *
+ * False for an unknown entry and false for one that was never a superset: a
+ * lone exercise is already its own entry, and saying so is more honest than
+ * splicing the array to produce exactly what was there.
+ */
+export function splitEntry(workout: Workout, entryId: string, mint: () => string): boolean {
+	const at = workout.entries.findIndex((e) => e.id === entryId);
+
+	if (at === -1 || workout.entries[at].exercises.length < 2) {
+		return false;
+	}
+
+	const entry = workout.entries[at];
+	const [first, ...rest] = entry.exercises;
+
+	entry.exercises = [first];
+
+	workout.entries.splice(
+		at + 1,
+		0,
+		...rest.map((exercise) => ({ id: mint(), exercises: [exercise] }))
+	);
 
 	return true;
+}
+
+/**
+ * Swaps what is performed in one slot, leaving the entry and every other leg of
+ * it alone.
+ *
+ * The rack was taken, so you do something else in the slot you had. The slot is
+ * the exercise node: its position in the entry survives, and the entry's
+ * position in the session survives with it, which is what keeps a swap out of
+ * reorder's business — the alternative, remove and add, drops the exercise at
+ * the end of the session and makes the user drag it back.
+ *
+ * The node and not the entry, because an entry can hold two of them: swapping
+ * one leg of a superset is a swap of that leg, and rebuilding the entry around
+ * it would take the other leg — and everything logged under it — with something
+ * the menu never named.
+ *
+ * Everything below the node is new. The sets are blank and counted by the
+ * *incoming* exercise's history, exactly as if it had been added fresh, because
+ * the sets that were there answered to a different exercise: four sets of bench
+ * is not a prescription for four sets of incline press, and a logged 82.5 × 7
+ * carried across would be the app filing a set under something nobody
+ * performed. Callers with logged sets in hand are expected to have asked first.
+ *
+ * Null for an unknown node and null for no set ids, the same refusals
+ * `addExercise` makes.
+ */
+export function replaceExercise(
+	workout: Workout,
+	exerciseId: string,
+	catalogId: string,
+	ids: ExerciseIds
+): WorkoutExercise | null {
+	if (ids.sets.length === 0) {
+		return null;
+	}
+
+	for (const entry of workout.entries) {
+		const at = entry.exercises.findIndex((e) => e.id === exerciseId);
+
+		if (at === -1) {
+			continue;
+		}
+
+		const exercise: WorkoutExercise = {
+			id: ids.exercise,
+			exerciseId: catalogId,
+			sets: ids.sets.map((id) => blankSet(id))
+		};
+
+		entry.exercises[at] = exercise;
+
+		return exercise;
+	}
+
+	return null;
+}
+
+/**
+ * Removes an exercise and everything under it, logged or not — and the entry it
+ * stood in when nothing else does.
+ *
+ * The node and not the entry, for `replaceExercise`'s reason: the menu names one
+ * exercise, and taking a superset's other leg with it would destroy sets the
+ * user never pointed at. Breaking the pair is `splitEntry`'s job and stays a
+ * separate gesture.
+ *
+ * No floor, unlike `removeSet`: a session with nothing left in it is an ordinary
+ * state — it is what every session starts as — so there is nothing here to
+ * refuse. What a *set* cannot do is leave its exercise empty, because an
+ * exercise with no sets is not a shorter exercise; an empty session is just an
+ * empty session.
+ */
+export function removeExercise(workout: Workout, exerciseId: string): boolean {
+	for (const [at, entry] of workout.entries.entries()) {
+		const index = entry.exercises.findIndex((e) => e.id === exerciseId);
+
+		if (index === -1) {
+			continue;
+		}
+
+		entry.exercises.splice(index, 1);
+
+		if (entry.exercises.length === 0) {
+			workout.entries.splice(at, 1);
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 /**
@@ -752,8 +1017,8 @@ export function removeSet(workout: Workout, setId: string): boolean {
  *
  * The entry and not the exercise, because an entry holding two exercises is a
  * superset and the pair is performed together — a reorder that could land one
- * half three exercises away from the other is not a reorder, it is a different
- * edit against a level of the tree the UI does not expose.
+ * leg three exercises away from the other is not a reorder, it is a break, and
+ * breaking one is `splitEntry`'s own gesture.
  *
  * Session order is the only thing that changes. Nothing here touches which set
  * is active: the cursor is held by id, and `advanceFrom` reads position at the

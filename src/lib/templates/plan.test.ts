@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { planShape, planSummary, repsLabel } from '$lib/templates/plan';
+import { entrySummary, planShape, planSummary, repsLabel } from '$lib/templates/plan';
 import type { TemplateExercise } from '$lib/domain/template';
 
 /**
@@ -61,5 +61,13 @@ describe('what an exercise prescribes', () => {
 		expect(planSummary(planned([8, 8, 8]))).toBe('3 × 8');
 		expect(planSummary(planned([12, 10, 8]))).toBe('3 × 8–12');
 		expect(planSummary(planned([null]))).toBe('1 × Open');
+	});
+
+	// Both legs spelled out rather than a round count: nothing evens a superset
+	// up when it is made, so a row claiming "3 rounds" over a 3-and-2 would be
+	// describing a plan nobody wrote.
+	test('a superset row spells every leg it holds', () => {
+		expect(entrySummary([planned([8, 8, 8]), planned([15, 15])])).toBe('3 × 8 + 2 × 15');
+		expect(entrySummary([planned([8, 8, 8])])).toBe('3 × 8');
 	});
 });

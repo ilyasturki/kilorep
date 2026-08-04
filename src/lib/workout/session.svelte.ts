@@ -32,9 +32,11 @@ import {
 	moveEntry as relocateEntry,
 	prefillFor,
 	rateSet,
-	removeEntry as dropEntry,
+	removeExercise as dropExercise,
 	removeSet as dropSet,
-	replaceEntry
+	replaceExercise,
+	splitEntry,
+	supersetWith
 } from '$lib/domain/workout';
 import type { History, Workout } from '$lib/domain/workout';
 
@@ -333,30 +335,75 @@ export class WorkoutSession {
 	}
 
 	/**
-	 * Swapping what is performed in an entry: the rack was taken.
+	 * Supersetting: the picks become legs of `entryId`, lifted in turn with what
+	 * already stands there.
+	 *
+	 * Move-in-or-add-fresh is `supersetWith`'s rule and lives in the domain with
+	 * the tests that keep it honest. What is left here is the session's share of
+	 * it: the set count a fresh leg gets, the ids, and the cursor.
+	 *
+	 * The cursor stays where it is: pairing the exercise you are mid-set on with
+	 * another one is a statement about the session's shape, not about what is
+	 * being lifted right now, and the round order will carry the cursor across on
+	 * the next commit anyway. The exception is a session that had nothing left
+	 * owed — new sets have just appeared, and leaving the cursor null would leave
+	 * the screen claiming the workout was over.
+	 */
+	public superset(entryId: string, exerciseIds: string[]): void {
+		for (const exerciseId of exerciseIds) {
+			const count = insertedSetCount(this.history, exerciseId);
+
+			supersetWith(this.workout, entryId, exerciseId, {
+				exercise: crypto.randomUUID(),
+				sets: Array.from({ length: count }, () => crypto.randomUUID())
+			});
+		}
+
+		if (this.activeSetId === null) {
+			this.#focus(firstUncompleted(this.workout)?.set.id ?? null);
+		}
+	}
+
+	/**
+	 * Breaking one: the legs go back to being their own exercises, in place.
+	 *
+	 * The cursor is not touched, and needs no care — every set keeps its id and
+	 * every set stays in the session. What changes is only what comes next, which
+	 * `advanceFrom` reads at the moment it is asked.
+	 */
+	public breakSuperset(entryId: string): void {
+		splitEntry(this.workout, entryId, () => crypto.randomUUID());
+	}
+
+	/**
+	 * Swapping what is performed in one slot: the rack was taken.
 	 *
 	 * Set count from the incoming exercise's history, ids minted here, both for
 	 * the same reasons `addExercises` above has them.
 	 *
-	 * The cursor follows only if it was inside the entry — where it has to, the
-	 * set it was on having just left the tree — or if the session had nothing
+	 * The exercise node and not the entry, because an entry can hold two of them:
+	 * swapping one leg of a superset must leave the other standing, with
+	 * everything logged under it.
+	 *
+	 * The cursor follows only if it was inside the exercise — where it has to,
+	 * the set it was on having just left the tree — or if the session had nothing
 	 * left owed. Swapping something further down the session while logging is
 	 * not a statement about what is being done right now, and stealing the
 	 * cursor for it would cost a jump back.
 	 */
-	public swapExercise(entryId: string, exerciseId: string): void {
+	public swapExercise(exerciseId: string, catalogId: string): void {
 		const active = this.activeSetId === null ? null : cursorFor(this.workout, this.activeSetId);
-		const held = active === null || active.entry.id === entryId;
+		const held = active === null || active.exercise.id === exerciseId;
 
-		const count = insertedSetCount(this.history, exerciseId);
+		const count = insertedSetCount(this.history, catalogId);
 
-		const entry = replaceEntry(this.workout, entryId, exerciseId, {
+		const exercise = replaceExercise(this.workout, exerciseId, catalogId, {
 			exercise: crypto.randomUUID(),
 			sets: Array.from({ length: count }, () => crypto.randomUUID())
 		});
 
-		if (entry !== null && held) {
-			this.#focus(entry.exercises[0].sets[0].id);
+		if (exercise !== null && held) {
+			this.#focus(exercise.sets[0].id);
 		}
 	}
 
@@ -364,21 +411,22 @@ export class WorkoutSession {
 	 * Removing an exercise, and everything logged under it.
 	 *
 	 * Same care `removeSet` takes with the cursor, one level up: the set above
-	 * the *entry* is read before the removal, because `advanceFrom` handed the id
-	 * of a set that has left the tree silently starts again from the top of the
-	 * session and undoes whatever jump the user had made.
+	 * the *exercise* is read before the removal, because `advanceFrom` handed the
+	 * id of a set that has left the tree silently starts again from the top of
+	 * the session and undoes whatever jump the user had made.
 	 *
-	 * `at` is the first set belonging to the entry, so the one above it is
-	 * necessarily outside — there is no risk of measuring from a set that is
-	 * about to be removed alongside it.
+	 * `at` is the first set belonging to the exercise, so the one above it is
+	 * necessarily outside it — true even inside a superset, where the legs
+	 * interleave and the set above the *first* of this leg's is somebody else's
+	 * by construction.
 	 */
-	public removeExercise(entryId: string): void {
+	public removeExercise(exerciseId: string): void {
 		const all = cursors(this.workout);
-		const at = all.findIndex((c) => c.entry.id === entryId);
+		const at = all.findIndex((c) => c.exercise.id === exerciseId);
 		const above = at > 0 ? all[at - 1].set.id : null;
-		const held = all.some((c) => c.entry.id === entryId && c.set.id === this.activeSetId);
+		const held = all.some((c) => c.exercise.id === exerciseId && c.set.id === this.activeSetId);
 
-		if (!dropEntry(this.workout, entryId) || !held) {
+		if (!dropExercise(this.workout, exerciseId) || !held) {
 			return;
 		}
 

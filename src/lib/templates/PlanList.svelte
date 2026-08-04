@@ -2,8 +2,8 @@
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
 
-	import type { Planned } from '$lib/templates/plan';
-	import { planSummary } from '$lib/templates/plan';
+	import type { PlannedEntry } from '$lib/templates/plan';
+	import { entrySummary } from '$lib/templates/plan';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
@@ -27,7 +27,7 @@
 	 * what makes reordering on a phone possible without one.
 	 */
 	type Props = {
-		groups: Planned[];
+		entries: PlannedEntry[];
 		/** A tap: show me this one. The screen scrolls its pane to the card. */
 		onjump: (entryId: string) => void;
 		oninsert: () => void;
@@ -35,12 +35,12 @@
 		onreorder: (entryId: string, index: number) => void;
 	};
 
-	let { groups, onjump, oninsert, onreorder }: Props = $props();
+	let { entries, onjump, oninsert, onreorder }: Props = $props();
 
-	// Deduplicated for the superset reason `SessionList` gives: one entry can
-	// render as several rows, and the two halves must not be offered as two slots
-	// that cannot be separated.
-	const entryIds = $derived([...new Set(groups.map((group) => group.entryId))]);
+	// One row per entry, which is also the draggable unit — a superset is a
+	// single row naming both of its legs, so there is nothing to deduplicate and
+	// no way to be offered two slots that cannot be separated.
+	const entryIds = $derived(entries.map((entry) => entry.id));
 
 	const drag = new DragOrder({
 		order: () => entryIds,
@@ -53,12 +53,12 @@
 
 	// A long-press that lifted a row still ends in a click, and the row under it
 	// would scroll the pane somewhere. Same swallow `SessionList` makes.
-	function select(event: MouseEvent, group: Planned) {
+	function select(event: MouseEvent, entry: PlannedEntry) {
 		if (drag.swallowClick(event)) {
 			return;
 		}
 
-		onjump(group.entryId);
+		onjump(entry.id);
 	}
 
 	// Direct manipulation is not animation: the lifted row keeps following the
@@ -69,14 +69,14 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
 <div bind:this={drag.root} class="flex flex-col gap-1">
-	{#each groups as group (group.id)}
-		{@const lifted = drag.isLifted(group.entryId)}
-		{@const settling = drag.settlingId === group.entryId}
+	{#each entries as entry (entry.id)}
+		{@const lifted = drag.isLifted(entry.id)}
+		{@const settling = drag.settlingId === entry.id}
 
 		<!-- Outer element for flip and slot measurement, inner for the finger — the
 		     same split `SessionList` makes, for the reason recorded there. -->
 		<div
-			data-drag-id={group.entryId}
+			data-drag-id={entry.id}
 			animate:flip={{ duration: slide }}
 			class={lifted ? 'relative z-10 rounded-xl bg-sunken' : ''}
 		>
@@ -91,21 +91,24 @@
 			>
 				<button
 					type="button"
-					onclick={(event) => select(event, group)}
-					onpointerdown={(event) => drag.rowDown(event, group.entryId)}
+					onclick={(event) => select(event, entry)}
+					onpointerdown={(event) => drag.rowDown(event, entry.id)}
 					onpointermove={(event) => drag.move(event)}
 					onpointerup={(event) => drag.up(event)}
 					onpointercancel={(event) => drag.up(event)}
 					class="flex min-w-0 flex-1 items-center gap-3 py-2 text-left focus-ring-inset"
 				>
 					<span class="min-w-0 flex-1">
+						<!-- Both names on one row, joined by the plus a lifter would write. -->
 						<span class="block truncate text-base font-extrabold tracking-tight text-ink">
-							{group.meta.name}
+							{entry.title}
 						</span>
 						<!-- The shape rather than the equipment: on a planning surface what
-						     the row is being asked to say is how much work it is. -->
+						     the row is being asked to say is how much work it is. A superset
+						     spells every leg — nothing evens them up, so a round count would
+						     be describing a plan nobody wrote. -->
 						<span class="block truncate text-sm font-bold tracking-numeral text-ink-faint">
-							{planSummary(group.exercise)}
+							{entrySummary(entry.legs.map((leg) => leg.exercise))}
 						</span>
 					</span>
 				</button>
@@ -116,7 +119,7 @@
 				<span
 					role="presentation"
 					aria-hidden="true"
-					onpointerdown={(event) => drag.handleDown(event, group.entryId)}
+					onpointerdown={(event) => drag.handleDown(event, entry.id)}
 					onpointermove={(event) => drag.move(event)}
 					onpointerup={(event) => drag.up(event)}
 					onpointercancel={(event) => drag.up(event)}

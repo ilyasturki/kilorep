@@ -13,29 +13,60 @@
 
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template, TemplateExercise } from '$lib/domain/template';
+import { entryTitle } from '$lib/workout/groups';
 
 export type Planned = {
 	/** The exercise node id — what an `{#each}` keys on and a removal names. */
 	id: string;
-	/**
-	 * Carried through rather than resolved again at the screen: reorder acts on
-	 * the entry, and a list that had to walk back into the tree to find out
-	 * which one a row belongs to would be re-deriving what this walk knew.
-	 */
-	entryId: string;
 	meta: Exercise;
 	exercise: TemplateExercise;
 };
 
-export function plannedGroups(template: Template, catalog: Record<string, Exercise>): Planned[] {
-	return template.entries.flatMap((entry) =>
-		entry.exercises.map((exercise) => ({
+/**
+ * One planned entry and its legs — `$lib/workout/groups`' `Entry`, one tree
+ * over, and for the same reason: an entry holding two exercises is a superset,
+ * and the editor draws, brackets and drags it as one thing.
+ *
+ * No cursors here, because a plan has none. What the sidebar needs instead is
+ * the shape, and `entrySummary` below is the joint one.
+ */
+export type PlannedEntry = {
+	id: string;
+	legs: Planned[];
+	/** More than one leg, which is the whole of what makes it a superset. */
+	superset: boolean;
+	/** `Cable Fly + Lateral Raise`, or just the one name. */
+	title: string;
+};
+
+/**
+ * The plan as entries, each holding its legs. The workout side's
+ * `entriesWithMeta`, and walked once for the same reason.
+ *
+ * `entryTitle` is imported rather than restated: how an entry names itself is
+ * one decision — the separator, and what to do with a leg the catalog cannot
+ * name — and it is the same decision on both surfaces. The rest stays per-tree,
+ * because a plan's leg carries a prescription where a session's carries
+ * cursors.
+ */
+export function plannedEntries(
+	template: Template,
+	catalog: Record<string, Exercise>
+): PlannedEntry[] {
+	return template.entries.map((entry) => {
+		const legs = entry.exercises.map((exercise) => ({
 			id: exercise.id,
-			entryId: entry.id,
 			meta: catalog[exercise.exerciseId],
 			exercise
-		}))
-	);
+		}));
+
+		return {
+			id: entry.id,
+			legs,
+			superset: legs.length > 1,
+			title: entryTitle(legs)
+		};
+	});
 }
 
 /**
@@ -108,4 +139,17 @@ export function planSummary(exercise: TemplateExercise): string {
 	const shape = planShape(exercise);
 
 	return `${shape.sets} × ${shape.target}`;
+}
+
+/**
+ * A whole entry in one glance: every leg's shape, joined the way its names are
+ * — `3 × 12 + 3 × 15`. One leg is `planSummary` itself, which is the ordinary
+ * row and pays nothing for the level above it.
+ *
+ * Both numbers rather than a round count, because the legs are allowed to
+ * disagree: nothing evens a superset up when it is made, and a row claiming
+ * "3 rounds" over a 3-and-4 would be describing a plan nobody wrote.
+ */
+export function entrySummary(exercises: TemplateExercise[]): string {
+	return exercises.map((exercise) => planSummary(exercise)).join(' + ');
 }

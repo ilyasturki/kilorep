@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Drawer } from 'vaul-svelte';
 
-	import type { Group } from '$lib/workout/groups';
+	import type { Entry } from '$lib/workout/groups';
 	import SessionList from '$lib/workout/SessionList.svelte';
 	import { registerOverlay } from '$lib/ui/overlays';
 
@@ -24,7 +24,7 @@
 	 */
 	type Props = {
 		open?: boolean;
-		groups: Group[];
+		entries: Entry[];
 		activeSetId: string | null;
 		onjump: (setId: string) => void;
 		oninsert: () => void;
@@ -34,7 +34,7 @@
 
 	let {
 		open = $bindable(false),
-		groups,
+		entries,
 		activeSetId,
 		onjump,
 		oninsert,
@@ -86,7 +86,7 @@
 			     padding is what buys the first row's focus ring room to exist. -->
 			<div class="min-h-0 flex-1 overflow-y-auto px-4 pt-1.5 pb-4">
 				<SessionList
-					{groups}
+					{entries}
 					{activeSetId}
 					{onreorder}
 					{ondrop}

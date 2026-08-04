@@ -15,18 +15,22 @@
 		replaceExercise,
 		setExerciseReps,
 		setPlannedReps,
-		startFrom
+		splitEntry,
+		startFrom,
+		supersetWith
 	} from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
-	import { plannedGroups } from '$lib/templates/plan';
+	import { plannedEntries } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanList from '$lib/templates/PlanList.svelte';
 	import PlanOptionsMenu from '$lib/templates/PlanOptionsMenu.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
+	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
+	import { entryOf, legOf, shelfOf } from '$lib/workout/groups';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
@@ -116,11 +120,14 @@
 		}
 	});
 
-	const groups = $derived(plannedGroups(template, catalogById));
+	/**
+	 * The pane stacks entries, not exercises: a planned superset is one entry
+	 * with two legs, bracketed together below and dragged as one.
+	 */
+	const entries = $derived(plannedEntries(template, catalogById));
 
-	// Deduplicated for the same superset reason as PlanList's, even though this
-	// build's UI only ever makes one-exercise entries.
-	const entryIds = $derived([...new Set(groups.map((group) => group.entryId))]);
+	/** One row per entry, so there is nothing left to deduplicate. */
+	const entryIds = $derived(entries.map((entry) => entry.id));
 
 	// Handle-only lift, unlike PlanList's hold-anywhere: these cards are full of
 	// controls, and a long-press that lifted the card out from under a rep target
@@ -151,6 +158,11 @@
 
 	let insertOpen = $state(false);
 
+	// One helper rather than the expression twice: the plan's two ways to gain an
+	// exercise — a fresh entry and a superset leg — must not drift about how many
+	// sets one starts with. The history screen's `ids()` for the same reason.
+	const setIds = () => Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID());
+
 	// A list, because the picker answers in lists: a plan is written by checking
 	// off a day's movements at once, which is the act this editor exists for.
 	// Order preserved — the picks land in the plan in the order they were made.
@@ -159,14 +171,14 @@
 			addExercise(template, exerciseId, {
 				entry: crypto.randomUUID(),
 				exercise: crypto.randomUUID(),
-				sets: Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID())
+				sets: setIds()
 			});
 		}
 	}
 
 	/** Drop the last set of an exercise — the sets stepper's `−`. */
 	function shrink(exerciseId: string) {
-		const group = groups.find((candidate) => candidate.id === exerciseId);
+		const group = legOf(entries, exerciseId);
 		const last = group?.exercise.sets.at(-1);
 
 		if (last !== undefined) {
@@ -213,9 +225,11 @@
 	let optionsOpen = $state(false);
 	let optionsAnchor = $state<HTMLElement | null>(null);
 	let swapOpen = $state(false);
+	let supersetOpen = $state(false);
 	let acting = $state<string | null>(null);
 
-	const actingGroup = $derived(groups.find((group) => group.id === acting) ?? null);
+	const actingGroup = $derived(legOf(entries, acting));
+	const actingEntry = $derived(entryOf(entries, acting));
 
 	function options(exerciseId: string, anchor: HTMLElement) {
 		acting = exerciseId;
@@ -232,6 +246,38 @@
 	function removePlanned() {
 		if (acting !== null) {
 			removeExercise(template, acting);
+			acting = null;
+		}
+	}
+
+	/** Everything else already planned, pinned above the catalog — see `shelfOf`. */
+	const supersetShelf = $derived(
+		actingEntry === null ? null : shelfOf(entries, actingEntry.id, 'In this plan')
+	);
+
+	/**
+	 * Pairing. Move-in-or-plan-fresh is `supersetWith`'s rule and lives in the
+	 * domain beside the tree it edits; what is left here is the set count a fresh
+	 * leg gets and the ids.
+	 */
+	function supersetPicks(exerciseIds: string[]) {
+		if (actingEntry === null) {
+			return;
+		}
+
+		for (const exerciseId of exerciseIds) {
+			supersetWith(template, actingEntry.id, exerciseId, {
+				exercise: crypto.randomUUID(),
+				sets: setIds()
+			});
+		}
+
+		acting = null;
+	}
+
+	function breakSuperset() {
+		if (actingEntry !== null) {
+			splitEntry(template, actingEntry.id, () => crypto.randomUUID());
 			acting = null;
 		}
 	}
@@ -400,10 +446,10 @@
 			class="absolute inset-y-0 left-[calc(50%-32rem)] hidden w-52 py-3
 				lg:block xl:left-[calc(50%-37rem)] xl:w-72"
 		>
-			{#if groups.length > 0}
+			{#if entries.length > 0}
 				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
 					<PlanList
-						{groups}
+						{entries}
 						onjump={jumpTo}
 						oninsert={() => (insertOpen = true)}
 						onreorder={(entryId, index) => moveEntry(template, entryId, index)}
@@ -436,54 +482,69 @@
 						tracking-tight text-ink focus-ring placeholder:text-ink-faint lg:block"
 				/>
 
-				{#each groups as group (group.id)}
-					{@const lifted = drag.isLifted(group.entryId)}
-					{@const settling = drag.settlingId === group.entryId}
+				{#each entries as entry (entry.id)}
+					{@const lifted = drag.isLifted(entry.id)}
+					{@const settling = drag.settlingId === entry.id}
 
 					<!-- Outer element for flip and slot measurement, inner for the finger —
 					     the same split as PlanList, for the same reason. And as there, the
 					     outer's box is the vacated slot while the card is airborne, so the
 					     sunken fill is the landing shown at the card's exact size. -->
 					<div
-						data-drag-id={group.entryId}
+						data-drag-id={entry.id}
 						animate:flip={{ duration: slide }}
 						class={lifted ? 'relative z-10 rounded-2xl bg-sunken' : ''}
 					>
+						<!-- Handed to the first leg only, and to no other: the entry is what
+						     moves, so one handle per entry is the honest count — a second would
+						     be two ways to start the same drag, sitting a card apart.
+
+						     Declared in here rather than at the top of the file because it
+						     closes over the entry it drags, and inside the animated element
+						     rather than beside it because that element has to be the each
+						     block's only child. Same non-focusable grip as PlanList, same
+						     reason. -->
+						{#snippet handle()}
+							<span
+								role="presentation"
+								aria-hidden="true"
+								onpointerdown={(event) => drag.handleDown(event, entry.id)}
+								onpointermove={(event) => drag.move(event)}
+								onpointerup={(event) => drag.up(event)}
+								onpointercancel={(event) => drag.up(event)}
+								class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
+									text-ink-faint select-none"
+							>
+								<DotsSixVertical size={18} />
+							</span>
+						{/snippet}
+
 						<div
 							style:transform={lifted ? `translateY(${drag.offset}px) scale(1.01)` : null}
 							style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
-							class={lifted ? 'shadow-lg' : ''}
+							class={['relative flex flex-col gap-2', lifted && 'shadow-lg']}
 						>
-							<PlanCard
-								meta={group.meta}
-								exercise={group.exercise}
-								onoptions={(anchor) => options(group.id, anchor)}
-								onaddset={() => addSet(template, group.id, crypto.randomUUID())}
-								onremoveset={() => shrink(group.id)}
-								onreps={(reps) => setExerciseReps(template, group.id, reps)}
-								onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
-							>
-								{#snippet grip()}
-									<!-- Same non-focusable grip as PlanList, same reason. -->
-									<span
-										role="presentation"
-										aria-hidden="true"
-										onpointerdown={(event) => drag.handleDown(event, group.entryId)}
-										onpointermove={(event) => drag.move(event)}
-										onpointerup={(event) => drag.up(event)}
-										onpointercancel={(event) => drag.up(event)}
-										class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
-											text-ink-faint select-none"
-									>
-										<DotsSixVertical size={18} />
-									</span>
+							<!-- The workout pane's bracket, on the plan that starts it, so a
+							     superset reads the same wherever it is looked at. -->
+							<EntryStack legs={entry.legs} superset={entry.superset}>
+								{#snippet leg(leg, at)}
+									<PlanCard
+										meta={leg.meta}
+										exercise={leg.exercise}
+										onoptions={(anchor) => options(leg.id, anchor)}
+										onaddset={() => addSet(template, leg.id, crypto.randomUUID())}
+										onremoveset={() => shrink(leg.id)}
+										onreps={(reps) => setExerciseReps(template, leg.id, reps)}
+										onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
+										grip={at === 0 ? handle : undefined}
+									/>
 								{/snippet}
-							</PlanCard>
+							</EntryStack>
 						</div>
 					</div>
 				{/each}
 
-				{#if groups.length === 0}
+				{#if entries.length === 0}
 					<!-- Outlined, not commit: the screen's one filled button is the sticky
 					     Start below. No add row under this — the ask is already centred in
 					     the pane, and a second way to do the only thing on screen is not a
@@ -566,11 +627,29 @@
 	onpick={([id]) => swapPick(id)}
 />
 
+<!-- The third question, and the workout screen's verbatim again: what to
+     superset this exercise with. What is already planned rides above the
+     catalog, because pairing two things already on the list is what the gesture
+     nearly always means. `multiple`, so a giant set is planned in one pass. -->
+<ExercisePickerSheet
+	bind:open={supersetOpen}
+	title="Superset {actingGroup === null ? 'exercise' : actingGroup.meta.name} with…"
+	multiple
+	verb="Superset"
+	pinned={supersetShelf}
+	lastPerformed={data.lastPerformed}
+	mains={data.mains}
+	onpick={supersetPicks}
+/>
+
 <PlanOptionsMenu
 	bind:open={optionsOpen}
 	group={actingGroup}
+	superset={actingEntry !== null && actingEntry.superset}
 	anchor={optionsAnchor}
 	onswap={() => (swapOpen = true)}
+	onsuperset={() => (supersetOpen = true)}
+	onbreak={breakSuperset}
 	onremove={removePlanned}
 />
 

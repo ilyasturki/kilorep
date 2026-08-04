@@ -2,16 +2,20 @@ import { describe, expect, test } from 'vitest';
 
 import {
 	addExercise,
+	addExerciseTo,
 	addSet,
 	blankTemplate,
 	isBlank,
+	joinEntry,
 	moveEntry,
 	removeExercise,
 	removeSet,
 	replaceExercise,
 	setExerciseReps,
 	setPlannedReps,
-	startFrom
+	splitEntry,
+	startFrom,
+	supersetWith
 } from '$lib/domain/template';
 import type { Template } from '$lib/domain/template';
 
@@ -277,6 +281,140 @@ describe('reorder', () => {
 
 		expect(moveEntry(template, 'bench-press-entry', 0)).toBe(false);
 		expect(moveEntry(template, 'nope', 0)).toBe(false);
+	});
+});
+
+describe('planning supersets', () => {
+	/** Two planned exercises, ready to be paired. */
+	function pair(): Template {
+		const template = blankTemplate('t1', 100);
+
+		plan(template, 'cable-fly', 3);
+		plan(template, 'lateral-raise', 3);
+
+		return template;
+	}
+
+	test('joining moves the exercise in and takes its entry with it', () => {
+		const template = pair();
+
+		expect(joinEntry(template, 'cable-fly-entry', 'lateral-raise-node')).toBe(true);
+		expect(template.entries).toHaveLength(1);
+		expect(template.entries[0].exercises.map((e) => e.exerciseId)).toEqual([
+			'cable-fly',
+			'lateral-raise'
+		]);
+	});
+
+	// The 12/10/8 somebody sat down to build was a decision about that movement,
+	// and pairing it with another one is not a reason to forget it.
+	test('the targets ride along', () => {
+		const template = pair();
+		setPlannedReps(template, 'lateral-raise-set-1', 15);
+
+		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');
+
+		expect(targetsOf(template, 'lateral-raise-node')).toEqual([15, null, null]);
+	});
+
+	test('an exercise already in the entry is an honest no-op', () => {
+		const template = pair();
+
+		expect(joinEntry(template, 'cable-fly-entry', 'cable-fly-node')).toBe(false);
+		expect(template.entries).toHaveLength(2);
+	});
+
+	test('breaking puts the legs back as their own entries, in place', () => {
+		const template = pair();
+		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');
+
+		expect(splitEntry(template, 'cable-fly-entry', mint('e'))).toBe(true);
+		expect(orderOf(template)).toEqual(['cable-fly', 'lateral-raise']);
+		expect(template.entries[0].id).toBe('cable-fly-entry');
+		expect(template.entries).toHaveLength(2);
+	});
+
+	test('a lone exercise was never a superset, and says so', () => {
+		expect(splitEntry(pair(), 'cable-fly-entry', mint('e'))).toBe(false);
+	});
+
+	test('a fresh leg joins with open targets, like any planned exercise', () => {
+		const template = pair();
+
+		addExerciseTo(template, 'cable-fly-entry', 'lateral-raise', {
+			exercise: 'fresh-node',
+			sets: ['fresh-1', 'fresh-2']
+		});
+
+		expect(template.entries[0].exercises.map((e) => e.id)).toEqual([
+			'cable-fly-node',
+			'fresh-node'
+		]);
+		expect(targetsOf(template, 'fresh-node')).toEqual([null, null]);
+	});
+
+	test('zero sets and an unknown entry are both refused', () => {
+		const ids = { exercise: 'fresh-node', sets: ['fresh-1'] };
+
+		expect(
+			addExerciseTo(pair(), 'cable-fly-entry', 'lateral-raise', { exercise: 'f', sets: [] })
+		).toBeNull();
+		expect(addExerciseTo(pair(), 'nope', 'lateral-raise', ids)).toBeNull();
+	});
+
+	// The pairing rule itself: a pick already in the plan moves, anything else is
+	// planned fresh, and this entry's own legs never count as "already".
+	describe('supersetWith', () => {
+		const ids = { exercise: 'fresh-node', sets: ['fresh-1'] };
+
+		test('an exercise already planned moves in, targets and all', () => {
+			const template = pair();
+			setPlannedReps(template, 'lateral-raise-set-1', 15);
+
+			expect(supersetWith(template, 'cable-fly-entry', 'lateral-raise', ids)).toBe(true);
+			expect(template.entries).toHaveLength(1);
+			expect(targetsOf(template, 'lateral-raise-node')).toEqual([15, null, null]);
+		});
+
+		test('an exercise not in the plan is planned fresh, on the minted ids', () => {
+			const template = pair();
+
+			expect(supersetWith(template, 'cable-fly-entry', 'pec-deck', ids)).toBe(true);
+			expect(template.entries[0].exercises.map((e) => e.id)).toEqual([
+				'cable-fly-node',
+				'fresh-node'
+			]);
+			expect(template.entries).toHaveLength(2);
+		});
+
+		test('an exercise already in this entry is planned a second time', () => {
+			const template = pair();
+
+			expect(supersetWith(template, 'cable-fly-entry', 'cable-fly', ids)).toBe(true);
+			expect(template.entries[0].exercises.map((e) => e.id)).toEqual([
+				'cable-fly-node',
+				'fresh-node'
+			]);
+		});
+
+		test('an unknown entry is refused', () => {
+			expect(supersetWith(pair(), 'nope', 'pec-deck', ids)).toBe(false);
+		});
+	});
+
+	// The whole reason the plan holds the level at all: a session started from a
+	// planned superset has to be one.
+	test('a planned superset starts as a superset', () => {
+		const template = pair();
+		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');
+
+		const workout = startFrom(template, 5000, mint('w'));
+
+		expect(workout.entries).toHaveLength(1);
+		expect(workout.entries[0].exercises.map((e) => e.exerciseId)).toEqual([
+			'cable-fly',
+			'lateral-raise'
+		]);
 	});
 });
 

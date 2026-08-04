@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import type { Group } from '$lib/workout/groups';
+	import type { Entry } from '$lib/workout/groups';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
@@ -26,9 +26,9 @@
 	 * shape `SetRow` already has for the same reason.
 	 */
 	type Props = {
-		groups: Group[];
+		entries: Entry[];
 		activeSetId: string | null;
-		/** A tap: go to this exercise. Whatever is holding the list may leave with it. */
+		/** A tap: go to this entry. Whatever is holding the list may leave with it. */
 		onjump: (setId: string) => void;
 		/**
 		 * A lift: the same set becomes active, but the list stays where it is.
@@ -49,23 +49,27 @@
 		ondrop?: (entryId: string) => void;
 	};
 
-	let { groups, activeSetId, onjump, onfocus, oninsert, onreorder, ondrop }: Props = $props();
+	let { entries, activeSetId, onjump, onfocus, oninsert, onreorder, ondrop }: Props = $props();
 
 	/**
-	 * The draggable units are entries, not rows.
+	 * One row per entry, which is also the draggable unit — a superset is a
+	 * single row naming both of its legs, so there is nothing here to deduplicate
+	 * and no way to be offered two slots that cannot be separated.
 	 *
-	 * A superset is one entry rendering as two rows, so the ids are deduplicated
-	 * before the drag counts them — otherwise the two halves would be offered as
-	 * two slots that cannot be separated.
+	 * Two rows was the shape while nothing could make a superset. It stopped
+	 * being right the moment the legs began interleaving: two rows would each
+	 * claim a position in a session order that no longer has one per exercise.
 	 */
-	const entryIds = $derived([...new Set(groups.map((group) => group.entryId))]);
+	const entryIds = $derived(entries.map((entry) => entry.id));
 
 	// Where a gesture on a row lands: the next set still owed, or the last one if
-	// the exercise is finished — going to a done exercise should show it, not
-	// refuse. Which of the two callbacks receives it is the caller's business,
-	// and the only difference between a tap and a lift.
-	function target(group: Group, go: (setId: string) => void) {
-		const cursor = group.cursors.find((c) => !c.set.completed) ?? group.cursors.at(-1);
+	// the entry is finished — going to a done exercise should show it, not
+	// refuse. `entry.cursors` is in round order, so on a superset this is the leg
+	// that is actually next rather than whichever one is written first. Which of
+	// the two callbacks receives it is the caller's business, and the only
+	// difference between a tap and a lift.
+	function target(entry: Entry, go: (setId: string) => void) {
+		const cursor = entry.cursors.find((c) => !c.set.completed) ?? entry.cursors.at(-1);
 
 		if (cursor === undefined) {
 			return;
@@ -87,14 +91,12 @@
 		// before, and the user has to tap the row they just moved.
 		//
 		// The same target a tap picks, so a lift and a tap cannot land on different
-		// sets of the same exercise — only the leaving differs, which is `onfocus`.
-		// `find` and not `filter`: a superset entry renders two groups, and the
-		// first of them is where its sets start.
+		// sets of the same entry — only the leaving differs, which is `onfocus`.
 		lift: (entryId) => {
-			const group = groups.find((candidate) => candidate.entryId === entryId);
+			const entry = entries.find((candidate) => candidate.id === entryId);
 
-			if (group !== undefined) {
-				target(group, onfocus);
+			if (entry !== undefined) {
+				target(entry, onfocus);
 			}
 		},
 		drop: (entryId) => ondrop?.(entryId)
@@ -103,12 +105,12 @@
 	// A long-press that lifted a row still ends in a click, and the row under it
 	// jumps the session somewhere. Same swallow `SetRow` and `StepperField` make,
 	// and it cannot reach a keyboard activation for the same reason.
-	function select(event: MouseEvent, group: Group) {
+	function select(event: MouseEvent, entry: Entry) {
 		if (drag.swallowClick(event)) {
 			return;
 		}
 
-		target(group, onjump);
+		target(entry, onjump);
 	}
 
 	// Direct manipulation is not animation: the lifted row has to keep following
@@ -129,14 +131,15 @@
      the header, the scrim and hardware back all still do. Inert in the rail,
      where there is no drawer to refuse. -->
 <div bind:this={drag.root} data-vaul-no-drag class="flex flex-col gap-1">
-	{#each groups as group (group.id)}
-		{@const here = group.cursors.some((c) => c.set.id === activeSetId)}
+	{#each entries as entry (entry.id)}
+		{@const here = entry.cursors.some((c) => c.set.id === activeSetId)}
 		<!-- A predicate, not a count. Done/total came out of the app for restating
 		     what the rows already show, and "finished" is the one part of it this
-		     list cannot show for itself. -->
-		{@const done = group.cursors.every((c) => c.set.completed)}
-		{@const lifted = drag.isLifted(group.entryId)}
-		{@const settling = drag.settlingId === group.entryId}
+		     list cannot show for itself. Across the whole entry, because the row is
+		     the whole entry: a superset is done when both legs are. -->
+		{@const done = entry.cursors.every((c) => c.set.completed)}
+		{@const lifted = drag.isLifted(entry.id)}
+		{@const settling = drag.settlingId === entry.id}
 
 		<!-- The outer element is what `animate:flip` moves between slots and what
 		     the drag measures; the inner one is what follows the finger. They have
@@ -148,7 +151,7 @@
 		     the vacated slot — so painting it sunken is the landing shown, at the
 		     row's exact size, sliding with every crossing because flip moves it. -->
 		<div
-			data-drag-id={group.entryId}
+			data-drag-id={entry.id}
 			animate:flip={{ duration: slide }}
 			class={lifted ? 'relative z-10 rounded-xl bg-sunken' : ''}
 		>
@@ -166,19 +169,24 @@
 			>
 				<button
 					type="button"
-					onclick={(event) => select(event, group)}
-					onpointerdown={(event) => drag.rowDown(event, group.entryId)}
+					onclick={(event) => select(event, entry)}
+					onpointerdown={(event) => drag.rowDown(event, entry.id)}
 					onpointermove={(event) => drag.move(event)}
 					onpointerup={(event) => drag.up(event)}
 					onpointercancel={(event) => drag.up(event)}
 					class="flex min-w-0 flex-1 items-center gap-3 py-2 text-left focus-ring-inset"
 				>
 					<span class="min-w-0 flex-1">
+						<!-- Both names on one row, joined by the plus a lifter would write.
+						     `truncate` is doing real work in a 208px rail — which is why the
+						     line below says the word rather than a second badge: the right
+						     of the row is already spoken for by Now, and a rail that put two
+						     pills beside a two-name title would have room for neither. -->
 						<span class="block truncate text-base font-extrabold tracking-tight text-ink">
-							{group.meta.name}
+							{entry.title}
 						</span>
 						<span class="block truncate text-sm font-bold text-ink-faint">
-							{group.meta.equipment}
+							{entry.superset ? 'Superset' : entry.legs[0].meta.equipment}
 						</span>
 					</span>
 
@@ -200,7 +208,7 @@
 				<span
 					role="presentation"
 					aria-hidden="true"
-					onpointerdown={(event) => drag.handleDown(event, group.entryId)}
+					onpointerdown={(event) => drag.handleDown(event, entry.id)}
 					onpointermove={(event) => drag.move(event)}
 					onpointerup={(event) => drag.up(event)}
 					onpointercancel={(event) => drag.up(event)}

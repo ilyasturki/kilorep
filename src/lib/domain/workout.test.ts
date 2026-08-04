@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { freshWorkout, history } from '$lib/domain/fixture';
 import {
 	addExercise,
+	addExerciseTo,
 	addSet,
 	advanceFrom,
 	canCommit,
@@ -15,16 +16,19 @@ import {
 	hintFor,
 	hintLabel,
 	insertedSetCount,
+	joinEntry,
 	markSet,
 	moveEntry,
 	parseEntry,
 	prefillFor,
 	rateSet,
-	removeEntry,
+	removeExercise,
 	removeSet,
 	repeatFrom,
-	replaceEntry,
-	settle
+	replaceExercise,
+	settle,
+	splitEntry,
+	supersetWith
 } from '$lib/domain/workout';
 import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workout';
 
@@ -59,6 +63,33 @@ function openSet(id: string): WorkoutSet {
 		completed: false
 	};
 }
+
+/**
+ * The fixture cut down to one exercise and one superset: three sets of `we-a`
+ * against two of `we-b`, so the ragged tail is under every test that uses it
+ * rather than only the one that asks about it.
+ */
+function superset(workout: Workout): Workout {
+	workout.entries = [
+		workout.entries[0],
+		{
+			id: 'superset',
+			exercises: [
+				{
+					id: 'we-a',
+					exerciseId: 'cable-fly',
+					sets: [openSet('a-1'), openSet('a-2'), openSet('a-3')]
+				},
+				{ id: 'we-b', exerciseId: 'pec-deck', sets: [openSet('b-1'), openSet('b-2')] }
+			]
+		}
+	];
+
+	return workout;
+}
+
+/** The id a split hands its new entries, fixed so a test can name what it expects. */
+const freshEntry = (): string => 'fresh';
 
 /** A missing cursor is a broken fixture, so it fails loudly instead of widening every type. */
 function at(workout: Workout, setId: string): SetCursor {
@@ -601,24 +632,24 @@ describe('removeSet', () => {
 	});
 });
 
-describe('replaceEntry', () => {
+describe('replaceExercise', () => {
 	const ids = { exercise: 'we-row', sets: ['row-1', 'row-2', 'row-3'] };
 
 	test('keeps the slot and changes what is performed in it', () => {
 		const workout = freshWorkout(0);
-		const entry = replaceEntry(workout, 'entry-2', 'barbell-row', ids);
+		const exercise = replaceExercise(workout, 'we-incline', 'barbell-row', ids);
 
 		// Second of four, exactly where incline was. A remove-and-add would have
 		// dropped it at the end and made the user drag it back.
-		expect(workout.entries[1]).toBe(entry);
-		expect(entry!.id).toBe('entry-2');
+		expect(workout.entries[1].exercises[0]).toBe(exercise);
+		expect(workout.entries[1].id).toBe('entry-2');
 		expect(orderOf(workout)).toEqual(['bench-press', 'barbell-row', 'cable-fly', 'pec-deck']);
 	});
 
 	test('the sets are the incoming exercise, blank — nothing is carried across', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'incline-1', 30, 10);
-		replaceEntry(workout, 'entry-2', 'barbell-row', ids);
+		replaceExercise(workout, 'we-incline', 'barbell-row', ids);
 
 		expect(idsOf(workout)).not.toContain('incline-1');
 		expect(idsOf(workout).slice(5, 8)).toEqual(['row-1', 'row-2', 'row-3']);
@@ -633,45 +664,252 @@ describe('replaceEntry', () => {
 		});
 	});
 
-	test('zero sets is refused, and the entry it would have emptied is left alone', () => {
+	test('zero sets is refused, and the slot it would have emptied is left alone', () => {
 		const workout = freshWorkout(0);
 
-		expect(replaceEntry(workout, 'entry-2', 'barbell-row', { exercise: 'we-row', sets: [] })).toBe(
-			null
-		);
+		expect(
+			replaceExercise(workout, 'we-incline', 'barbell-row', { exercise: 'we-row', sets: [] })
+		).toBeNull();
 		expect(orderOf(workout)[1]).toBe('incline-dumbbell-press');
 	});
 
-	test('an unknown entry is refused rather than silently ignored', () => {
-		expect(replaceEntry(freshWorkout(0), 'nope', 'barbell-row', ids)).toBeNull();
+	test('an unknown exercise is refused rather than silently ignored', () => {
+		expect(replaceExercise(freshWorkout(0), 'nope', 'barbell-row', ids)).toBeNull();
+	});
+
+	// The one that makes this leg-scoped rather than entry-scoped: the sibling
+	// and everything logged under it must survive a swap it was not part of.
+	test('the other leg of a superset is untouched', () => {
+		const workout = superset(freshWorkout(0));
+		commitSet(workout, 'b-1', 12, 15);
+
+		replaceExercise(workout, 'we-a', 'barbell-row', ids);
+
+		expect(workout.entries[1].exercises.map((e) => e.id)).toEqual(['we-row', 'we-b']);
+		expect(at(workout, 'b-1').set.completed).toBe(true);
 	});
 });
 
-describe('removeEntry', () => {
+describe('removeExercise', () => {
 	test('takes the exercise and every set under it, logged or not', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'incline-1', 30, 10);
 
-		expect(removeEntry(workout, 'entry-2')).toBe(true);
+		expect(removeExercise(workout, 'we-incline')).toBe(true);
 		expect(orderOf(workout)).toEqual(['bench-press', 'cable-fly', 'pec-deck']);
 		expect(idsOf(workout)).not.toContain('incline-1');
 	});
 
 	// No floor, unlike `removeSet`. An empty session is where every session
 	// starts, so there is nothing here to refuse.
-	test('the last entry goes too, leaving an empty session', () => {
+	test('the last exercise goes too, leaving an empty session', () => {
 		const workout = freshWorkout(0);
 
-		for (const id of ['entry-1', 'entry-2', 'entry-3', 'entry-4']) {
-			expect(removeEntry(workout, id)).toBe(true);
+		for (const id of ['we-bench', 'we-incline', 'we-fly', 'we-pecdeck']) {
+			expect(removeExercise(workout, id)).toBe(true);
 		}
 
 		expect(workout.entries).toEqual([]);
 		expect(firstUncompleted(workout)).toBeNull();
 	});
 
+	test('an unknown exercise is refused rather than silently ignored', () => {
+		expect(removeExercise(freshWorkout(0), 'nope')).toBe(false);
+	});
+
+	// Half a superset is a leg leaving, not the pair. The entry survives holding
+	// what is left, and only empties out when the last leg goes.
+	test('one leg of a superset leaves the other standing in the entry', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(removeExercise(workout, 'we-a')).toBe(true);
+		expect(workout.entries[1].id).toBe('superset');
+		expect(workout.entries[1].exercises.map((e) => e.id)).toEqual(['we-b']);
+	});
+
+	test('the entry goes when its last leg does', () => {
+		const workout = superset(freshWorkout(0));
+
+		removeExercise(workout, 'we-a');
+		removeExercise(workout, 'we-b');
+
+		expect(workout.entries.map((e) => e.id)).toEqual(['entry-1']);
+	});
+});
+
+describe('joinEntry', () => {
+	test('moves an exercise in, making the two a superset', () => {
+		const workout = freshWorkout(0);
+
+		expect(joinEntry(workout, 'entry-1', 'we-fly')).toBe(true);
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench', 'we-fly']);
+		expect(workout.entries.map((e) => e.id)).toEqual(['entry-1', 'entry-2', 'entry-4']);
+	});
+
+	// The whole reason a join moves rather than copies: three sets of curls done
+	// before the pairing was decided are still three sets of curls.
+	test('logged sets ride along', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'fly-1', 20, 12);
+
+		joinEntry(workout, 'entry-1', 'we-fly');
+
+		expect(at(workout, 'fly-1').set.completed).toBe(true);
+		expect(at(workout, 'fly-1').entry.id).toBe('entry-1');
+	});
+
+	test('an exercise already in the entry is an honest no-op', () => {
+		const workout = freshWorkout(0);
+
+		expect(joinEntry(workout, 'entry-1', 'we-bench')).toBe(false);
+		expect(workout.entries[0].exercises).toHaveLength(1);
+	});
+
+	test('an unknown entry and an unknown exercise are both refused', () => {
+		expect(joinEntry(freshWorkout(0), 'nope', 'we-fly')).toBe(false);
+		expect(joinEntry(freshWorkout(0), 'entry-1', 'nope')).toBe(false);
+	});
+
+	// A third leg is the same act again. Nothing caps an entry at two.
+	test('a third leg joins the same way', () => {
+		const workout = freshWorkout(0);
+
+		joinEntry(workout, 'entry-1', 'we-fly');
+		joinEntry(workout, 'entry-1', 'we-pecdeck');
+
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual([
+			'we-bench',
+			'we-fly',
+			'we-pecdeck'
+		]);
+	});
+});
+
+describe('supersetWith', () => {
+	const ids = { exercise: 'we-new', sets: ['new-1', 'new-2'] };
+
+	// The pick named something already being performed, so it moves rather than
+	// arriving fresh — and the ids the caller minted go unused.
+	test('a movement already in the session moves in, logged sets and all', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'fly-1', 20, 12);
+
+		expect(supersetWith(workout, 'entry-1', 'cable-fly', ids)).toBe(true);
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench', 'we-fly']);
+		expect(workout.entries.map((e) => e.id)).toEqual(['entry-1', 'entry-2', 'entry-4']);
+		expect(at(workout, 'fly-1').set.completed).toBe(true);
+	});
+
+	test('a movement not in the session arrives fresh, on the minted ids', () => {
+		const workout = freshWorkout(0);
+
+		expect(supersetWith(workout, 'entry-1', 'lateral-raise', ids)).toBe(true);
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench', 'we-new']);
+		expect(workout.entries).toHaveLength(4);
+		expect(at(workout, 'new-1').set.completed).toBe(false);
+	});
+
+	// "Elsewhere" excludes this entry's own legs: naming one of them is a second
+	// of it, not the no-op a bare `joinEntry` would report.
+	test('a movement already standing in this entry is added again', () => {
+		const workout = freshWorkout(0);
+
+		expect(supersetWith(workout, 'entry-1', 'bench-press', ids)).toBe(true);
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench', 'we-new']);
+	});
+
+	// The same exercise twice is two nodes but one name, and the first is the
+	// nearest thing to "the one you meant" an id can express.
+	test('the first match wins when the session holds the exercise twice', () => {
+		const workout = freshWorkout(0);
+		addExercise(workout, 'cable-fly', {
+			entry: 'entry-5',
+			exercise: 'we-fly-again',
+			sets: ['again-1']
+		});
+
+		supersetWith(workout, 'entry-1', 'cable-fly', ids);
+
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench', 'we-fly']);
+	});
+
+	test('an unknown entry is refused, and nothing is added anywhere', () => {
+		const workout = freshWorkout(0);
+
+		expect(supersetWith(workout, 'nope', 'lateral-raise', ids)).toBe(false);
+		expect(cursors(workout).some((c) => c.set.id === 'new-1')).toBe(false);
+	});
+});
+
+describe('splitEntry', () => {
+	test('the legs become their own entries, in place and in order', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(splitEntry(workout, 'superset', freshEntry)).toBe(true);
+		expect(workout.entries.map((e) => e.id)).toEqual(['entry-1', 'superset', 'fresh']);
+		expect(orderOf(workout)).toEqual(['bench-press', 'cable-fly', 'pec-deck']);
+	});
+
+	test('nothing is lost — every set stays on the exercise holding it', () => {
+		const workout = superset(freshWorkout(0));
+		commitSet(workout, 'b-1', 12, 15);
+
+		splitEntry(workout, 'superset', freshEntry);
+
+		expect(at(workout, 'b-1').set.completed).toBe(true);
+		expect(idsOf(workout)).toContain('a-1');
+	});
+
+	// The first leg keeps the entry so a screen holding that id keeps pointing at
+	// something, and the block the gesture was made from does not jump.
+	test('the first leg keeps the entry id', () => {
+		const workout = superset(freshWorkout(0));
+
+		splitEntry(workout, 'superset', freshEntry);
+
+		expect(workout.entries[1].exercises[0].id).toBe('we-a');
+	});
+
+	test('a lone exercise was never a superset, and says so', () => {
+		expect(splitEntry(freshWorkout(0), 'entry-1', freshEntry)).toBe(false);
+	});
+
 	test('an unknown entry is refused rather than silently ignored', () => {
-		expect(removeEntry(freshWorkout(0), 'nope')).toBe(false);
+		expect(splitEntry(freshWorkout(0), 'nope', freshEntry)).toBe(false);
+	});
+});
+
+describe('addExerciseTo', () => {
+	const ids = { exercise: 'we-new', sets: ['new-1', 'new-2'] };
+
+	test('lands as another leg of the entry, at the end', () => {
+		const workout = freshWorkout(0);
+
+		expect(addExerciseTo(workout, 'entry-1', 'barbell-row', ids)).not.toBeNull();
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench', 'we-new']);
+		expect(workout.entries).toHaveLength(4);
+	});
+
+	test('the sets arrive blank, nothing prescribed', () => {
+		const workout = freshWorkout(0);
+		addExerciseTo(workout, 'entry-1', 'barbell-row', ids);
+
+		expect(at(workout, 'new-1').set).toEqual({
+			id: 'new-1',
+			type: 'normal',
+			plannedReps: null,
+			weight: null,
+			reps: null,
+			rpe: null,
+			completed: false
+		});
+	});
+
+	test('zero sets and an unknown entry are both refused', () => {
+		expect(
+			addExerciseTo(freshWorkout(0), 'entry-1', 'barbell-row', { exercise: 'we-new', sets: [] })
+		).toBeNull();
+		expect(addExerciseTo(freshWorkout(0), 'nope', 'barbell-row', ids)).toBeNull();
 	});
 });
 
@@ -780,6 +1018,96 @@ describe('groupsOf', () => {
 		];
 
 		expect(groupsOf(workout).map((g) => g.entryId)).toEqual(['superset', 'superset']);
+	});
+
+	// The session walk interleaves; a block does not. A group folded out of the
+	// spliced sequence would cut at every crossing and hand the screen four
+	// blocks of one set, which is the bug this walk exists to not have.
+	test('each leg keeps its own sets, unspliced', () => {
+		const groups = groupsOf(superset(freshWorkout(0)));
+
+		expect(groups.map((g) => g.cursors.map((c) => c.set.id))).toEqual([
+			['bench-w', 'bench-1', 'bench-2', 'bench-3', 'bench-4'],
+			['a-1', 'a-2', 'a-3'],
+			['b-1', 'b-2']
+		]);
+	});
+});
+
+/**
+ * The round order — the one rule that only exists for supersets, and the one
+ * nothing on screen would reveal: a cursor running straight down one leg looks
+ * exactly like a cursor doing the right thing until you notice you did three
+ * sets of flyes before touching the pec deck.
+ */
+describe('performing a superset', () => {
+	test('the legs interleave round by round', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(idsOf(workout).slice(5)).toEqual(['a-1', 'b-1', 'a-2', 'b-2', 'a-3']);
+	});
+
+	test('the advance crosses to the other leg', () => {
+		const workout = superset(freshWorkout(0));
+		commitSet(workout, 'a-1', 12, 15);
+
+		expect(idOf(advanceFrom(workout, 'a-1'))).toBe('b-1');
+	});
+
+	// Nothing evens the legs up when a superset is made, so the longer one keeps
+	// going alone once the shorter has run out. That is how it gets lifted.
+	test('a ragged leg finishes its tail alone', () => {
+		const workout = superset(freshWorkout(0));
+		commitSet(workout, 'b-2', 40, 12);
+
+		expect(idOf(advanceFrom(workout, 'b-2'))).toBe('a-3');
+	});
+
+	// Ramping into a movement happens before the circuit, not between two legs
+	// of it.
+	test('warmups sit ahead of the rounds, in leg order', () => {
+		const workout = superset(freshWorkout(0));
+
+		workout.entries[1].exercises[1].sets.unshift({
+			id: 'b-w',
+			type: 'warmup',
+			plannedReps: null,
+			weight: 10,
+			reps: 10,
+			rpe: null,
+			completed: false
+		});
+
+		expect(idsOf(workout).slice(5)).toEqual(['b-w', 'a-1', 'b-1', 'a-2', 'b-2', 'a-3']);
+	});
+
+	// The single-leg branch, which is every other entry in the app: a warmup
+	// written between two working sets stays where the lifter put it, because
+	// hoisting it would be the walk editing the session.
+	test('a lone exercise keeps its own array order', () => {
+		const workout = freshWorkout(0);
+
+		workout.entries[0].exercises[0].sets.splice(2, 0, {
+			id: 'bench-w2',
+			type: 'warmup',
+			plannedReps: null,
+			weight: 60,
+			reps: 5,
+			rpe: null,
+			completed: false
+		});
+
+		expect(idsOf(workout).slice(0, 4)).toEqual(['bench-w', 'bench-1', 'bench-w2', 'bench-2']);
+	});
+
+	// The hint index counts working sets of the exercise, and a superset must not
+	// disturb that: leg B's first working set is still its first, whatever is
+	// being lifted between the two of them.
+	test('the working index is counted per leg, not across the entry', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(at(workout, 'b-1').workingIndex).toBe(0);
+		expect(at(workout, 'a-2').workingIndex).toBe(1);
 	});
 });
 

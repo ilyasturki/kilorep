@@ -15,10 +15,10 @@
 		markSet,
 		moveEntry,
 		rateSet,
-		removeEntry,
+		removeExercise,
 		removeSet,
 		repeatFrom,
-		replaceEntry
+		replaceExercise
 	} from '$lib/domain/workout';
 	import { workoutTitle } from '$lib/history/label';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
@@ -26,8 +26,9 @@
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
 	import { syncSoon } from '$lib/sync/client';
-	import { groupsWithMeta } from '$lib/workout/groups';
+	import { entriesWithMeta, legOf } from '$lib/workout/groups';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
+	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
@@ -85,7 +86,7 @@
 	const title = $derived(workoutTitle(workout, template === null ? [] : [template]));
 	const drift = $derived(template === null ? null : driftFrom(workout, template));
 
-	const groups = $derived(groupsWithMeta(workout, catalogById));
+	const entries = $derived(entriesWithMeta(workout, catalogById));
 
 	/**
 	 * Persistence as a side effect of existing, exactly as on the template
@@ -231,49 +232,57 @@
 
 	/**
 	 * The exercise-level sheet, and the picker a swap opens behind it. Addressed
-	 * by entry id and resolved out of the live tree on every read, the same care
-	 * the workout screen takes: a swap rebuilds the entry underneath, and a group
-	 * snapshotted on open would have the sheet naming an exercise that has left.
+	 * by the exercise *node* id and resolved out of the live tree on every read,
+	 * the same care the workout screen takes: a swap rebuilds the node
+	 * underneath, and a group snapshotted on open would have the sheet naming an
+	 * exercise that has left.
+	 *
+	 * The node and not the entry, because a recorded session can hold a superset:
+	 * correcting one leg of one must leave the other standing, with everything
+	 * logged under it. What this screen does *not* offer is pairing and
+	 * unpairing — see the options menu below, which draws those only for a screen
+	 * that hands it the callbacks. A correction fixes what a session was; how it
+	 * would be lifted is the gym floor's question and the plan's.
 	 */
 	let exerciseOpen = $state(false);
 	let swapOpen = $state(false);
-	let swapping = $state<string | null>(null);
+	let acting = $state<string | null>(null);
 
-	const exerciseGroup = $derived(groups.find((group) => group.entryId === swapping) ?? null);
+	const actingLeg = $derived(legOf(entries, acting));
 
 	let exerciseAnchor = $state<HTMLElement | null>(null);
 
-	function exerciseOptions(entryId: string, anchor: HTMLElement) {
-		swapping = entryId;
+	function exerciseOptions(exerciseId: string, anchor: HTMLElement) {
+		acting = exerciseId;
 		exerciseAnchor = anchor;
 		exerciseOpen = true;
 	}
 
-	function swap(exerciseId: string) {
-		if (swapping === null) {
+	function swap(catalogId: string) {
+		if (acting === null) {
 			return;
 		}
 
-		const entry = replaceEntry(workout, swapping, exerciseId, {
+		const exercise = replaceExercise(workout, acting, catalogId, {
 			exercise: crypto.randomUUID(),
 			sets: ids()
 		});
 
-		swapping = null;
+		acting = null;
 
 		// The sets that were there answered to a different exercise, so the
 		// replacements are blank — and the first of them is what the user has to
 		// fill in before the swap means anything.
-		openSetId = entry === null ? null : entry.exercises[0].sets[0].id;
+		openSetId = exercise === null ? null : exercise.sets[0].id;
 	}
 
 	function dropExercise() {
-		if (swapping === null) {
+		if (acting === null) {
 			return;
 		}
 
-		removeEntry(workout, swapping);
-		swapping = null;
+		removeExercise(workout, acting);
+		acting = null;
 		openSetId = null;
 	}
 
@@ -288,7 +297,9 @@
 	let optionsAnchor = $state<HTMLElement | null>(null);
 
 	const optionsGroup = $derived(
-		groups.find((group) => group.cursors.some((c) => c.set.id === optionsSetId)) ?? null
+		entries
+			.flatMap((entry) => entry.legs)
+			.find((leg) => leg.cursors.some((c) => c.set.id === optionsSetId)) ?? null
 	);
 
 	const optionsCursor = $derived(
@@ -317,9 +328,10 @@
 		optionsSetId = null;
 	}
 
-	// Deduplicated for the superset reason every other draggable list gives:
-	// one entry can render as two groups, and they travel as one.
-	const entryIds = $derived([...new Set(groups.map((group) => group.entryId))]);
+	// The entry is the draggable unit, and now also the rendered one: a superset
+	// is one bracketed section holding both legs, so there is nothing left to
+	// deduplicate here.
+	const entryIds = $derived(entries.map((entry) => entry.id));
 
 	// Handle-only lift, like the template editor's cards and unlike SessionList's
 	// hold-anywhere: these sections are full of controls, and a long-press that
@@ -529,41 +541,49 @@
 		     grip, which only edit mode draws, and a second markup path for the
 		     reading posture would be the same section written twice. -->
 		<div bind:this={drag.root} class="flex flex-col gap-3">
-			{#each groups as group (group.id)}
-				{@const lifted = drag.isLifted(group.entryId)}
-				{@const settling = drag.settlingId === group.entryId}
+			{#each entries as entry (entry.id)}
+				{@const lifted = drag.isLifted(entry.id)}
+				{@const settling = drag.settlingId === entry.id}
 
 				<!-- Outer element for flip and slot measurement, inner for the finger —
 				     the same split every draggable list here makes. While the inner is
 				     off following the finger the outer's box is the vacated slot, so the
 				     sunken fill is the landing shown at the section's exact size. -->
 				<div
-					data-drag-id={group.entryId}
+					data-drag-id={entry.id}
 					animate:flip={{ duration: slide }}
 					class={lifted ? 'relative z-10 rounded-2xl bg-sunken' : ''}
 				>
 					<div
 						style:transform={lifted ? `translateY(${drag.offset}px) scale(1.01)` : null}
 						style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
-						class={['rounded-2xl', lifted && 'shadow-lg']}
+						class={['relative flex flex-col gap-2 rounded-2xl', lifted && 'shadow-lg']}
 					>
-						<WorkoutSection
-							meta={group.meta}
-							entryId={group.entryId}
-							cursors={group.cursors}
-							badges={badgesFor(group.id)}
-							{editing}
-							{openSetId}
-							onopen={(setId) => (openSetId = setId)}
-							onclose={() => (openSetId = null)}
-							ondraft={draft}
-							onrate={rate}
-							ontoggle={toggle}
-							onoptions={setOptions}
-							onexercise={(anchor) => exerciseOptions(group.entryId, anchor)}
-							onadd={() => add(group.cursors[0].exercise.id)}
-							grip={editing ? handle : undefined}
-						/>
+						<!-- The bracket the workout pane draws, on the record of the session
+						     it was lifted in. This screen cannot make or break one — see the
+						     options menu — but a superset that read as two unrelated exercises
+						     here would be the record misdescribing the day. -->
+						<EntryStack legs={entry.legs} superset={entry.superset}>
+							{#snippet leg(leg, at)}
+								<WorkoutSection
+									meta={leg.meta}
+									entryId={entry.id}
+									cursors={leg.cursors}
+									badges={badgesFor(leg.id)}
+									{editing}
+									{openSetId}
+									onopen={(setId) => (openSetId = setId)}
+									onclose={() => (openSetId = null)}
+									ondraft={draft}
+									onrate={rate}
+									ontoggle={toggle}
+									onoptions={setOptions}
+									onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
+									onadd={() => add(leg.cursors[0].exercise.id)}
+									grip={editing && at === 0 ? handle : undefined}
+								/>
+							{/snippet}
+						</EntryStack>
 					</div>
 				</div>
 			{/each}
@@ -572,7 +592,7 @@
 		{#if editing}
 			<!-- The same dashed silhouette the sections grow by, one level up. -->
 			<AddRow label="Add exercise" onclick={() => (insertOpen = true)} />
-		{:else if groups.length === 0}
+		{:else if entries.length === 0}
 			<!-- Editing down to nothing is allowed — the record is still a record of a
 			     day, and Delete is right there for a session that should not have
 			     been. It must not read as a blank page, though. -->
@@ -632,15 +652,19 @@
 <ExercisePickerSheet
 	bind:open={swapOpen}
 	title="Swap exercise"
-	replacing={exerciseGroup === null ? null : exerciseGroup.meta}
+	replacing={actingLeg === null ? null : actingLeg.meta}
 	lastPerformed={data.lastPerformed}
 	mains={data.mains}
 	onpick={([id]) => swap(id)}
 />
 
+<!-- No `onsuperset` and no `onbreak`, so the menu draws neither: this screen
+     corrects what a session was, and how it would be lifted is a question for
+     the gym floor and the plan. The pairing a record already holds still reads
+     — see the bracket above. -->
 <ExerciseOptionsMenu
 	bind:open={exerciseOpen}
-	group={exerciseGroup}
+	group={actingLeg}
 	anchor={exerciseAnchor}
 	onswap={() => (swapOpen = true)}
 	onremove={dropExercise}

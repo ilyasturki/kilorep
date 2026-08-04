@@ -8,8 +8,9 @@
 	import { catalogById } from '$lib/catalog';
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
-	import { groupsWithMeta } from '$lib/workout/groups';
+	import { entriesWithMeta, entryOf, legOf, shelfOf } from '$lib/workout/groups';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
+	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
@@ -159,7 +160,14 @@
 		await goto('/workout');
 	}
 
-	const groups = $derived(session === null ? [] : groupsWithMeta(session.workout, catalogById));
+	/**
+	 * The pane stacks entries, not exercises. A superset is one entry with two
+	 * legs — bracketed together below, lifted a round at a time — so the entry is
+	 * both the unit that is drawn and the unit `animate:flip` slides when a drag
+	 * on the rail reorders the session. Iterating legs would slide the halves of
+	 * a pair independently, which is two events where the user made one.
+	 */
+	const entries = $derived(session === null ? [] : entriesWithMeta(session.workout, catalogById));
 
 	/**
 	 * The pane's answer to a drag happening somewhere else.
@@ -271,46 +279,76 @@
 	}
 
 	/**
-	 * The exercise-level sheet, and the picker a swap opens behind it.
+	 * The exercise-level sheet, and the two pickers that open behind it.
 	 *
-	 * Addressed by entry id and resolved out of the live tree on every read, for
-	 * the same reason the set sheet is: a swap rebuilds the entry underneath, and
-	 * a group snapshotted on open would have the sheet naming the exercise that
-	 * has just left.
+	 * Addressed by the exercise *node* id, and resolved out of the live tree on
+	 * every read for the same reason the set sheet is: a swap rebuilds the node
+	 * underneath, and a group snapshotted on open would have the sheet naming an
+	 * exercise that has just left.
 	 *
-	 * `swapping` outlives the options sheet on purpose — it is what the picker's
+	 * The node and not the entry, because an entry can hold two of them now: Swap
+	 * and Remove act on the leg whose ⋯ was tapped, while Superset and Break act
+	 * on the entry it stands in — which is why both are derived here rather than
+	 * one being passed around.
+	 *
+	 * `acting` outlives the options sheet on purpose — it is what a picker's
 	 * answer is applied to, and the options sheet has closed by then.
 	 */
 	let exerciseOpen = $state(false);
 	let swapOpen = $state(false);
-	let swapping = $state<string | null>(null);
+	let supersetOpen = $state(false);
+	let acting = $state<string | null>(null);
 
-	const exerciseGroup = $derived(groups.find((g) => g.entryId === swapping) ?? null);
+	const actingLeg = $derived(legOf(entries, acting));
+	const actingEntry = $derived(entryOf(entries, acting));
+
+	/** Everything else in the session, pinned above the catalog — see `shelfOf`. */
+	const supersetShelf = $derived(
+		actingEntry === null ? null : shelfOf(entries, actingEntry.id, 'In this session')
+	);
 
 	let exerciseAnchor = $state<HTMLElement | null>(null);
 
-	function exerciseOptions(entryId: string, anchor: HTMLElement) {
-		swapping = entryId;
+	function exerciseOptions(exerciseId: string, anchor: HTMLElement) {
+		acting = exerciseId;
 		exerciseAnchor = anchor;
 		exerciseOpen = true;
 	}
 
-	function swapPick(exerciseId: string) {
-		if (session === null || swapping === null) {
+	function swapPick(catalogId: string) {
+		if (session === null || acting === null) {
 			return;
 		}
 
-		session.swapExercise(swapping, exerciseId);
-		swapping = null;
+		session.swapExercise(acting, catalogId);
+		acting = null;
+	}
+
+	function supersetPicks(exerciseIds: string[]) {
+		if (session === null || actingEntry === null) {
+			return;
+		}
+
+		session.superset(actingEntry.id, exerciseIds);
+		acting = null;
+	}
+
+	function breakSuperset() {
+		if (session === null || actingEntry === null) {
+			return;
+		}
+
+		session.breakSuperset(actingEntry.id);
+		acting = null;
 	}
 
 	function removeExercise() {
-		if (session === null || swapping === null) {
+		if (session === null || acting === null) {
 			return;
 		}
 
-		session.removeExercise(swapping);
-		swapping = null;
+		session.removeExercise(acting);
+		acting = null;
 	}
 
 	// Finish asks first, from either header and from the button under the
@@ -320,7 +358,7 @@
 	let finishing = $state(false);
 
 	const owed = $derived(
-		groups.flatMap((group) => group.cursors).filter((cursor) => !cursor.set.completed).length
+		entries.flatMap((entry) => entry.cursors).filter((cursor) => !cursor.set.completed).length
 	);
 
 	const owedLabel = $derived(
@@ -343,7 +381,9 @@
 	let optionsAnchor = $state<HTMLElement | null>(null);
 
 	const optionsGroup = $derived(
-		groups.find((g) => g.cursors.some((c) => c.set.id === optionsSetId)) ?? null
+		entries
+			.flatMap((entry) => entry.legs)
+			.find((leg) => leg.cursors.some((c) => c.set.id === optionsSetId)) ?? null
 	);
 
 	const optionsCursor = $derived(
@@ -478,7 +518,7 @@
 			>
 				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
 					<SessionList
-						{groups}
+						{entries}
 						activeSetId={session.activeSetId}
 						onjump={jumpTo}
 						onfocus={(id) => session.select(id)}
@@ -507,24 +547,33 @@
 			     column past its content and leave FINISH stranded at the pane's
 			     floor, a scroll below the last set. -->
 				<div
-					class={['column-content flex flex-col gap-7 px-3', groups.length === 0 && 'min-h-full']}
+					class={['column-content flex flex-col gap-7 px-3', entries.length === 0 && 'min-h-full']}
 				>
-					{#each groups as group (group.id)}
-						<div animate:flip={{ duration: slide }}>
-							<ExerciseBlock
-								meta={group.meta}
-								cursors={group.cursors}
-								history={data.history}
-								activeSetId={session.activeSetId}
-								oncommit={(w, r) => session.commit(w, r)}
-								ondraft={(id, w, r) => session.draft(id, w, r)}
-								onrate={(id, rpe) => session.rate(id, rpe)}
-								onselect={(id) => session.select(id)}
-								onadd={() => session.addSet(group.cursors[0].exercise.id)}
-								oninsert={() => insertFrom(group.entryId)}
-								onoptions={options}
-								onexercise={(anchor) => exerciseOptions(group.entryId, anchor)}
-							/>
+					{#each entries as entry (entry.id)}
+						<!-- The flip wrapper is the entry, so a superset's legs slide
+						     together when the rail reorders the session — one gesture, one
+						     movement on screen. Inside it the legs keep their own blocks,
+						     their own headers and their own ⋯; what says they are one thing
+						     is `EntryStack`'s bracket. -->
+						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-5">
+							<EntryStack legs={entry.legs} superset={entry.superset}>
+								{#snippet leg(leg)}
+									<ExerciseBlock
+										meta={leg.meta}
+										cursors={leg.cursors}
+										history={data.history}
+										activeSetId={session.activeSetId}
+										oncommit={(w, r) => session.commit(w, r)}
+										ondraft={(id, w, r) => session.draft(id, w, r)}
+										onrate={(id, rpe) => session.rate(id, rpe)}
+										onselect={(id) => session.select(id)}
+										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
+										oninsert={() => insertFrom(entry.id)}
+										onoptions={options}
+										onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
+									/>
+								{/snippet}
+							</EntryStack>
 						</div>
 					{/each}
 
@@ -532,7 +581,7 @@
 				     nothing, and the insert sheet is how everything arrives. It is also
 				     where a session lands when its last exercise is removed, which is
 				     the same state and needs no second wording. -->
-					{#if groups.length === 0}
+					{#if entries.length === 0}
 						<EmptyState title="Empty session" description="Add an exercise to start logging.">
 							{#snippet icon()}
 								<Stack size={24} />
@@ -587,7 +636,7 @@
 
 	<OverviewDrawer
 		bind:open={overview}
-		{groups}
+		{entries}
 		activeSetId={session.activeSetId}
 		onjump={jumpTo}
 		oninsert={() => insertFrom(null)}
@@ -617,23 +666,46 @@
      `replacing` is what makes it a different question rather than the same list
      under another title: the sheet shelves substitutes for this exercise above
      the muscle sections. It resolves out of the live tree like everything else
-     addressed by `swapping`, and is null once the entry is gone — the sheet has
+     addressed by `acting`, and is null once the exercise is gone — the sheet has
      closed by then, and a Similar list for an exercise that has left the session
      would be describing nothing. -->
 	<ExercisePickerSheet
 		bind:open={swapOpen}
 		title="Swap exercise"
-		replacing={exerciseGroup === null ? null : exerciseGroup.meta}
+		replacing={actingLeg === null ? null : actingLeg.meta}
 		lastPerformed={data.lastPerformed}
 		mains={data.mains}
 		onpick={([id]) => swapPick(id)}
 	/>
 
+	<!-- The third question, and the reason the sheet takes a `pinned` shelf: what
+	     to superset this exercise with. The session's own movements ride above
+	     the catalog, because pairing two things already on the list is what the
+	     gesture nearly always means — and the catalog is still underneath for the
+	     time it does not.
+
+	     `multiple`, so a giant set is built in one pass rather than by reopening
+	     the sheet per leg. The verb follows: the commit bar says what it is about
+	     to do, and this one is not adding. -->
+	<ExercisePickerSheet
+		bind:open={supersetOpen}
+		title="Superset {actingLeg === null ? 'exercise' : actingLeg.meta.name} with…"
+		multiple
+		verb="Superset"
+		pinned={supersetShelf}
+		lastPerformed={data.lastPerformed}
+		mains={data.mains}
+		onpick={supersetPicks}
+	/>
+
 	<ExerciseOptionsMenu
 		bind:open={exerciseOpen}
-		group={exerciseGroup}
+		group={actingLeg}
+		superset={actingEntry !== null && actingEntry.superset}
 		anchor={exerciseAnchor}
 		onswap={() => (swapOpen = true)}
+		onsuperset={() => (supersetOpen = true)}
+		onbreak={breakSuperset}
 		onremove={removeExercise}
 	/>
 

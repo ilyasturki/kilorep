@@ -35,11 +35,15 @@
 	 * The grip arrives as a snippet: the drag belongs to the screen stacking
 	 * these — it owns the order, the measurements and the flip — and a card that
 	 * took four pointer handlers as props would be pretending otherwise.
+	 *
+	 * Optional, because the draggable unit is the entry and a superset stacks two
+	 * cards inside one: the legs below the first get no handle. `WorkoutSection`
+	 * says the same thing the same way.
 	 */
 	type Props = {
 		meta: Exercise;
 		exercise: TemplateExercise;
-		grip: Snippet;
+		grip?: Snippet;
 		/** The exercise itself: view it, swap it, or take it out of the plan. */
 		/** Handed the ⋯ itself, so the desktop menu can hang from it. */
 		onoptions: (anchor: HTMLElement) => void;
@@ -153,7 +157,7 @@
 			<More size={20} />
 		</button>
 
-		{@render grip()}
+		{@render grip?.()}
 	</div>
 
 	<div class="flex items-center gap-2">

@@ -15,11 +15,12 @@
 	/**
 	 * The catalog behind a search field and a muscle rail, one tap to pick.
 	 *
-	 * Two questions, one sheet: which exercises to add, and which one to swap an
-	 * entry for. They differ in the title, in what the screen does with the
-	 * answer, in what sits at the top of the list — and, since `multiple`, in
-	 * whether a tap is the answer or part of one. Still one component: a second
-	 * copy would be a second search field to keep in step with the first.
+	 * Three questions, one sheet: which exercises to add, which one to swap a
+	 * slot for, and which to superset the slot with. They differ in the title, in
+	 * what the screen does with the answer, in what sits at the top of the list —
+	 * and, since `multiple`, in whether a tap is the answer or part of one. Still
+	 * one component: a second copy would be a second search field to keep in step
+	 * with the first.
 	 *
 	 * The same `ExerciseList` the Exercises screen uses — browse folded by
 	 * family, search flat and ranked — with the rows picking instead of
@@ -55,12 +56,35 @@
 		 */
 		frequent?: string[];
 		/**
+		 * The exercises already in this session or plan, pinned above the catalog —
+		 * the superset question's shelf, and the reason that sheet is not a
+		 * different component. Pairing with something already on the list is the
+		 * common case by a distance, and it must not be a search.
+		 *
+		 * It outranks both shelves above: `frequent` answers "what do you train",
+		 * which is a question about the catalog, and this one is about the session
+		 * on screen. Null for the two sheets that are not asking it.
+		 *
+		 * The rows below it are not filtered against this. An exercise appearing in
+		 * both bands is one pick with one meaning, because the screen resolves a
+		 * pick against the session rather than against the row it came from — see
+		 * `WorkoutSession.superset`.
+		 */
+		pinned?: { title: string; exercises: Exercise[] } | null;
+		/**
 		 * Whether a tap answers or accumulates. An insert takes any number — an
 		 * empty session is a day's worth of movements checked off and committed
 		 * once — and a swap takes exactly one, because a second pick would not be
-		 * a second swap, it would be the same entry replaced twice.
+		 * a second swap, it would be the same slot replaced twice. Supersetting
+		 * takes any number too: a giant set is built the way a session is.
 		 */
 		multiple?: boolean;
+		/**
+		 * The verb the commit bar leads with — `Add 2 exercises`, `Superset 2
+		 * exercises`. The bar names the act it is about to perform, and "Add" over
+		 * a sheet that pairs would be naming a different one.
+		 */
+		verb?: string;
 		/** Straight through to the list, which renders it under each name. */
 		lastPerformed: LastPerformed;
 		/** Straight through to the list, which reseats each family around it. */
@@ -78,18 +102,25 @@
 		title,
 		replacing = null,
 		frequent = [],
+		pinned = null,
 		multiple = false,
+		verb = 'Add',
 		lastPerformed,
 		mains,
 		onpick
 	}: Props = $props();
 
 	/**
-	 * What rides above the muscle sections, and it is one thing or the other:
-	 * both at once would be two shortcuts arguing about which the user meant, and
-	 * a swap has already been asked a narrower question than "what do you train".
+	 * What rides above the muscle sections, and it is one thing or another: all
+	 * of them at once would be shortcuts arguing about which the user meant, and
+	 * every question past the plain insert has already been asked something
+	 * narrower than "what do you train".
 	 */
 	const shelf = $derived.by(() => {
+		if (pinned !== null) {
+			return pinned;
+		}
+
 		if (replacing !== null) {
 			return { title: 'Similar', exercises: similarTo(catalog, replacing) };
 		}
@@ -175,7 +206,9 @@
 		}
 	});
 
-	const label = $derived(picks.length === 1 ? 'Add 1 exercise' : `Add ${picks.length} exercises`);
+	const label = $derived(
+		picks.length === 1 ? `${verb} 1 exercise` : `${verb} ${picks.length} exercises`
+	);
 </script>
 
 <!-- Handed to the sheet only once something is picked, rather than rendering

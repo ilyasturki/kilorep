@@ -6,10 +6,10 @@
  * wraps its own slice, and nothing here knows it does.
  *
  * The tree is PRODUCT.md's, level for level: session → entries → exercises →
- * sets, an entry holding several exercises being a superset. The superset
- * level is modelled and never built by this build's UI — the same bargain
- * `WorkoutEntry` struck, and for the same reason: it is the shape the workout
- * tree already has, and a template that flattened it could never start one.
+ * sets, an entry holding several exercises being a superset. The planning side
+ * of that is `joinEntry` and `splitEntry` below, deliberately the same pair of
+ * verbs the workout tree exposes — a plan that could not shape a superset would
+ * be a plan that starts a session it cannot describe.
  *
  * A planned set prescribes reps only, and null is an open target. Weight is
  * never planned — progression is recall, never prescription — so a template
@@ -80,8 +80,14 @@ export const PLANNED_SET_COUNT = 3;
  */
 export const PLANNED_REPS = 8;
 
-/** Every node a planned exercise needs, minted by the caller — see `blankTemplate`. */
-export type NewExerciseIds = { entry: string; exercise: string; sets: string[] };
+/** What a leg joining an entry needs. No entry id: it is joining one, not making one. */
+export type ExerciseIds = { exercise: string; sets: string[] };
+
+/**
+ * The same, plus the entry a newly planned exercise stands in on its own —
+ * composed rather than restated, the workout tree's spelling for the same pair.
+ */
+export type NewExerciseIds = ExerciseIds & { entry: string };
 
 /**
  * Plans an exercise as a new entry at the end of the template. Null when no
@@ -114,6 +120,155 @@ export function addExercise(
 	template.entries.push(entry);
 
 	return entry;
+}
+
+/**
+ * Plans an exercise as another leg of an entry that already exists — the fresh
+ * half of "superset this with…", where the answer was something not yet in the
+ * plan.
+ *
+ * The leg lands at the end of the entry, which is the order it will be lifted
+ * in once `startFrom` copies the tree across. Its sets arrive as
+ * `addExercise`'s do, open targets and all: nothing about being supersetted
+ * prescribes a rep count.
+ *
+ * Null for an unknown entry and null for no set ids, `addExercise`'s refusals.
+ */
+export function addExerciseTo(
+	template: Template,
+	entryId: string,
+	catalogId: string,
+	ids: ExerciseIds
+): TemplateExercise | null {
+	const entry = template.entries.find((e) => e.id === entryId);
+
+	if (entry === undefined || ids.sets.length === 0) {
+		return null;
+	}
+
+	const exercise: TemplateExercise = {
+		id: ids.exercise,
+		exerciseId: catalogId,
+		sets: ids.sets.map((id) => ({ id, plannedReps: null }))
+	};
+
+	entry.exercises.push(exercise);
+
+	return exercise;
+}
+
+/**
+ * Moves a planned exercise into `entryId`, making the two a superset — the
+ * other half of "superset this with…", where the answer was already in the plan.
+ *
+ * Everything the exercise prescribes rides along: the 12/10/8 somebody sat down
+ * to build was a decision about that movement, and pairing it with another one
+ * is not a reason to forget it. The workout tree's `joinEntry` carries logged
+ * sets across for the same reason, one tree over.
+ *
+ * The entry it came from goes with it when nothing is left there — the husk
+ * rule `removeExercise` already keeps.
+ *
+ * False for an unknown entry, an unknown exercise, and one already standing in
+ * this entry, the honest no-op `moveEntry` reports.
+ */
+export function joinEntry(template: Template, entryId: string, exerciseId: string): boolean {
+	const target = template.entries.find((e) => e.id === entryId);
+
+	if (target === undefined) {
+		return false;
+	}
+
+	for (const [at, entry] of template.entries.entries()) {
+		const index = entry.exercises.findIndex((e) => e.id === exerciseId);
+
+		if (index === -1) {
+			continue;
+		}
+
+		if (entry === target) {
+			return false;
+		}
+
+		const [exercise] = entry.exercises.splice(index, 1);
+
+		target.exercises.push(exercise);
+
+		if (entry.exercises.length === 0) {
+			template.entries.splice(at, 1);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * "Superset this with…", answered against the plan — the workout tree's
+ * `supersetWith`, restated here for the reason `moveEntry` gives at the foot of
+ * this file, and carrying the same rule.
+ *
+ * A pick naming something already planned elsewhere is that exercise moving in,
+ * its targets riding along; anything else is planned fresh as another leg. The
+ * choice is read off the template rather than off the row the pick came from,
+ * so a shelf pinned above the catalog and a search result below it mean the
+ * same thing when they name the same exercise.
+ *
+ * "Elsewhere" excludes this entry's own legs, so naming one of them plans a
+ * second of it rather than doing nothing.
+ */
+export function supersetWith(
+	template: Template,
+	entryId: string,
+	catalogId: string,
+	ids: ExerciseIds
+): boolean {
+	const standing = template.entries
+		.filter((entry) => entry.id !== entryId)
+		.flatMap((entry) => entry.exercises)
+		.find((exercise) => exercise.exerciseId === catalogId);
+
+	if (standing !== undefined) {
+		return joinEntry(template, entryId, standing.id);
+	}
+
+	return addExerciseTo(template, entryId, catalogId, ids) !== null;
+}
+
+/**
+ * Breaks a planned superset back into one entry per exercise, in place and in
+ * the order the legs stood in — the workout tree's `splitEntry`, restated
+ * against this tree for the reason `moveEntry` gives at the foot of this file:
+ * the two trees agree only by coincidence of shape.
+ *
+ * Nothing is lost. Every set and every target stays on the exercise that holds
+ * it, and what changes is only that the legs stop being lifted in turn.
+ *
+ * The first leg keeps the entry, so an id the editor is holding stays valid.
+ * The rest take fresh ones from `mint`, because ids key records and sync.
+ *
+ * False for an unknown entry and false for one that was never a superset.
+ */
+export function splitEntry(template: Template, entryId: string, mint: () => string): boolean {
+	const at = template.entries.findIndex((e) => e.id === entryId);
+
+	if (at === -1 || template.entries[at].exercises.length < 2) {
+		return false;
+	}
+
+	const entry = template.entries[at];
+	const [first, ...rest] = entry.exercises;
+
+	entry.exercises = [first];
+
+	template.entries.splice(
+		at + 1,
+		0,
+		...rest.map((exercise) => ({ id: mint(), exercises: [exercise] }))
+	);
+
+	return true;
 }
 
 /**
