@@ -1,3 +1,4 @@
+import type { OnNavigate } from '@sveltejs/kit';
 import { tick } from 'svelte';
 import { prefersReducedMotion } from 'svelte/motion';
 import { onNavigate } from '$app/navigation';
@@ -62,48 +63,119 @@ function direction(from: string, to: string, delta: number | undefined): Directi
 }
 
 /**
- * Stamp the direction where the CSS can read it, run the transition, and take
- * the stamp back off once it settles — `finished` also rejects when a second
- * navigation skips this one, and the attribute must not outlive either end.
+ * Whether this move should animate at all. The `typeof` is the feature detect:
+ * `lib.dom` declares `startViewTransition` as always present, so `!document.
+ * startViewTransition` is a branch the type checker reads as unreachable even
+ * though the browsers it exists for are real.
  */
+function slidingWanted(): boolean {
+	return typeof document.startViewTransition === 'function' && !prefersReducedMotion.current;
+}
+
+/**
+ * The transition the stamp currently belongs to. Navigating again mid-slide
+ * skips the first transition, and a skipped one settles *before* the slide that
+ * replaced it — so without an owner the loser takes the winner's attribute off
+ * on its way out and the new slide animates with no direction to read.
+ */
+let stampOwner: ViewTransition | undefined;
+
+/**
+ * Take the stamp back off once the transition settles, if it is still ours.
+ * `finished` rejects on two different endings — skipped by a newer navigation,
+ * or the navigation itself aborting — and only the first has someone else to
+ * hand the attribute to. Clearing in `finally` covers the second, and the
+ * ownership check is what keeps it from stealing from the first.
+ */
+async function unstamp(transition: ViewTransition): Promise<void> {
+	try {
+		await transition.finished;
+	} catch {
+		// Skipped or aborted. Both are endings; neither is a failure to report.
+	} finally {
+		if (stampOwner === transition) {
+			stampOwner = undefined;
+			delete document.documentElement.dataset.nav;
+		}
+	}
+}
+
+/**
+ * Await a transition promise nobody reads, purely so its rejection is not left
+ * on the floor. A ViewTransition exposes three of them and every ending that is
+ * not a clean finish rejects all three: skipping the transition, and the update
+ * callback throwing — which for us is `navigation.complete` on a navigation the
+ * user replaced mid-flight. `unstamp` is the only one of the three we act on;
+ * unread, the other two surface as `unhandledrejection` and read like a crash.
+ */
+async function absorb(settling: Promise<void>): Promise<void> {
+	try {
+		await settling;
+	} catch {
+		// An ending, not a failure. Nothing here is ours to report.
+	}
+}
+
+/** Stamp the direction where the CSS can read it, then run the transition. */
 function slide(dir: Direction, update: () => Promise<void>): void {
 	document.documentElement.dataset.nav = dir;
 
 	const transition = document.startViewTransition(update);
 
-	void transition.finished.finally(() => {
-		delete document.documentElement.dataset.nav;
-	});
+	stampOwner = transition;
+
+	void absorb(transition.ready);
+	void absorb(transition.updateCallbackDone);
+	void unstamp(transition);
+}
+
+/**
+ * The direction this navigation slides, or `undefined` where it should not
+ * slide at all. Same pathname is a search-param change — a filter, not a
+ * journey — and sliding a page over an identical page is motion with nothing
+ * to say.
+ */
+function navigationDirection(navigation: OnNavigate): Direction | undefined {
+	const { from, to } = navigation;
+
+	if (from === null || to === null) {
+		return undefined;
+	}
+
+	const a = from.url.pathname;
+	const b = to.url.pathname;
+
+	if (a === b || outsideShell(a) || outsideShell(b)) {
+		return undefined;
+	}
+
+	return direction(a, b, navigation.delta);
 }
 
 /** Called once, by the `(app)` layout — component init, like any lifecycle hook. */
 export function slideNavigation(): void {
-	onNavigate((navigation) => {
-		if (!document.startViewTransition || prefersReducedMotion.current) {
+	onNavigate(async (navigation) => {
+		if (!slidingWanted()) {
 			return;
 		}
 
-		const from = navigation.from?.url.pathname;
-		const to = navigation.to?.url.pathname;
+		const dir = navigationDirection(navigation);
 
-		// Same pathname is a search-param change — a filter, not a journey — and
-		// sliding a page over an identical page is motion with nothing to say.
-		if (from === undefined || to === undefined || from === to) {
+		if (dir === undefined) {
 			return;
 		}
 
-		if (outsideShell(from) || outsideShell(to)) {
-			return;
-		}
+		// Resolving is what lets SvelteKit swap the DOM; the browser then holds the
+		// transition open until the navigation has fully landed. Awaiting the same
+		// deferred here is what SvelteKit waits on in turn, per the FAQ's recipe.
+		const { promise, resolve }: PromiseWithResolvers<void> = Promise.withResolvers();
 
-		return new Promise((resolve) => {
-			slide(direction(from, to, navigation.delta), async () => {
-				// The resolve is what lets SvelteKit swap the DOM; the browser then
-				// holds the transition open until the navigation has fully landed.
-				resolve();
-				await navigation.complete;
-			});
+		slide(dir, async () => {
+			resolve();
+			await navigation.complete;
 		});
+
+		await promise;
 	});
 }
 
@@ -115,7 +187,7 @@ export function slideNavigation(): void {
  * bare flip where transitions are unsupported or unwanted.
  */
 export function pageSlide(dir: Direction, mutate: () => void): void {
-	if (!document.startViewTransition || prefersReducedMotion.current) {
+	if (!slidingWanted()) {
 		mutate();
 		return;
 	}
