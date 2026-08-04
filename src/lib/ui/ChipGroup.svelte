@@ -19,12 +19,13 @@
 		value?: string | string[];
 		type?: 'single' | 'multiple';
 		/**
-		 * `grid` for the fixed 4-up set-type row, `wrap` for the RPE scale, `row`
-		 * for a set too long to wrap where it stands — the eleven muscles under
-		 * the picker's search field, which wrapped to three rows and pushed the
-		 * first result off a phone.
+		 * `grid` for the fixed 4-up set-type row, `line` for the exertion ladder,
+		 * `wrap` for a set whose members are words of their own length, `row` for
+		 * one too long to wrap where it stands — the eleven muscles under the
+		 * picker's search field, which wrapped to three rows and pushed the first
+		 * result off a phone.
 		 */
-		layout?: 'grid' | 'wrap' | 'row';
+		layout?: 'grid' | 'line' | 'wrap' | 'row';
 		label?: string;
 		class?: ClassValue;
 		children: Snippet;
@@ -49,13 +50,17 @@
 	// second row of chrome, and it would eat the ring room the padding just
 	// bought. The half-chip cut off at the edge is the affordance instead, which
 	// is what a scrolling chip rail has always used.
+	// The gap belongs to the layout rather than to all of them: `line` divides one
+	// row between every chip it holds, and eight 8px gaps is a whole rung's worth
+	// of width to give away on a phone.
 	const shapes: Record<NonNullable<Props['layout']>, string> = {
-		grid: 'grid grid-cols-4',
-		wrap: 'flex flex-wrap',
-		row: 'flex overflow-x-auto py-1.5 -my-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+		grid: 'grid grid-cols-4 gap-2',
+		line: 'flex gap-1',
+		wrap: 'flex flex-wrap gap-2',
+		row: 'flex gap-2 overflow-x-auto py-1.5 -my-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
 	};
 
-	const shape = $derived(['gap-2', shapes[layout], klass]);
+	const shape = $derived([shapes[layout], klass]);
 </script>
 
 {#if type === 'multiple'}

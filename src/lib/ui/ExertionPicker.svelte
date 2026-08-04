@@ -14,6 +14,7 @@
 	import Chip from '$lib/ui/Chip.svelte';
 	import ChipGroup from '$lib/ui/ChipGroup.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
+	import More from '$lib/ui/icons/More.svelte';
 
 	/**
 	 * How hard the set was — the one optional thing the logging card asks.
@@ -149,31 +150,42 @@
 		<span class="label-caps">{name}</span>
 	</button>
 {:else if mode === 'chips'}
-	<!-- `wrap` and not the scrolling `row`: nine chips scroll to about a screen
-	     and a half on a phone, and a swipe to reach RPE 10 is the precision
-	     gesture mid-set that DESIGN.md rules out. Two short rows, every rung
-	     under a thumb, and the whole thing is gone again after one tap. -->
+	<!-- One line, which is the whole point of a ladder: the scale is an ordered
+	     thing and the eye reads it in a single sweep, where two rows make the
+	     reader find where the first one left off. `line` and not the scrolling
+	     `row` — a swipe to reach RPE 10 is the precision gesture mid-set that
+	     DESIGN.md rules out — so the nine share the card between them and none of
+	     them is off screen or behind a gesture.
+
+	     Narrow, therefore: about a third of a `min-w-14` token on a small phone.
+	     That is affordable here and nowhere else on this card — a rung is a digit
+	     under a thumb that is choosing between neighbours, not a target being
+	     aimed at from across a rack, and it stays a full 52px tall. -->
 	<ChipGroup
 		bind:value={() => selected, pick}
-		layout="wrap"
+		layout="line"
 		label="{name} for this set"
 		class="basis-full py-0.5"
 	>
 		<!-- The one clear that works from everywhere. Tapping the lit rung clears
 		     too, but a value off the ladder lights no rung and would otherwise be
 		     stuck on the set. -->
-		<Chip value="clear">–</Chip>
+		<Chip value="clear" column>–</Chip>
 
 		<!-- Keyed on the shown number, which is unique per rung under both scales:
 		     `10 − x` is injective, so no two rungs ever collide. -->
 		{#each rungs as rung (rung)}
-			<Chip value={rung}>{rung}</Chip>
+			<Chip value={rung} column>{rung}</Chip>
 		{/each}
 
-		<!-- `⋯` is absent from the latin subset — the icons README measured it — so
-		     the escape hatch is worded. It is also the clearer label: this chip
-		     does not set a value, it opens the way to one. -->
-		<Chip value="custom">Other</Chip>
+		<!-- The escape hatch, as the ⋯ it means. It was the word `Other` — `⋯` is
+		     absent from the latin subset, the icons README measured it — but a word
+		     is four rungs wide and a column has a ninth of the card, so it is the
+		     glyph the app already uses for "there is more behind this" and the name
+		     is on the control, where the README puts it. -->
+		<Chip value="custom" column aria-label="Other {name} value">
+			<More size={20} />
+		</Chip>
 	</ChipGroup>
 {:else}
 	<div class="flex basis-full items-stretch gap-2">
