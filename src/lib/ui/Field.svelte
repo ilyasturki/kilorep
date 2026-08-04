@@ -2,18 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
 
-	/**
-	 * The frame every labelled control sits in: the caps label above it, the
-	 * error under it, and the `id` that ties the three together.
-	 *
-	 * It also puts the error slot somewhere Select and DatePicker can reach.
-	 * They had no `error` prop at all while Input and Textarea each carried a
-	 * private copy of one, so the first caller needing to mark a Select invalid
-	 * would have invented its own paragraph and its own `aria-describedby`.
-	 */
 	type Props = {
 		label: string;
-		/** Shown under the control and announced with it. */
 		error?: string;
 		class?: ClassValue;
 		children: Snippet<[{ id: string; describedBy: string | undefined; invalid: true | undefined }]>;

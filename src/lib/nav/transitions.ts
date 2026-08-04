@@ -37,20 +37,8 @@ import type { Direction, Move } from '$lib/nav/move';
  * tab bar's on `data-bar` alone.
  */
 
-/**
- * The app routes that render no tab bar — the ones outside `(tabs)`. Settings,
- * and nothing else today. Passed to `classifyMove` rather than hard-coded in
- * it for the same reason the tab list is: that file stays testable without the
- * app's route tree in front of it.
- */
 const BARLESS = ['/settings'];
 
-/**
- * Outside the app shell there is nothing to slide against: the marketing page
- * and the login screen carry no `vt-page`, and `/dev` is a gallery. A
- * navigation touching any of them lands instantly instead of animating one
- * half of a pair.
- */
 function outsideShell(pathname: string): boolean {
 	return pathname === '/' || pathname === '/login' || pathname.startsWith('/dev');
 }
@@ -65,26 +53,13 @@ function slidingWanted(): boolean {
 	return typeof document.startViewTransition === 'function' && !prefersReducedMotion.current;
 }
 
-/**
- * The transition the stamps currently belong to. Navigating again mid-slide
- * skips the first transition, and a skipped one settles *before* the slide that
- * replaced it — so without an owner the loser takes the winner's attributes off
- * on its way out and the new slide animates with nothing to read.
- */
 let stampOwner: ViewTransition | undefined;
 
-/**
- * Take the stamps back off once the transition settles, if they are still ours.
- * `finished` rejects on two different endings — skipped by a newer navigation,
- * or the navigation itself aborting — and only the first has someone else to
- * hand the attributes to. Clearing in `finally` covers the second, and the
- * ownership check is what keeps it from stealing from the first.
- */
 async function unstamp(transition: ViewTransition): Promise<void> {
 	try {
 		await transition.finished;
 	} catch {
-		// Skipped or aborted. Both are endings; neither is a failure to report.
+		// Absorbed: the stamp must come off however the transition ended.
 	} finally {
 		if (stampOwner === transition) {
 			stampOwner = undefined;
@@ -110,7 +85,7 @@ async function absorb(settling: Promise<void>): Promise<void> {
 	try {
 		await settling;
 	} catch {
-		// An ending, not a failure. Nothing here is ours to report.
+		// The whole point: swallow it so it is not an unhandledrejection.
 	}
 }
 
@@ -140,11 +115,6 @@ function slide({ direction, axis, bar }: Move, update: () => Promise<void>): voi
 	void unstamp(transition);
 }
 
-/**
- * How this navigation slides, or `undefined` where it should not slide at all.
- * Same pathname is a search-param change — a filter, not a journey — and
- * sliding a page over an identical page is motion with nothing to say.
- */
 function navigationMove(navigation: OnNavigate): Move | undefined {
 	const { from, to } = navigation;
 
@@ -168,7 +138,6 @@ function navigationMove(navigation: OnNavigate): Move | undefined {
 	});
 }
 
-/** Called once, by the `(app)` layout — component init, like any lifecycle hook. */
 export function slideNavigation(): void {
 	onNavigate(async (navigation) => {
 		if (!slidingWanted()) {
@@ -181,9 +150,6 @@ export function slideNavigation(): void {
 			return;
 		}
 
-		// Resolving is what lets SvelteKit swap the DOM; the browser then holds the
-		// transition open until the navigation has fully landed. Awaiting the same
-		// deferred here is what SvelteKit waits on in turn, per the FAQ's recipe.
 		const { promise, resolve }: PromiseWithResolvers<void> = Promise.withResolvers();
 
 		slide(move, async () => {
@@ -195,17 +161,6 @@ export function slideNavigation(): void {
 	});
 }
 
-/**
- * The same slide for a screen that changes posture without changing address —
- * History's edit mode is a place the user goes *into* and backs out of, and
- * the URL never hears about it. Depth, therefore, and never lateral: there is
- * one screen here and the new posture stacks on the old one. The bar holds,
- * because the address did not move and so neither did the bar.
- *
- * `mutate` flips the state; `tick` is what makes the flip visible before the
- * new snapshot is taken. Falls back to a bare flip where transitions are
- * unsupported or unwanted.
- */
 export function pageSlide(direction: Direction, mutate: () => void): void {
 	if (!slidingWanted()) {
 		mutate();

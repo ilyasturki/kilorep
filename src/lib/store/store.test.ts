@@ -10,15 +10,8 @@ import { openDatabase } from './db.ts';
 import { frequentFrom, hintsOf } from './derive.ts';
 import { Store } from './store.ts';
 
-/**
- * Against fake-indexeddb, which implements the real structured-clone,
- * transaction and index semantics in memory — so these tests exercise the
- * actual IndexedDB code paths, not a mock of the store's own interface.
- */
-
 let counter = 0;
 
-/** A fresh, uniquely named database per test: isolation without deletion. */
 async function freshStore(): Promise<Store> {
 	counter += 1;
 
@@ -48,7 +41,6 @@ const set = (spec: SetSpec, id: string): WorkoutSet => ({
 	completed: spec.completed ?? true
 });
 
-/** One exercise, one entry — the shape almost every derivation case needs. */
 function workout(id: string, startedAt: number, exerciseId: string, sets: SetSpec[]): Workout {
 	return {
 		id,
@@ -77,7 +69,6 @@ const wire = (
 	deletedAt: number | null = null
 ): WireRecord => ({ id, kind, updatedAt, deletedAt, payload });
 
-/** A remote copy of a workout: the payload as another device would have written it. */
 const finished = (w: Workout, finishedAt: number): unknown => ({
 	id: w.id,
 	templateId: w.templateId,
@@ -146,7 +137,6 @@ describe('workouts', () => {
 		const listed = await store.listWorkouts();
 
 		expect(listed[0].entries[0].exercises[0].sets[0].weight).toBe(100);
-		// The correction is not a second ending, and it does not move the session.
 		expect(listed[0].finishedAt).toBe(200);
 		expect(listed[0].startedAt).toBe(100);
 
@@ -156,8 +146,6 @@ describe('workouts', () => {
 		expect(dirty[0]).toMatchObject({ id: 'w1', updatedAt: 400, deletedAt: null });
 	});
 
-	// The whole reason the write reads the record first: blind, it would put
-	// `deletedAt: null` over a tombstone that arrived while the screen was open.
 	it('an update never resurrects a tombstoned workout', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
 
@@ -240,8 +228,6 @@ describe('templates', () => {
 		expect(await store.listTemplates()).toEqual([]);
 		expect(await store.getTemplate('t1')).toBeNull();
 
-		// The tombstone still owes a push, stamped with the delete's own time —
-		// an old `updatedAt` would lose to the server's live copy and undelete.
 		const dirty = await store.dirtyRecords();
 		const record = dirty.find((r) => r.id === 't1');
 
@@ -252,7 +238,6 @@ describe('templates', () => {
 		await store.saveTemplate(template('t1', 100), 150);
 		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
 
-		// A workout's id handed to the template delete tombstones nothing.
 		await store.deleteTemplate('w1', 300);
 		await store.deleteTemplate('t1', 300);
 
@@ -325,8 +310,6 @@ describe('main variants', () => {
 	});
 
 	it('drops payloads it does not recognise rather than poisoning the map', async () => {
-		// A `preference` record another app version wrote: same kind, foreign
-		// shape. It must fall out of the read, and the recognisable one survive.
 		await store.applyRemote([
 			wire('rest-timer', 50, { seconds: 90 }, 'preference'),
 			wire('main-variant:deadlift', 60, { family: 'deadlift', main: 'sumo-deadlift' }, 'preference')
@@ -347,8 +330,6 @@ describe('main variants', () => {
 describe('exertion scale', () => {
 	it('is RPE for an account that has never said, without writing a record', async () => {
 		expect(await store.exertionScale()).toBe('rpe');
-		// The default is a read-side rule, not a row: a fresh device must not push
-		// a preference nobody chose and win last-write-wins against one they did.
 		expect(await store.dirtyRecords()).toEqual([]);
 	});
 
@@ -371,9 +352,6 @@ describe('exertion scale', () => {
 	});
 
 	it('falls back rather than widening to a scale it cannot render', async () => {
-		// A newer app version's third name, arriving over sync. Reading it through
-		// would leave every label on every screen with a word this build has no
-		// rendering for.
 		await store.applyRemote([wire('exertion-scale', 50, { scale: 'borg' }, 'preference')]);
 
 		expect(await store.exertionScale()).toBe('rpe');
@@ -385,7 +363,6 @@ describe('exertion scale', () => {
 		expect(await store.exertionScale()).toBe('rpe');
 	});
 
-	// The two preference shapes share a kind and are told apart by id alone.
 	it('does not leak into the main-variant map', async () => {
 		await store.setExertionScale('rir', 100);
 
@@ -426,12 +403,7 @@ describe('history derivation', () => {
 	});
 
 	it('reads a record written before ratings existed as unrated', async () => {
-		// A payload with no `rpe` key at all, which is every workout this app ever
-		// wrote before today and every one an older device still writes. It has to
-		// derive as an honest null rather than carry `undefined` into a label.
 		const legacy = workout('legacy', 100, 'bench-press', [{ weight: 80, reps: 8 }]);
-		// Absent, not null — the factory writes `rpe: null` and a pre-rating
-		// payload has no such key at all, which is the case under test.
 		const legacySet: Partial<WorkoutSet> = legacy.entries[0].exercises[0].sets[0];
 
 		delete legacySet.rpe;
@@ -493,7 +465,6 @@ describe('last performed', () => {
 
 		const history = await store.history();
 
-		// Each exercise keeps its own last session, and the warmup is not in it.
 		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
 		expect(hintsOf(await store.lastPerformed())).toEqual(history);
 	});
@@ -514,9 +485,6 @@ describe('past sessions', () => {
 	});
 
 	it('counts the ordinal across every exercise the workout holds, performed or not', async () => {
-		// Three exercises in session order, the middle one never completed: the
-		// ordinal must still say "3rd", because that is where the exercise sits
-		// on the workout screen the id links to.
 		const w = workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]);
 		w.entries.push(
 			{
@@ -546,7 +514,6 @@ describe('past sessions', () => {
 			{ date: 100, workoutId: 'w1', position: 3, sets: [{ weight: 50, reps: 10, rpe: null }] }
 		]);
 
-		// The projection agrees: same workout, same ordinal.
 		const projected = await store.lastPerformed();
 
 		expect(projected['pec-deck']!.position).toBe(3);
@@ -554,12 +521,6 @@ describe('past sessions', () => {
 });
 
 describe('frequent exercises', () => {
-	/**
-	 * One workout, one exercise per entry, one completed set each — the shelf
-	 * counts sessions, so what those sets hold never matters. `done: false`
-	 * leaves the whole session logged but uncompleted, which is the state that
-	 * must not count as training.
-	 */
 	function session(id: string, startedAt: number, exerciseIds: string[], done = true): Workout {
 		return {
 			id,
@@ -598,8 +559,6 @@ describe('frequent exercises', () => {
 	});
 
 	it('counts an exercise performed twice in one session once', async () => {
-		// Two entries, same exercise — a session that came back to the rack, not
-		// two sessions.
 		await store.finishWorkout(session('w1', 100, ['bench-press', 'bench-press']), 150);
 		await store.finishWorkout(session('w2', 200, ['cable-fly']), 250);
 
@@ -614,8 +573,6 @@ describe('frequent exercises', () => {
 	});
 
 	it('looks ten sessions back and no further', async () => {
-		// Eleven workouts, the oldest the only one holding the fly: it falls out
-		// of the window the eleventh pushes it past.
 		await store.finishWorkout(session('w0', 100, ['cable-fly']), 150);
 
 		for (let i = 1; i <= 10; i += 1) {
@@ -667,7 +624,6 @@ describe('sync bookkeeping', () => {
 
 	it('acknowledge settles only the exact version that was pushed', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
-		// An edit lands while the push is in flight: same id, newer updatedAt.
 		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 300);
 
 		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
@@ -730,8 +686,6 @@ describe('sync bookkeeping', () => {
 
 	it('owner reports the stamp without making one', async () => {
 		expect(await store.owner()).toBeNull();
-		// Asking must not be answering: the sign-in screen reads this before it
-		// knows whether it has a choice to offer.
 		expect(await store.owner()).toBeNull();
 
 		await store.claimOwner('user-a');
@@ -753,15 +707,12 @@ describe('changing hands', () => {
 
 		await store.adopt('user-b');
 
-		// The ack that settled this record was the other account's and means
-		// nothing here, so the push has to happen again.
 		const dirty = await store.dirtyRecords();
 		expect(dirty).toHaveLength(1);
 		expect(dirty[0].id).toBe('w1');
 
 		expect(await store.listWorkouts()).toHaveLength(1);
 		expect(await store.owner()).toBe('user-b');
-		// Counted on the old account's counter, so it names nothing on the new one.
 		expect(await store.watermark()).toBe(0);
 		expect(await store.claimOwner('user-b')).toBe(true);
 		expect(await store.claimOwner('user-a')).toBe(false);

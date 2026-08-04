@@ -5,8 +5,6 @@ import type { Exercise, LoadMode, Muscle } from '$lib/domain/exercise';
 import type { PastSession } from '$lib/domain/stats';
 import type { SetType, Workout, WorkoutSet } from '$lib/domain/workout';
 
-// `workoutId`/`position` are dummies throughout: nothing on the dashboard
-// reads either — the same bargain the stats tests strike.
 const session = (date: number, sets: [number, number][]): PastSession => ({
 	date,
 	workoutId: `w${date}`,
@@ -16,7 +14,6 @@ const session = (date: number, sets: [number, number][]): PastSession => ({
 
 const one = (): number => 1;
 
-// Mon 1 Jan 2024, local — the consistency weeks are counted against it.
 const monday = (weeksOn: number, day = 0, hour = 12): number =>
 	new Date(2024, 0, 1 + weeksOn * 7 + day, hour).getTime();
 
@@ -120,9 +117,7 @@ describe('mainLifts', () => {
 	test('a session-count tie settles on volume, load factor included', () => {
 		const lifts = mainLifts(
 			{
-				// 2 × 60×5 = 600 at factor 1.
 				squat: [session(60, [[60, 5]]), session(70, [[60, 5]])],
-				// 2 × 20×10 = 400, ×2 per-hand = 800.
 				'db-press': [session(60, [[20, 10]]), session(70, [[20, 10]])]
 			},
 			50,
@@ -158,7 +153,6 @@ describe('estTrend', () => {
 		);
 
 		expect(points).toEqual([
-			// 100 × (1 + 8/30) beats 100 × (1 + 5/30).
 			{ date: 60, est: 100 * (1 + 8 / 30) },
 			{ date: 70, est: 102.5 * (1 + 5 / 30) }
 		]);
@@ -183,7 +177,6 @@ describe('consistency', () => {
 	});
 
 	test('counts this week from Monday and takes the median over full weeks', () => {
-		// now = Wed 31 Jan 2024; this week began Mon 29 Jan = monday(4).
 		const startedAts = [
 			monday(0), // week of 1 Jan: 1 session
 			monday(1),
@@ -200,12 +193,10 @@ describe('consistency', () => {
 
 		expect(result.thisWeek).toBe(2);
 		expect(result.weeks).toEqual([1, 3, 1, 2]);
-		// Median of [1, 3, 1, 2] → sorted [1, 1, 2, 3] → 1.5.
 		expect(result.habit).toBe(1.5);
 	});
 
 	test('weeks before the log began count for nothing, not for zero', () => {
-		// One quiet full week since the first session, not eight.
 		const result = consistency([monday(3), monday(4, 2)], new Date(2024, 0, 31));
 
 		expect(result.weeks).toEqual([1]);
@@ -213,7 +204,6 @@ describe('consistency', () => {
 	});
 
 	test('a Sunday session lands in its Monday-started week', () => {
-		// Sun 28 Jan 23:00 belongs to the week of Mon 22 Jan, not the running one.
 		const result = consistency([monday(3, 6, 23)], new Date(2024, 0, 31));
 
 		expect(result.thisWeek).toBe(0);
@@ -233,7 +223,6 @@ describe('muscleVolume', () => {
 		const rows = muscleVolume([workout(60, 'bench-press', [set(100, 5)])], 50, resolver);
 
 		expect(rows.find((row) => row.muscle === 'Chest')).toEqual({ muscle: 'Chest', kg: 500 });
-		// Triceps is secondary on the fixture bench and stays untouched.
 		expect(rows.find((row) => row.muscle === 'Triceps')).toEqual({ muscle: 'Triceps', kg: 0 });
 		expect(rows).toHaveLength(11);
 	});

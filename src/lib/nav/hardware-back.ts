@@ -6,16 +6,11 @@ import { navTabs } from '$lib/nav/bar.svelte';
 import { backDepth } from '$lib/nav/depth';
 import { closeTopOverlay, hasOpenOverlay } from '$lib/ui/overlays';
 
-/**
- * Swallows every way a native call can fail to matter — the plugin missing,
- * the platform not Android, the app already backgrounded. Same argument as
- * `buzz` in `ui/haptics.ts`: none changes what the screen does next.
- */
 async function minimize(): Promise<void> {
 	try {
 		await App.minimizeApp();
 	} catch {
-		// Deliberately silent — see above.
+		// Nothing to do if the platform refuses; the press is spent either way.
 	}
 }
 
@@ -24,7 +19,7 @@ async function remove(listener: Promise<{ remove: () => Promise<void> }>): Promi
 		const handle = await listener;
 		await handle.remove();
 	} catch {
-		// Deliberately silent — see above.
+		// Teardown races an unmount; a listener that never attached is fine.
 	}
 }
 
@@ -61,7 +56,7 @@ async function remove(listener: Promise<{ remove: () => Promise<void> }>): Promi
 export function wireHardwareBack(): () => void {
 	if (!import.meta.env.APP_BUILD) {
 		return () => {
-			// The web build: nothing was wired, so there is nothing to unwire.
+			// Web: no listener was wired, so there is nothing to unwire.
 		};
 	}
 

@@ -12,88 +12,16 @@
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
 
-	/**
-	 * The catalog behind a search field and a muscle rail, one tap to pick.
-	 *
-	 * Three questions, one sheet: which exercises to add, which one to swap a
-	 * slot for, and which to superset the slot with. They differ in the title, in
-	 * what the screen does with the answer, in what sits at the top of the list —
-	 * and, since `multiple`, in whether a tap is the answer or part of one. Still
-	 * one component: a second copy would be a second search field to keep in step
-	 * with the first.
-	 *
-	 * The same `ExerciseList` the Exercises screen uses — browse folded by
-	 * family, search flat and ranked — with the rows picking instead of
-	 * navigating. Tapping a family row takes the canonical parent immediately;
-	 * the variants sit behind the same expander as everywhere else. In-gym
-	 * rule: the common case is one tap after typing three letters.
-	 *
-	 * The rail is what the Exercises screen does not need and this sheet does.
-	 * There, the muscle sections *are* the page and scrolling to one is free;
-	 * here they sit inside a panel that opens over a live session, where the
-	 * scroll is the friction and a chip is the way past it. It is the second
-	 * half of the same act as the search field, so it sits directly under it.
-	 */
 	type Props = {
 		open?: boolean;
 		title: string;
-		/**
-		 * The exercise this pick will replace, which turns the sheet's browse
-		 * posture into an answer rather than a catalog: `similarTo` shelves a
-		 * handful of substitutes above the muscle sections. Null for an insert —
-		 * nothing is being replaced, so there is nothing to be similar to.
-		 */
 		replacing?: Exercise | null;
-		/**
-		 * The exercises this user actually trains, most-trained first — the
-		 * insert's answer to the same problem `replacing` solves for a swap. See
-		 * `frequentFrom`: a catalog that opens on Chest is a catalog you scroll,
-		 * and eight rows is most sessions' whole list.
-		 *
-		 * Ids rather than exercises, because the store that counts them knows
-		 * nothing of the catalog. Anything it cannot resolve is dropped rather
-		 * than drawn as a gap.
-		 */
 		frequent?: string[];
-		/**
-		 * The exercises already in this session or plan, pinned above the catalog —
-		 * the superset question's shelf, and the reason that sheet is not a
-		 * different component. Pairing with something already on the list is the
-		 * common case by a distance, and it must not be a search.
-		 *
-		 * It outranks both shelves above: `frequent` answers "what do you train",
-		 * which is a question about the catalog, and this one is about the session
-		 * on screen. Null for the two sheets that are not asking it.
-		 *
-		 * The rows below it are not filtered against this. An exercise appearing in
-		 * both bands is one pick with one meaning, because the screen resolves a
-		 * pick against the session rather than against the row it came from — see
-		 * `WorkoutSession.superset`.
-		 */
 		pinned?: { title: string; exercises: Exercise[] } | null;
-		/**
-		 * Whether a tap answers or accumulates. An insert takes any number — an
-		 * empty session is a day's worth of movements checked off and committed
-		 * once — and a swap takes exactly one, because a second pick would not be
-		 * a second swap, it would be the same slot replaced twice. Supersetting
-		 * takes any number too: a giant set is built the way a session is.
-		 */
 		multiple?: boolean;
-		/**
-		 * The verb the commit bar leads with — `Add 2 exercises`, `Superset 2
-		 * exercises`. The bar names the act it is about to perform, and "Add" over
-		 * a sheet that pairs would be naming a different one.
-		 */
 		verb?: string;
-		/** Straight through to the list, which renders it under each name. */
 		lastPerformed: LastPerformed;
-		/** Straight through to the list, which reseats each family around it. */
 		mains: MainVariants;
-		/**
-		 * The answer, always a list even when the sheet only allows one: one shape
-		 * for both postures beats a callback whose arity the caller has to work out
-		 * from the props it passed.
-		 */
 		onpick: (exerciseIds: string[]) => void;
 	};
 
@@ -110,12 +38,6 @@
 		onpick
 	}: Props = $props();
 
-	/**
-	 * What rides above the muscle sections, and it is one thing or another: all
-	 * of them at once would be shortcuts arguing about which the user meant, and
-	 * every question past the plain insert has already been asked something
-	 * narrower than "what do you train".
-	 */
 	const shelf = $derived.by(() => {
 		if (pinned !== null) {
 			return pinned;
@@ -134,49 +56,20 @@
 
 	let query = $state('');
 
-	/**
-	 * The muscle rail's pick, empty for none — `''` is what a single-select
-	 * ToggleGroup holds when nothing is on, and the list wants a `Muscle` or
-	 * null, so the two meet here rather than in a component that would have to
-	 * know about both.
-	 *
-	 * Search answers the "which exercise" question and this answers "which
-	 * kind", and the two compose: three letters and a lit chip is the shortest
-	 * route through a catalog that will keep growing. Nothing is lit on open —
-	 * the sheet is asked to show everything, and a filter the user did not set
-	 * is one they have to notice before they can undo it.
-	 */
 	let muscle = $state('');
 
 	const narrowed = $derived(muscle === '' ? null : (muscle as Muscle));
 
-	/**
-	 * The picks so far, in the order they were made — which is the order they
-	 * will be performed in, so it is the order the session is built in.
-	 *
-	 * An array and not a `Set` because that order is the whole point; the `Set`
-	 * handed to the list is derived from it, so membership stays a lookup rather
-	 * than a scan per row.
-	 */
 	let picks = $state<string[]>([]);
 
 	const picked = $derived(new Set(picks));
 
-	// Every question the sheet holds, reset together: the next opening is a new
-	// one. A muscle left lit would silently narrow an insert made twenty minutes
-	// later, and a pick left checked would add an exercise nobody asked for.
 	function reset() {
 		query = '';
 		muscle = '';
 		picks = [];
 	}
 
-	/**
-	 * A tap. Single-answer, it *is* the answer and the sheet closes behind it —
-	 * the swap's behaviour, unchanged, and the reason a swap is still two taps.
-	 * Collecting, it toggles: same row, same tap, so a mis-tap costs exactly what
-	 * it should.
-	 */
 	function choose(exercise: Exercise) {
 		if (!multiple) {
 			onpick([exercise.id]);
@@ -197,9 +90,6 @@
 		open = false;
 	}
 
-	// Dismissing is not committing: a sheet flicked away has to leave the session
-	// exactly as it found it, and picks that outlived the panel would arrive at
-	// the next opening as checks nobody remembers making.
 	$effect(() => {
 		if (!open) {
 			reset();
@@ -211,11 +101,6 @@
 	);
 </script>
 
-<!-- Handed to the sheet only once something is picked, rather than rendering
-     nothing while empty: the foot draws a hairline and claims its padding for
-     whatever it is given, and an empty bar would be chrome describing a state
-     the list above already makes obvious. A sheet with no picks is dismissed,
-     not completed. -->
 {#snippet addBar()}
 	<Button variant="commit" class="w-full" onclick={commit}>{label}</Button>
 {/snippet}
@@ -224,11 +109,6 @@
 	<div class="flex flex-col gap-3">
 		<SearchField label="Search exercises" bind:value={query} />
 
-		<!-- Bled to the panel's edges so the rail scrolls the full width of the
-		     sheet: inset by the body's own padding it would look like a list that
-		     had been cut short rather than one that keeps going. `-mx-4` lands the
-		     scroll box exactly on the padding edge, which is where the sheet clips
-		     anyway, so nothing new can overflow. -->
 		<ChipGroup bind:value={muscle} layout="row" label="Filter by muscle" class="-mx-4 px-4">
 			{#each MUSCLES as name (name)}
 				<Chip value={name}>{name}</Chip>

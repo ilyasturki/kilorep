@@ -18,8 +18,6 @@ describe('bodyweightId', () => {
 
 describe('localDateOf', () => {
 	test('reads the clock local, zero-padded', () => {
-		// Local-component constructor, so the expectation holds in every timezone
-		// the suite runs in.
 		expect(localDateOf(new Date(2026, 7, 2, 0, 30))).toBe('2026-08-02');
 		expect(localDateOf(new Date(2026, 0, 5))).toBe('2026-01-05');
 	});
@@ -46,7 +44,6 @@ describe('rollingAverage', () => {
 
 	test('averages the trailing seven calendar days, inclusive', () => {
 		const trend = rollingAverage([
-			// Exactly six days before the last point: inside the window.
 			{ date: '2026-07-27', kg: 82 },
 			{ date: '2026-08-02', kg: 80 }
 		]);
@@ -56,7 +53,6 @@ describe('rollingAverage', () => {
 
 	test('a day outside the window has no say', () => {
 		const trend = rollingAverage([
-			// Seven days before: one past the edge.
 			{ date: '2026-07-26', kg: 90 },
 			{ date: '2026-08-02', kg: 80 }
 		]);
@@ -68,11 +64,9 @@ describe('rollingAverage', () => {
 		const trend = rollingAverage([
 			{ date: '2026-07-01', kg: 84 },
 			{ date: '2026-07-02', kg: 83 },
-			// Three weeks of nothing logged.
 			{ date: '2026-07-23', kg: 81 }
 		]);
 
-		// The July points average each other; the late one rests on itself alone.
 		expect(trend.map((point) => point.kg)).toEqual([84, 83.5, 81]);
 	});
 });
@@ -85,7 +79,6 @@ describe('windowed', () => {
 	];
 
 	test('keeps the last N days ending today, inclusive both ends', () => {
-		// 84 days ending 2026-08-02 reach back to 2026-05-11 exactly.
 		expect(windowed(entries, '2026-08-02', 84)).toEqual([
 			{ date: '2026-05-11', kg: 83.6 },
 			{ date: '2026-08-02', kg: 80 }
@@ -112,7 +105,6 @@ describe('weeklyRate', () => {
 	});
 
 	test('kilograms per week, signed, first point to last', () => {
-		// −1.2 kg over 28 days is −0.3 a week.
 		expect(
 			weeklyRate([
 				{ date: '2026-07-01', kg: 80 },

@@ -2,13 +2,6 @@
 	import type { ClassValue, HTMLTextareaAttributes } from 'svelte/elements';
 	import Field from '$lib/ui/Field.svelte';
 
-	/**
-	 * Multi-line free text: the set note, an exercise's own note.
-	 *
-	 * Resize is left to the browser on the vertical axis only: dragging a field
-	 * wider than its column is never wanted, and on touch the handle does not
-	 * exist at all.
-	 */
 	type Props = Omit<HTMLTextareaAttributes, 'value' | 'class'> & {
 		label: string;
 		value?: string;

@@ -3,13 +3,6 @@ import { describe, expect, test } from 'vitest';
 import { entrySummary, planShape, planSummary, repsLabel } from '$lib/templates/plan';
 import type { TemplateExercise } from '$lib/domain/template';
 
-/**
- * The four states the editor's card has to draw, and the one rule that is easy
- * to get wrong: a plan holding both numbers and open sets must not be spelled
- * as a range, because a range silently drops the open ones from a label
- * claiming to cover every set.
- */
-
 function planned(targets: (number | null)[]): TemplateExercise {
 	return {
 		id: 'node',
@@ -45,8 +38,6 @@ describe('what an exercise prescribes', () => {
 
 		expect(shape.kind).toBe('mixed');
 		expect(shape.target).toBe('Mixed');
-		// The one that matters: `8–12` here would be a label describing two sets
-		// out of three while claiming to describe the exercise.
 		expect(repsLabel(shape)).toBe('Mixed');
 	});
 
@@ -63,9 +54,6 @@ describe('what an exercise prescribes', () => {
 		expect(planSummary(planned([null]))).toBe('1 × Open');
 	});
 
-	// Both legs spelled out rather than a round count: nothing evens a superset
-	// up when it is made, so a row claiming "3 rounds" over a 3-and-2 would be
-	// describing a plan nobody wrote.
 	test('a superset row spells every leg it holds', () => {
 		expect(entrySummary([planned([8, 8, 8]), planned([15, 15])])).toBe('3 × 8 + 2 × 15');
 		expect(entrySummary([planned([8, 8, 8])])).toBe('3 × 8');

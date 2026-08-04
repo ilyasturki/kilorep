@@ -8,12 +8,6 @@ import { createUser } from './accounts.ts';
 import { claimCode, issueCode } from './device-codes.ts';
 import { challengeFor } from './google.ts';
 
-/**
- * The last hop of the phone's Google sign-in. What is worth testing here is
- * exactly what the code exists to prevent: a deep link that was intercepted
- * being worth something to whoever intercepted it.
- */
-
 let db: Database;
 let userId: string;
 
@@ -39,8 +33,6 @@ describe('claiming a device code', () => {
 		const code = issueCode(db, userId, challengeFor(VERIFIER));
 
 		expect(claimCode(db, code, 'a guess')).toBeNull();
-		// The legitimate app now fails too, and that is the intended trade: one
-		// visible retry beats letting the guess be repeated.
 		expect(claimCode(db, code, VERIFIER)).toBeNull();
 	});
 

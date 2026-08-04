@@ -1,54 +1,20 @@
-/**
- * A planned exercise joined to its catalog meta, and the one line that
- * describes its shape.
- *
- * The workout side's `$lib/workout/groups.ts`, restated for the template tree —
- * same boundary, same reason: the catalog lookup is presentation and stops
- * here rather than dragging a name table into the domain. Named once because
- * the editor pane builds these and the sidebar reads them, and two independent
- * declarations of the same shape drift silently under structural typing.
- *
- * No framework import, so the readouts below are testable on their own.
- */
-
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template, TemplateExercise } from '$lib/domain/template';
 import { entryTitle } from '$lib/workout/groups';
 
 export type Planned = {
-	/** The exercise node id — what an `{#each}` keys on and a removal names. */
 	id: string;
 	meta: Exercise;
 	exercise: TemplateExercise;
 };
 
-/**
- * One planned entry and its legs — `$lib/workout/groups`' `Entry`, one tree
- * over, and for the same reason: an entry holding two exercises is a superset,
- * and the editor draws, brackets and drags it as one thing.
- *
- * No cursors here, because a plan has none. What the sidebar needs instead is
- * the shape, and `entrySummary` below is the joint one.
- */
 export type PlannedEntry = {
 	id: string;
 	legs: Planned[];
-	/** More than one leg, which is the whole of what makes it a superset. */
 	superset: boolean;
-	/** `Cable Fly + Lateral Raise`, or just the one name. */
 	title: string;
 };
 
-/**
- * The plan as entries, each holding its legs. The workout side's
- * `entriesWithMeta`, and walked once for the same reason.
- *
- * `entryTitle` is imported rather than restated: how an entry names itself is
- * one decision — the separator, and what to do with a leg the catalog cannot
- * name — and it is the same decision on both surfaces. The rest stays per-tree,
- * because a plan's leg carries a prescription where a session's carries
- * cursors.
- */
 export function plannedEntries(
 	template: Template,
 	catalog: Record<string, Exercise>
@@ -69,29 +35,9 @@ export function plannedEntries(
 	});
 }
 
-/**
- * What an exercise prescribes, in the four states the editor has to draw.
- *
- * `fixed` is the overwhelming case and the one the whole card is shaped around
- * — three sets of eight, one number for the exercise. The other three exist
- * because the editor must never print a number the plan does not hold:
- *
- * - `open` — nothing prescribed yet, on any set.
- * - `range` — every set names a number and they disagree: a 12/10/8 pyramid,
- *   spelled as its ends.
- * - `mixed` — some sets name a number and some are open. A range here would
- *   quietly drop the open sets from a label claiming to describe all of them,
- *   so this state says only that it is mixed and sends the reader to the
- *   per-set steppers.
- *
- * `reps` is what a shared stepper steps from, and it is non-null in exactly
- * the `fixed` case — the only one where a single arm can move the whole
- * exercise without inventing a number for the sets it disagrees with.
- */
 export type PlanShape = {
 	sets: number;
 	kind: 'open' | 'fixed' | 'range' | 'mixed';
-	/** The target as one word: "Open", "8", "8–12", "Mixed". */
 	target: string;
 	reps: number | null;
 };
@@ -121,7 +67,6 @@ export function planShape(exercise: TemplateExercise): PlanShape {
 	return { sets, kind: 'range', target: `${low}–${high}`, reps: null };
 }
 
-/** The stepper's own readout — the target, worded. */
 export function repsLabel(shape: PlanShape): string {
 	return shape.kind === 'fixed' || shape.kind === 'range' ? `${shape.target} reps` : shape.target;
 }
@@ -130,26 +75,12 @@ export function setsLabel(count: number): string {
 	return count === 1 ? '1 set' : `${count} sets`;
 }
 
-/**
- * The whole exercise in one glance, for a sidebar row that has no room for
- * steppers: `3 × 8`, `3 × 8–12`, `3 × Open`. `×` is a character Nunito carries,
- * per the icons README, and the same one the workout's hint labels use.
- */
 export function planSummary(exercise: TemplateExercise): string {
 	const shape = planShape(exercise);
 
 	return `${shape.sets} × ${shape.target}`;
 }
 
-/**
- * A whole entry in one glance: every leg's shape, joined the way its names are
- * — `3 × 12 + 3 × 15`. One leg is `planSummary` itself, which is the ordinary
- * row and pays nothing for the level above it.
- *
- * Both numbers rather than a round count, because the legs are allowed to
- * disagree: nothing evens a superset up when it is made, and a row claiming
- * "3 rounds" over a 3-and-4 would be describing a plan nobody wrote.
- */
 export function entrySummary(exercises: TemplateExercise[]): string {
 	return exercises.map((exercise) => planSummary(exercise)).join(' + ');
 }

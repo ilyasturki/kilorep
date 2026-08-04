@@ -1,19 +1,11 @@
 <script lang="ts">
-	// Phosphor `arrows-left-right`, bold.
+	import Glyph from './Glyph.svelte';
+
 	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
-<svg
-	data-glyph
-	viewBox="0 0 256 256"
-	width={size}
-	height={size}
-	fill="currentColor"
-	aria-hidden="true"
-	class={klass}
-	focusable="false"
->
+<Glyph {size} class={klass}>
 	<path
 		d="M216.49,184.49l-32,32a12,12,0,0,1-17-17L179,188H48a12,12,0,0,1,0-24H179l-11.52-11.51a12,12,0,0,1,17-17l32,32A12,12,0,0,1,216.49,184.49Zm-145-64a12,12,0,0,0,17-17L77,92H208a12,12,0,0,0,0-24H77L88.49,56.49a12,12,0,0,0-17-17l-32,32a12,12,0,0,0,0,17Z"
 	/>
-</svg>
+</Glyph>

@@ -1,34 +1,6 @@
-/**
- * The exercise catalog: immutable, shipped with the app, grown in this file.
- *
- * Deliberately small — common lifts, not a census. The standing rule while the
- * user base is one person is *grow the catalog, never a custom, for a real
- * exercise*: a missing movement gets a slug here rather than a custom on the
- * phone, because a custom logged for weeks forks its own history the day the
- * catalog grows the real entry, and nothing merges.
- *
- * Rules the data answers to:
- *
- * - **Slugs are forever.** Fields may be fixed; a slug is never deleted or
- *   reused. Workout records carry these ids for good.
- * - **Variant or alias.** Different load or emphasis → its own entry with
- *   `variantOf` (close-grip pulldown). Same movement, another name → an alias
- *   (military press). The hint system is why: hints never cross entries, so an
- *   entry split too fine costs a cold start, and one merged too coarse makes
- *   the hint lie.
- * - **Load mode is math, not description.** Volume multiplies by 2 for
- *   `per-hand` and `unilateral`, so a wrong default here corrupts stats
- *   silently. Weight on a per-hand entry means *one* dumbbell; on unilateral,
- *   reps are per side.
- * - **No descriptions, no photos, no video, ever** (PRODUCT.md). The one
- *   visual is a bundled line-art SVG per entry in `static/illustrations/`,
- *   keyed by id — and an entry may ship without one.
- */
-
 import type { Exercise } from '$lib/domain/exercise';
 
 export const catalog: Exercise[] = [
-	// Chest
 	{
 		id: 'bench-press',
 		name: 'Bench Press',
@@ -141,7 +113,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders', 'Core'] }
 	},
 
-	// Back
 	{
 		id: 'deadlift',
 		name: 'Deadlift',
@@ -285,7 +256,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings'] }
 	},
 
-	// Shoulders
 	{
 		id: 'overhead-press',
 		name: 'Overhead Press',
@@ -405,9 +375,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Shoulders', secondary: ['Back'] }
 	},
 
-	// Biceps
-	// "ez bar curl" moved off this entry when the EZ-bar curl became its own —
-	// the leg-curl precedent: the alias lands on the entry that earned it.
 	{
 		id: 'barbell-curl',
 		name: 'Barbell Curl',
@@ -473,7 +440,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Biceps', secondary: ['Forearms'] }
 	},
 
-	// Triceps
 	{
 		id: 'triceps-pushdown',
 		name: 'Triceps Pushdown',
@@ -512,7 +478,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] }
 	},
 
-	// Forearms
 	{
 		id: 'wrist-curl',
 		name: 'Wrist Curl',
@@ -535,8 +500,6 @@ export const catalog: Exercise[] = [
 		loadMode: 'total',
 		muscles: { primary: 'Forearms', secondary: ['Biceps'] }
 	},
-	// Logged as weight × reps like everything else — one trip is a rep, and the
-	// weight is one implement's, hence per-hand.
 	{
 		id: 'farmers-carry',
 		name: "Farmer's Carry",
@@ -546,7 +509,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Forearms', secondary: ['Core'] }
 	},
 
-	// Core
 	{
 		id: 'plank',
 		name: 'Plank',
@@ -564,8 +526,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Core', secondary: [] },
 		variantOf: 'plank'
 	},
-	// "sit-up" is deliberately not an alias: a sit-up is a different movement,
-	// and an alias that lands on the wrong entry is search lying.
 	{
 		id: 'crunch',
 		name: 'Crunch',
@@ -607,7 +567,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Core', secondary: ['Forearms'] }
 	},
 
-	// Quads
 	{
 		id: 'squat',
 		name: 'Squat',
@@ -702,7 +661,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] }
 	},
 
-	// Hamstrings
 	{
 		id: 'romanian-deadlift',
 		name: 'Romanian Deadlift',
@@ -740,11 +698,6 @@ export const catalog: Exercise[] = [
 		loadMode: 'total',
 		muscles: { primary: 'Hamstrings', secondary: ['Glutes', 'Back'] }
 	},
-	// The parent kept its slug when the bench angles were split out, because a
-	// slug is never deleted and this one carries every leg curl logged before
-	// the split. Its positional aliases moved to the entries that earned them:
-	// "seated leg curl" typed at the search box must land on the seated entry,
-	// not back here on the row that cannot say which machine it was.
 	{
 		id: 'leg-curl',
 		name: 'Leg Curl',
@@ -772,7 +725,6 @@ export const catalog: Exercise[] = [
 		variantOf: 'leg-curl'
 	},
 
-	// Glutes
 	{
 		id: 'hip-thrust',
 		name: 'Hip Thrust',
@@ -812,7 +764,6 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Glutes', secondary: [] }
 	},
 
-	// Calves
 	{
 		id: 'standing-calf-raise',
 		name: 'Standing Calf Raise',
@@ -839,7 +790,6 @@ export const catalog: Exercise[] = [
 	}
 ];
 
-/** The join the screens use: a workout knows a slug, a row needs the entry. */
 export const catalogById: Record<string, Exercise> = Object.fromEntries(
 	catalog.map((exercise) => [exercise.id, exercise])
 );

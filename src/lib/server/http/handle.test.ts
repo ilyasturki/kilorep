@@ -12,16 +12,6 @@ import { runMigrations } from '../db/migrate.ts';
 import type { User } from '../db/schema.ts';
 import { createHandle } from './handle.ts';
 
-/**
- * The hook is where authentication is enforced, so it is the one piece that
- * cannot be covered by testing the functions underneath it: a route handler
- * called directly never runs this, and "did we remember to guard that endpoint"
- * is precisely the question these answer.
- *
- * Called as the plain function it is — no server, no port, no `$app/environment`
- * to resolve, which is why `createHandle` lives apart from `hooks.server.ts`.
- */
-
 const PASSWORD = 'correct horse battery';
 
 type Options = {
@@ -29,18 +19,12 @@ type Options = {
 	origin?: string;
 	bearer?: string;
 	cookie?: string;
-	/**
-	 * What the router matched, which SvelteKit sets before this hook runs. Null
-	 * by default — the pessimistic case, where the hook learns nothing from it
-	 * and the pathname logic has to carry the guard on its own.
-	 */
 	routeId?: string | null;
 };
 
 type Outcome = {
 	response: Response;
 	locals: App.Locals;
-	/** How many times the request was allowed through to a route. */
 	resolved: number;
 };
 
@@ -56,9 +40,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-	// Closed before the directory goes: unlinking the file out from under an open
-	// `DatabaseSync` is silent on Linux, an error on Windows, and a leaked
-	// descriptor per test either way.
 	db.$client.close();
 	rmSync(directory, { recursive: true, force: true });
 	delete process.env.CORS_ORIGINS;
@@ -210,8 +191,6 @@ describe('enforcement', () => {
 	});
 
 	test('guards rather than crashes on a malformed escape', async () => {
-		// `decodeURI('%zz')` throws. It matches no route either way, but the raw
-		// form still has to land inside the guard rather than take the hook down.
 		const { response, resolved } = await run('/api/%zz');
 
 		expect(response.status).toBe(401);
@@ -231,8 +210,6 @@ describe('enforcement', () => {
 
 		expect(response.status).toBe(503);
 		expect(resolved).toBe(0);
-		// Without the header the APK sees a network error rather than a 503, and
-		// cannot tell "the server is busy" from "there is no server".
 		expect(response.headers.get('access-control-allow-origin')).toBe('https://localhost');
 	});
 
@@ -242,8 +219,6 @@ describe('enforcement', () => {
 
 		expect(response.status).toBe(200);
 		expect(resolved).toBe(1);
-		// Null even for a valid credential: pages are client-rendered, nothing
-		// reads this, and resolving it would cost a query per asset request.
 		expect(locals.credential).toBeNull();
 	});
 });
@@ -272,7 +247,6 @@ describe('cors', () => {
 	test('refuses an origin nobody allowed, and still varies so a cache cannot cross the wires', async () => {
 		const { response, resolved } = await run('/api/health', { origin: 'https://evil.example' });
 
-		// The absence of the header is the refusal; the browser enforces it.
 		expect(response.headers.get('access-control-allow-origin')).toBeNull();
 		expect(response.headers.get('vary')).toContain('Origin');
 		expect(resolved).toBe(1);
@@ -286,8 +260,6 @@ describe('cors', () => {
 	});
 
 	test('forgives the trailing slash an address bar puts on a copied origin', async () => {
-		// An `Origin` header never has one, so compared as written this entry
-		// matched nothing — and said nothing about why.
 		process.env.CORS_ORIGINS = 'https://kilorep.example.com/';
 
 		const { response } = await run('/api/health', { origin: 'https://kilorep.example.com' });
@@ -306,9 +278,6 @@ describe('cors', () => {
 	});
 
 	test('drops an entry that is not an origin instead of letting it match', async () => {
-		// `new URL('mailto:…').origin` is the string "null", which is also what a
-		// sandboxed iframe sends as its Origin — matching it would grant access to
-		// exactly the caller with none.
 		process.env.CORS_ORIGINS = 'mailto:someone@example.com, not a url, https://ok.example.com';
 
 		const opaque = await run('/api/health', { origin: 'null' });

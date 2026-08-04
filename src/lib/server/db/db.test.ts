@@ -14,12 +14,6 @@ import { appliedMigrationCount, runMigrations } from './migrate.ts';
 import { authTokens, syncCounters, users } from './schema.ts';
 import { claimSeq } from './seq.ts';
 
-/**
- * Runs against a real SQLite file rather than `:memory:` on purpose: the file
- * path, the directory creation and the WAL pragmas are part of what is being
- * verified, and none of them exist in memory.
- */
-
 let directory: string;
 let db: Database;
 
@@ -30,9 +24,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-	// Closed before the directory goes: unlinking the file out from under an open
-	// `DatabaseSync` is silent on Linux, an error on Windows, and a leaked
-	// descriptor per test either way.
 	db.$client.close();
 	rmSync(directory, { recursive: true, force: true });
 });
@@ -48,8 +39,6 @@ describe('migrations', () => {
 	});
 
 	test('count zero on a database that has never been migrated', () => {
-		// Not a throw: `/api/health` reports this database as reachable and
-		// unmigrated, which is exactly what it is.
 		const fresh = createDatabase(path.join(directory, 'fresh.db'));
 		expect(appliedMigrationCount(fresh)).toBe(0);
 		fresh.$client.close();
@@ -66,9 +55,6 @@ describe('migrations', () => {
 			.nextSeq;
 		expect(before).toBeGreaterThan(1);
 
-		// Named to sort last, and written exactly as drizzle-kit writes one —
-		// pointless pragmas included, because those are part of what is being
-		// tested.
 		const rebuild = path.join(folder, '99999999999999_rebuild_users');
 		mkdirSync(rebuild, { recursive: true });
 		writeFileSync(
@@ -109,8 +95,6 @@ describe('accounts', () => {
 	test('never store the password', async () => {
 		const user = await createUser(db, 'a@b.c', 'correct horse');
 
-		// The column is nullable for accounts that only ever signed in with Google;
-		// this path is the one that always writes it.
 		const hash = user.passwordHash!;
 		expect(hash).not.toContain('correct horse');
 		await expect(verifyPassword('correct horse', hash)).resolves.toBe(true);
@@ -172,8 +156,6 @@ describe('seq', () => {
 			})
 		).toThrow('write failed after claiming');
 
-		// The consumed number must come back, or the client's watermark steps
-		// over a row that was never written.
 		expect(claimSeq(db, user.id)).toBe(1);
 	});
 
@@ -198,9 +180,6 @@ describe('constraints', () => {
 	});
 
 	test('refuse a null id, which a text primary key allows unless told not to', () => {
-		// Straight at the driver rather than through drizzle, whose wrapper
-		// replaces the message with the query text and leaves SQLite's own on
-		// `cause`. It is SQLite's constraint that is under test.
 		expect(() => {
 			db.$client.exec(
 				`insert into users (id, email, password_hash, created_at) values (null, 'a@b.c', 'x', 1)`
@@ -217,27 +196,19 @@ describe('password hashing', () => {
 	test('rejects a malformed stored hash instead of throwing', async () => {
 		await expect(verifyPassword('pw', 'garbage')).resolves.toBe(false);
 		await expect(verifyPassword('pw', 'bcrypt$1$2$3$4$5')).resolves.toBe(false);
-		// Six parts and the right scheme, but parameters scrypt itself rejects
-		// with a throw: `N` must be a power of two, and a login route owes the
-		// client a 401 rather than a 500.
 		await expect(verifyPassword('pw', 'scrypt$3$8$1$AAAAAAAAAAAAAAAA$AAAA')).resolves.toBe(false);
-		// An `N` no honest hash would carry: gigabytes of allocation on demand.
 		await expect(verifyPassword('pw', `scrypt$${2 ** 24}$8$1$AAAAAAAAAAAAAAAA$AAAA`)).resolves.toBe(
 			false
 		);
 	});
 
 	test('rejects a truncated key rather than accepting every password', async () => {
-		// The bug this exists to prevent: an empty or undecodable key segment
-		// decodes to zero bytes, and a zero-byte constant-time comparison is
-		// true for any input at all.
 		await expect(verifyPassword('anything', 'scrypt$131072$8$1$AAAAAAAAAAAAAAAA$')).resolves.toBe(
 			false
 		);
 		await expect(
 			verifyPassword('anything', 'scrypt$131072$8$1$AAAAAAAAAAAAAAAA$%%%%')
 		).resolves.toBe(false);
-		// Short but non-empty is no better — a 16-byte key is not this scheme's.
 		await expect(
 			verifyPassword('anything', 'scrypt$131072$8$1$AAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAA==')
 		).resolves.toBe(false);

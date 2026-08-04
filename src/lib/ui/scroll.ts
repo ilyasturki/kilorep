@@ -1,8 +1,3 @@
-/**
- * The nearest ancestor that scrolls, so the rail, the sheet and the pane all
- * work without being told which one they are. Falls back to the document,
- * which is what a list on an unconstrained page scrolls.
- */
 export function scrollParent(node: HTMLElement): HTMLElement {
 	let current: HTMLElement | null = node;
 
@@ -21,15 +16,6 @@ export function scrollParent(node: HTMLElement): HTMLElement {
 		: document.body;
 }
 
-/**
- * Whether every pixel of `node` sits inside its scroller, which is the gate
- * both reveals below share: a page that moves under a thumb that tapped
- * something already on screen is motion with nothing to justify it.
- *
- * The document scroller is measured as the viewport rather than by its rect:
- * `documentElement`'s box is the whole content, whose top goes negative as the
- * page scrolls, and testing against it would call everything visible.
- */
 function fullyVisible(node: HTMLElement): boolean {
 	const scroller = scrollParent(node);
 

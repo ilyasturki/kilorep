@@ -1,34 +1,9 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 
-	/**
-	 * A ± pair around a worded value, at row height.
-	 *
-	 * Not `StepperField`, and deliberately not a small mode of it. That control
-	 * is 76px of typable number sized for a thumb at arm's length mid-set, with
-	 * hold-to-repeat and an accent tint that means "you claimed this rather than
-	 * recalled it". None of that is true here: the planning surface is read
-	 * standing still, its numbers are small and land in two or three taps, and
-	 * there is no recalled value for a tint to be measured against. What is
-	 * shared is the silhouette — sunken well, fat arms on the ends, the value
-	 * between them — and that is the part the eye recognises.
-	 *
-	 * `±` are characters, per the icons README: a glyph Nunito carries never
-	 * becomes an SVG.
-	 *
-	 * An arm is a handler or it is null, rather than a handler plus a `disabled`
-	 * flag: the caller already knows which presses mean something — a set count
-	 * at one, a shared target over sets that disagree — and a null arm cannot
-	 * fall out of step with the handler beside it. It stays on screen, greyed,
-	 * because a control that vanishes at the edge of its range moves everything
-	 * next to it.
-	 */
 	type Props = {
-		/** Names the group and both arms: "Sets", "Rep target", "Set 2 reps". */
 		label: string;
-		/** What sits between the arms, already worded — "3 sets", "8 reps", "Open". */
 		value: string;
-		/** A target nothing has claimed yet, drawn like a placeholder rather than a number. */
 		dim?: boolean;
 		ondec: (() => void) | null;
 		oninc: (() => void) | null;

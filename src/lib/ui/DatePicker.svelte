@@ -6,12 +6,6 @@
 		'font-bold text-ink-muted hover:bg-hover active:bg-surface-2 ' +
 		'data-disabled:pointer-events-none data-disabled:opacity-30';
 
-	// Both the hover fill and the today ink are scoped to `not-data-selected:`
-	// rather than trusted to lose a tie. Tailwind resolves conflicts by
-	// stylesheet order, not by which variant looks more specific, and today's
-	// ink is the case that proves it: on the day that is both today and
-	// selected, `text-accent-text` was winning and painting lime-700 on the
-	// lime-400 fill at about 2.3:1.
 	const day =
 		'focus-ring mx-auto grid size-10 place-items-center rounded-xl text-base font-bold ' +
 		'not-data-selected:hover:bg-hover ' +
@@ -42,75 +36,21 @@
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
-	/**
-	 * A calendar day: backdating a body-weight entry, correcting the date on a
-	 * workout logged after the fact.
-	 *
-	 * Calendar, not Bits UI's full DatePicker. The half we skipped is DateField —
-	 * the segmented 07 / 28 / 2026 thing you arrow through — which is desktop
-	 * form furniture. Nobody types a date segment-by-segment on a phone, and
-	 * this app's date has exactly two plausible values: today and a day last
-	 * week.
-	 *
-	 * Which is why `maxToday` exists and why Today is a button rather than a
-	 * cell you hunt for: the common case should cost one tap.
-	 *
-	 * The month rides the same two-element split as Select — `ContentStatic` on
-	 * `overlay-sheet` below `sm`, `Content` anchored under the trigger from `sm`
-	 * up — for the reason written out there, and through the same `viewport.ts`
-	 * read so the two pickers can never disagree about where the line is. The
-	 * calendar is the case that makes it obvious: a grid is a small, dense,
-	 * self-contained object, and blacking out the page to show one is theatre.
-	 *
-	 * The month arrows are `‹` and `›`, characters — the subset carries both
-	 * (measured: U+2039 and U+203A present) — so per the icons README no caret
-	 * is drawn for them. The trigger's calendar mark has no character to be.
-	 *
-	 * The value is a `DateValue` and not an ISO string, so the dependency
-	 * reaches every consumer. That is a deliberate call: callers get real
-	 * calendar arithmetic instead of parsing strings back into dates.
-	 */
 	type Props = {
 		label: string;
 		value?: DateValue;
-		/**
-		 * Clamp the calendar to today. A body weight cannot be logged forward.
-		 * An explicit `maxValue` is the more specific statement and wins.
-		 */
 		maxToday?: boolean;
-		minValue?: DateValue;
-		maxValue?: DateValue;
-		/** 0 Sunday … 6 Saturday. Monday by default: the training week is ISO. */
-		weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
-		error?: string;
-		placeholder?: string;
-		disabled?: boolean;
 		class?: ClassValue;
 	};
 
-	let {
-		label,
-		value = $bindable(),
-		maxToday = false,
-		minValue,
-		maxValue,
-		weekStartsOn = 1,
-		error,
-		placeholder = 'Choose a date',
-		disabled = false,
-		class: klass
-	}: Props = $props();
+	let { label, value = $bindable(), maxToday = false, class: klass }: Props = $props();
 
 	let open = $state(false);
 
-	// Hardware back closes the month before it navigates — see `ui/overlays.ts`.
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
-	const max = $derived(maxValue ?? (maxToday ? today(zone) : undefined));
+	const max = $derived(maxToday ? today(zone) : undefined);
 
-	// The month the calendar opens on. Bound so paging survives a close/reopen
-	// within the same session, and so it starts on the selected date's month
-	// rather than always on this one.
 	let month = $state<DateValue>(value ?? today(zone));
 
 	const display = $derived(value ? formatter.format(value.toDate(zone)) : '');
@@ -135,9 +75,8 @@
 			}
 		}}
 		bind:placeholder={month}
-		{minValue}
 		maxValue={max}
-		{weekStartsOn}
+		weekStartsOn={1}
 		weekdayFormat="short"
 		class="min-h-0 flex-1 overflow-y-auto px-4"
 	>
@@ -183,11 +122,6 @@
 
 {#snippet panel()}
 	{#if wideViewport.current}
-		<!-- No scrim and no header, as on Select: the trigger stays visible and
-		     Bits UI closes on outside pointerdown and on Escape. The width is
-		     fixed rather than the trigger's — a month is 7 × 40px of cell plus the
-		     grid's own gutters, and stretching that to match a full-width field
-		     would leave a small calendar adrift in a wide box. -->
 		<Popover.Portal>
 			<Popover.Content
 				sideOffset={6}
@@ -209,20 +143,16 @@
 	{/if}
 {/snippet}
 
-<Field {label} {error} class={klass}>
+<Field {label} class={klass}>
 	{#snippet children({ id, describedBy, invalid })}
 		<Popover.Root bind:open>
 			<Popover.Trigger
 				{id}
-				{disabled}
 				aria-invalid={invalid}
 				aria-describedby={describedBy}
-				class={[
-					'field-box field-trigger min-h-row focus-ring',
-					error ? 'border-danger' : 'border-line'
-				]}
+				class="field-box field-trigger min-h-row border-line focus-ring"
 			>
-				<span class={['truncate', !display && 'text-ink-faint']}>{display || placeholder}</span>
+				<span class={['truncate', !display && 'text-ink-faint']}>{display || 'Choose a date'}</span>
 				<CalendarIcon size={18} class="shrink-0 text-ink-muted" />
 			</Popover.Trigger>
 

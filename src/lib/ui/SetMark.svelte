@@ -1,20 +1,6 @@
 <script lang="ts" module>
-	/**
-	 * The 32px disc at the head of a set row: done, active, pending, warmup.
-	 *
-	 * One vocabulary for one concept — `SetRow` imports this type rather than
-	 * keeping a second union and a table to translate between them.
-	 *
-	 * Note which token the active ring uses. `accent` is lime-500 and it is a
-	 * fill only — as a 2px ring on a light surface it measures 1.95:1, still
-	 * under the 3:1 that WCAG requires of a control boundary, and the active set
-	 * is exactly the status a user has to find at arm's length. `accent-text`
-	 * resolves to lime-700 in light and back to lime-500 in dark, so dark is
-	 * pixel-identical to the design and light is legible.
-	 */
 	export type SetStatus = 'done' | 'active' | 'pending' | 'warmup';
 
-	// A done disc wears a check and a warmup disc a W, so neither reads its index.
 	const fixedLabels: Partial<Record<SetStatus, string>> = {
 		done: 'set logged',
 		warmup: 'warmup set'
@@ -29,17 +15,14 @@
 </script>
 
 <script lang="ts">
-	import type { ClassValue } from 'svelte/elements';
 	import Check from '$lib/ui/icons/Check.svelte';
 
 	type Props = {
 		status: SetStatus;
-		/** Set number. Ignored for `done` (a check) and `warmup` (a W). */
 		index?: number;
-		class?: ClassValue;
 	};
 
-	let { status, index, class: klass }: Props = $props();
+	let { status, index }: Props = $props();
 
 	const label = $derived(fixedLabels[status] ?? `set ${index ?? ''} ${status}`.trim());
 </script>
@@ -49,8 +32,7 @@
 	aria-label={label}
 	class={[
 		'grid size-8 shrink-0 place-items-center rounded-full text-md font-extrabold',
-		shells[status],
-		klass
+		shells[status]
 	]}
 >
 	{#if status === 'done'}

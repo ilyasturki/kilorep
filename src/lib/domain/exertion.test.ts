@@ -15,15 +15,6 @@ import {
 	storedExertion
 } from '$lib/domain/exertion';
 
-/**
- * The conversion is the thing that breaks silently.
- *
- * One number is stored and two scales read it, so a sign error anywhere here
- * files "as hard as it gets" under "three reps left" — a record that is wrong
- * rather than missing, and wrong in a way that reads perfectly plausibly on
- * every screen that shows it.
- */
-
 describe('settleExertion', () => {
 	test('rounds to the half step the chips and the arms both move in', () => {
 		expect(settleExertion(8.24)).toBe(8);
@@ -51,17 +42,12 @@ describe('isExertion', () => {
 		expect(isExertion(null)).toBe(false);
 	});
 
-	// Spelled as a missing property rather than as the literal, because that is
-	// the shape it actually arrives in: a workout record written before ratings
-	// existed simply has no such field.
 	test('a field that was never written is not a rating', () => {
 		const legacy: { rpe?: number } = {};
 
 		expect(isExertion(legacy.rpe)).toBe(false);
 	});
 
-	// The one that matters: `settleExertion(NaN)` clamps to the floor, so a NaN
-	// slipping past would file as a deliberate RPE 1 rather than as unrated.
 	test('NaN is not a rating', () => {
 		expect(isExertion(Number.NaN)).toBe(false);
 		expect(isExertion(Number.POSITIVE_INFINITY)).toBe(false);
@@ -90,7 +76,6 @@ describe('the two scales', () => {
 	test('the bounds are the same two ends, named from opposite sides', () => {
 		expect(shownMin('rpe')).toBe(1);
 		expect(shownMax('rpe')).toBe(10);
-		// Never 10: RIR 10 would be RPE 0, which is not a set that was performed.
 		expect(shownMin('rir')).toBe(0);
 		expect(shownMax('rir')).toBe(9);
 	});
@@ -116,15 +101,9 @@ describe('labels', () => {
 
 	test('an unrated set has no label and no suffix', () => {
 		expect(exertionLabel(null, 'rpe')).toBeNull();
-		// Empty rather than null: every caller of the suffix is concatenating.
 		expect(exertionSuffix(null, 'rpe')).toBe('');
 	});
 
-	// A session logged before ratings existed has no `rpe` key at all, and the
-	// store asserts its records into shape rather than checking them — so the
-	// absent field reaches here as `undefined` on the history-detail path. A bare
-	// null test would spell that `RPE undefined`, and `RIR NaN` in the other
-	// scale, on a screen that is only ever showing old sessions.
 	test('a set from before ratings existed is unrated, not a broken label', () => {
 		const legacy: { rpe?: number } = {};
 

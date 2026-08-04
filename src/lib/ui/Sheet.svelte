@@ -1,74 +1,24 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { ClassValue } from 'svelte/elements';
 	import { Dialog } from 'bits-ui';
 	import { Drawer } from 'vaul-svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
-	/**
-	 * Session overview, set options, anything that slides up over the loop.
-	 *
-	 * Two elements and the viewport picks one, the same split Select makes and
-	 * for the same reason: no stylesheet swaps a component. On a phone this is
-	 * a vaul-svelte drawer — the panel follows the finger, and a flick down
-	 * dismisses it — because a sheet that only *looks* draggable teaches the
-	 * gesture and then ignores it. From `sm` up it stays the Bits UI dialog,
-	 * centred by `overlay-sheet`: a mouse does not drag panels off screen.
-	 *
-	 * Focus trap, scroll lock and dismiss-on-outside come from Bits UI in both
-	 * branches — vaul-svelte is built on the same Dialog primitive, which is
-	 * also why the header renders `Dialog.Title` inside the drawer: `Drawer.
-	 * Title` is that component re-exported, not a different one. Everything
-	 * visible is ours.
-	 *
-	 * Position is the one thing in this library keyed to the viewport rather
-	 * than to a container query: the content is portalled to `<body>`, so it has
-	 * no meaningful container to measure. That geometry lives in `overlay-sheet`
-	 * and `overlay-drawer` in app.css, because Select and DatePicker are the
-	 * same panel and were about to be the same twelve lines.
-	 */
 	type Props = {
 		open?: boolean;
 		title: string;
 		description?: string;
-		trigger?: Snippet;
 		children: Snippet;
-		/**
-		 * A bar pinned below the scroll box — the picker's `Add 3 exercises`, and
-		 * nothing else so far.
-		 *
-		 * Outside `body` rather than the last thing inside it, which is the whole
-		 * point: a commit that scrolls away with the list is a commit the user has
-		 * to go and find after checking the eighth row. The panel is already a flex
-		 * column with the body taking the slack, so this costs no geometry of its
-		 * own.
-		 */
 		footer?: Snippet;
-		class?: ClassValue;
 	};
 
-	let {
-		open = $bindable(false),
-		title,
-		description,
-		trigger,
-		children,
-		footer,
-		class: klass
-	}: Props = $props();
+	let { open = $bindable(false), title, description, children, footer }: Props = $props();
 
-	// While open, the hardware back button owns the first press — see
-	// `ui/overlays.ts`. Registered from the effect so the cleanup runs on close
-	// and on unmount alike.
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 </script>
 
-<!-- CLOSE belongs to the dialog branch alone: the drawer wears the handle and
-     answers the flick it teaches, and a button restating what the gesture,
-     the scrim and the hardware back all already do was chrome on a surface
-     that has none to spare. -->
 {#snippet header(closable: boolean)}
 	<div class="flex items-start justify-between gap-3 px-4 pt-4 pb-0.5">
 		<div class="min-w-0">
@@ -103,10 +53,6 @@
 		{@render children()}
 	</div>
 
-	<!-- The hairline is the scroll box's edge, drawn only when something sits
-	     below it: it says the list continues under the bar rather than ending
-	     there. `shrink-0` because the body above it is what gives, always — a
-	     panel at its 85dvh ceiling must lose list, never the commit. -->
 	{#if footer}
 		<div class="shrink-0 border-t border-line-soft px-4 pt-3">
 			{@render footer()}
@@ -116,14 +62,10 @@
 
 {#if wideViewport.current}
 	<Dialog.Root bind:open>
-		{#if trigger}
-			<Dialog.Trigger>{@render trigger()}</Dialog.Trigger>
-		{/if}
-
 		<Dialog.Portal>
 			<Dialog.Overlay class="overlay-scrim" />
 
-			<Dialog.Content class={['overlay-panel overlay-sheet', klass]}>
+			<Dialog.Content class="overlay-panel overlay-sheet">
 				{@render header(true)}
 				{@render body()}
 			</Dialog.Content>
@@ -131,14 +73,10 @@
 	</Dialog.Root>
 {:else}
 	<Drawer.Root bind:open>
-		{#if trigger}
-			<Drawer.Trigger>{@render trigger()}</Drawer.Trigger>
-		{/if}
-
 		<Drawer.Portal>
 			<Drawer.Overlay class="overlay-scrim-drawer" />
 
-			<Drawer.Content class={['overlay-panel overlay-drawer', klass]}>
+			<Drawer.Content class="overlay-panel overlay-drawer">
 				<Drawer.Handle class="mt-3" />
 				{@render header(false)}
 				{@render body()}

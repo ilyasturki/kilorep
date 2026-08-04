@@ -6,12 +6,6 @@ import { authTokens, users } from '../db/schema.ts';
 import { issueToken, revokeToken } from './accounts.ts';
 import { hashToken } from './tokens.ts';
 
-/**
- * Turning a request into an identity. One mechanism for all three clients: the
- * browser sends the secret in a cookie, the APK and MCP send it as a Bearer
- * header, and both resolve to the same row in `auth_tokens`.
- */
-
 export const SESSION_COOKIE = 'kr_session';
 
 /**
@@ -29,12 +23,10 @@ export const SESSION_COOKIE = 'kr_session';
  */
 const COOKIE_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
 
-/** When a `web` credential minted now stops resolving. Matches its cookie exactly. */
 export function webCredentialExpiry(now: Date = new Date()): Date {
 	return new Date(now.getTime() + COOKIE_MAX_AGE_SECONDS * 1000);
 }
 
-/** `lastUsedAt` is a "when did I last see this device" display, not an audit log. */
 const TOUCH_INTERVAL_MS = 60 * 60 * 1000;
 
 export type Credential = { user: User; token: AuthToken };
@@ -47,31 +39,6 @@ export type SessionCookieOptions = {
 	maxAge: number;
 };
 
-/**
- * `secure` is derived from the request rather than configured.
- *
- * A `Secure` cookie is refused outright by browsers when it arrives over plain
- * HTTP, and refused silently — login answers 204, the cookie is dropped, and
- * the app simply behaves as though it were logged out. Hard-coding it would
- * break every LAN self-hoster on `http://192.168.x.x` in the one way that
- * leaves no evidence.
- *
- * Deriving it is necessary and, on its own, not sufficient — because the `url`
- * this reads is not always the one the client used. adapter-node builds it from
- * the request headers, and when `PROTOCOL_HEADER` is unset its protocol
- * defaults to `https` rather than being read off the socket. A plain-http
- * instance therefore reports `https:` here and hits the silent-drop anyway.
- *
- * Two settings avoid it, and one of them is always required: `PROTOCOL_HEADER`
- * behind a TLS-terminating proxy, or `ORIGIN` on anything served directly over
- * http. `.env.example` documents both, and Google sign-in depends on the same
- * fact for a different reason — see `callbackUri`.
- *
- * Exported because the OAuth handshake cookie has to answer this the same way.
- * One function rather than the same expression in two modules: the day this
- * consults more than `url.protocol`, a second copy would keep the old rule and
- * break sign-in with an error naming the wrong thing entirely.
- */
 export function secureCookies(url: URL): boolean {
 	return url.protocol === 'https:';
 }
@@ -98,13 +65,6 @@ export function bearerToken(request: Request): string | null {
 	return value;
 }
 
-/**
- * Records that a credential was used, at most once an hour.
- *
- * SQLite has a single writer, and a write on every authenticated request would
- * put the sync push behind the timestamp bookkeeping of whatever else is
- * talking to the server. An hour's resolution is more than a token list needs.
- */
 function touch(db: Database, token: AuthToken, now: Date): void {
 	if (token.lastUsedAt !== null && now.getTime() - token.lastUsedAt.getTime() < TOUCH_INTERVAL_MS) {
 		return;
@@ -156,22 +116,6 @@ export function resolveCredential(db: Database, secret: string | null): Credenti
 	return row;
 }
 
-/**
- * Everything that makes a browser session, in one place: what it is called, how
- * long it lasts, and what happens to the one the caller already had.
- *
- * Two routes mint these — the password login and the Google callback — and the
- * rule is the same for both because it is one rule. A browser signing in on a
- * session it already holds *replaces* that credential rather than adding to it;
- * otherwise a year of signing in each morning leaves a year of rows all labelled
- * `Web`, every one of them a live secret for whoever captured its cookie, and
- * none of them distinguishable from the others in a list that shows a prefix and
- * a last-used date.
- *
- * The cookie is set by the caller, not here. This module deliberately holds no
- * framework import: it answers what the credential *is*, and `Cookies` is how a
- * route delivers it.
- */
 export function startWebSession(
 	db: Database,
 	userId: string,

@@ -2,21 +2,6 @@
 	import type { ClassValue } from 'svelte/elements';
 	import { Switch } from 'bits-ui';
 
-	/**
-	 * Settings toggles: keep-awake, sync, anything with two states and no
-	 * consequence worth confirming.
-	 *
-	 * The whole row *is* the switch — the label and description live inside
-	 * `Switch.Root`, which Bits UI renders as a single `button[role=switch]`.
-	 * The obvious alternative, a ListRow with a switch dropped in its trailing
-	 * slot, produces a control nested inside a control: two elements claiming
-	 * one tap, and a screen reader announcing a button inside a button. This
-	 * way there is exactly one interactive element and its target is the full
-	 * `min-h-row`, not a 48×28 track.
-	 *
-	 * The track is `line-soft` rather than `sunken` when off. `sunken` collapses
-	 * onto `canvas` in dark, and a Settings screen is a canvas.
-	 */
 	type Props = {
 		label: string;
 		description?: string;

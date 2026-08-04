@@ -42,19 +42,6 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 
-	/**
-	 * The catalog entry's line-art thumb, from `static/illustrations/<id>.svg`
-	 * — generated and traced by `scripts/illustrations/`. A missing file is a
-	 * state, not an error: customs never have art, and a catalog entry can be
-	 * added before its illustration is drawn, so the component renders nothing
-	 * rather than reserving space — a caller that needs the slot held (a list
-	 * column) reserves it around this.
-	 *
-	 * Inlined (not `<img>`) so the single `fill="currentColor"` path inherits
-	 * the ink the container sets. The `<svg` check is load-bearing: a web host
-	 * may answer a missing path with the SPA fallback and a 200, and that
-	 * payload must never reach `{@html}`.
-	 */
 	type Props = { id: string; name: string; class?: ClassValue };
 
 	let { id, name, class: klass }: Props = $props();
@@ -64,8 +51,6 @@
 	$effect(() => {
 		let stale = false;
 
-		// Called here rather than inside the closure below, so `id` is read while the
-		// effect is still running and the effect therefore tracks it.
 		const pending = load(id);
 
 		void (async () => {

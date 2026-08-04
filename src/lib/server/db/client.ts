@@ -22,19 +22,11 @@ export function createDatabase(file: string = databasePath): Database {
 
 	const sqlite = new DatabaseSync(file);
 
-	// Off by default in SQLite, per connection. Without it every `references()`
-	// in the schema is documentation rather than a constraint — including the
-	// cascades that clean up tokens and counters when an account is deleted.
 	sqlite.exec('pragma foreign_keys = on');
 
 	if (file !== ':memory:') {
-		// A reader never blocks the writer, which matters the moment a sync push
-		// overlaps a web request.
 		sqlite.exec('pragma journal_mode = wal');
-		// WAL's durability/throughput trade: safe against process crashes,
-		// exposed only to power loss.
 		sqlite.exec('pragma synchronous = normal');
-		// Wait rather than throw SQLITE_BUSY if a write is already in flight.
 		sqlite.exec('pragma busy_timeout = 5000');
 	}
 
@@ -46,10 +38,6 @@ export function createDatabase(file: string = databasePath): Database {
 
 let instance: Database | undefined;
 
-/**
- * The server's single connection, created on first use. SQLite is one file and
- * one writer; a pool would buy nothing and cost lock contention.
- */
 export function getDatabase(): Database {
 	return (instance ??= createDatabase());
 }

@@ -3,16 +3,6 @@ import { describe, expect, test } from 'vitest';
 import { applyMains, familyOf, sections, similarTo } from '$lib/exercises/browse';
 import type { Equipment, Exercise, Muscle } from '$lib/domain/exercise';
 
-/**
- * A hand-made pool rather than the real catalog, for the reason `search.test`
- * gives: these tests pin the shelving and the substitute rules, and growing the
- * catalog must never break them.
- *
- * The shape mirrors the chest corner of the real one closely enough to be
- * honest — a barbell family with a variant that shelves under another muscle, a
- * dumbbell family, a lone barbell entry and two lone machines — because every
- * tier boundary `similarTo` draws is a distinction that corner contains.
- */
 function ex(
 	id: string,
 	name: string,
@@ -29,9 +19,6 @@ function ex(
 		muscles: { primary, secondary: ['Triceps'] }
 	};
 
-	// Assigned rather than spread in: `variantOf` is optional, and an explicit
-	// `variantOf: undefined` is a different shape from an absent key — the
-	// promotion rule reads the key, not its value.
 	if (variantOf !== undefined) {
 		exercise.variantOf = variantOf;
 	}
@@ -42,8 +29,6 @@ function ex(
 const bench = ex('bench-press', 'Bench Press', 'Barbell', 'Chest');
 const closeGrip = ex('close-grip-bench', 'Close-Grip Bench', 'Barbell', 'Triceps', 'bench-press');
 const incline = ex('incline-bench', 'Incline Bench', 'Barbell', 'Chest', 'bench-press');
-// Barbell and Chest with no family, so the same-rack tier is a real tier here
-// and not something only kinship ever reaches.
 const floor = ex('floor-press', 'Floor Press', 'Barbell', 'Chest');
 const dbBench = ex('db-bench', 'Dumbbell Bench', 'Dumbbell', 'Chest');
 const dbIncline = ex('db-incline', 'Incline DB Press', 'Dumbbell', 'Chest', 'db-bench');
@@ -56,7 +41,6 @@ const pool = [bench, closeGrip, incline, floor, dbBench, dbIncline, overhead, fl
 
 const idsOf = (result: Exercise[]): string[] => result.map((e) => e.id);
 
-/** A pool member by id, or a loud failure — a reseat must never lose one. */
 function entryOf(reseated: Exercise[], id: string): Exercise {
 	const found = reseated.find((entry) => entry.id === id);
 
@@ -81,8 +65,6 @@ describe('sections', () => {
 			'floor-press',
 			'pec-deck'
 		]);
-		// Close-Grip is a Triceps exercise and still lives with Bench Press: the
-		// row the user scans for is the family's.
 		expect(idsOf(chest.families[0].variants)).toEqual(['close-grip-bench', 'incline-bench']);
 	});
 
@@ -95,7 +77,6 @@ describe('sections', () => {
 
 describe('similarTo', () => {
 	test('the family comes first, whatever muscle it shelves under', () => {
-		// Close-Grip is a Triceps exercise, so only kinship can put it here.
 		expect(idsOf(similarTo(pool, bench)).slice(0, 2)).toEqual([
 			'close-grip-bench',
 			'incline-bench'
@@ -110,9 +91,6 @@ describe('similarTo', () => {
 	});
 
 	test('same rack outranks another rack, and both beat another muscle', () => {
-		// Floor Press sits above Cable Fly despite the alphabet, which is the tier
-		// doing the work. Overhead Press and Squat share no primary and are absent
-		// however close their name sorts.
 		expect(idsOf(similarTo(pool, bench))).toEqual([
 			'close-grip-bench',
 			'incline-bench',
@@ -140,7 +118,6 @@ describe('similarTo', () => {
 	});
 
 	test('nothing to suggest is an empty list, not a filler one', () => {
-		// Squat is the only Quads exercise in the pool and has no family.
 		expect(similarTo(pool, squat)).toEqual([]);
 	});
 });
@@ -160,8 +137,6 @@ describe('applyMains', () => {
 	test('no honourable choice is the identity, by reference', () => {
 		expect(applyMains(pool, {})).toBe(pool);
 
-		// The parent itself, a member of another family, a slug the pool lacks:
-		// stale taste means the default, never a broken screen.
 		expect(
 			applyMains(pool, {
 				'bench-press': 'bench-press',
@@ -178,15 +153,12 @@ describe('applyMains', () => {
 		expect(entryOf(reseated, 'bench-press').variantOf).toBe('incline-bench');
 		expect(entryOf(reseated, 'close-grip-bench').variantOf).toBe('incline-bench');
 
-		// Untouched families pass through by reference, not as copies.
 		expect(entryOf(reseated, 'db-incline')).toBe(dbIncline);
 	});
 
 	test('the fold then shelves the family under the chosen main', () => {
 		const shelved = sections(applyMains(pool, { 'bench-press': 'close-grip-bench' }));
 
-		// Close-Grip leads now, so the family stands in *its* section — Triceps —
-		// with the old head folded into the chips like any other member.
 		const triceps = shelved.find((section) => section.muscle === 'Triceps');
 		const family =
 			triceps === undefined

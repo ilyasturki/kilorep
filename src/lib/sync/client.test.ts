@@ -15,17 +15,6 @@ import type { SyncRequest } from './protocol.ts';
 
 import { syncNow } from './client.ts';
 
-/**
- * The whole loop, end to end: the real client store on fake-indexeddb, the
- * real server logic on in-memory SQLite, and a stubbed `fetch` standing where
- * HTTP would. What is *not* real is exactly the endpoint's boundary work —
- * auth and body validation — which `handle.test.ts` and the endpoint's own
- * guards cover; this file is about the protocol agreeing with itself.
- *
- * A fresh store per test — `syncNow`'s test-only `target` parameter exists
- * exactly because the app's own store is a process-wide singleton.
- */
-
 let server: Database;
 let userId: string;
 let store: Store;
@@ -44,8 +33,6 @@ beforeEach(async () => {
 
 	vi.stubGlobal(
 		'fetch',
-		// Synchronous on purpose: `await fetch(...)` accepts a plain value, and a
-		// sync mock keeps the async-function lint rules out of a fake.
 		vi.fn((input: unknown, init: RequestInit = {}) => {
 			expect(input).toBe('http://sync.test/api/sync');
 
@@ -75,7 +62,6 @@ afterEach(() => {
 
 let n = 0;
 
-/** A minimal finished workout with one completed working set, unique per call. */
 function lift(): Workout {
 	n += 1;
 

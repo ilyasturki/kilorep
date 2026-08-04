@@ -2,13 +2,6 @@ import { error } from '@sveltejs/kit';
 
 import { jsonObject } from '../json.ts';
 
-/**
- * Reading a JSON request body without trusting a byte of it.
- *
- * Every failure here is a 400 with a field name, because the client that sent
- * it is the APK or an MCP config and the person debugging it has no server log.
- */
-
 export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
 	const body = await jsonObject(request);
 
@@ -19,10 +12,6 @@ export async function readJsonBody(request: Request): Promise<Record<string, unk
 	return body;
 }
 
-/**
- * A non-blank string field, returned exactly as sent — never trimmed, because
- * one of the callers is a password and its spaces are the user's business.
- */
 export function requiredString(body: Record<string, unknown>, field: string): string {
 	const value = body[field];
 

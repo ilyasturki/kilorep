@@ -1,16 +1,6 @@
 <script lang="ts" module>
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 
-	/**
-	 * Weight and reps sit on the same three-column grid in every status, so the
-	 * digits line up vertically down the whole list and the eye can scan one
-	 * column instead of hunting. The grid is in rem, not px, so it grows with
-	 * the OS text size along with everything else.
-	 *
-	 * Options are reached by long-press on a touch device, by a visible dots
-	 * button when there is a mouse, and by right-click either way. Same handler,
-	 * and a hybrid device gets all three rather than being made to guess.
-	 */
 	const styles: Record<SetStatus, { shell: string; numerals: string; times: string }> = {
 		warmup: {
 			shell: 'min-h-14 rounded-xl bg-surface border border-dashed border-line opacity-[0.72]',
@@ -23,8 +13,6 @@
 			times: 'text-base'
 		},
 		active: {
-			// `card-active` in app.css, shared with the editor this row expands
-			// into — including the reason it is accent-text and not accent.
 			shell: 'card-active min-h-24',
 			numerals: 'text-3xl tracking-numeral text-ink',
 			times: 'text-lg'
@@ -45,7 +33,6 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { ClassValue } from 'svelte/elements';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import More from '$lib/ui/icons/More.svelte';
 
@@ -54,33 +41,17 @@
 		index?: number;
 		weight?: number | null;
 		reps?: number | null;
-		/** One slot, one fact: `RPE 8`, `82.5 × 7`, `NOW`, `note`. */
 		right?: Snippet;
 		onselect?: () => void;
-		/** Handed the element that asked, so the desktop menu can hang from it. */
 		onoptions?: (anchor: HTMLElement) => void;
-		class?: ClassValue;
 	};
 
-	let { status, index, weight, reps, right, onselect, onoptions, class: klass }: Props = $props();
+	let { status, index, weight, reps, right, onselect, onoptions }: Props = $props();
 
 	const style = $derived(styles[status]);
 
-	/**
-	 * Whether the row responds to a tap, and therefore whether it says so.
-	 *
-	 * Read off the prop rather than the status, the same test `ListRow` makes:
-	 * a pending row and a logged one are both selectable — tapping a logged set
-	 * reopens it for editing — and a warmup is neither, because `ExerciseBlock`
-	 * hands it no `onselect`. A hover that promised a tap the row then refused
-	 * would be the surprise DESIGN.md rules out.
-	 */
 	const interactive = $derived(Boolean(onselect));
 
-	// Long-press. The timer is cleared by any pointer exit, and a completed press
-	// swallows the click that follows it so options and select never both fire.
-	// Neither of these is `$state`: both are written and read inside handlers and
-	// nothing renders from them.
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let fired = false;
 
@@ -116,8 +87,7 @@
 		// the right edge, so a tint on the button alone would light two thirds of
 		// a row. `:active` still fires here when the press lands on that button.
 		interactive && 'hover:bg-hover active:bg-surface-2',
-		interactive && 'pointer-fine:transition-[background-color] pointer-fine:duration-100',
-		klass
+		interactive && 'pointer-fine:transition-[background-color] pointer-fine:duration-100'
 	]}
 >
 	{#if status === 'active'}
@@ -153,10 +123,6 @@
 	</button>
 
 	{#if onoptions}
-		<!-- `sunken`, not `hover`: the shell already hovers `hover`, so a
-		     button hovering the same swatch inside it never changed colour at all
-		     and read as part of the row rather than as its own target. The well
-		     is a visible step past the lit row in both themes. -->
 		<button
 			type="button"
 			aria-label="Set options"

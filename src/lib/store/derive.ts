@@ -1,33 +1,9 @@
-/**
- * What stored workouts mean: the hint map and the per-exercise session lists,
- * derived on read and never stored. One source of truth — the workout records
- * — so history cannot drift from the sessions it summarises, which is the same
- * reason the fixture derived its hint map instead of authoring it twice.
- */
-
 import { isExertion } from '$lib/domain/exertion';
 import type { PastSession } from '$lib/domain/stats';
 import type { History, PerformedSet, Workout } from '$lib/domain/workout';
 
-/**
- * The payload of a `workout` sync record: the domain tree as the session left
- * it, stamped with when it ended. `finishedAt` lives here and not on the
- * domain type because a workout in flight has no end yet — the domain never
- * sees one, and the store never holds one without.
- */
 export type FinishedWorkout = Workout & { finishedAt: number };
 
-/**
- * The sets of one exercise that count, in session order: completed working
- * sets only. Warmups never count and uncompleted sets never count — CLAUDE.md
- * states it as the volume rule, and the hint index math in
- * `$lib/domain/workout` depends on the same filtering, because last time's
- * "working set 2" must mean what this session's does.
- *
- * Flattened across the whole workout: an exercise performed twice in one
- * session is two groups on screen but one history — the sets were all lifted
- * that day, in that order.
- */
 export function performedSets(workout: Workout, exerciseId: string): PerformedSet[] {
 	const out: PerformedSet[] = [];
 
@@ -38,14 +14,7 @@ export function performedSets(workout: Workout, exerciseId: string): PerformedSe
 			}
 
 			for (const set of exercise.sets) {
-				// `weight`/`reps` are non-null on every completed set `commitSet`
-				// wrote, but the type cannot say so; checked rather than asserted,
-				// because these records also arrive from other devices over sync.
 				if (set.completed && set.type !== 'warmup' && set.weight !== null && set.reps !== null) {
-					// `rpe` gets the same treatment one level down: a record written
-					// before rating existed carries no such field at all, which reads
-					// as `undefined` here and has to land as an honest null rather
-					// than travel on as a value nothing can render.
 					out.push({
 						weight: set.weight,
 						reps: set.reps,
@@ -59,24 +28,10 @@ export function performedSets(workout: Workout, exerciseId: string): PerformedSe
 	return out;
 }
 
-/** Every catalog exercise a workout holds, each once, in session order. */
 function exercisesIn(workout: Workout): string[] {
-	const seen = new Set<string>();
-
-	for (const entry of workout.entries) {
-		for (const exercise of entry.exercises) {
-			seen.add(exercise.exerciseId);
-		}
-	}
-
-	return [...seen];
+	return [...new Set(workout.entries.flatMap((entry) => entry.exercises.map((e) => e.exerciseId)))];
 }
 
-/**
- * Every exercise's past in one walk — the source the two projections below
- * read, and the Dashboard's own read. Sessions oldest first, a workout where
- * nothing was completed contributing none.
- */
 export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, PastSession[]> {
 	const out: Record<string, PastSession[]> = {};
 
@@ -98,64 +53,28 @@ export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, 
 	return out;
 }
 
-/**
- * One exercise's past, oldest first — the shape the exercise detail renders.
- * A workout where the exercise was present but nothing was completed
- * contributes no session: nothing was performed, and a row of zero sets would
- * draw as a workout that did not happen.
- */
 export function pastSessionsFrom(workouts: FinishedWorkout[], exerciseId: string): PastSession[] {
 	return sessionsByExercise(workouts)[exerciseId] ?? [];
 }
 
-/**
- * For every exercise ever performed, its last session — the working sets, and
- * the day they were lifted. An exercise nothing has completed is absent rather
- * than empty, which is the shape `hintFor` reads as "never performed".
- */
 export type LastPerformed = Record<string, PastSession | undefined>;
 
 export function lastPerformedFrom(workouts: FinishedWorkout[]): LastPerformed {
-	const out: LastPerformed = {};
-
-	// Oldest first from `sessionsByExercise`, so the last entry is the latest.
-	for (const [exerciseId, sessions] of Object.entries(sessionsByExercise(workouts))) {
-		out[exerciseId] = sessions.at(-1);
-	}
-
-	return out;
+	return Object.fromEntries(
+		Object.entries(sessionsByExercise(workouts)).map(([id, sessions]) => [id, sessions.at(-1)])
+	);
 }
 
-/**
- * The hint map the workout screen prefills from: the same last sessions with
- * the date dropped. A projection rather than its own walk, so a screen holding
- * both — the workout page, whose insert sheet lists the catalog — pays for one
- * pass over the records, and so the hint can never disagree with the row that
- * claims to show the same set.
- */
 export function hintsOf(last: LastPerformed): History {
-	const out: History = {};
-
-	for (const [exerciseId, session] of Object.entries(last)) {
-		if (session !== undefined) {
-			out[exerciseId] = session.sets;
-		}
-	}
-
-	return out;
+	return Object.fromEntries(
+		Object.entries(last).flatMap(([id, session]) =>
+			session === undefined ? [] : [[id, session.sets]]
+		)
+	);
 }
 
-/**
- * A count of sessions rather than a calendar window, which was the other
- * candidate. A window in weeks measures the calendar, and what the shelf is
- * actually asking is "what do you train" — so a fortnight away from the gym
- * would blank it for someone whose routine had not changed at all. Ten is
- * roughly a training block: long enough that an upper/lower split shows both
- * halves, short enough that a movement dropped two months ago has fallen out.
- */
 const RECENT_SESSIONS = 10;
 
-/** As many as the picker shelves before the muscle sections start. */
 const SHELF = 8;
 
 /**

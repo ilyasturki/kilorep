@@ -17,32 +17,6 @@
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
-	/**
-	 * One-of-N and any-of-N over a list too long for chips: equipment and muscle
-	 * targets on a custom exercise, a rest-duration override, Settings.
-	 *
-	 * Never on the gym floor. Mid-workout the pickers are ChipGroup (set type,
-	 * RPE) and SearchField (insert an exercise); a control whose options are
-	 * hidden until tapped has no business in the loop.
-	 *
-	 * The list is two elements and the viewport picks one. On a phone it is
-	 * `ContentStatic` in a portal wearing `overlay-sheet`, up from the bottom
-	 * behind a scrim: a fifteen-row list anchored to a trigger near the top of a
-	 * tall phone opens in the half of the screen a thumb cannot reach. From `sm`
-	 * it is `Content`, anchored under the trigger by Floating UI, because a
-	 * mouse has no reach problem and dimming a 1400px page to answer "which
-	 * equipment" is a modal answer to a question that is not one.
-	 *
-	 * The swap is JS and not CSS for the same reason Tooltip's is: the two are
-	 * different Bits UI parts, and no media query rewrites an element. Bits UI
-	 * owns the listbox itself either way — roles, arrow keys, typeahead,
-	 * scroll-into-view — which is the half worth importing.
-	 *
-	 * `type` is split across two `Select.Root` instances because the primitive's
-	 * value is `string` in one case and `string[]` in the other, and that is a
-	 * discriminated union rather than a prop. The panel is one snippet rendered
-	 * by both, so there is no second copy of the markup.
-	 */
 	type Props = {
 		label: string;
 		items: SelectOption[];
@@ -67,7 +41,6 @@
 
 	let open = $state(false);
 
-	// Hardware back closes the list before it navigates — see `ui/overlays.ts`.
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
 	const selected = $derived(
@@ -118,13 +91,6 @@
 
 {#snippet panel()}
 	{#if wideViewport.current}
-		<!-- No scrim and no header: the trigger is still visible and still says
-		     what this is, and Bits UI closes the list on outside pointerdown and
-		     on Escape. `min-w` and not `w`, off Floating UI's measurement of the
-		     trigger — the list lines up with the field it belongs to, and a
-		     label longer than the field widens the list rather than truncating
-		     twice. The ceiling is whatever room is left below the trigger, up to
-		     a list worth scrolling rather than one that reaches the taskbar. -->
 		<Select.Portal>
 			<Select.Content
 				sideOffset={6}

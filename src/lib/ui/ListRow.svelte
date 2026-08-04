@@ -2,51 +2,14 @@
 	import type { Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
 
-	/**
-	 * The generic tappable row: a template on Start, a workout in History, an
-	 * exercise in the catalog, a destination in Settings.
-	 *
-	 * Navigation and actions only. It never carries a Switch — a control inside
-	 * a clickable row is two elements competing for one tap — and Switch owns
-	 * its own row for exactly that reason. SetRow stays separate too: it is
-	 * welded to weight/reps/check and to the set's status, which is a domain
-	 * shape rather than a layout.
-	 *
-	 * The element follows the job: `href` renders an anchor, `onclick` a button,
-	 * and neither renders a plain div, so a row that does nothing is not
-	 * announced as something to press.
-	 *
-	 * The chevron is `›`, a character — the subset carries it (measured: U+203A
-	 * present), so per the icons README nothing is drawn.
-	 */
 	type Props = {
 		title: string;
-		/**
-		 * The slice of `title` a search matched, marked with an underline so a
-		 * result explains itself. Underline and not the accent: the accent means
-		 * "this logs a set", and a matched substring is not that.
-		 */
 		match?: { start: number; end: number } | null;
 		meta?: string;
 		href?: string;
 		onclick?: () => void;
-		/** Suppress the chevron on a row that acts in place rather than navigating. */
 		chevron?: boolean;
-		/**
-		 * The 44px row of a screen read rather than tapped through — the
-		 * Dashboard's, and nothing on the workout loop. `--target-row-dense` in
-		 * `app.css` carries the reasoning and the rule.
-		 */
 		dense?: boolean;
-		/**
-		 * A row whose tap toggles rather than fires, and where it stands — the
-		 * picker's multi-select. Left undefined the row is an action, which is what
-		 * every other row in the app is, and nothing is announced.
-		 *
-		 * The state itself is drawn by the caller in `trailing`: this is the button's
-		 * half of it, and a row that looked selected without saying so is exactly
-		 * the failure the attribute exists to prevent.
-		 */
 		pressed?: boolean;
 		leading?: Snippet;
 		trailing?: Snippet;
@@ -116,11 +79,6 @@
 	{/if}
 {/snippet}
 
-<!-- `data-list-row` is how `list-group` finds the row it is wrapping: inside a
-     card the row's own corners are squared and its focus ring turns inward, and
-     the attribute survives the `<li>` and `<section>` wrappers the call sites
-     put in between. A class would have to be threaded through every one of
-     those. -->
 {#if href}
 	<a {href} data-list-row class={shape}>{@render body()}</a>
 {:else if onclick}

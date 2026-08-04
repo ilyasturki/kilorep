@@ -10,12 +10,6 @@ import {
 } from '$lib/history/label';
 import type { Workout, WorkoutSet } from '$lib/domain/workout';
 
-/**
- * The words that break silently: a wrong title reads as a plausible workout,
- * a wrong tally as a quiet session. The catalog ids are real ones, because a
- * fallback title built on a typo'd id would pass any test using made-up ids.
- */
-
 const [first, second] = catalog;
 
 type SetSpec = {
@@ -93,7 +87,6 @@ describe('exerciseCount', () => {
 			templateId: null,
 			startedAt: 0,
 			entries: [
-				// A superset: one entry, two exercises, two blocks on screen.
 				{
 					id: 'e0',
 					exercises: [
@@ -101,7 +94,6 @@ describe('exerciseCount', () => {
 						{ id: 'x1', exerciseId: second.id, sets: [] }
 					]
 				},
-				// The same exercise again, later in the session.
 				{ id: 'e1', exercises: [{ id: 'x2', exerciseId: first.id, sets: [] }] }
 			]
 		};
@@ -140,8 +132,6 @@ describe('formatSince', () => {
 	});
 
 	test('the scale never steps backwards at a seam', () => {
-		// 8w is 56 days and the first month figure would claim ~61, so the weeks
-		// run to 62 rather than handing over at 56 and reading as *less* time.
 		expect(since(56)).toBe('8w');
 		expect(since(60)).toBe('8w');
 	});
@@ -151,8 +141,6 @@ describe('formatSince', () => {
 	});
 });
 
-// Local time throughout, because `formatWhen`'s whole claim is about the
-// calendar the phone is holding rather than about UTC.
 const at = (y: number, m: number, d: number, h = 12): number => new Date(y, m - 1, d, h).getTime();
 
 describe('formatWhen', () => {
@@ -188,10 +176,7 @@ describe('formatWhen', () => {
 	});
 
 	test('the calendar decides, not the clock', () => {
-		// 23:00 yesterday read at 01:00 today is nine hours ago and still
-		// Yesterday — the failure the elapsed-time `formatSince` would make.
 		expect(formatWhen(at(2026, 8, 3, 23), at(2026, 8, 4, 1)).short).toBe('Yesterday');
-		// And twenty-six hours inside one long day is still Today.
 		expect(formatWhen(at(2026, 8, 4, 1), at(2026, 8, 4, 23)).short).toBe('Today');
 	});
 

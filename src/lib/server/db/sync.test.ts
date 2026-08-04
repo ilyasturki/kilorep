@@ -8,18 +8,12 @@ import { createDatabase } from './client.ts';
 import { runMigrations } from './migrate.ts';
 import { syncExchange } from './sync.ts';
 
-/**
- * In memory: unlike `db.test.ts`, nothing here is about files or pragmas —
- * only about what one transaction does to the records table.
- */
-
 let db: Database;
 let userId: string;
 
 beforeEach(async () => {
 	db = createDatabase(':memory:');
 	runMigrations(db);
-	// `createUser` also creates the sync counter, same as production.
 	const user = await createUser(db, 'lifter@example.com', 'a-long-enough-password');
 	userId = user.id;
 });
@@ -37,7 +31,6 @@ describe('push', () => {
 		const response = syncExchange(db, userId, { watermark: 0, push: [record('w1', 100)] });
 
 		expect(response.acks).toEqual([{ id: 'w1', updatedAt: 100 }]);
-		// The client already holds what it pushed — no echo.
 		expect(response.records).toEqual([]);
 		expect(response.watermark).toBe(1);
 	});
@@ -61,7 +54,6 @@ describe('push', () => {
 		const replay = syncExchange(db, userId, { watermark: 0, push: [record('w1', 100)] });
 
 		expect(replay.acks).toEqual([]);
-		// The echo settles the client's dirty flag: same id, same updatedAt.
 		expect(replay.records).toHaveLength(1);
 		expect(replay.records[0].updatedAt).toBe(100);
 		expect(replay.watermark).toBe(1);
@@ -133,8 +125,6 @@ describe('tenancy', () => {
 			push: [record('shared-id', 50, { of: 'theirs' })]
 		});
 
-		// Accepted despite the older updatedAt: the other tenant's row is not
-		// "existing" here, or one user could block another's ids.
 		expect(response.acks).toHaveLength(1);
 
 		const mine = syncExchange(db, userId, { watermark: 0, push: [] });

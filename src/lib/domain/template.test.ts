@@ -19,18 +19,8 @@ import {
 } from '$lib/domain/template';
 import type { Template } from '$lib/domain/template';
 
-/**
- * The rules that break silently.
- *
- * A wrong blank rule writes junk records or eats a real one; a copy-on-start
- * that reuses an id lets the store confuse two Tuesdays; a planned target of
- * zero is a plan nobody made. The editor's layout is judged by thumb; these
- * are judged here.
- */
-
 let n = 0;
 
-/** Deterministic ids, so a test can name the node it means. */
 function mint(prefix: string): () => string {
 	return () => {
 		n += 1;
@@ -39,7 +29,6 @@ function mint(prefix: string): () => string {
 	};
 }
 
-/** A planned exercise appended with `count` sets, ids readable per node. */
 function plan(template: Template, exerciseId: string, count: number): void {
 	addExercise(template, exerciseId, {
 		entry: `${exerciseId}-entry`,
@@ -48,7 +37,6 @@ function plan(template: Template, exerciseId: string, count: number): void {
 	});
 }
 
-/** Every planned target under one exercise node, in order. */
 function targetsOf(template: Template, exerciseId: string): (number | null)[] {
 	const exercise = template.entries
 		.flatMap((entry) => entry.exercises)
@@ -57,37 +45,23 @@ function targetsOf(template: Template, exerciseId: string): (number | null)[] {
 	return exercise === undefined ? [] : exercise.sets.map((set) => set.plannedReps);
 }
 
-/** Session order by exercise, which is the thing a reorder is judged on. */
 function orderOf(template: Template): string[] {
 	return template.entries.flatMap((entry) => entry.exercises.map((e) => e.exerciseId));
 }
 
-/**
- * Every node id in a tree, walked. Structural on purpose: templates and the
- * workouts they start share the levels, and the whole point of the test that
- * uses this is comparing the two.
- */
 type IdTree = {
 	id: string;
 	entries: { id: string; exercises: { id: string; sets: { id: string }[] }[] }[];
 };
 
 function idsIn(tree: IdTree): string[] {
-	const out = [tree.id];
-
-	for (const entry of tree.entries) {
-		out.push(entry.id);
-
-		for (const exercise of entry.exercises) {
-			out.push(exercise.id);
-
-			for (const set of exercise.sets) {
-				out.push(set.id);
-			}
-		}
-	}
-
-	return out;
+	return [
+		tree.id,
+		...tree.entries.flatMap((entry) => [
+			entry.id,
+			...entry.exercises.flatMap((ex) => [ex.id, ...ex.sets.map((set) => set.id)])
+		])
+	];
 }
 
 describe('the blank rule', () => {
@@ -165,9 +139,7 @@ describe('planning exercises', () => {
 
 		expect(replaceExercise(template, 'bench-press-node', 'incline-press')).toBe(true);
 
-		// The pyramid is the user's, not the barbell's: it survives whole.
 		expect(targetsOf(template, 'bench-press-node')).toEqual([12, 10, 8]);
-		// First still, not shuffled to the end the way a remove-and-add would.
 		expect(orderOf(template)).toEqual(['incline-press', 'cable-fly']);
 		expect(idsIn(template)).toEqual(before);
 	});
@@ -285,7 +257,6 @@ describe('reorder', () => {
 });
 
 describe('planning supersets', () => {
-	/** Two planned exercises, ready to be paired. */
 	function pair(): Template {
 		const template = blankTemplate('t1', 100);
 
@@ -306,8 +277,6 @@ describe('planning supersets', () => {
 		]);
 	});
 
-	// The 12/10/8 somebody sat down to build was a decision about that movement,
-	// and pairing it with another one is not a reason to forget it.
 	test('the targets ride along', () => {
 		const template = pair();
 		setPlannedReps(template, 'lateral-raise-set-1', 15);
@@ -362,8 +331,6 @@ describe('planning supersets', () => {
 		expect(addExerciseTo(pair(), 'nope', 'lateral-raise', ids)).toBeNull();
 	});
 
-	// The pairing rule itself: a pick already in the plan moves, anything else is
-	// planned fresh, and this entry's own legs never count as "already".
 	describe('supersetWith', () => {
 		const ids = { exercise: 'fresh-node', sets: ['fresh-1'] };
 
@@ -402,8 +369,6 @@ describe('planning supersets', () => {
 		});
 	});
 
-	// The whole reason the plan holds the level at all: a session started from a
-	// planned superset has to be one.
 	test('a planned superset starts as a superset', () => {
 		const template = pair();
 		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');

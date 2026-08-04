@@ -6,42 +6,12 @@ import { adoptToken, deviceLabel, googleStartUrl } from './auth.ts';
 import { ApiError, OFFLINE, request } from './client.ts';
 import { DEVICE_REDIRECT, GOOGLE_CLAIM_PATH } from './routes.ts';
 
-/**
- * Google sign-in on the phone, which is a different flow from the web's and not
- * a variation of it.
- *
- * Three facts force the shape. Google refuses OAuth inside an embedded WebView
- * (`disallowed_useragent`), so this cannot happen in the app's own window and
- * opens a Custom Tab instead. That browser is the system's, so what it ends up
- * holding — a cookie for the server's origin — is of no use to a WebView on
- * `https://localhost`. And the way back into the app is a custom scheme, which
- * on Android is claimed rather than owned, so the return URL is a channel to be
- * assumed public.
- *
- * Hence PKCE over our own last hop: a verifier is minted here and never leaves,
- * only its SHA-256 goes out with the request, and the deep link comes back
- * carrying a code that is worthless without the verifier. `device-codes.ts` is
- * the server's half.
- *
- * The one module under `$lib/api` that touches the shell. It belongs with the
- * calls it makes rather than with the navigation edges, because everything
- * except the two listeners below is this client's own protocol.
- */
-
-/**
- * Bytes to base64url — the spelling both PKCE and the server's hashes use.
- *
- * `btoa` wants one character per byte, and every byte is below 128 here, so the
- * code-point spelling is the code-unit spelling. Spread rather than a loop
- * because these are 32 bytes, not a stream.
- */
 function base64url(bytes: Uint8Array): string {
 	const binary = String.fromCodePoint(...bytes);
 
 	return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '');
 }
 
-/** 256 bits from the platform CSPRNG, the same strength the server's secrets use. */
 function newVerifier(): string {
 	const bytes = new Uint8Array(32);
 	crypto.getRandomValues(bytes);
@@ -72,7 +42,6 @@ async function challengeFor(verifier: string): Promise<string> {
  */
 const CLOSE_GRACE_MS = 500;
 
-/** The redirect's scheme and host, lowercased once for comparison. */
 const RETURN = new URL(DEVICE_REDIRECT);
 
 function isReturn(incoming: string): boolean {
@@ -81,25 +50,10 @@ function isReturn(incoming: string): boolean {
 
 		return url.protocol === RETURN.protocol && url.host.toLowerCase() === RETURN.host.toLowerCase();
 	} catch {
-		// Not a URL at all, so not ours. Another app's deep link, most likely.
 		return false;
 	}
 }
 
-/**
- * Opens the Custom Tab and resolves with the URL the app was returned on, or
- * null if the person backed out of it.
- *
- * The promise is bridged from native events rather than awaited from a call,
- * which is what `new Promise` is for — the same case `password.ts` makes for
- * scrypt. The two listeners race and the loser is simply dropped: `resolve`
- * ignores every call after the first, so no guard of our own is needed.
- *
- * Both listeners are removed on every path, and so is the grace timer. An
- * `appUrlOpen` left registered would fire on the next sign-in as well, and
- * resolve a promise nobody is waiting on with a code that has already been
- * spent.
- */
 async function openAndWait(url: string): Promise<URL | null> {
 	let settle!: (value: URL | null) => void;
 
@@ -108,9 +62,6 @@ async function openAndWait(url: string): Promise<URL | null> {
 		settle = resolve;
 	});
 
-	// Held so the `finally` can drop it: on the success path the deep link brings
-	// the app forward and finishes the tab too, leaving a timer scheduled against
-	// a promise that has already settled.
 	let grace: ReturnType<typeof setTimeout> | undefined;
 
 	const opened = await App.addListener('appUrlOpen', ({ url: incoming }) => {
@@ -132,41 +83,19 @@ async function openAndWait(url: string): Promise<URL | null> {
 	} finally {
 		clearTimeout(grace);
 
-		// Independent, and on the path where somebody is watching the app come back
-		// to the foreground.
 		await Promise.all([opened.remove(), closed.remove()]);
 
-		// Idempotent, and needed on the success path: the deep link brings the app
-		// forward without necessarily dismissing the tab behind it, and one left
-		// open is a finished sign-in still sitting in the recents.
 		try {
 			await Browser.close();
 		} catch {
-			// Already gone, which is the ordinary case after a cancellation.
+			// Already closed by the user, which is the common path.
 		}
 	}
 }
 
-/**
- * The whole flow, from the button in Settings to a signed-in account.
- *
- * Throws `ApiError` for everything a caller has to render: `NO_SERVER` when
- * nothing is connected, `OFFLINE` when the person backed out of the browser —
- * there is nothing to report and nothing went wrong — and whatever the server
- * said for the rest.
- *
- * The verifier lives in memory for the duration, and that is a deliberate
- * bound: if Android reclaims the app while the Custom Tab is in front of it,
- * the return cold-starts a process that has no verifier and the code goes
- * unspent. It expires in a minute and the button is still there. Persisting it
- * would mean writing a live half-credential to disk to save a tap in the rarest
- * path there is.
- */
 export async function signInWithGoogle(): Promise<Account> {
 	const verifier = newVerifier();
 
-	// Raises `NO_SERVER` when nothing is connected — the guard lives there, with
-	// the `apiBase()` read it protects.
 	const url = googleStartUrl({ challenge: await challengeFor(verifier) });
 
 	const returned = await openAndWait(url);
@@ -175,8 +104,6 @@ export async function signInWithGoogle(): Promise<Account> {
 		throw new ApiError(OFFLINE, 'sign-in was cancelled');
 	}
 
-	// The callback's own wording, already in the voice the rest of the screens
-	// use — it wrote these for a person, not for a log.
 	const failure = returned.searchParams.get('error');
 	if (failure !== null) {
 		throw new ApiError(OFFLINE, failure === '' ? 'sign-in was cancelled' : failure);

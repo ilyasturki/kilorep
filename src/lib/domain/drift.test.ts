@@ -5,13 +5,6 @@ import type { SetDrift } from '$lib/domain/drift';
 import type { Template } from '$lib/domain/template';
 import type { SetType, Workout } from '$lib/domain/workout';
 
-/**
- * The diff that has no screen to check it: a wrong match reads as a plausible
- * badge on a plausible row. Matching is by catalog exercise and occurrence
- * order, never by node id — the ids were re-minted at start and agreeing ids
- * here would be a broken fixture, so the builders mint disjoint ones.
- */
-
 type PlannedShape = [exerciseId: string, targets: (number | null)[]];
 
 function plan(...exercises: PlannedShape[]): Template {

@@ -4,8 +4,6 @@ import type { PastSession } from '$lib/domain/stats';
 import { bestSet, estimated1Rm, rawPr } from '$lib/domain/stats';
 import type { PerformedSet } from '$lib/domain/workout';
 
-// `rawPr` never reads the workout link or the ordinal; dummies keep the
-// literals below about what the tests are about.
 const session = (date: number, sets: PerformedSet[]): PastSession => ({
 	date,
 	workoutId: `w${date}`,
@@ -13,10 +11,6 @@ const session = (date: number, sets: PerformedSet[]): PastSession => ({
 	sets
 });
 
-// None of this module's math reads the rating, which is exactly why it is
-// spelled once here rather than on every literal below: a helper keeps the
-// tests about weight and reps, and `toEqual` compares whole objects, so both
-// sides of every assertion have to agree about a field neither is testing.
 const set = (weight: number, reps: number): PerformedSet => ({ weight, reps, rpe: null });
 
 describe('bestSet', () => {

@@ -2,33 +2,10 @@
 	import type { BodyweightEntry } from '$lib/domain/bodyweight';
 	import { addDays } from '$lib/domain/bodyweight';
 
-	/**
-	 * The trend: raw weigh-ins as faint dots, the 7-day rolling average as the
-	 * line. Both layers on purpose — daily weight swings on water and meal
-	 * timing by more than a real week's change, so the average is the signal,
-	 * and the dots keep it honest about being derived.
-	 *
-	 * The app's first chart, and deliberately monochrome: the line wears ink,
-	 * the dots wear the faint step, and the accent stays out of it — the accent
-	 * means "this logs a set", and a reading is not that. One series, so no
-	 * legend: the section heading already names what is plotted.
-	 *
-	 * The x-domain is the fixed window, not the data: a fortnight of entries
-	 * sits in its own corner of the twelve weeks rather than stretching to fill
-	 * them, because "how long have I been tracking" is part of what the chart
-	 * answers.
-	 *
-	 * Geometry in device pixels via `bind:clientWidth` rather than a scaled
-	 * viewBox, so hairlines stay hairlines and text stays text-sized.
-	 */
 	type Props = {
-		/** Raw entries inside the window, oldest first. */
 		dots: BodyweightEntry[];
-		/** The rolling average inside the window, oldest first. */
 		line: BodyweightEntry[];
-		/** The window's last day, inclusive — the right edge. */
 		today: string;
-		/** Window length in calendar days. */
 		days?: number;
 	};
 
@@ -55,11 +32,6 @@
 
 	const x = $derived((date: string) => LEFT + ((at(date) - t0) / (t1 - t0)) * innerWidth);
 
-	/**
-	 * The y-domain hugs the data, padded so the extremes never sit on the
-	 * frame; zero would be absurd here — nobody weighs nothing, and a weight
-	 * axis from zero flattens a real cut into a flat line.
-	 */
 	const domain = $derived.by(() => {
 		const values = [...dots, ...line].map((entry) => entry.kg);
 		const lo = Math.min(...values);
@@ -73,7 +45,6 @@
 		(kg: number) => TOP + ((domain.hi - kg) / (domain.hi - domain.lo)) * innerHeight
 	);
 
-	/** Clean-numbered y ticks: the coarsest step that still yields two or more. */
 	const ticks = $derived.by(() => {
 		const span = domain.hi - domain.lo;
 		const step = [10, 5, 2, 1, 0.5].find((s) => span / s >= 2) ?? 0.5;
@@ -87,7 +58,6 @@
 		return out;
 	});
 
-	/** First-of-month marks inside the window — the only x labels 12 weeks need. */
 	const months = $derived.by(() => {
 		const out: string[] = [];
 		const start = new Date(t0);
@@ -130,11 +100,6 @@
 			.join('')
 	);
 
-	/**
-	 * The hover layer: nearest weigh-in to the pointer, crosshair on its day,
-	 * the numbers in a fixed readout above the plot — a floating tooltip on a
-	 * phone hides under the finger that asked for it.
-	 */
 	let hovered = $state<number | null>(null);
 
 	function locate(event: PointerEvent & { currentTarget: SVGSVGElement }) {
@@ -195,8 +160,6 @@
 			onpointerdown={locate}
 			onpointerleave={() => (hovered = null)}
 		>
-			<!-- Recessive furniture first: hairline gridlines, solid, one step off
-			     the surface, with the tick values in muted text tokens. -->
 			{#each ticks as tick (tick)}
 				<line
 					x1={LEFT}
@@ -238,8 +201,6 @@
 				/>
 			{/if}
 
-			<!-- The raw layer: faint dots, each ringed in the surface colour so a
-			     dot crossing the line stays a dot. -->
 			{#each dots as dot (dot.date)}
 				<circle
 					cx={x(dot.date)}
@@ -250,7 +211,6 @@
 				/>
 			{/each}
 
-			<!-- The signal: the 7-day average, 2px, round-capped ink. -->
 			{#if line.length === 1}
 				<circle cx={x(line[0].date)} cy={y(line[0].kg)} r="4" class="fill-ink" />
 			{:else}

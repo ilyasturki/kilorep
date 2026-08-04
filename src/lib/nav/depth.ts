@@ -26,33 +26,16 @@
  *   there.
  */
 
-/** `PerformanceNavigationTiming['type']`, named so the pure half can take it. */
 export type EnterReason = 'navigate' | 'reload' | 'back_forward' | 'prerender';
 
-/**
- * The shape of `afterNavigate`'s payload, narrowed to the two fields that
- * change the count. Structural on purpose — taking SvelteKit's `AfterNavigate`
- * would drag the framework into a file that has no other use for it.
- */
 export type NavStep = { type: string; delta?: number | null };
 
 const KEY = 'kilorep:back-depth';
 
-/**
- * A reload keeps the stack behind it, and so does arriving by back or forward.
- * Only a fresh navigation into the app starts over — that is the deep link,
- * the typed address and the link from another site, all three of which have
- * nothing of ours behind them.
- */
 export function depthOnEnter(stored: number, reason: EnterReason): number {
 	return reason === 'navigate' ? 0 : Math.max(0, stored);
 }
 
-/**
- * `delta` is signed and already says how far a popstate moved, so forward
- * counts back up without a second branch. `leave` and `enter` are not steps
- * within the app and change nothing.
- */
 export function depthAfter(depth: number, step: NavStep): number {
 	if (step.type === 'popstate') {
 		return Math.max(0, depth + (step.delta ?? 0));
@@ -67,12 +50,6 @@ export function depthAfter(depth: number, step: NavStep): number {
 
 let counted = 0;
 
-/**
- * Swallows every way storage can fail to matter — Safari's private mode, a
- * quota, a disabled setting. Same argument as `buzz` in `ui/haptics.ts`: none
- * of them changes what the screen does next, and a back button that falls back
- * to its parent is the behaviour the app shipped with anyway.
- */
 function readStored(): number {
 	try {
 		return Number(sessionStorage.getItem(KEY)) || 0;
@@ -85,7 +62,7 @@ function writeStored(value: number): void {
 	try {
 		sessionStorage.setItem(KEY, String(value));
 	} catch {
-		// Deliberately silent — see above.
+		// `sessionStorage` throws in Safari private mode and on quota.
 	}
 }
 
@@ -113,21 +90,11 @@ export function startDepthTracking(): void {
 	writeStored(counted);
 }
 
-/** Called by the root layout for every navigation SvelteKit completes. */
 export function recordNavigation(step: NavStep): void {
 	counted = depthAfter(counted, step);
 	writeStored(counted);
 }
 
-/**
- * The count, clamped to what the tab could possibly hold.
- *
- * `history.length` is a poor floor and an honest ceiling: it over-reports by
- * counting other sites, but it cannot under-report, so a count above it is
- * certainly wrong. This is what turns the `replaceState` over-count into a
- * zero on the one path where being wrong would walk the user out of the app —
- * the sign-in redirect, whose replaced entry is the tab's only one.
- */
 export function backDepth(): number {
 	return Math.min(counted, Math.max(0, history.length - 1));
 }

@@ -39,12 +39,6 @@ import {
 	saturated
 } from './throttle.ts';
 
-/**
- * The auth surface below HTTP: everything a route calls, against a real SQLite
- * file and real scrypt. The hook that guards those routes is covered next door
- * in `../http/handle.test.ts`.
- */
-
 const PASSWORD = 'correct horse battery';
 
 let directory: string;
@@ -58,10 +52,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-	// Closed before the directory goes, and not merely for tidiness: every case
-	// here opens a `DatabaseSync` plus its WAL and shm handles, and unlinking the
-	// files out from under an open connection is silent on Linux, an error on
-	// Windows, and file descriptors either way.
 	db.$client.close();
 	rmSync(directory, { recursive: true, force: true });
 });
@@ -95,9 +85,6 @@ describe('decoy hash', () => {
 	test('parses as a stored hash and matches nothing', async () => {
 		const decoy = decoyHash();
 
-		// It has to reach the derivation to cost what a real verification costs;
-		// a malformed string would be rejected by the parser in microseconds and
-		// answer "no such account" by timing alone.
 		expect(decoy.startsWith('scrypt$')).toBe(true);
 		await expect(verifyPassword(PASSWORD, decoy)).resolves.toBe(false);
 		await expect(verifyPassword('', decoy)).resolves.toBe(false);
@@ -122,8 +109,6 @@ describe('verifyLogin', () => {
 	});
 
 	test('refuses an unknown address without saying so', async () => {
-		// The route answers 401 for both cases; this is the half that must not
-		// answer faster, which is why the unknown path still hashes.
 		await expect(verifyLogin(db, 'nobody@example.com', PASSWORD)).resolves.toBeNull();
 	});
 });
@@ -135,11 +120,6 @@ function identity(subject: string, email: string): { subject: string; email: str
 	return { subject, email };
 }
 
-/**
- * The rule about who gets an account, exhaustively — the part of Google sign-in
- * worth testing, and the reason it is a function that takes claims rather than
- * something buried in the callback beside two `fetch` calls.
- */
 describe('resolveGoogleIdentity', () => {
 	test('creates an account for an unknown identity when the instance is open', () => {
 		const result = resolveGoogleIdentity(db, identity('sub-1', 'Lifter@Example.com'), OPEN);
@@ -163,7 +143,6 @@ describe('resolveGoogleIdentity', () => {
 		const created = resolveGoogleIdentity(db, identity('sub-1', 'lifter@example.com'), OPEN);
 		const again = resolveGoogleIdentity(db, identity('sub-1', 'lifter@example.com'), CLOSED);
 
-		// Closed the second time, and it still works: the gate is about creating.
 		expect(again).toMatchObject({ ok: true, outcome: 'signed-in' });
 		expect(again.ok && created.ok && again.user.id).toBe(created.ok && created.user.id);
 	});
@@ -171,8 +150,6 @@ describe('resolveGoogleIdentity', () => {
 	test('links a new subject to the account that already holds its verified address', async () => {
 		const existing = await createUser(db, 'operator@example.com', PASSWORD);
 
-		// Closed, deliberately: linking is not creation, and this is how an
-		// operator moves onto Google without opening the instance to strangers.
 		const result = resolveGoogleIdentity(db, identity('sub-9', 'OPERATOR@example.com'), CLOSED);
 
 		expect(result).toMatchObject({ ok: true, outcome: 'linked' });
@@ -217,18 +194,11 @@ describe('a Google-only account has no password', () => {
 		const result = resolveGoogleIdentity(db, { subject: 'sub-1', email: 'g@example.com' }, true);
 		expect(result.ok && result.user.passwordHash).toBeNull();
 
-		// Not merely false: the empty string is what a caller sends when trying to
-		// find out whether an account has a password at all.
 		await expect(verifyLogin(db, 'g@example.com', PASSWORD)).resolves.toBeNull();
 		await expect(verifyLogin(db, 'g@example.com', '')).resolves.toBeNull();
 	});
 });
 
-/**
- * Claim validation, against tokens built here rather than fetched. The two
- * `fetch` calls around it are the untested part by decision — what matters is
- * that nothing gets past this with the wrong audience or an unverified address.
- */
 const CLIENT = 'client-123.apps.googleusercontent.com';
 const NOW = Date.parse('2026-07-29T12:00:00Z');
 
@@ -236,15 +206,6 @@ function segment(value: unknown): string {
 	return Buffer.from(JSON.stringify(value)).toString('base64url');
 }
 
-/**
- * A well-formed token, with whatever claims this case wants to break. The base
- * is rebuilt per call so no case can leak into another.
- *
- * Overrides are copied in a loop, which looks like the long way round and is the
- * only way left: spread is banned outside components, `Object.assign` on a fresh
- * literal trips `prefer-object-spread`, and assigning after the initializer
- * trips `no-immediate-mutation`.
- */
 function idToken(overrides: Record<string, unknown> = {}): string {
 	const claims: Record<string, unknown> = {
 		iss: 'https://accounts.google.com',
@@ -259,8 +220,6 @@ function idToken(overrides: Record<string, unknown> = {}): string {
 		claims[claim] = value;
 	}
 
-	// The signature is never read — see `verifyClaims` on why TLS stands in for
-	// it — so a token only has to be shaped like one.
 	return `${segment({ alg: 'RS256' })}.${segment(claims)}.signature`;
 }
 
@@ -322,7 +281,6 @@ function header(value: string): Request {
 describe('bearerToken', () => {
 	test('reads the secret out of an Authorization header', () => {
 		expect(bearerToken(header('Bearer kr_secret'))).toBe('kr_secret');
-		// The scheme is case-insensitive per RFC 7235; the secret is not.
 		expect(bearerToken(header('bearer kr_secret'))).toBe('kr_secret');
 		expect(bearerToken(header('Basic kr_secret'))).toBeNull();
 		expect(bearerToken(header('Bearer'))).toBeNull();
@@ -422,7 +380,6 @@ describe('token ownership', () => {
 		const yours = await createUser(db, 'yours@example.com', PASSWORD);
 		const { token, record } = issueToken(db, yours.id, 'your phone', 'device');
 
-		// A token id is visible to its owner, so the id alone must not be enough.
 		expect(revokeToken(db, mine.id, record.id)).toBe(false);
 		expect(resolveCredential(db, token)).not.toBeNull();
 
@@ -483,8 +440,6 @@ describe('login throttle', () => {
 			clearLoginFailures(ADDRESS, 'attacker@example.com');
 		}
 
-		// The pair counter was reset by nothing, and the address counter — which
-		// no success clears — has long since run out at 54 guesses.
 		expect(loginBlocked(ADDRESS, ACCOUNT)).toBe(true);
 		expect(loginBlocked(ADDRESS, 'yet-another@example.com')).toBe(true);
 	});
@@ -499,15 +454,10 @@ describe('login throttle', () => {
 	});
 
 	test('keeps the failure map bounded against an address a caller can vary at will', () => {
-		// A /64 is 2**64 addresses. Every entry here is fresh, so nothing expires
-		// and nothing gets reclaimed — the cap is the only thing standing between
-		// a stranger and unbounded memory.
 		for (let host = 0; host < 12_000; host++) {
 			recordLoginFailure(`2001:db8::${host.toString(16)}`, ACCOUNT);
 		}
 
-		// The oldest are gone and the newest are still counted, which is the
-		// order a fixed window puts them in.
 		expect(loginBlocked('2001:db8::0', ACCOUNT)).toBe(false);
 		for (let attempt = 0; attempt < 9; attempt++) {
 			recordLoginFailure('2001:db8::2ecf', ACCOUNT);

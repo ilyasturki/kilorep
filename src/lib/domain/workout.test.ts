@@ -12,7 +12,6 @@ import {
 	cursors,
 	draftSet,
 	firstUncompleted,
-	groupsOf,
 	hintFor,
 	hintLabel,
 	insertedSetCount,
@@ -32,31 +31,19 @@ import {
 } from '$lib/domain/workout';
 import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workout';
 
-/**
- * The rules that break silently.
- *
- * Every one of these is a case the screen cannot be trusted to reveal: an
- * off-by-one in the hint lookup reads as a plausible weight, a wrong advance
- * looks like a jump the user half-remembers making, and a check that goes live
- * on an untouched zero logs a set nobody performed. The layout is judged by
- * thumb; these are judged here.
- */
-
 function idsOf(workout: Workout): string[] {
 	return cursors(workout).map((c) => c.set.id);
 }
 
-/** Session order by exercise, which is the thing a reorder is judged on. */
 function orderOf(workout: Workout): string[] {
-	return groupsOf(workout).map((g) => g.exerciseId);
+	return workout.entries.flatMap((entry) => entry.exercises.map((e) => e.exerciseId));
 }
 
-/** A bare uncompleted set, for the shapes the fixture deliberately does not have. */
-function openSet(id: string): WorkoutSet {
+function openSet(id: string, plannedReps: number | null = 10): WorkoutSet {
 	return {
 		id,
 		type: 'normal',
-		plannedReps: 10,
+		plannedReps,
 		weight: null,
 		reps: null,
 		rpe: null,
@@ -64,11 +51,6 @@ function openSet(id: string): WorkoutSet {
 	};
 }
 
-/**
- * The fixture cut down to one exercise and one superset: three sets of `we-a`
- * against two of `we-b`, so the ragged tail is under every test that uses it
- * rather than only the one that asks about it.
- */
 function superset(workout: Workout): Workout {
 	workout.entries = [
 		workout.entries[0],
@@ -88,10 +70,8 @@ function superset(workout: Workout): Workout {
 	return workout;
 }
 
-/** The id a split hands its new entries, fixed so a test can name what it expects. */
 const freshEntry = (): string => 'fresh';
 
-/** A missing cursor is a broken fixture, so it fails loudly instead of widening every type. */
 function at(workout: Workout, setId: string): SetCursor {
 	const cursor = cursorFor(workout, setId);
 
@@ -110,7 +90,6 @@ function prefillOf(workout: Workout, setId: string): Prefill {
 	return prefillFor(at(workout, setId), history);
 }
 
-/** Log every set from the top, which is the ordinary linear path through a session. */
 function completeAll(workout: Workout): void {
 	for (const cursor of cursors(workout)) {
 		commitSet(workout, cursor.set.id, 100, 5);
@@ -159,7 +138,6 @@ describe('hintFor', () => {
 
 describe('prefillFor', () => {
 	test('weight recalls, reps prefer the plan over the recall', () => {
-		// Last time's fourth bench set was 77.5 × 7, but 8 reps are planned today.
 		expect(prefillOf(freshWorkout(0), 'bench-4')).toEqual({ weight: 77.5, reps: 8 });
 	});
 
@@ -180,7 +158,6 @@ describe('prefillFor', () => {
 
 	test('a set past the end of history carries the one above it', () => {
 		const workout = freshWorkout(0);
-		// Bench has four sets last time, so a fifth is a set history cannot reach.
 		const added = addSet(workout, 'we-bench', 'bench-5');
 		commitSet(workout, 'bench-4', 75, 8);
 
@@ -192,8 +169,6 @@ describe('prefillFor', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'pecdeck-1', 45, 10);
 
-		// The plan still owns the reps; only the weight had nowhere else to come
-		// from. Every set of every exercise is in this state for a new user.
 		expect(prefillOf(workout, 'pecdeck-2')).toEqual({ weight: 45, reps: 10 });
 	});
 
@@ -201,9 +176,6 @@ describe('prefillFor', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'fly-1', 25, 12);
 
-		// Last time's second fly was 20 × 12, but 25 is what is on the cable
-		// stack right now — the user's decision of a minute ago beats the memory
-		// of last week. The recall stays on the row as a label, never as prefill.
 		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: 25, reps: 12 });
 	});
 
@@ -211,9 +183,6 @@ describe('prefillFor', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'bench-1', 82.5, 6);
 
-		// 8 reps are planned today: an instruction for this set, which neither
-		// the 6 just ground out above it nor last time's memory outranks. The
-		// weight has no planned tier, so it carries.
 		expect(prefillOf(workout, 'bench-2')).toEqual({ weight: 82.5, reps: 8 });
 	});
 
@@ -221,23 +190,16 @@ describe('prefillFor', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'incline-1', 32.5, 8);
 
-		// No plan on incline, so with a set above holding both numbers the
-		// recall (30 × 9) is never reached.
 		expect(prefillOf(workout, 'incline-2')).toEqual({ weight: 32.5, reps: 8 });
 	});
 
 	test('the carry skips a warmup and any set holding nothing', () => {
 		const workout = freshWorkout(0);
-		// Nothing logged under pecdeck, so the only set above the third holding a
-		// pair is none of them — and bench's warmup belongs to another exercise
-		// entirely, which is the off-by-one the working-set walk already counts past.
 		expect(prefillOf(workout, 'pecdeck-3')).toEqual({ weight: null, reps: 10 });
 
 		const bench = freshWorkout(0);
 		addSet(bench, 'we-bench', 'bench-5');
 
-		// bench-w is a completed 40 × 10 above four blank working sets: a warmup is
-		// never what the next working set opens on.
 		expect(prefillOf(bench, 'bench-5')).toEqual({ weight: null, reps: null });
 	});
 });
@@ -286,8 +248,6 @@ describe('draftSet', () => {
 		});
 	});
 
-	// The whole point of the pair being written together: a draft that skipped
-	// nulls could put a number into a set and never take it back out.
 	test('null is a value, not a slot to skip', () => {
 		const workout = freshWorkout(0);
 		draftSet(workout, 'bench-1', { weight: 80, reps: 8 });
@@ -296,9 +256,6 @@ describe('draftSet', () => {
 		expect(at(workout, 'bench-1').set).toMatchObject({ weight: null, reps: null });
 	});
 
-	// Seeding a set is `draftSet` of its own prefill, and `prefillFor` reads what
-	// the set already holds first — so a set that has been drafted, or logged,
-	// opens on itself and seeding it again changes nothing.
 	test('seeding is idempotent, and cannot rewrite a logged set', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'bench-1', 82.5, 6);
@@ -312,9 +269,6 @@ describe('draftSet', () => {
 		});
 	});
 
-	// The claim only ever moves down, and only here: a set stripped of a number
-	// is a set that can no longer say what happened, and `markSet` would refuse
-	// to make that claim in the first place.
 	test('a set that loses a value stops claiming it happened', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'bench-1', 82.5, 6);
@@ -352,7 +306,6 @@ describe('rateSet', () => {
 		const set = at(workout, 'bench-1').set;
 
 		expect(set.rpe).toBe(8);
-		// The claim and the numbers are none of this function's business.
 		expect(set.completed).toBe(true);
 		expect(set.weight).toBe(82.5);
 		expect(set.reps).toBe(7);
@@ -367,7 +320,6 @@ describe('rateSet', () => {
 
 		expect(set.rpe).toBe(9);
 		expect(set.completed).toBe(false);
-		// The whole point of the field being optional: it is invisible to the check.
 		expect(canCommit(set.weight, set.reps)).toBe(false);
 	});
 
@@ -389,8 +341,6 @@ describe('rateSet', () => {
 		expect(at(workout, 'bench-1').set.rpe).toBe(10);
 	});
 
-	// A rating read off an untrusted payload can arrive as NaN, and settling one
-	// would clamp it to the floor and file it as a deliberate RPE 1.
 	test('a NaN is unrated, not the bottom of the scale', () => {
 		const workout = freshWorkout(0);
 
@@ -425,8 +375,6 @@ describe('markSet', () => {
 		expect(at(workout, 'bench-1').set.completed).toBe(true);
 	});
 
-	// The rule that keeps the volume tally honest: a set claiming it happened
-	// without saying what happened would count as a bodyweight zero.
 	test('refuses to claim a set with nothing in it', () => {
 		const workout = freshWorkout(0);
 		draftSet(workout, 'bench-1', { weight: null, reps: null });
@@ -445,8 +393,6 @@ describe('markSet', () => {
 		expect(markSet(workout, 'bench-1', true)).toBe(false);
 	});
 
-	// Clearing has no such gate: whatever the set holds stays on it, which is
-	// what makes the disc a toggle rather than a one-way door.
 	test('clearing a blank set is allowed', () => {
 		const workout = freshWorkout(0);
 		draftSet(workout, 'bench-1', { weight: null, reps: null });
@@ -464,16 +410,7 @@ describe('addSet', () => {
 		const workout = freshWorkout(0);
 		const set = addSet(workout, 'we-bench', 'bench-5');
 
-		expect(set).toEqual({
-			id: 'bench-5',
-			type: 'normal',
-			plannedReps: null,
-			weight: null,
-			reps: null,
-			rpe: null,
-			completed: false
-		});
-		// At the foot of its own exercise, not the foot of the session.
+		expect(set).toEqual(openSet('bench-5', null));
 		expect(idsOf(workout).slice(0, 7)).toEqual([
 			'bench-w',
 			'bench-1',
@@ -485,8 +422,6 @@ describe('addSet', () => {
 		]);
 	});
 
-	// History has four bench sets. The fifth is a set nothing recalls, and the
-	// screen has to be able to say so rather than guess it from its neighbour.
 	test('the added set has no hint and cannot be committed untouched', () => {
 		const workout = freshWorkout(0);
 		addSet(workout, 'we-bench', 'bench-5');
@@ -514,17 +449,7 @@ describe('addExercise', () => {
 		expect(workout.entries.at(-1)).toBe(entry);
 		expect(idsOf(workout).slice(-3)).toEqual(['row-1', 'row-2', 'row-3']);
 
-		// Blank and unplanned: nothing prescribed these sets, and the hint path
-		// resolves them from history by index without any copying here.
-		expect(entry!.exercises[0].sets[0]).toEqual({
-			id: 'row-1',
-			type: 'normal',
-			plannedReps: null,
-			weight: null,
-			reps: null,
-			rpe: null,
-			completed: false
-		});
+		expect(entry!.exercises[0].sets[0]).toEqual(openSet('row-1', null));
 	});
 
 	test('an inserted exercise with history opens on last time, via the ordinary hint path', () => {
@@ -545,9 +470,6 @@ describe('addExercise', () => {
 		expect(workout.entries).toHaveLength(4);
 	});
 
-	// Where the ask was made is where the exercise lands. The pane's add row
-	// belongs to a block, and an exercise appearing at the foot of a session
-	// scrolled somewhere else is a drag the user never asked to perform.
 	test('lands directly behind the entry it was asked from', () => {
 		const workout = freshWorkout(0);
 
@@ -561,8 +483,6 @@ describe('addExercise', () => {
 			'pec-deck'
 		]);
 
-		// The sets travel with it: position is the entry's, and the cursor walk
-		// reads the tree rather than a second ordering.
 		expect(idsOf(workout).slice(8, 11)).toEqual(['row-1', 'row-2', 'row-3']);
 	});
 
@@ -574,9 +494,6 @@ describe('addExercise', () => {
 		expect(workout.entries.at(-1)!.id).toBe('entry-5');
 	});
 
-	// The same forgiveness `moveEntry` shows when it clamps a drag held past the
-	// last row: a placement the caller half-remembered is not worth refusing an
-	// insert over, and the end is where an unplaced exercise goes anyway.
 	test('an unknown anchor falls to the end rather than refusing the insert', () => {
 		const workout = freshWorkout(0);
 		const entry = addExercise(workout, 'barbell-row', ids, 'entry-nope');
@@ -606,8 +523,6 @@ describe('removeSet', () => {
 		expect(idsOf(workout)).not.toContain('bench-1');
 	});
 
-	// The set numbers are positional, so removing one renumbers the rest — and
-	// with them the hint each remaining set looks up.
 	test('the sets below it move up, hints included', () => {
 		const workout = freshWorkout(0);
 		removeSet(workout, 'bench-1');
@@ -639,8 +554,6 @@ describe('replaceExercise', () => {
 		const workout = freshWorkout(0);
 		const exercise = replaceExercise(workout, 'we-incline', 'barbell-row', ids);
 
-		// Second of four, exactly where incline was. A remove-and-add would have
-		// dropped it at the end and made the user drag it back.
 		expect(workout.entries[1].exercises[0]).toBe(exercise);
 		expect(workout.entries[1].id).toBe('entry-2');
 		expect(orderOf(workout)).toEqual(['bench-press', 'barbell-row', 'cable-fly', 'pec-deck']);
@@ -653,15 +566,7 @@ describe('replaceExercise', () => {
 
 		expect(idsOf(workout)).not.toContain('incline-1');
 		expect(idsOf(workout).slice(5, 8)).toEqual(['row-1', 'row-2', 'row-3']);
-		expect(at(workout, 'row-1').set).toEqual({
-			id: 'row-1',
-			type: 'normal',
-			plannedReps: null,
-			weight: null,
-			reps: null,
-			rpe: null,
-			completed: false
-		});
+		expect(at(workout, 'row-1').set).toEqual(openSet('row-1', null));
 	});
 
 	test('zero sets is refused, and the slot it would have emptied is left alone', () => {
@@ -677,8 +582,6 @@ describe('replaceExercise', () => {
 		expect(replaceExercise(freshWorkout(0), 'nope', 'barbell-row', ids)).toBeNull();
 	});
 
-	// The one that makes this leg-scoped rather than entry-scoped: the sibling
-	// and everything logged under it must survive a swap it was not part of.
 	test('the other leg of a superset is untouched', () => {
 		const workout = superset(freshWorkout(0));
 		commitSet(workout, 'b-1', 12, 15);
@@ -700,8 +603,6 @@ describe('removeExercise', () => {
 		expect(idsOf(workout)).not.toContain('incline-1');
 	});
 
-	// No floor, unlike `removeSet`. An empty session is where every session
-	// starts, so there is nothing here to refuse.
 	test('the last exercise goes too, leaving an empty session', () => {
 		const workout = freshWorkout(0);
 
@@ -717,8 +618,6 @@ describe('removeExercise', () => {
 		expect(removeExercise(freshWorkout(0), 'nope')).toBe(false);
 	});
 
-	// Half a superset is a leg leaving, not the pair. The entry survives holding
-	// what is left, and only empties out when the last leg goes.
 	test('one leg of a superset leaves the other standing in the entry', () => {
 		const workout = superset(freshWorkout(0));
 
@@ -746,8 +645,6 @@ describe('joinEntry', () => {
 		expect(workout.entries.map((e) => e.id)).toEqual(['entry-1', 'entry-2', 'entry-4']);
 	});
 
-	// The whole reason a join moves rather than copies: three sets of curls done
-	// before the pairing was decided are still three sets of curls.
 	test('logged sets ride along', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'fly-1', 20, 12);
@@ -770,7 +667,6 @@ describe('joinEntry', () => {
 		expect(joinEntry(freshWorkout(0), 'entry-1', 'nope')).toBe(false);
 	});
 
-	// A third leg is the same act again. Nothing caps an entry at two.
 	test('a third leg joins the same way', () => {
 		const workout = freshWorkout(0);
 
@@ -788,8 +684,6 @@ describe('joinEntry', () => {
 describe('supersetWith', () => {
 	const ids = { exercise: 'we-new', sets: ['new-1', 'new-2'] };
 
-	// The pick named something already being performed, so it moves rather than
-	// arriving fresh — and the ids the caller minted go unused.
 	test('a movement already in the session moves in, logged sets and all', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'fly-1', 20, 12);
@@ -809,8 +703,6 @@ describe('supersetWith', () => {
 		expect(at(workout, 'new-1').set.completed).toBe(false);
 	});
 
-	// "Elsewhere" excludes this entry's own legs: naming one of them is a second
-	// of it, not the no-op a bare `joinEntry` would report.
 	test('a movement already standing in this entry is added again', () => {
 		const workout = freshWorkout(0);
 
@@ -818,8 +710,6 @@ describe('supersetWith', () => {
 		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench', 'we-new']);
 	});
 
-	// The same exercise twice is two nodes but one name, and the first is the
-	// nearest thing to "the one you meant" an id can express.
 	test('the first match wins when the session holds the exercise twice', () => {
 		const workout = freshWorkout(0);
 		addExercise(workout, 'cable-fly', {
@@ -860,8 +750,6 @@ describe('splitEntry', () => {
 		expect(idsOf(workout)).toContain('a-1');
 	});
 
-	// The first leg keeps the entry so a screen holding that id keeps pointing at
-	// something, and the block the gesture was made from does not jump.
 	test('the first leg keeps the entry id', () => {
 		const workout = superset(freshWorkout(0));
 
@@ -894,15 +782,7 @@ describe('addExerciseTo', () => {
 		const workout = freshWorkout(0);
 		addExerciseTo(workout, 'entry-1', 'barbell-row', ids);
 
-		expect(at(workout, 'new-1').set).toEqual({
-			id: 'new-1',
-			type: 'normal',
-			plannedReps: null,
-			weight: null,
-			reps: null,
-			rpe: null,
-			completed: false
-		});
+		expect(at(workout, 'new-1').set).toEqual(openSet('new-1', null));
 	});
 
 	test('zero sets and an unknown entry are both refused', () => {
@@ -931,7 +811,6 @@ describe('advanceFrom', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'bench-4', 80, 8);
 
-		// Sets 1–3 are still open above it, and it goes forward anyway.
 		expect(idOf(advanceFrom(workout, 'bench-4'))).toBe('incline-1');
 	});
 
@@ -961,85 +840,6 @@ describe('advanceFrom', () => {
 	});
 });
 
-describe('groupsOf', () => {
-	test('one group per exercise, in session order, warmup included', () => {
-		const groups = groupsOf(freshWorkout(0));
-
-		expect(groups.map((g) => g.exerciseId)).toEqual([
-			'bench-press',
-			'incline-dumbbell-press',
-			'cable-fly',
-			'pec-deck'
-		]);
-		// The node id, not the catalog id — what tells two performances of the
-		// same exercise apart.
-		expect(groups.map((g) => g.id)).toEqual(['we-bench', 'we-incline', 'we-fly', 'we-pecdeck']);
-		expect(groups[0].cursors.map((c) => c.set.id)).toEqual([
-			'bench-w',
-			'bench-1',
-			'bench-2',
-			'bench-3',
-			'bench-4'
-		]);
-	});
-
-	/**
-	 * The one rule in this build that exists only for supersets, and the fixture
-	 * has no superset to exercise it. Built here instead, because a screen that
-	 * merged the two halves of a superset would look plausible while being wrong.
-	 */
-	test('a superset stays two adjacent groups rather than merging', () => {
-		const workout = freshWorkout(0);
-
-		workout.entries = [
-			{
-				id: 'superset',
-				exercises: [
-					{ id: 'we-a', exerciseId: 'bench', sets: [openSet('a-1')] },
-					{ id: 'we-b', exerciseId: 'fly', sets: [openSet('b-1')] }
-				]
-			}
-		];
-
-		expect(groupsOf(workout).map((g) => g.exerciseId)).toEqual(['bench', 'fly']);
-	});
-
-	test('both halves of a superset name the one entry a reorder would move', () => {
-		const workout = freshWorkout(0);
-
-		workout.entries = [
-			{
-				id: 'superset',
-				exercises: [
-					{ id: 'we-a', exerciseId: 'bench', sets: [openSet('a-1')] },
-					{ id: 'we-b', exerciseId: 'fly', sets: [openSet('b-1')] }
-				]
-			}
-		];
-
-		expect(groupsOf(workout).map((g) => g.entryId)).toEqual(['superset', 'superset']);
-	});
-
-	// The session walk interleaves; a block does not. A group folded out of the
-	// spliced sequence would cut at every crossing and hand the screen four
-	// blocks of one set, which is the bug this walk exists to not have.
-	test('each leg keeps its own sets, unspliced', () => {
-		const groups = groupsOf(superset(freshWorkout(0)));
-
-		expect(groups.map((g) => g.cursors.map((c) => c.set.id))).toEqual([
-			['bench-w', 'bench-1', 'bench-2', 'bench-3', 'bench-4'],
-			['a-1', 'a-2', 'a-3'],
-			['b-1', 'b-2']
-		]);
-	});
-});
-
-/**
- * The round order — the one rule that only exists for supersets, and the one
- * nothing on screen would reveal: a cursor running straight down one leg looks
- * exactly like a cursor doing the right thing until you notice you did three
- * sets of flyes before touching the pec deck.
- */
 describe('performing a superset', () => {
 	test('the legs interleave round by round', () => {
 		const workout = superset(freshWorkout(0));
@@ -1054,8 +854,6 @@ describe('performing a superset', () => {
 		expect(idOf(advanceFrom(workout, 'a-1'))).toBe('b-1');
 	});
 
-	// Nothing evens the legs up when a superset is made, so the longer one keeps
-	// going alone once the shorter has run out. That is how it gets lifted.
 	test('a ragged leg finishes its tail alone', () => {
 		const workout = superset(freshWorkout(0));
 		commitSet(workout, 'b-2', 40, 12);
@@ -1063,8 +861,6 @@ describe('performing a superset', () => {
 		expect(idOf(advanceFrom(workout, 'b-2'))).toBe('a-3');
 	});
 
-	// Ramping into a movement happens before the circuit, not between two legs
-	// of it.
 	test('warmups sit ahead of the rounds, in leg order', () => {
 		const workout = superset(freshWorkout(0));
 
@@ -1081,9 +877,6 @@ describe('performing a superset', () => {
 		expect(idsOf(workout).slice(5)).toEqual(['b-w', 'a-1', 'b-1', 'a-2', 'b-2', 'a-3']);
 	});
 
-	// The single-leg branch, which is every other entry in the app: a warmup
-	// written between two working sets stays where the lifter put it, because
-	// hoisting it would be the walk editing the session.
 	test('a lone exercise keeps its own array order', () => {
 		const workout = freshWorkout(0);
 
@@ -1100,9 +893,6 @@ describe('performing a superset', () => {
 		expect(idsOf(workout).slice(0, 4)).toEqual(['bench-w', 'bench-1', 'bench-w2', 'bench-2']);
 	});
 
-	// The hint index counts working sets of the exercise, and a superset must not
-	// disturb that: leg B's first working set is still its first, whatever is
-	// being lifted between the two of them.
 	test('the working index is counted per leg, not across the entry', () => {
 		const workout = superset(freshWorkout(0));
 
@@ -1137,28 +927,13 @@ describe('moveEntry', () => {
 		]);
 	});
 
-	// A superset is one entry and two groups. Dragging it must not leave half of
-	// it three exercises away from the other half.
 	test('a superset moves whole', () => {
-		const workout = freshWorkout(0);
-
-		workout.entries = [
-			workout.entries[0],
-			{
-				id: 'superset',
-				exercises: [
-					{ id: 'we-a', exerciseId: 'fly', sets: [openSet('a-1')] },
-					{ id: 'we-b', exerciseId: 'pecdeck', sets: [openSet('b-1')] }
-				]
-			}
-		];
+		const workout = superset(freshWorkout(0));
 
 		expect(moveEntry(workout, 'superset', 0)).toBe(true);
-		expect(orderOf(workout)).toEqual(['fly', 'pecdeck', 'bench-press']);
+		expect(orderOf(workout)).toEqual(['cable-fly', 'pec-deck', 'bench-press']);
 	});
 
-	// The drag computes this index off row midpoints, so the last row is exactly
-	// where a rounding error lands.
 	test('an index past the end clamps rather than refusing the move', () => {
 		const workout = freshWorkout(0);
 
@@ -1187,20 +962,15 @@ describe('moveEntry', () => {
 		expect(moveEntry(freshWorkout(0), 'nope', 0)).toBe(false);
 	});
 
-	// Reordering is not a jump: the set stays exactly where the cursor left it,
-	// and what changes is what comes *next* — because the advance reads position
-	// at the moment it is asked rather than remembering one.
 	test('the set stays put, but the set after it follows the new order', () => {
 		const workout = freshWorkout(0);
 		completeAll(workout);
-		// Two gaps, one in fly and one in pecdeck, with fly above.
 		workout.entries[2].exercises[0].sets[0].completed = false;
 		workout.entries[3].exercises[0].sets[0].completed = false;
 
 		expect(idOf(advanceFrom(workout, 'bench-4'))).toBe('fly-1');
 		expect(idOf(firstUncompleted(workout))).toBe('fly-1');
 
-		// Fly goes to the foot of the session, so pecdeck is now the nearer gap.
 		moveEntry(workout, 'entry-3', 3);
 
 		expect(cursorFor(workout, 'bench-4')).not.toBeNull();
@@ -1264,15 +1034,12 @@ describe('settle', () => {
 		expect(settle(1, 2.5)).toBe(2.5);
 	});
 
-	// Open by default, because a weight has no ceiling. The rating field is the
-	// one caller that passes one.
 	test('caps at max when it is given one, and never otherwise', () => {
 		expect(settle(999)).toBe(999);
 		expect(settle(12, 1, 10)).toBe(10);
 	});
 });
 
-/** Deterministic ids, so a test can name the node it means. */
 function mint(prefix: string): () => string {
 	let n = 0;
 
@@ -1283,23 +1050,14 @@ function mint(prefix: string): () => string {
 	};
 }
 
-/** Every node id in a tree, walked — the same sweep template.test makes. */
 function idsIn(workout: Workout): string[] {
-	const out = [workout.id];
-
-	for (const entry of workout.entries) {
-		out.push(entry.id);
-
-		for (const exercise of entry.exercises) {
-			out.push(exercise.id);
-
-			for (const set of exercise.sets) {
-				out.push(set.id);
-			}
-		}
-	}
-
-	return out;
+	return [
+		workout.id,
+		...workout.entries.flatMap((entry) => [
+			entry.id,
+			...entry.exercises.flatMap((ex) => [ex.id, ...ex.sets.map((set) => set.id)])
+		])
+	];
 }
 
 describe('copy-on-repeat', () => {
@@ -1316,8 +1074,6 @@ describe('copy-on-repeat', () => {
 
 		const sets = cursors(next).map((c) => c.set);
 
-		// Bench's warmup is gone; its four working sets survive, and so does
-		// every planned target — the prescription repeats, the numbers do not.
 		expect(sets.length).toBe(13);
 		expect(sets.slice(0, 4).map((s) => s.plannedReps)).toEqual([8, 8, 8, 8]);
 		expect(

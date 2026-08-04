@@ -11,56 +11,24 @@
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
-	import type { SetStatus } from '$lib/ui/SetMark.svelte';
+	import { statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
 
-	/**
-	 * One exercise of a past workout, in both of the screen's postures.
-	 *
-	 * One component and not two, because everything above the rows — the name,
-	 * the load-mode note, the drift badges — is the same fact in either posture,
-	 * and written twice it would drift the first time a badge changed. What the
-	 * posture decides is only what a row *is*: a line to read, or a disc that
-	 * claims, a body that opens an editor and a ⋯ that removes.
-	 *
-	 * Nothing here is the workout screen's. `ExerciseBlock` renders the same
-	 * three things for a session in progress, and reaching for it would have meant
-	 * a hint slot to suppress, a cursor to fake, and a disc that must become a
-	 * button inside a row whose whole surface is already one — all of it inside
-	 * the files hard rule 7 answers to.
-	 */
 	type Props = {
 		meta: Exercise;
-		/** The entry this exercise was performed under — what a reorder moves. */
 		entryId: string;
 		cursors: SetCursor[];
-		/**
-		 * Drift against the template as it stands today, already worded:
-		 * `Unplanned`, `+1 set`, `target moved`. Empty when the session matched its
-		 * plan, and empty when there was never a plan to hold it against.
-		 */
 		badges: string[];
 		editing: boolean;
-		/** The set expanded into an editor, when it is one of this exercise's. */
 		openSetId: string | null;
 		onopen: (setId: string) => void;
 		onclose: () => void;
 		ondraft: (setId: string, weight: number | null, reps: number | null) => void;
 		onrate: (setId: string, rpe: number | null) => void;
-		/** The disc: claim this set, or take the claim back. */
 		ontoggle: (setId: string) => void;
-		/** Handed the element that asked as well, so the desktop menu can hang from it. */
 		onoptions: (setId: string, anchor: HTMLElement) => void;
-		/** The name: swap what was performed here, or take it out of the record. */
 		onexercise: (anchor: HTMLElement) => void;
 		onadd: () => void;
-		/**
-		 * The drag handle, owned by the screen — this is one draggable unit, and
-		 * the gesture belongs to the list that holds the order. Handed the entry id
-		 * so the screen can declare one handle for every section: a snippet
-		 * declared inside the `{#each}` would leave the animated wrapper with a
-		 * sibling, which `animate:` forbids.
-		 */
 		grip?: Snippet<[string]>;
 	};
 
@@ -82,27 +50,10 @@
 		grip
 	}: Props = $props();
 
-	/**
-	 * A warmup stays a warmup once logged — its disc wears a W rather than a
-	 * check, the same rule the workout screen keeps, because it was never a
-	 * working set and the list must not imply it counted.
-	 */
-	function statusOf(cursor: SetCursor): SetStatus {
-		if (cursor.set.type === 'warmup') {
-			return 'warmup';
-		}
-
-		return cursor.set.completed ? 'done' : 'pending';
-	}
-
 	const note = $derived(loadModeNote(meta.loadMode));
 </script>
 
-<!-- The numbers as the session left them, in the one dress both postures share.
-     `—` for a set that holds neither, which is every set added while editing
-     until it is answered. -->
 {#snippet numbers(cursor: SetCursor)}
-	<!-- How hard the set was, in whichever of the two names this account reads. -->
 	{@const felt = exertionLabel(cursor.set.rpe, exertionScale.current)}
 
 	<span
@@ -116,9 +67,6 @@
 			: '—'}
 	</span>
 
-	<!-- How it felt, where it was said. Beside the numbers rather than under them:
-	     it is a fact about this set, and the row already reads left to right as
-	     what happened, then what was planned. -->
 	{#if felt !== null}
 		<span class="shrink-0 text-sm font-bold text-ink-faint">{felt}</span>
 	{/if}
@@ -132,8 +80,6 @@
 
 {#snippet heading()}
 	<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
-	<!-- The load mode and nothing else: the sets below are the record of the day,
-	     and this line exists only to say when their numbers count double. -->
 	{#if note}
 		<p class="truncate text-sm font-bold text-ink-faint">{note}</p>
 	{/if}
@@ -142,9 +88,6 @@
 <section class="flex flex-col gap-2 rounded-2xl border border-line-soft bg-surface p-3">
 	<div class="flex items-center gap-2">
 		{#if editing}
-			<!-- The name is the button and the whole heading is its target, exactly as
-			     on the workout screen: what a tap is about is the exercise, and the
-			     sheet it opens is titled with the name the thumb landed on. -->
 			<button
 				type="button"
 				onclick={(e) => onexercise(e.currentTarget)}
@@ -168,14 +111,6 @@
 
 	{#each cursors as cursor (cursor.set.id)}
 		{#if editing && cursor.set.id === openSetId}
-			<!-- Keyed on the set id so a different row mounts a fresh editor rather
-			     than mutating the open one underneath the user's thumb.
-
-			     The editor alone slides — height only, the app's 200ms, zero under
-			     reduced motion. The rows around it stay snap-swapped on purpose:
-			     entering edit mode is animated by the page-level slide (see
-			     `pageSlide` on the screen), and rows that also grew during it would
-			     be two animations disagreeing about one flip. -->
 			<div transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}>
 				{#key cursor.set.id}
 					<EditSet
@@ -190,10 +125,6 @@
 			</div>
 		{:else if editing}
 			<div class="flex min-h-11 items-center gap-1">
-				<!-- The disc is the claim, so in this posture it is the control that
-				     makes and unmakes one. Not for a warmup: `SetMark` draws a W either
-				     way, warmups count toward nothing anywhere in the app, and a button
-				     that changes neither the screen nor the data is worse than none. -->
 				{#if cursor.set.type === 'warmup'}
 					<div class="grid size-11 shrink-0 place-items-center">
 						<SetMark status="warmup" />
@@ -220,9 +151,6 @@
 					{@render numbers(cursor)}
 				</button>
 
-				<!-- Always drawn, where `SetRow` shows its own only to a mouse: there is
-				     no long-press here to fall back on, and the sheet behind it is the
-				     only way a set leaves the record. -->
 				<button
 					type="button"
 					aria-label="Set options"
@@ -242,9 +170,6 @@
 	{/each}
 
 	{#if editing}
-		<!-- A row's silhouette with nothing in it, the same dashed shape the workout
-		     screen grows by. `+` is a character — the icons README is explicit that a
-		     glyph Nunito carries never becomes an SVG. -->
 		<button
 			type="button"
 			onclick={onadd}

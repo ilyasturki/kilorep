@@ -1,18 +1,5 @@
 import type { AuthToken, User } from '../db/schema.ts';
 
-/**
- * What an account and a credential look like on the wire.
- *
- * Every response builds its payload through here, by construction rather than
- * by review: `passwordHash` and `tokenHash` exist on the rows and must never
- * leave the process, and the reliable way to guarantee that is for no endpoint
- * to serialise a row directly.
- *
- * Timestamps go out as epoch milliseconds, matching the schema's own
- * convention — a number needs no parsing and carries no timezone to disagree
- * about.
- */
-
 export type PublicToken = {
 	id: string;
 	label: string;
@@ -21,7 +8,6 @@ export type PublicToken = {
 	createdAt: number;
 	lastUsedAt: number | null;
 	expiresAt: number | null;
-	/** Whether this is the credential the request itself arrived with. */
 	current: boolean;
 };
 

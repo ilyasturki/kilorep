@@ -2,58 +2,14 @@
 	import type { ClassValue } from 'svelte/elements';
 	import { parseEntry, settle } from '$lib/domain/workout';
 
-	/**
-	 * A weight or rep field with fat ± on either side of the number.
-	 *
-	 * The value goes accent-coloured the moment it leaves what the field opened
-	 * at, and back to ink if you step onto that number again. Not decoration.
-	 * PRODUCT.md: the check "commits exactly what's on screen — the hint/target
-	 * if untouched, your edits if touched", and the hint is never silently
-	 * written, so something has to distinguish a recalled number from a claimed
-	 * one. Colouring the number itself rather than parking a mark above it puts
-	 * that on the thing it is about — a dot in the corner of a 76px well is a
-	 * legend the user has to learn.
-	 */
 	type Props = {
-		/**
-		 * Null is a field with nothing in it — no history to recall, nothing typed
-		 * yet, or a number the user has since taken back out.
-		 */
 		value: number | null;
-		/**
-		 * What the field opened at, and the only thing the tint is measured
-		 * against.
-		 *
-		 * It has to answer to the recalled value rather than to the live one —
-		 * otherwise a caller that feeds its own edits back in, which every caller
-		 * now does, could never show the tint at all.
-		 */
 		recalled?: number | null;
 		label: string;
 		step?: number;
 		min?: number;
-		/**
-		 * The ceiling, open by default — a weight has none. The one caller that
-		 * passes it is the exertion picker, whose scale ends at 10 and whose arm
-		 * must go inert there rather than propose a rating the record refuses.
-		 */
 		max?: number;
-		/** Null is the field emptied — see `commit`, which is the only caller that sends one. */
 		onchange?: (value: number | null) => void;
-		/**
-		 * Every keystroke, answered with what `commit` would land right now.
-		 *
-		 * `onchange` deliberately waits for blur, and that wait is right for the
-		 * value itself — but a commit bar reading only settled values sits inert
-		 * while both numbers are already on screen, and the tap that would blur
-		 * them lands on a disabled button and is swallowed. This is the honest
-		 * middle: the caller can see where the field is going without the field
-		 * claiming it got there. Same contract as `commit` — an unparseable
-		 * draft answers the value it would keep, an emptied one answers null.
-		 *
-		 * The field never says "editing ended"; blur reaches the caller as its
-		 * own `focusout`, which is where a preview stops mattering.
-		 */
 		onpreview?: (value: number | null) => void;
 		class?: ClassValue;
 	};
@@ -72,17 +28,8 @@
 
 	const touched = $derived(value !== recalled);
 
-	// `–` for an empty field, the same glyph `SetRow` shows for a set with no
-	// numbers in it yet. Zero is a real weight, so it is never spelled this way.
 	const display = $derived(value === null ? '–' : String(settle(value, min, max)));
 
-	// An empty field steps from `min`, so the first + on a blank weight lands on
-	// one step rather than on nothing.
-	//
-	// Reports whether it moved. At either end a step changes nothing, and a
-	// silent no-op is the honest answer — the same rule `commit` already keeps,
-	// and it is what stops a hold from firing twenty identical `onchange` a
-	// second into the floor.
 	function nudge(direction: number) {
 		const next = settle((value ?? min) + direction * step, min, max);
 		if (next === value) {
@@ -93,28 +40,10 @@
 		return true;
 	}
 
-	/**
-	 * A tap is a `click`, and nothing else is.
-	 *
-	 * `click` is the one event that already answers every question this field
-	 * used to arbitrate by hand: it fires once per press on a mouse and on a
-	 * finger, it does not fire at all when the gesture turns out to be a scroll,
-	 * and Enter and Space on a focused arm synthesise it for free. Stepping on
-	 * `pointerdown` instead meant swallowing the click that followed — and on a
-	 * touchscreen the pointer is destroyed at release, so `pointerleave` arrived
-	 * *before* that click, cleared the guard, and let every tap step twice.
-	 *
-	 * Neither of the two below is `$state`: both are written and read inside
-	 * handlers, and nothing renders from either.
-	 */
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let repeating = false;
 
 	function nudgeOnce(event: MouseEvent, direction: number) {
-		// A hold has already stepped, repeatedly, and the release still produces a
-		// click. `detail` is the click count for a pointer and 0 for a keyboard
-		// activation, so the swallow can never reach an Enter — which is the way
-		// the old guard failed once it was left standing.
 		if (repeating && event.detail !== 0) {
 			repeating = false;
 			return;
@@ -162,51 +91,24 @@
 		timer = setTimeout(tick, HOLD_DELAY);
 	}
 
-	// Every way a press can stop: released, dragged off the arm, or taken by a
-	// scroll. All three end the chain and none of them has anything else to undo,
-	// because nothing was stepped before the chain began.
 	function holdEnd() {
 		clearTimeout(timer);
 	}
 
-	// A set committed mid-hold takes the field down with it, and the chain would
-	// otherwise keep calling `onchange` from a component nobody is rendering.
-	// The body tracks nothing, so this is a teardown on destroy and nothing else.
 	$effect(() => () => clearTimeout(timer));
 
-	// Typing is held in `draft` and only lands in `value` on commit. Writing
-	// every keystroke through would fire `onchange` per digit and flicker the
-	// tint on the way from 8 to 82.5 — and a half-typed "8." is not a number the
-	// rest of the app should ever see.
 	let draft = $state('');
 	let editing = $state(false);
 
-	// A caret placed in "82.5" means editing the wrong two digits; the gesture
-	// is always "this weight, not that one". `select()` in `onfocus` is undone
-	// by the mouseup that follows a click, so that one mouseup is swallowed.
 	let selectPending = false;
 
 	function start(event: FocusEvent & { currentTarget: HTMLInputElement }) {
-		// An empty field opens empty, not on the `–` that stands in for it.
 		draft = value === null ? '' : display;
 		editing = true;
 		selectPending = true;
 		event.currentTarget.select();
 	}
 
-	// What the draft is worth: the value blur would land. Anything unparseable
-	// is not an affirmative claim, so the field keeps what it had rather than
-	// guessing.
-	//
-	// An emptied field is the exception, and it is not the same thing at all: a
-	// number deleted is a decision, so it is answered as null and the field
-	// goes back to `–`. `parseEntry` answers null for both cases — nothing
-	// typed and nothing sensible typed — which is why emptiness is tested here
-	// rather than read off that null.
-	//
-	// One reading, taken at two moments: per keystroke for `onpreview`, and at
-	// blur for `commit`. Split, the preview would drift from what blur then
-	// actually lands, which is the one lie a preview must not tell.
 	function landing(): number | null {
 		if (draft.trim() === '') {
 			return null;
@@ -217,9 +119,6 @@
 		return parsed === null ? value : settle(parsed, min, max);
 	}
 
-	// Blur commits, so tapping ± while typing steps from the typed number and
-	// not from the one it replaced — and so Enter, which blurs, logs the value
-	// just typed.
 	function commit() {
 		editing = false;
 

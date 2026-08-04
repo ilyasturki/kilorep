@@ -3,10 +3,6 @@ import { describe, expect, test } from 'vitest';
 import { matchRange, searchExercises } from '$lib/domain/search';
 import type { Exercise } from '$lib/domain/exercise';
 
-/**
- * A hand-made pool rather than the real catalog: these tests pin the matching
- * rules, and growing the catalog must never break them.
- */
 function ex(id: string, name: string, aliases: string[] = []): Exercise {
 	return {
 		id,
@@ -26,7 +22,6 @@ const pool = [
 	ex('close-grip-lat-pulldown', 'Close-Grip Lat Pulldown', ['close grip pulldown']),
 	ex('developpe-couche', 'Développé Couché'),
 	ex('squat', 'Squat', ['back squat']),
-	ex('front-raise', 'Front Raise'),
 	ex('dip', 'Dip'),
 	ex('hip-thrust', 'Hip Thrust')
 ];
@@ -40,8 +35,6 @@ describe('the substring pass', () => {
 	});
 
 	test('a name prefix outranks a name substring', () => {
-		// "leg" starts Leg Press and merely appears inside nothing else here;
-		// "press" starts no name but is a word of three.
 		expect(ids('leg')).toEqual(['leg-press']);
 		expect(ids('press')).toEqual(['bench-press', 'leg-press', 'overhead-press']);
 	});
@@ -52,8 +45,6 @@ describe('the substring pass', () => {
 	});
 
 	test('a name-word prefix outranks an alias hit', () => {
-		// "pulldown" is a word of both names and an alias of the parent — the
-		// visible-name matches come first, alphabetically among themselves.
 		expect(ids('pulldown')).toEqual(['close-grip-lat-pulldown', 'lat-pulldown']);
 	});
 
@@ -74,8 +65,6 @@ describe('the fuzzy fallback', () => {
 	});
 
 	test('fuzzy never runs when substring found anything', () => {
-		// "hip" is one edit from "dip", well inside the fallback's tolerance —
-		// but "dip" hits Dip exactly, so the fallback never gets to speak.
 		expect(ids('dip')).toEqual(['dip']);
 	});
 
@@ -84,7 +73,6 @@ describe('the fuzzy fallback', () => {
 	});
 });
 
-/** The slice the range names, which is what the row will underline. */
 const marked = (name: string, query: string): string | null => {
 	const range = matchRange(name, query);
 
@@ -106,7 +94,6 @@ describe('the match range', () => {
 	});
 
 	test('an alias hit and a fuzzy save mark nothing', () => {
-		// The row lists them, but the matched text is not on screen.
 		expect(marked('Overhead Press', 'ohp')).toBeNull();
 		expect(marked('Bench Press', 'bnech')).toBeNull();
 	});

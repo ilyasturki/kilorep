@@ -1,18 +1,5 @@
 <script lang="ts">
-	/**
-	 * The Dashboard's small trend mark: an ink line in a fixed box, no axes, no
-	 * labels, no interaction — the card's own text states the numbers, and the
-	 * mark only answers "which way". Monochrome like `TrendChart`, and for the
-	 * same reason: the accent means "this logs a set", and a reading is not
-	 * that.
-	 *
-	 * x is real time, not point index — two sessions a day apart and two a
-	 * month apart must not draw as the same slope. The y-domain hugs the data
-	 * the way the big chart's does; a single point draws as a dot, and a flat
-	 * series as a centred line rather than a divide-by-zero.
-	 */
 	type Props = {
-		/** The series, oldest first: x in epoch ms, y in the card's unit. */
 		points: { x: number; y: number }[];
 		width?: number;
 		height?: number;
@@ -20,7 +7,6 @@
 
 	let { points, width = 96, height = 28 }: Props = $props();
 
-	// Room for the 2px stroke's round caps at the extremes.
 	const PAD = 3;
 
 	const sx = $derived.by(() => {

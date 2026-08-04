@@ -28,12 +28,10 @@ describe('overlay registry', () => {
 			closed.push('confirm');
 		});
 
-		// Back press pops `confirm`, whose effect cleanup then unregisters again.
 		expect(closeTopOverlay()).toBe(true);
 		unregisterConfirm();
 		unregisterConfirm();
 
-		// `sheet` must still be the top, not collateral of the double cleanup.
 		expect(hasOpenOverlay()).toBe(true);
 		expect(closeTopOverlay()).toBe(true);
 		expect(closed).toEqual(['confirm', 'sheet']);
