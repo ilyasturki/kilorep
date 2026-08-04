@@ -44,6 +44,21 @@
 		min?: number;
 		/** Null is the field emptied — see `commit`, which is the only caller that sends one. */
 		onchange?: (value: number | null) => void;
+		/**
+		 * Every keystroke, answered with what `commit` would land right now.
+		 *
+		 * `onchange` deliberately waits for blur, and that wait is right for the
+		 * value itself — but a commit bar reading only settled values sits inert
+		 * while both numbers are already on screen, and the tap that would blur
+		 * them lands on a disabled button and is swallowed. This is the honest
+		 * middle: the caller can see where the field is going without the field
+		 * claiming it got there. Same contract as `commit` — an unparseable
+		 * draft answers the value it would keep, an emptied one answers null.
+		 *
+		 * The field never says "editing ended"; blur reaches the caller as its
+		 * own `focusout`, which is where a preview stops mattering.
+		 */
+		onpreview?: (value: number | null) => void;
 		class?: ClassValue;
 	};
 
@@ -54,6 +69,7 @@
 		step = 2.5,
 		min = 0,
 		onchange,
+		onpreview,
 		class: klass
 	}: Props = $props();
 
@@ -186,34 +202,38 @@
 		event.currentTarget.select();
 	}
 
-	// Blur commits, so tapping ± while typing steps from the typed number and
-	// not from the one it replaced — and so Enter, which blurs, logs the value
-	// just typed. Anything unparseable is not an affirmative claim, so the field
-	// keeps what it had rather than guessing.
+	// What the draft is worth: the value blur would land. Anything unparseable
+	// is not an affirmative claim, so the field keeps what it had rather than
+	// guessing.
 	//
 	// An emptied field is the exception, and it is not the same thing at all: a
-	// number deleted is a decision, so it is sent on as null and the field goes
-	// back to `–`. `parseEntry` answers null for both cases — nothing typed and
-	// nothing sensible typed — which is why emptiness is tested here rather than
-	// read off that null. The field used to restore what it had either way, so
-	// a weight the user cleared reappeared under the thumb that had just cleared
-	// it, and no keystroke could take it back out.
-	function commit() {
-		editing = false;
-
+	// number deleted is a decision, so it is answered as null and the field
+	// goes back to `–`. `parseEntry` answers null for both cases — nothing
+	// typed and nothing sensible typed — which is why emptiness is tested here
+	// rather than read off that null. The field used to restore what it had
+	// either way, so a weight the user cleared reappeared under the thumb that
+	// had just cleared it, and no keystroke could take it back out.
+	//
+	// One reading, taken at two moments: per keystroke for `onpreview`, and at
+	// blur for `commit`. Split, the preview would drift from what blur then
+	// actually lands, which is the one lie a preview must not tell.
+	function landing(): number | null {
 		if (draft.trim() === '') {
-			if (value !== null) {
-				value = null;
-				onchange?.(null);
-			}
-			return;
+			return null;
 		}
 
 		const parsed = parseEntry(draft);
-		if (parsed === null) {
-			return;
-		}
-		const next = settle(parsed, min);
+
+		return parsed === null ? value : settle(parsed, min);
+	}
+
+	// Blur commits, so tapping ± while typing steps from the typed number and
+	// not from the one it replaced — and so Enter, which blurs, logs the value
+	// just typed.
+	function commit() {
+		editing = false;
+
+		const next = landing();
 		if (next !== value) {
 			value = next;
 			onchange?.(next);
@@ -268,7 +288,10 @@
 		     makes it carry the commit bar underneath along with it. -->
 		<input
 			value={editing ? draft : display}
-			oninput={(event) => (draft = event.currentTarget.value)}
+			oninput={(event) => {
+				draft = event.currentTarget.value;
+				onpreview?.(landing());
+			}}
 			onfocus={start}
 			onblur={commit}
 			onmouseup={(event) => {

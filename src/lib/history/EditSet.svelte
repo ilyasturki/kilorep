@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { SetCursor } from '$lib/domain/workout';
 	import Button from '$lib/ui/Button.svelte';
+	import { revealEnd } from '$lib/ui/scroll';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import More from '$lib/ui/icons/More.svelte';
@@ -23,6 +24,13 @@
 	type Props = {
 		cursor: SetCursor;
 		/**
+		 * The weight arms' increment, the same equipment rule the gym card gets —
+		 * `weightStep` in `$lib/domain/exercise`, looked up by `WorkoutSection`,
+		 * which is the holder of the catalog meta here. A dumbbell set corrected
+		 * a day later steps in the same jumps it was lifted in.
+		 */
+		step: number;
+		/**
 		 * Every nudge and every typed value, on its way to the set.
 		 *
 		 * Immediately, and uncompleted — the card holds nothing of its own, so the
@@ -36,7 +44,7 @@
 		onoptions: () => void;
 	};
 
-	let { cursor, ondraft, ondone, onoptions }: Props = $props();
+	let { cursor, step, ondraft, ondone, onoptions }: Props = $props();
 
 	const weight = $derived(cursor.set.weight);
 	const reps = $derived(cursor.set.reps);
@@ -58,15 +66,15 @@
 
 	/**
 	 * The system keyboard takes the bottom of the screen and the card goes with
-	 * it. `ActiveSet` explains the move at length; a card that types has the
-	 * same problem wherever it stands.
+	 * it. `ActiveSet` explains the move at length — including why it is gated
+	 * on visibility; a card that types has the same problem wherever it stands.
 	 */
 	function reveal(event: FocusEvent) {
-		if (!(event.target instanceof HTMLInputElement)) {
+		if (!(event.target instanceof HTMLInputElement) || card === null) {
 			return;
 		}
 
-		card?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+		revealEnd(card);
 	}
 
 	/**
@@ -126,7 +134,7 @@
 				label="kg"
 				value={weight}
 				recalled={opened.weight}
-				step={2.5}
+				{step}
 				onchange={(v) => ondraft(v, reps)}
 			/>
 			<!-- Null passes straight through rather than being rounded: it is the

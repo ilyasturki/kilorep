@@ -25,6 +25,24 @@ export function loadFactor(mode: LoadMode): number {
 }
 
 /**
+ * The ± increment the weight stepper uses for an exercise, in kg.
+ *
+ * Racked implements move in the jumps the rack was bought in: dumbbells and
+ * kettlebells almost universally 2 kg apart, so ±2.5 from an 8 kg bell
+ * proposed a 10.5 that exists in no gym, and every second tap needed a typed
+ * correction. Everything plate-loaded or pin-stacked keeps 2.5, the smallest
+ * pair of plates worth racking.
+ *
+ * A rule on equipment rather than a per-exercise setting: the catalog already
+ * says what each exercise is lifted with, and a preference to maintain per
+ * exercise is friction the loop rule does not allow. Typing stays the way to
+ * any weight the arms cannot reach.
+ */
+export function weightStep(equipment: Equipment): number {
+	return equipment === 'Dumbbell' || equipment === 'Kettlebell' ? 2 : 2.5;
+}
+
+/**
  * A closed union rather than a free string, so the browse screen can filter
  * and group without a normalisation pass, and so two catalog entries cannot
  * spell the same rack two ways.

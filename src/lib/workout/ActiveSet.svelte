@@ -3,6 +3,7 @@
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import Button from '$lib/ui/Button.svelte';
 	import { tapCommit } from '$lib/ui/haptics';
+	import { revealEnd } from '$lib/ui/scroll';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
@@ -20,6 +21,13 @@
 	type Props = {
 		cursor: SetCursor;
 		history: History;
+		/**
+		 * The weight arms' increment, decided by the exercise's equipment —
+		 * `weightStep` in `$lib/domain/exercise` is the rule, `ExerciseBlock`
+		 * looks it up because it is the one holding the catalog meta. Reps keep
+		 * their own ±1 below regardless.
+		 */
+		step: number;
 		oncommit: (weight: number, reps: number) => void;
 		/**
 		 * An edit, on its way to the set it belongs to.
@@ -45,7 +53,7 @@
 		onoptions: () => void;
 	};
 
-	let { cursor, history, oncommit, ondraft, onoptions }: Props = $props();
+	let { cursor, history, step, oncommit, ondraft, onoptions }: Props = $props();
 
 	const hint = $derived(hintLabel(history, cursor));
 
@@ -80,11 +88,50 @@
 	// svelte-ignore state_referenced_locally
 	const opened = { weight: cursor.set.weight, reps: cursor.set.reps };
 
-	const live = $derived(canCommit(weight, reps));
+	/**
+	 * What each field is worth mid-keystroke, before blur settles it.
+	 *
+	 * The commit bar used to read only settled values, so it sat inert while
+	 * both numbers were plainly on screen — and the tap meant to log them blurred
+	 * the field into a still-disabled button and was swallowed, which turned the
+	 * one-tap commit into two. `undefined` is "not being typed in", and it is
+	 * distinct from null on purpose: null is a field the user emptied, a real
+	 * preview the bar must go inert for.
+	 *
+	 * Only the bar reads these. The set still learns values on blur, so the row
+	 * above, the rail and everything else keep updating exactly when they did.
+	 */
+	let previewWeight = $state<number | null | undefined>();
+	let previewReps = $state<number | null | undefined>();
+
+	const liveWeight = $derived(previewWeight === undefined ? weight : previewWeight);
+	// Rounded like `ondraft` rounds, so the bar never goes live for a "0.4"
+	// that blur would land as zero reps.
+	const liveReps = $derived.by(() => {
+		if (previewReps === undefined) {
+			return reps;
+		}
+
+		return previewReps === null ? null : Math.round(previewReps);
+	});
+
+	const live = $derived(canCommit(liveWeight, liveReps));
+
+	/**
+	 * Blur has already landed the draft on the set by the time this bubbles up —
+	 * `StepperField` commits in its own `onblur` first — so dropping the preview
+	 * here hands the bar back to the settled values it just previewed. Without
+	 * this, a ± tap after typing would update the set while the bar kept reading
+	 * the stale preview.
+	 */
+	function settlePreviews() {
+		previewWeight = undefined;
+		previewReps = undefined;
+	}
 
 	// Which value is missing is worth saying. "Enter a weight to log" under a rep
 	// field the user already filled reads as though the app lost the entry.
-	const inertLabel = $derived(weight === null ? 'Enter a weight to log' : 'Enter reps to log');
+	const inertLabel = $derived(liveWeight === null ? 'Enter a weight to log' : 'Enter reps to log');
 
 	let card = $state<HTMLElement | null>(null);
 
@@ -105,6 +152,12 @@
 	 * bottom edge up on focus is what keeps it in reach, and it is the reason
 	 * this screen can hand typing back to the OS at all.
 	 *
+	 * `revealEnd` and not a bare `scrollIntoView`: the scroll only happens when
+	 * some of the card is actually off screen. Unconditional, it also ran at a
+	 * desk — every click into a field bottom-aligned the card and slid the page
+	 * under the pointer for nothing. The keyboard case survives the gate, and
+	 * `revealEnd` says how.
+	 *
 	 * `focusin` on the card rather than a prop on each field: it bubbles, so
 	 * there is no second copy of the rule to keep in step with the first.
 	 *
@@ -113,11 +166,11 @@
 	 * card jumping out from under a press for no reason at all.
 	 */
 	function reveal(event: FocusEvent) {
-		if (!(event.target instanceof HTMLInputElement)) {
+		if (!(event.target instanceof HTMLInputElement) || card === null) {
 			return;
 		}
 
-		card?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+		revealEnd(card);
 	}
 
 	/**
@@ -150,7 +203,12 @@
 
 <svelte:window {onkeydown} />
 
-<div bind:this={card} onfocusin={reveal} class="relative scroll-mb-3 overflow-hidden card-active">
+<div
+	bind:this={card}
+	onfocusin={reveal}
+	onfocusout={settlePreviews}
+	class="relative scroll-mb-3 overflow-hidden card-active"
+>
 	<div class="absolute inset-y-0 left-0 w-1.5 bg-accent-text" aria-hidden="true"></div>
 
 	<div class="flex flex-col gap-3 py-3 pr-3 pl-4">
@@ -191,8 +249,9 @@
 				label="kg"
 				value={weight}
 				recalled={opened.weight}
-				step={2.5}
+				{step}
 				onchange={(v) => ondraft(v, reps)}
+				onpreview={(v) => (previewWeight = v)}
 			/>
 			<!-- Null passes straight through rather than being rounded: it is the
 			     field emptied, and `Math.round(null)` is a rep count of zero the
@@ -203,6 +262,7 @@
 				recalled={opened.reps}
 				step={1}
 				onchange={(v) => ondraft(weight, v === null ? null : Math.round(v))}
+				onpreview={(v) => (previewReps = v)}
 			/>
 		</div>
 

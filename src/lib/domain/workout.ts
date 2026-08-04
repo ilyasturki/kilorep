@@ -263,26 +263,25 @@ function carriedInto(cursor: SetCursor): Prefill {
 }
 
 /**
- * Precedence: what the set already holds, then the plan, then last time, then
- * the set above it.
+ * Precedence: what the set already holds, then the plan, then the set above
+ * it, then last time.
  *
- * Reps take a planned value over the hint because a planned rep count is an
- * instruction for today and the hint is only a memory of the last one. Weight
- * has no planned tier by design — PRODUCT.md: progression is recall, never
- * prescription — so it falls straight from the set to the hint.
+ * Reps take a planned value over everything because a planned rep count is an
+ * instruction for today, and neither the set just done nor the memory of last
+ * week outranks an instruction. Weight has no planned tier by design —
+ * PRODUCT.md: progression is recall, never prescription — so it falls straight
+ * from the set to the carry.
  *
- * The last tier is the one that catches a set history cannot reach: the fifth
- * set of an exercise you did four of last week, which is what `addSet` mints
- * every time, and every set of an exercise never performed at all. A blank
- * pair there costs a full re-entry to log a set identical to the one above it,
- * which is friction the loop rule does not allow — and the honest answer to
- * "what is this set" when nothing recalls it is the set the user just did.
- *
- * It sits *below* the recall rather than above, so an exercise with history
- * still opens on last time's fourth set rather than today's third: the recall
- * is the whole reason the hint map exists, and carrying would quietly replace
- * it everywhere it is right. The two never both apply — history holding a set
- * at this index means `recalled` fills both slots and the carry is unreachable.
+ * The carry sits *above* the recall: mid-exercise, the number that answers
+ * "what is this set" is the one just lifted at the bench being lifted at, not
+ * last week's entry at the same index. Recall-first was tried and it made the
+ * cursor argue with the session — log set one at 45 after a hint of 40, and
+ * set two reopened on 40, presenting the user's own decision of a minute ago
+ * as something to re-enter. The recall keeps the two places carry cannot
+ * reach: the first working set, which has nothing above it to carry, and a set
+ * following only warmups. And it keeps the label — "Last 40 × 10" stays
+ * printed beside the card either way, memory as reference rather than as
+ * prefill.
  */
 export function prefillFor(cursor: SetCursor, history: History): Prefill {
 	// Collapsed to a blank pair rather than null-checked twice below, so each
@@ -296,8 +295,8 @@ export function prefillFor(cursor: SetCursor, history: History): Prefill {
 	const carried = carriedInto(cursor);
 
 	return {
-		weight: cursor.set.weight ?? recalled.weight ?? carried.weight,
-		reps: cursor.set.reps ?? cursor.set.plannedReps ?? recalled.reps ?? carried.reps
+		weight: cursor.set.weight ?? carried.weight ?? recalled.weight,
+		reps: cursor.set.reps ?? cursor.set.plannedReps ?? carried.reps ?? recalled.reps
 	};
 }
 

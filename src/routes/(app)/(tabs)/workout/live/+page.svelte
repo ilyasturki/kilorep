@@ -337,33 +337,30 @@
 		     which is the whole reason the set rows land on the same pixel here as
 		     they do on Exercises. A rail with a width would move them, and used to.
 
-		     `left` is where the gutter runs out: half the window, back the 288px
-		     half-cap of the column, back 16px of air, back the card. 32rem is those
-		     three added up at `lg`, 37rem at `xl`, and they are the only numbers in
-		     this layout.
+		     The card hangs from its *right* edge, which never moves: half the
+		     window, back the 288px half-cap of the column, back 16px of air.
+		     19rem is those two added up, and `right` is the window's other half
+		     plus that. Growth happens leftward, into margin nothing else uses.
 
-		     Two widths, because 208px is a card that truncates half the catalog —
-		     Incline Dumbbell Press has never once fitted in it — and the fix is not
-		     a wider rail everywhere but a rail that grows when the window can pay
-		     for it. At `xl` it takes 288px and the gutter still covers it; below
-		     that the window genuinely has no more to give and the truncation is
-		     the honest price of the rail existing at all.
+		     The width is the whole margin, clamped. The floor is the 208px that
+		     makes 576 + 2 × (208 + 16) = 1024 exactly — the rail fits flush the
+		     moment `lg` puts the top bar up, no laptop left with the bar but not
+		     the rail, see `app.css`. From there every pixel the window grows goes
+		     straight to the card (19.75rem is the right offset plus 12px of air
+		     kept off the window's edge), because 208px truncates half the catalog
+		     — Incline Dumbbell Press has never once fitted in it. The ceiling is
+		     320px, past which a wider card is no more legible and a huge monitor
+		     would be drawing a sidebar rather than a card; beyond ~1272px the
+		     card simply floats mid-margin.
 
 		     `inset-y-0` is the pane's height and nothing more, so `max-h-full` on
 		     the card is exact — a session longer than the window scrolls inside the
 		     card rather than off the bottom of it. It is a card and not a pane: the
 		     height of what is in it, no edge borrowed from the window, and no
-		     shadow, which in this app means something has left the page.
-
-		     `lg`, the app's one breakpoint, and the cap is what pays for that: at
-		     `lg` the column steps down to 576px, and 576 + 2 × (208 + 16) = 1024
-		     exactly — the rail fits the moment the top bar exists, and no laptop
-		     is left with the bar but not the rail. The 288px width waits for the
-		     1184px that 576 + 2 × (288 + 16) makes, first cleared at `xl` rather
-		     than at a breakpoint of its own. See `app.css`. -->
+		     shadow, which in this app means something has left the page. -->
 			<aside
-				class="absolute inset-y-0 left-[calc(50%-32rem)] hidden w-52 py-3
-					lg:block xl:left-[calc(50%-37rem)] xl:w-72"
+				class="absolute inset-y-0 right-[calc(50%+19rem)] hidden
+					w-[clamp(13rem,50%_-_19.75rem,20rem)] py-3 lg:block"
 			>
 				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
 					<SessionList

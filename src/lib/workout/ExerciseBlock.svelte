@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { hintLabel } from '$lib/domain/workout';
+	import { weightStep } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
@@ -131,6 +132,7 @@
 					<ActiveSet
 						{cursor}
 						{history}
+						step={weightStep(meta.equipment)}
 						{oncommit}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
 						onoptions={() => onoptions(cursor.set.id)}

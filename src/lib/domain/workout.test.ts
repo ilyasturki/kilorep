@@ -157,13 +157,33 @@ describe('prefillFor', () => {
 		expect(prefillOf(workout, 'pecdeck-2')).toEqual({ weight: 45, reps: 10 });
 	});
 
-	test('history at this index outranks the set above it', () => {
+	test('the set above outranks history at this index', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'fly-1', 25, 12);
 
-		// Last time's second fly was 20 × 12, and that is still the recall — a
-		// carry here would quietly replace the hint everywhere it is right.
-		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: 20, reps: 12 });
+		// Last time's second fly was 20 × 12, but 25 is what is on the cable
+		// stack right now — the user's decision of a minute ago beats the memory
+		// of last week. The recall stays on the row as a label, never as prefill.
+		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: 25, reps: 12 });
+	});
+
+	test('the plan still owns the reps when it disagrees with the carry', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 82.5, 6);
+
+		// 8 reps are planned today: an instruction for this set, which neither
+		// the 6 just ground out above it nor last time's memory outranks. The
+		// weight has no planned tier, so it carries.
+		expect(prefillOf(workout, 'bench-2')).toEqual({ weight: 82.5, reps: 8 });
+	});
+
+	test('an open target carries both numbers over the recall', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'incline-1', 32.5, 8);
+
+		// No plan on incline, so with a set above holding both numbers the
+		// recall (30 × 9) is never reached.
+		expect(prefillOf(workout, 'incline-2')).toEqual({ weight: 32.5, reps: 8 });
 	});
 
 	test('the carry skips a warmup and any set holding nothing', () => {

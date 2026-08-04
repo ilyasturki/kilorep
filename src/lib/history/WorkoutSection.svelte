@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { weightStep } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { SetCursor } from '$lib/domain/workout';
 	import EditSet from '$lib/history/EditSet.svelte';
@@ -155,6 +156,7 @@
 			{#key cursor.set.id}
 				<EditSet
 					{cursor}
+					step={weightStep(meta.equipment)}
 					ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
 					ondone={onclose}
 					onoptions={() => onoptions(cursor.set.id)}
