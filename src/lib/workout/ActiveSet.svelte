@@ -5,6 +5,7 @@
 	import { tapCommit } from '$lib/ui/haptics';
 	import { revealEnd } from '$lib/ui/scroll';
 	import SetMark from '$lib/ui/SetMark.svelte';
+	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import More from '$lib/ui/icons/More.svelte';
@@ -134,6 +135,44 @@
 	// field the user already filled reads as though the app lost the entry.
 	const inertLabel = $derived(liveWeight === null ? 'Enter a weight to log' : 'Enter reps to log');
 
+	/**
+	 * The disc says what the set *is*; the card says where the cursor is.
+	 *
+	 * It used to be hardcoded `active`, which made the editor the one place in
+	 * the app where a set stopped showing its own state — reopening a logged set
+	 * to fix a number took its check away.
+	 *
+	 * The warmup branch is ahead of its use. Nothing mints a warmup today: every
+	 * set-creating path writes `normal`, and set type is parked behind the ⋯ with
+	 * RPE and note. It is here because the hardcoded status hid a second thing
+	 * besides the check — `workingIndex` is -1 for a warmup, so the disc's
+	 * `index` is 0, and the day set type lands the active warmup would draw a
+	 * `0`. One rule answers both, and only one of them can be seen yet.
+	 *
+	 * Nothing is lost by giving the ring up. `card-active` already carries the
+	 * accent border and the 6px rail down the left edge, and it is the only card
+	 * on the screen wearing either — the cursor was never in doubt from a 32px
+	 * disc.
+	 */
+	const status = $derived.by<SetStatus>(() => {
+		if (cursor.set.type === 'warmup') {
+			return 'warmup';
+		}
+
+		return cursor.set.completed ? 'done' : 'active';
+	});
+
+	/**
+	 * `Update set` for a set that has already been logged, `Log set` for one that
+	 * has not.
+	 *
+	 * The act behind the button is identical either way — `commitSet` writes the
+	 * pair and claims the set, whether or not it was claiming already — but the
+	 * word is not. Beside a disc wearing a check, "Log set" is the card offering
+	 * to do a thing it has just finished saying was done.
+	 */
+	const commitLabel = $derived(cursor.set.completed ? 'Update set' : 'Log set');
+
 	let card = $state<HTMLElement | null>(null);
 
 	function commit() {
@@ -215,7 +254,7 @@
 	<div class="flex flex-col gap-3 py-3 pr-3 pl-4">
 		<div class="flex items-center justify-between gap-2">
 			<div class="flex min-w-0 items-center gap-3">
-				<SetMark status="active" index={cursor.workingIndex + 1} />
+				<SetMark {status} index={cursor.workingIndex + 1} />
 				<span class="label-caps">
 					{cursor.workingIndex < 0 ? 'Warmup' : `Set ${cursor.workingIndex + 1}`}
 				</span>
@@ -270,7 +309,7 @@
 		<Button variant="commit" disabled={!live} class="w-full" onclick={commit}>
 			{#if live}
 				<Check size={30} />
-				Log set
+				{commitLabel}
 			{:else}
 				{inertLabel}
 			{/if}
