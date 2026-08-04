@@ -14,6 +14,8 @@
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
+	import Menu from '$lib/ui/Menu.svelte';
+	import MenuItem from '$lib/ui/MenuItem.svelte';
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import Select from '$lib/ui/Select.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
@@ -23,6 +25,7 @@
 	import Switch from '$lib/ui/Switch.svelte';
 	import Textarea from '$lib/ui/Textarea.svelte';
 	import Tooltip from '$lib/ui/Tooltip.svelte';
+	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
 	import Backspace from '$lib/ui/icons/Backspace.svelte';
 	import Barbell from '$lib/ui/icons/Barbell.svelte';
 	import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
@@ -30,6 +33,7 @@
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
+	import Eye from '$lib/ui/icons/Eye.svelte';
 	import Info from '$lib/ui/icons/Info.svelte';
 	import ListBullets from '$lib/ui/icons/ListBullets.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
@@ -37,6 +41,7 @@
 	import Play from '$lib/ui/icons/Play.svelte';
 	import PlayFill from '$lib/ui/icons/PlayFill.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
+	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	// An overview of the component library: one card per component, everything
 	// live. A card is titled with the component it renders and every instance
@@ -162,6 +167,17 @@
 	let overviewOpen = $state(false);
 	let optionsOpen = $state(false);
 
+	// One Menu instance addressed by whichever ⋯ asked, the way every screen
+	// holds one — the SetRow specimens and the Menu card all open it, so the
+	// gallery answers the gesture the way the app does.
+	let menuOpen = $state(false);
+	let menuAnchor = $state<HTMLElement | null>(null);
+
+	function openMenu(anchor: HTMLElement) {
+		menuAnchor = anchor;
+		menuOpen = true;
+	}
+
 	let exerciseName = $state('Bench Press (Barbell)');
 	let note = $state('');
 	let query = $state('');
@@ -269,7 +285,7 @@
 				<div class="flex flex-col gap-2.5 rounded-xl bg-canvas p-3">
 					<div class="flex flex-col gap-1">
 						<span class={caption}>status="warmup"</span>
-						<SetRow status="warmup" weight={20} reps={12} onoptions={() => (optionsOpen = true)}>
+						<SetRow status="warmup" weight={20} reps={12} onoptions={openMenu}>
 							{#snippet right()}warmup{/snippet}
 						</SetRow>
 					</div>
@@ -285,7 +301,7 @@
 							weight={85}
 							reps={8}
 							onselect={() => {}}
-							onoptions={() => (optionsOpen = true)}
+							onoptions={openMenu}
 						>
 							{#snippet right()}RPE 8{/snippet}
 						</SetRow>
@@ -297,7 +313,7 @@
 							index={3}
 							weight={85}
 							reps={8}
-							onoptions={() => (optionsOpen = true)}
+							onoptions={openMenu}
 						>
 							{#snippet right()}<span class="font-extrabold tracking-wider text-accent-text"
 									>NOW</span
@@ -310,7 +326,7 @@
 							status="pending"
 							index={4}
 							onselect={() => {}}
-							onoptions={() => (optionsOpen = true)}
+							onoptions={openMenu}
 						>
 							{#snippet right()}80 × 7{/snippet}
 						</SetRow>
@@ -348,6 +364,25 @@
 						<Button variant="secondary" onclick={() => (optionsOpen = true)}>Set options</Button>
 						<span class={caption}>title="Set 3"</span>
 					</div>
+				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">Menu</h2>
+				<!-- The adaptive ⋯: a sheet under a thumb, a list anchored to the
+				     button under a pointer. The SetRow specimens open the same
+				     instance from their own ⋯. -->
+				<div class={specimen}>
+					<button
+						type="button"
+						aria-label="Exercise options"
+						onclick={(e) => openMenu(e.currentTarget)}
+						class="grid min-h-chrome w-11 place-items-center rounded-full text-ink-muted
+							focus-ring hover:bg-hover active:bg-surface-2"
+					>
+						<More size={20} />
+					</button>
+					<span class={caption}>anchor = the ⋯ that asked</span>
 				</div>
 			</article>
 
@@ -504,7 +539,7 @@
 								style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
 								class={[
 									'flex min-h-row items-center gap-1 rounded-xl pr-1 pl-3',
-									lifted ? 'bg-surface shadow-lg' : 'hover:bg-surface-2 active:bg-surface-2'
+									lifted ? 'bg-surface shadow-lg' : 'hover:bg-hover active:bg-surface-2'
 								]}
 							>
 								<button
@@ -689,6 +724,21 @@
 		{/each}
 	</div>
 </Sheet>
+
+<Menu bind:open={menuOpen} title="Bench Press (Barbell)" anchor={menuAnchor}>
+	<MenuItem onselect={() => (menuOpen = false)}>
+		<Eye size={18} />
+		View exercise
+	</MenuItem>
+	<MenuItem onselect={() => (menuOpen = false)}>
+		<ArrowsLeftRight size={18} />
+		Swap exercise
+	</MenuItem>
+	<MenuItem destructive onselect={() => (menuOpen = false)}>
+		<Trash size={18} />
+		Remove exercise
+	</MenuItem>
+</Menu>
 
 <Sheet bind:open={optionsOpen} title="Set 3" description="Bench Press (Barbell)">
 	<div class="flex flex-col gap-4">

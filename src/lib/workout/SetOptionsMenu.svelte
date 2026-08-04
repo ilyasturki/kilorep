@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { SetCursor } from '$lib/domain/workout';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
-	import Button from '$lib/ui/Button.svelte';
-	import Sheet from '$lib/ui/Sheet.svelte';
+	import Menu from '$lib/ui/Menu.svelte';
+	import MenuItem from '$lib/ui/MenuItem.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	/**
@@ -10,21 +10,24 @@
 	 *
 	 * Reached by long-press on a touch device, by the row's own ⋯ where there is
 	 * a mouse, and by right-click either way — `SetRow` already owns all three
-	 * and had nothing to hand them to until now.
+	 * and had nothing to hand them to until now. Menu picks the container: a
+	 * sheet under a thumb, an anchored list under a pointer.
 	 *
-	 * Remove is the only entry today, and a sheet is a heavy container for one
-	 * button. It is a sheet because PRODUCT.md parks set type, RPE and note
+	 * Remove is the only entry today, and either container is heavy for one
+	 * verb. It holds the slot because PRODUCT.md parks set type, RPE and note
 	 * behind exactly this gesture; they land here, next to this.
 	 */
 	type Props = {
 		open?: boolean;
 		cursor: SetCursor | null;
+		/** The ⋯ (or the row it sits in) that asked — where the anchored menu hangs. */
+		anchor?: HTMLElement | null;
 		/** False for the only set an exercise has — see `removeSet` in the domain. */
 		removable: boolean;
 		onremove: () => void;
 	};
 
-	let { open = $bindable(false), cursor, removable, onremove }: Props = $props();
+	let { open = $bindable(false), cursor, anchor = null, removable, onremove }: Props = $props();
 
 	let confirming = $state(false);
 
@@ -56,16 +59,16 @@
 	}
 </script>
 
-<Sheet bind:open {title}>
+<Menu bind:open {title} {anchor}>
 	{#if removable}
-		<Button variant="destructive" class="w-full" onclick={remove}>
+		<MenuItem destructive onselect={remove}>
 			<Trash size={18} />
 			Remove set
-		</Button>
+		</MenuItem>
 	{:else}
-		<p class="px-1 text-md font-bold text-ink-faint">An exercise keeps at least one set.</p>
+		<p class="px-1 py-2 text-md font-bold text-ink-faint">An exercise keeps at least one set.</p>
 	{/if}
-</Sheet>
+</Menu>
 
 <AlertDialog
 	bind:open={confirming}

@@ -178,7 +178,7 @@
 					<a
 						href="/history/{session.workoutId}"
 						data-list-row
-						class="flex flex-col gap-2 px-3 py-2.5 focus-ring hover:bg-surface-2
+						class="flex flex-col gap-2 px-3 py-2.5 focus-ring hover:bg-hover
 							active:bg-surface-2 pointer-fine:transition-[background-color]
 							pointer-fine:duration-100"
 					>

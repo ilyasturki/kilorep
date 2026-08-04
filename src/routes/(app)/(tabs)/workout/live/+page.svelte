@@ -11,11 +11,11 @@
 	import { groupsWithMeta } from '$lib/workout/groups';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
-	import ExerciseOptionsSheet from '$lib/workout/ExerciseOptionsSheet.svelte';
+	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import OverviewDrawer from '$lib/workout/OverviewDrawer.svelte';
 	import SessionList from '$lib/workout/SessionList.svelte';
-	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
+	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -263,8 +263,11 @@
 
 	const exerciseGroup = $derived(groups.find((g) => g.entryId === swapping) ?? null);
 
-	function exerciseOptions(entryId: string) {
+	let exerciseAnchor = $state<HTMLElement | null>(null);
+
+	function exerciseOptions(entryId: string, anchor: HTMLElement) {
 		swapping = entryId;
+		exerciseAnchor = anchor;
 		exerciseOpen = true;
 	}
 
@@ -303,14 +306,17 @@
 	);
 
 	/**
-	 * The set-options sheet is one instance for the screen, addressed by id.
+	 * The set-options menu is one instance for the screen, addressed by id.
 	 *
 	 * Resolved out of the live tree on every read rather than captured when the
-	 * sheet opens: removing a set renumbers the ones below it, and a cursor
-	 * snapshotted on open would have the sheet describing a row that has moved.
+	 * menu opens: removing a set renumbers the ones below it, and a cursor
+	 * snapshotted on open would have the menu describing a row that has moved.
+	 * The anchor is the one thing that *is* captured — the ⋯ that was clicked
+	 * is where the desktop menu hangs, and it does not move while it is open.
 	 */
 	let optionsOpen = $state(false);
 	let optionsSetId = $state<string | null>(null);
+	let optionsAnchor = $state<HTMLElement | null>(null);
 
 	const optionsGroup = $derived(
 		groups.find((g) => g.cursors.some((c) => c.set.id === optionsSetId)) ?? null
@@ -322,8 +328,9 @@
 			: (optionsGroup.cursors.find((c) => c.set.id === optionsSetId) ?? null)
 	);
 
-	function options(setId: string) {
+	function options(setId: string, anchor: HTMLElement) {
 		optionsSetId = setId;
+		optionsAnchor = anchor;
 		optionsOpen = true;
 	}
 
@@ -378,7 +385,7 @@
 					aria-label="Session overview"
 					onclick={() => (overview = true)}
 					class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+					border-line text-ink-muted focus-ring hover:bg-hover active:bg-surface-2"
 				>
 					<Stack size={20} />
 				</button>
@@ -481,7 +488,7 @@
 								onadd={() => session.addSet(group.cursors[0].exercise.id)}
 								oninsert={() => (insertOpen = true)}
 								onoptions={options}
-								onexercise={() => exerciseOptions(group.entryId)}
+								onexercise={(anchor) => exerciseOptions(group.entryId, anchor)}
 							/>
 						</div>
 					{/each}
@@ -599,16 +606,18 @@
 		onpick={([id]) => swapPick(id)}
 	/>
 
-	<ExerciseOptionsSheet
+	<ExerciseOptionsMenu
 		bind:open={exerciseOpen}
 		group={exerciseGroup}
+		anchor={exerciseAnchor}
 		onswap={() => (swapOpen = true)}
 		onremove={removeExercise}
 	/>
 
-	<SetOptionsSheet
+	<SetOptionsMenu
 		bind:open={optionsOpen}
 		cursor={optionsCursor}
+		anchor={optionsAnchor}
 		removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
 		onremove={removeSet}
 	/>

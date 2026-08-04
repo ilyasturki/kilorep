@@ -50,7 +50,8 @@
 		 * removed — while `WorkoutSession.removeSet` carried a paragraph of care
 		 * for exactly that case, unreachable.
 		 */
-		onoptions: () => void;
+		/** Handed the ⋯ itself, so the desktop menu can hang from it. */
+		onoptions: (anchor: HTMLElement) => void;
 	};
 
 	let { cursor, history, step, oncommit, ondraft, onoptions }: Props = $props();
@@ -235,9 +236,9 @@
 				<button
 					type="button"
 					aria-label="Set options"
-					onclick={onoptions}
+					onclick={(e) => onoptions(e.currentTarget)}
 					class="-mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-lg
-						text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2"
+						text-ink-faint focus-ring hover:bg-hover active:bg-surface-2"
 				>
 					<More size={20} />
 				</button>

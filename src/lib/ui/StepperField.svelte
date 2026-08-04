@@ -267,7 +267,7 @@
 			// the gesture outright would make a fat target in the logging loop a
 			// dead zone for the one thing every screen does.
 			'touch-manipulation select-none',
-			'text-ink-muted hover:bg-surface-2 active:bg-surface-2 active:text-ink',
+			'text-ink-muted hover:bg-hover active:bg-surface-2 active:text-ink',
 			corner
 		]}
 	>

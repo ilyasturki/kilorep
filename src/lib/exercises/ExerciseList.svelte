@@ -10,7 +10,7 @@
 	// machinery: these chips navigate or pick, they never stay pressed.
 	const chip =
 		'inline-flex min-h-chip items-center rounded-xl bg-sunken px-3 text-sm font-bold ' +
-		'text-ink-muted select-none focus-ring hover:bg-surface-2 active:bg-surface-2 ' +
+		'text-ink-muted select-none focus-ring hover:bg-hover active:bg-surface-2 ' +
 		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
 </script>
 

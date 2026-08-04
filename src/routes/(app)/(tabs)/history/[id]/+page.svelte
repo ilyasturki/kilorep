@@ -20,14 +20,14 @@
 		replaceEntry
 	} from '$lib/domain/workout';
 	import { workoutTitle } from '$lib/history/label';
-	import WorkoutOptionsSheet from '$lib/history/WorkoutOptionsSheet.svelte';
+	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
 	import { syncSoon } from '$lib/sync/client';
 	import { groupsWithMeta } from '$lib/workout/groups';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
-	import ExerciseOptionsSheet from '$lib/workout/ExerciseOptionsSheet.svelte';
+	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -35,7 +35,7 @@
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import { registerOverlay } from '$lib/ui/overlays';
-	import SetOptionsSheet from '$lib/workout/SetOptionsSheet.svelte';
+	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import More from '$lib/ui/icons/More.svelte';
@@ -232,8 +232,11 @@
 
 	const exerciseGroup = $derived(groups.find((group) => group.entryId === swapping) ?? null);
 
-	function exerciseOptions(entryId: string) {
+	let exerciseAnchor = $state<HTMLElement | null>(null);
+
+	function exerciseOptions(entryId: string, anchor: HTMLElement) {
 		swapping = entryId;
+		exerciseAnchor = anchor;
 		exerciseOpen = true;
 	}
 
@@ -273,6 +276,7 @@
 	 */
 	let optionsOpen = $state(false);
 	let optionsSetId = $state<string | null>(null);
+	let optionsAnchor = $state<HTMLElement | null>(null);
 
 	const optionsGroup = $derived(
 		groups.find((group) => group.cursors.some((c) => c.set.id === optionsSetId)) ?? null
@@ -284,8 +288,9 @@
 			: (optionsGroup.cursors.find((c) => c.set.id === optionsSetId) ?? null)
 	);
 
-	function setOptions(setId: string) {
+	function setOptions(setId: string, anchor: HTMLElement) {
 		optionsSetId = setId;
+		optionsAnchor = anchor;
 		optionsOpen = true;
 	}
 
@@ -362,10 +367,11 @@
 
 	/**
 	 * The record's own `⋯`: what this workout can be besides read. Edit is a
-	 * mode, delete is a confirm, and neither happens from inside the sheet — see
-	 * `WorkoutOptionsSheet`.
+	 * mode, delete is a confirm, and neither happens from inside the menu — see
+	 * `WorkoutOptionsMenu`.
 	 */
 	let menuOpen = $state(false);
+	let menuAnchor = $state<HTMLElement | null>(null);
 
 	let deleteOpen = $state(false);
 
@@ -488,9 +494,12 @@
 				<button
 					type="button"
 					aria-label="Workout options"
-					onclick={() => (menuOpen = true)}
+					onclick={(e) => {
+						menuAnchor = e.currentTarget;
+						menuOpen = true;
+					}}
 					class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full
-						text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+						text-ink-muted focus-ring hover:bg-hover active:bg-surface-2"
 				>
 					<More size={20} />
 				</button>
@@ -541,7 +550,7 @@
 							ondraft={draft}
 							ontoggle={toggle}
 							onoptions={setOptions}
-							onexercise={() => exerciseOptions(group.entryId)}
+							onexercise={(anchor) => exerciseOptions(group.entryId, anchor)}
 							onadd={() => add(group.cursors[0].exercise.id)}
 							grip={editing ? handle : undefined}
 						/>
@@ -617,23 +626,26 @@
 	onpick={([id]) => swap(id)}
 />
 
-<ExerciseOptionsSheet
+<ExerciseOptionsMenu
 	bind:open={exerciseOpen}
 	group={exerciseGroup}
+	anchor={exerciseAnchor}
 	onswap={() => (swapOpen = true)}
 	onremove={dropExercise}
 />
 
-<WorkoutOptionsSheet
+<WorkoutOptionsMenu
 	bind:open={menuOpen}
 	{title}
+	anchor={menuAnchor}
 	onedit={startEditing}
 	ondelete={() => (deleteOpen = true)}
 />
 
-<SetOptionsSheet
+<SetOptionsMenu
 	bind:open={optionsOpen}
 	cursor={optionsCursor}
+	anchor={optionsAnchor}
 	removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
 	onremove={dropSet}
 />

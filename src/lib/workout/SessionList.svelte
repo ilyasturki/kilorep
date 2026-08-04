@@ -161,7 +161,7 @@
 					// Opaque and airborne. Tooltip is the only other thing in the app
 					// with a shadow, and it is the only other thing that leaves the
 					// layout — so the rule stays "a shadow means it is off the page".
-					lifted ? 'bg-surface shadow-lg' : 'hover:bg-surface-2 active:bg-surface-2'
+					lifted ? 'bg-surface shadow-lg' : 'hover:bg-hover active:bg-surface-2'
 				]}
 			>
 				<button

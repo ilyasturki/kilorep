@@ -29,7 +29,7 @@
 	let { label, onclick, secondaryLabel, onsecondary }: Props = $props();
 
 	const segment =
-		'grid min-h-row place-items-center focus-ring-inset hover:bg-surface-2 active:bg-surface-2';
+		'grid min-h-row place-items-center focus-ring-inset hover:bg-hover active:bg-surface-2';
 </script>
 
 {#if secondaryLabel !== undefined && onsecondary !== undefined}
@@ -51,7 +51,7 @@
 		type="button"
 		{onclick}
 		class="grid min-h-row place-items-center rounded-xl border border-dashed border-line
-			text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+			text-ink-muted focus-ring hover:bg-hover active:bg-surface-2"
 	>
 		<span class="label-caps">+ {label}</span>
 	</button>

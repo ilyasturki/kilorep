@@ -41,7 +41,8 @@
 		ondraft: (weight: number | null, reps: number | null) => void;
 		/** The bar. Nothing is written by it — the numbers are already on the set. */
 		ondone: () => void;
-		onoptions: () => void;
+		/** Handed the ⋯ itself, so the desktop menu can hang from it. */
+		onoptions: (anchor: HTMLElement) => void;
 	};
 
 	let { cursor, step, ondraft, ondone, onoptions }: Props = $props();
@@ -121,9 +122,9 @@
 			<button
 				type="button"
 				aria-label="Set options"
-				onclick={onoptions}
+				onclick={(e) => onoptions(e.currentTarget)}
 				class="-mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-lg
-					text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2"
+					text-ink-faint focus-ring hover:bg-hover active:bg-surface-2"
 			>
 				<More size={20} />
 			</button>

@@ -74,7 +74,7 @@
 			onclick={clear}
 			class="absolute top-1/2 right-2 grid size-9 -translate-y-1/2 place-items-center rounded-full
 				text-xl leading-none font-bold text-ink-muted focus-ring
-				hover:bg-surface-2 active:bg-surface-2"
+				hover:bg-hover active:bg-surface-2"
 		>
 			×
 		</button>

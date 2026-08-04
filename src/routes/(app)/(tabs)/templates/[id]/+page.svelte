@@ -24,7 +24,7 @@
 	import { plannedGroups } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanList from '$lib/templates/PlanList.svelte';
-	import PlanOptionsSheet from '$lib/templates/PlanOptionsSheet.svelte';
+	import PlanOptionsMenu from '$lib/templates/PlanOptionsMenu.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -207,17 +207,19 @@
 	 *
 	 * Removal asks nothing. It used to, back when it was a bare `×` in the card's
 	 * header and the plan is genuinely the work — but it is two taps behind a
-	 * sheet naming the exercise now, and a dialog after that is a third gate on
+	 * menu naming the exercise now, and a dialog after that is a third gate on
 	 * one decision.
 	 */
 	let optionsOpen = $state(false);
+	let optionsAnchor = $state<HTMLElement | null>(null);
 	let swapOpen = $state(false);
 	let acting = $state<string | null>(null);
 
 	const actingGroup = $derived(groups.find((group) => group.id === acting) ?? null);
 
-	function options(exerciseId: string) {
+	function options(exerciseId: string, anchor: HTMLElement) {
 		acting = exerciseId;
+		optionsAnchor = anchor;
 		optionsOpen = true;
 	}
 
@@ -319,7 +321,7 @@
 		aria-label="Delete template"
 		onclick={() => (deleteOpen = true)}
 		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line
-			text-danger focus-ring hover:bg-surface-2 active:bg-surface-2"
+			text-danger focus-ring hover:bg-hover active:bg-surface-2"
 	>
 		<Trash {size} />
 	</button>
@@ -455,7 +457,7 @@
 							<PlanCard
 								meta={group.meta}
 								exercise={group.exercise}
-								onoptions={() => options(group.id)}
+								onoptions={(anchor) => options(group.id, anchor)}
 								onaddset={() => addSet(template, group.id, crypto.randomUUID())}
 								onremoveset={() => shrink(group.id)}
 								onreps={(reps) => setExerciseReps(template, group.id, reps)}
@@ -562,9 +564,10 @@
 	onpick={([id]) => swapPick(id)}
 />
 
-<PlanOptionsSheet
+<PlanOptionsMenu
 	bind:open={optionsOpen}
 	group={actingGroup}
+	anchor={optionsAnchor}
 	onswap={() => (swapOpen = true)}
 	onremove={removePlanned}
 />

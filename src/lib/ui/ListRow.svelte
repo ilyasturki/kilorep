@@ -69,7 +69,7 @@
 	// say to a reader.
 	const shape = $derived([
 		'flex min-h-row w-full items-center gap-3 rounded-xl px-3 py-2 text-left',
-		interactive && 'focus-ring hover:bg-surface-2 active:bg-surface-2',
+		interactive && 'focus-ring hover:bg-hover active:bg-surface-2',
 		interactive && 'pointer-fine:transition-[background-color] pointer-fine:duration-100',
 		klass
 	]);

@@ -3,7 +3,7 @@
 
 	const nav =
 		'focus-ring grid size-10 place-items-center rounded-xl text-2xl leading-none ' +
-		'font-bold text-ink-muted hover:bg-surface-2 active:bg-surface-2 ' +
+		'font-bold text-ink-muted hover:bg-hover active:bg-surface-2 ' +
 		'data-disabled:pointer-events-none data-disabled:opacity-30';
 
 	// Both the hover fill and the today ink are scoped to `not-data-selected:`
@@ -14,7 +14,7 @@
 	// lime-400 fill at about 2.3:1.
 	const day =
 		'focus-ring mx-auto grid size-10 place-items-center rounded-xl text-base font-bold ' +
-		'not-data-selected:hover:bg-surface-2 ' +
+		'not-data-selected:hover:bg-hover ' +
 		'not-data-selected:data-today:text-accent-text ' +
 		'data-selected:bg-accent data-selected:text-on-accent ' +
 		'data-outside-month:opacity-30 ' +

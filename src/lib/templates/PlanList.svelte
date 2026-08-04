@@ -86,7 +86,7 @@
 				class={[
 					'flex min-h-row items-center gap-1 rounded-xl pr-1 pl-3',
 					'pointer-fine:transition-[background-color] pointer-fine:duration-100',
-					lifted ? 'bg-surface shadow-lg' : 'hover:bg-surface-2 active:bg-surface-2'
+					lifted ? 'bg-surface shadow-lg' : 'hover:bg-hover active:bg-surface-2'
 				]}
 			>
 				<button

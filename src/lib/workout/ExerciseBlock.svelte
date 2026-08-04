@@ -26,9 +26,10 @@
 		onadd: () => void;
 		/** The way in for an exercise the plan did not hold, on the add-set row. */
 		oninsert?: () => void;
-		onoptions: (setId: string) => void;
+		/** Handed the element that asked as well, so the desktop menu can hang from it. */
+		onoptions: (setId: string, anchor: HTMLElement) => void;
 		/** The exercise itself: swap it, or take it out of the session. */
-		onexercise: () => void;
+		onexercise: (anchor: HTMLElement) => void;
 	};
 
 	let {
@@ -127,8 +128,8 @@
 	     centred label here would be a control impersonating a title bar. -->
 	<button
 		type="button"
-		onclick={onexercise}
-		class="min-w-0 rounded-xl px-1 py-1 text-left focus-ring hover:bg-surface-2
+		onclick={(e) => onexercise(e.currentTarget)}
+		class="min-w-0 rounded-xl px-1 py-1 text-left focus-ring hover:bg-hover
 			active:bg-surface-2"
 	>
 		<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
@@ -157,7 +158,7 @@
 						step={weightStep(meta.equipment)}
 						{oncommit}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
-						onoptions={() => onoptions(cursor.set.id)}
+						onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
 					/>
 				{/key}
 			</div>
@@ -171,7 +172,7 @@
 					weight={cursor.set.weight}
 					reps={cursor.set.reps}
 					onselect={cursor.set.type === 'warmup' ? undefined : () => onselect(cursor.set.id)}
-					onoptions={() => onoptions(cursor.set.id)}
+					onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
 				>
 					{#snippet right()}
 						{rowHint(cursor) ?? ''}

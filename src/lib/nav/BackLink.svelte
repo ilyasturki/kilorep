@@ -49,7 +49,7 @@
 	onclick={walkBack}
 	class={[
 		'grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border',
-		'border-line text-xl leading-none text-ink-muted focus-ring hover:bg-surface-2',
+		'border-line text-xl leading-none text-ink-muted focus-ring hover:bg-hover',
 		'active:bg-surface-2',
 		extra
 	]}

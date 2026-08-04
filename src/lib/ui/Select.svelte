@@ -108,7 +108,7 @@
 				disabled={item.disabled}
 				class="flex min-h-row w-full items-center gap-3 rounded-xl px-3 text-base font-bold
 					select-none data-disabled:pointer-events-none data-disabled:opacity-50
-					data-highlighted:bg-surface-2"
+					data-highlighted:bg-hover"
 			>
 				{#snippet children({ selected: isSelected })}
 					<span class="min-w-0 flex-1 truncate">{item.label}</span>

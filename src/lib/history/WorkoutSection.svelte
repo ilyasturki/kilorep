@@ -46,9 +46,10 @@
 		ondraft: (setId: string, weight: number | null, reps: number | null) => void;
 		/** The disc: claim this set, or take the claim back. */
 		ontoggle: (setId: string) => void;
-		onoptions: (setId: string) => void;
+		/** Handed the element that asked as well, so the desktop menu can hang from it. */
+		onoptions: (setId: string, anchor: HTMLElement) => void;
 		/** The name: swap what was performed here, or take it out of the record. */
-		onexercise: () => void;
+		onexercise: (anchor: HTMLElement) => void;
 		onadd: () => void;
 		/**
 		 * The drag handle, owned by the screen — this is one draggable unit, and
@@ -132,8 +133,8 @@
 			     sheet it opens is titled with the name the thumb landed on. -->
 			<button
 				type="button"
-				onclick={onexercise}
-				class="min-w-0 flex-1 rounded-xl px-1 py-1 text-left focus-ring hover:bg-surface-2
+				onclick={(e) => onexercise(e.currentTarget)}
+				class="min-w-0 flex-1 rounded-xl px-1 py-1 text-left focus-ring hover:bg-hover
 					active:bg-surface-2"
 			>
 				{@render heading()}
@@ -168,7 +169,7 @@
 						step={weightStep(meta.equipment)}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
 						ondone={onclose}
-						onoptions={() => onoptions(cursor.set.id)}
+						onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
 					/>
 				{/key}
 			</div>
@@ -189,7 +190,7 @@
 							1} as done"
 						onclick={() => ontoggle(cursor.set.id)}
 						class="grid size-11 shrink-0 place-items-center rounded-full focus-ring
-							hover:bg-surface-2 active:bg-surface-2"
+							hover:bg-hover active:bg-surface-2"
 					>
 						<SetMark status={statusOf(cursor)} index={cursor.workingIndex + 1} />
 					</button>
@@ -199,7 +200,7 @@
 					type="button"
 					onclick={() => onopen(cursor.set.id)}
 					class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-2 text-left focus-ring
-						hover:bg-surface-2 active:bg-surface-2"
+						hover:bg-hover active:bg-surface-2"
 				>
 					{@render numbers(cursor)}
 				</button>
@@ -210,9 +211,9 @@
 				<button
 					type="button"
 					aria-label="Set options"
-					onclick={() => onoptions(cursor.set.id)}
+					onclick={(e) => onoptions(cursor.set.id, e.currentTarget)}
 					class="grid size-9 shrink-0 place-items-center rounded-lg text-lg text-ink-faint
-						focus-ring hover:bg-surface-2 active:bg-surface-2"
+						focus-ring hover:bg-hover active:bg-surface-2"
 				>
 					<More size={20} />
 				</button>
@@ -233,7 +234,7 @@
 			type="button"
 			onclick={onadd}
 			class="grid min-h-11 place-items-center rounded-xl border border-dashed border-line
-				text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+				text-ink-muted focus-ring hover:bg-hover active:bg-surface-2"
 		>
 			<span class="label-caps">+ Add set</span>
 		</button>

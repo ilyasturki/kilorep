@@ -39,7 +39,7 @@
 
 	const arm =
 		'grid w-11 shrink-0 place-items-center text-xl font-semibold text-ink-muted ' +
-		'focus-ring-inset select-none hover:bg-surface-2 active:bg-surface-2 active:text-ink ' +
+		'focus-ring-inset select-none hover:bg-hover active:bg-surface-2 active:text-ink ' +
 		'disabled:pointer-events-none disabled:opacity-40';
 </script>
 

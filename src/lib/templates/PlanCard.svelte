@@ -41,7 +41,8 @@
 		exercise: TemplateExercise;
 		grip: Snippet;
 		/** The exercise itself: view it, swap it, or take it out of the plan. */
-		onoptions: () => void;
+		/** Handed the ⋯ itself, so the desktop menu can hang from it. */
+		onoptions: (anchor: HTMLElement) => void;
 		onaddset: () => void;
 		/** Drop the last set. Never offered while one is left — that is a removal. */
 		onremoveset: () => void;
@@ -118,7 +119,7 @@
 		<h2 class="min-w-0 flex-1">
 			<a
 				href="/exercises/{meta.id}"
-				class="flex min-w-0 flex-col rounded-lg px-1 py-0.5 focus-ring hover:bg-surface-2
+				class="flex min-w-0 flex-col rounded-lg px-1 py-0.5 focus-ring hover:bg-hover
 					active:bg-surface-2 pointer-fine:transition-[background-color]
 					pointer-fine:duration-100"
 			>
@@ -145,9 +146,9 @@
 		<button
 			type="button"
 			aria-label="Options for {meta.name}"
-			onclick={onoptions}
+			onclick={(e) => onoptions(e.currentTarget)}
 			class="grid size-11 shrink-0 place-items-center rounded-full text-ink-faint focus-ring
-				hover:bg-surface-2 active:bg-surface-2"
+				hover:bg-hover active:bg-surface-2"
 		>
 			<More size={20} />
 		</button>
@@ -183,7 +184,7 @@
 			aria-label="Per-set rep targets for {meta.name}"
 			onclick={() => (expanded = !expanded)}
 			class="grid size-11 shrink-0 place-items-center rounded-xl text-ink-faint focus-ring
-				hover:bg-surface-2 active:bg-surface-2"
+				hover:bg-hover active:bg-surface-2"
 		>
 			<CaretDown size={16} class={expanded ? 'rotate-180' : ''} />
 		</button>
@@ -218,7 +219,7 @@
 				aria-label="Clear target for {meta.name}"
 				onclick={() => onreps(null)}
 				class="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-md font-bold
-					text-ink-faint focus-ring hover:bg-surface-2 active:bg-surface-2"
+					text-ink-faint focus-ring hover:bg-hover active:bg-surface-2"
 			>
 				<!-- `×` is a character the subset carries, same as the removal's above. -->
 				<span aria-hidden="true" class="text-lg leading-none">×</span>

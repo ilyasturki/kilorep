@@ -240,7 +240,7 @@
 		<a
 			href="/history"
 			class="flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-3 focus-ring
-				pointer-fine:transition-colors pointer-fine:hover:bg-surface-2"
+				pointer-fine:transition-colors pointer-fine:hover:bg-hover"
 		>
 			<span class="flex items-center justify-between px-1">
 				<h2 class="label-caps">Consistent?</h2>
@@ -312,7 +312,7 @@
 		<a
 			href="/weight"
 			class="flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-3 focus-ring
-				pointer-fine:transition-colors pointer-fine:hover:bg-surface-2"
+				pointer-fine:transition-colors pointer-fine:hover:bg-hover"
 		>
 			<span class="flex items-center justify-between px-1">
 				<h2 class="label-caps">Weight on track?</h2>

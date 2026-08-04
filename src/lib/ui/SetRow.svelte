@@ -59,7 +59,8 @@
 		/** One slot, one fact: `RPE 8`, `82.5 × 7`, `NOW`, `note`. */
 		right?: Snippet;
 		onselect?: () => void;
-		onoptions?: () => void;
+		/** Handed the element that asked, so the desktop menu can hang from it. */
+		onoptions?: (anchor: HTMLElement) => void;
 		class?: ClassValue;
 	};
 
@@ -85,14 +86,14 @@
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let fired = false;
 
-	function pressStart() {
+	function pressStart(anchor: HTMLElement) {
 		if (!onoptions) {
 			return;
 		}
 		fired = false;
 		timer = setTimeout(() => {
 			fired = true;
-			onoptions?.();
+			onoptions?.(anchor);
 		}, 500);
 	}
 
@@ -116,7 +117,7 @@
 		// On the shell and not on the button inside it: the ⋯ is a sibling holding
 		// the right edge, so a tint on the button alone would light two thirds of
 		// a row. `:active` still fires here when the press lands on that button.
-		interactive && 'hover:bg-surface-2 active:bg-surface-2',
+		interactive && 'hover:bg-hover active:bg-surface-2',
 		interactive && 'pointer-fine:transition-[background-color] pointer-fine:duration-100',
 		klass
 	]}
@@ -128,14 +129,14 @@
 	<button
 		type="button"
 		onclick={select}
-		onpointerdown={pressStart}
+		onpointerdown={(e) => pressStart(e.currentTarget)}
 		onpointerup={pressEnd}
 		onpointerleave={pressEnd}
 		onpointercancel={pressEnd}
 		oncontextmenu={(e) => {
 			if (!onoptions) return;
 			e.preventDefault();
-			onoptions();
+			onoptions(e.currentTarget);
 		}}
 		class="grid h-full w-full grid-cols-[2rem_1fr_auto] items-center gap-3 py-2 pr-3
 			pl-4 text-left focus-ring-inset"
@@ -154,14 +155,14 @@
 	</button>
 
 	{#if onoptions}
-		<!-- `sunken`, not `surface-2`: the shell already hovers `surface-2`, so a
+		<!-- `sunken`, not `hover`: the shell already hovers `hover`, so a
 		     button hovering the same swatch inside it never changed colour at all
 		     and read as part of the row rather than as its own target. The well
 		     is a visible step past the lit row in both themes. -->
 		<button
 			type="button"
 			aria-label="Set options"
-			onclick={onoptions}
+			onclick={(e) => onoptions?.(e.currentTarget)}
 			class="mr-2 hidden size-9 shrink-0 place-items-center rounded-lg text-lg text-ink-faint
 				focus-ring hover:bg-sunken hover:text-ink-muted pointer-fine:grid
 				pointer-fine:transition-[background-color,color] pointer-fine:duration-100"
