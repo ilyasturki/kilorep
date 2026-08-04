@@ -32,5 +32,23 @@
 <div class="flex h-dvh flex-col bg-canvas text-ink">
 	<AppBar />
 
-	{@render children()}
+	<!-- `vt-page` is the box the route transitions slide, and it lives here
+	     rather than on each screen so that it is the *same rectangle* on both
+	     sides of every navigation. It used to be declared twice — once by the
+	     tab layout, once by Settings — and those two boxes were different
+	     widths and different heights, so the browser spent the slide morphing
+	     one into the other on top of the travel. A single box owned by the
+	     shell cannot disagree with itself.
+
+	     `bg-canvas` and not merely the parent's: a view transition captures
+	     this element as an image, and an element with no background of its own
+	     captures transparent. Two panes overlap during a depth slide, and
+	     through a transparent one you would read both screens at once.
+
+	     The bar above stays outside it on purpose — it is the same bar on both
+	     sides of every navigation, and chrome that travels with the page it
+	     belongs *over* reads as the whole screen tearing away. -->
+	<div class="vt-page flex min-h-0 flex-1 flex-col bg-canvas">
+		{@render children()}
+	</div>
 </div>

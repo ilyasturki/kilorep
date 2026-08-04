@@ -418,295 +418,307 @@
 	<title>Settings | Kilorep</title>
 </svelte:head>
 
-<!-- `vt-page`: Settings sits outside `(tabs)` and so outside the box that
-     layout slides — without its own name here it would be the one screen that
-     blinks into place while every other one travels. -->
-<main class="vt-page column-content flex min-h-full flex-col gap-6 px-3 pt-safe-t pb-4 lg:pt-0">
-	<header class="flex flex-col gap-3 pt-3">
-		<BackLink href="/workout" label="Back to workout" class="self-start" />
+<!-- Its own scroll pane, because Settings sits outside `(tabs)` and that layout
+     is where every other screen gets one. It had none: a `min-h-full` column
+     inside a `h-dvh` shell, which meant a long Settings page grew the document
+     instead of scrolling a box — and, since the sliding rectangle used to be
+     this column, made the one screen in the app whose transition had to resize
+     itself on the way in. The box that slides is `(app)`'s now, identical
+     everywhere, and this pane is an ordinary scroller inside it like every
+     tab's. -->
+<div class="min-h-0 flex-1 overflow-y-auto">
+	<main class="column-content flex flex-col gap-6 px-3 pt-safe-t pb-4 lg:pt-0">
+		<header class="flex flex-col gap-3 pt-3">
+			<BackLink href="/workout" label="Back to workout" class="self-start" />
 
-		<h1 class="px-1 text-2xl font-extrabold tracking-tight">Settings</h1>
-	</header>
+			<h1 class="px-1 text-2xl font-extrabold tracking-tight">Settings</h1>
+		</header>
 
-	<!-- First, and above the account: it is the only section here that answers to
-	     the gym rather than to plumbing, and it exists whether or not a server
-	     was ever connected. -->
-	<section class="flex flex-col gap-3">
-		<h2 class="px-1 label-caps text-ink-faint">Sets</h2>
-
-		<div class="flex max-w-sm flex-col gap-3 px-1">
-			<p class="text-md text-pretty text-ink-muted">
-				How a set's optional rating is named. One number either way — the same set reads
-				<span class="font-bold text-ink">RPE 8</span>
-				or <span class="font-bold text-ink">RIR 2</span>, and changing this re-reads every set you
-				have ever rated.
-			</p>
-
-			<ChipGroup
-				bind:value={() => exertionScale.current, (next) => void chooseScale(next)}
-				layout="row"
-				label="Rating scale"
-			>
-				<Chip value="rpe">RPE</Chip>
-				<Chip value="rir">RIR</Chip>
-			</ChipGroup>
-		</div>
-	</section>
-
-	{#if data.user}
+		<!-- First, and above the account: it is the only section here that answers to
+		     the gym rather than to plumbing, and it exists whether or not a server
+		     was ever connected. -->
 		<section class="flex flex-col gap-3">
-			<h2 class="px-1 label-caps text-ink-faint">Account</h2>
+			<h2 class="px-1 label-caps text-ink-faint">Sets</h2>
 
 			<div class="flex max-w-sm flex-col gap-3 px-1">
-				<p class="text-md break-all text-ink-muted">{data.user.email}</p>
+				<p class="text-md text-pretty text-ink-muted">
+					How a set's optional rating is named. One number either way — the same set reads
+					<span class="font-bold text-ink">RPE 8</span>
+					or <span class="font-bold text-ink">RIR 2</span>, and changing this re-reads every set you
+					have ever rated.
+				</p>
 
-				<Button variant="secondary" disabled={signOutPending} onclick={signOut}>
-					{signOutPending ? 'Signing out…' : 'Sign out'}
-				</Button>
-
-				<div aria-live="polite">
-					{#if signOutError !== ''}
-						<p class="text-sm font-bold text-danger">{signOutError}</p>
-					{/if}
-				</div>
+				<ChipGroup
+					bind:value={() => exertionScale.current, (next) => void chooseScale(next)}
+					layout="row"
+					label="Rating scale"
+				>
+					<Chip value="rpe">RPE</Chip>
+					<Chip value="rir">RIR</Chip>
+				</ChipGroup>
 			</div>
 		</section>
-	{/if}
 
-	{#if import.meta.env.APP_BUILD}
-		<section class="flex flex-col gap-3">
-			<h2 class="px-1 label-caps text-ink-faint">Server</h2>
+		{#if data.user}
+			<section class="flex flex-col gap-3">
+				<h2 class="px-1 label-caps text-ink-faint">Account</h2>
 
-			{#if server === null}
 				<div class="flex max-w-sm flex-col gap-3 px-1">
-					<p class="text-md text-pretty text-ink-muted">
-						Everything lives on this phone. Connecting a self-hosted server adds sync, the web
-						surface and the API.
-					</p>
+					<p class="text-md break-all text-ink-muted">{data.user.email}</p>
 
-					<Input
-						label="Server address"
-						name="server"
-						placeholder="gym.example.com"
-						autocapitalize="none"
-						autocorrect="off"
-						spellcheck="false"
-						inputmode="url"
-						bind:value={address}
-						error={serverError}
-					/>
-
-					<Button variant="secondary" disabled={connectPending} onclick={connect}>
-						{connectPending ? 'Checking…' : 'Connect'}
+					<Button variant="secondary" disabled={signOutPending} onclick={signOut}>
+						{signOutPending ? 'Signing out…' : 'Sign out'}
 					</Button>
-				</div>
-			{:else}
-				<div class="flex max-w-sm flex-col gap-3 px-1">
-					<p class="text-md break-all text-ink-muted">{server}</p>
 
-					{#if !credentialled}
-						<!-- Connected and signed out, which is a state the app runs in
-						     rather than a door it stands behind: everything logged here
-						     still works, and this form is how sync starts. -->
+					<div aria-live="polite">
+						{#if signOutError !== ''}
+							<p class="text-sm font-bold text-danger">{signOutError}</p>
+						{/if}
+					</div>
+				</div>
+			</section>
+		{/if}
+
+		{#if import.meta.env.APP_BUILD}
+			<section class="flex flex-col gap-3">
+				<h2 class="px-1 label-caps text-ink-faint">Server</h2>
+
+				{#if server === null}
+					<div class="flex max-w-sm flex-col gap-3 px-1">
 						<p class="text-md text-pretty text-ink-muted">
-							Sign in to sync this phone with that server.
+							Everything lives on this phone. Connecting a self-hosted server adds sync, the web
+							surface and the API.
 						</p>
 
-						{#if data.google}
-							<Button
-								variant="secondary"
-								disabled={googlePending || signInPending}
-								onclick={withGoogle}
-							>
-								<GoogleLogo size={18} />
-								{googlePending ? 'Waiting for Google…' : 'Continue with Google'}
-							</Button>
-						{/if}
-
 						<Input
-							label="Email"
-							name="email"
-							type="email"
+							label="Server address"
+							name="server"
+							placeholder="gym.example.com"
 							autocapitalize="none"
 							autocorrect="off"
 							spellcheck="false"
-							inputmode="email"
-							autocomplete="email"
-							bind:value={email}
-							error={emailError}
+							inputmode="url"
+							bind:value={address}
+							error={serverError}
 						/>
 
-						<Input
-							label="Password"
-							name="password"
-							type="password"
-							autocomplete="current-password"
-							bind:value={password}
-							error={passwordError}
-						/>
-
-						<Button variant="secondary" disabled={signInPending || googlePending} onclick={signIn}>
-							{signInPending ? 'Signing in…' : 'Sign in'}
+						<Button variant="secondary" disabled={connectPending} onclick={connect}>
+							{connectPending ? 'Checking…' : 'Connect'}
 						</Button>
+					</div>
+				{:else}
+					<div class="flex max-w-sm flex-col gap-3 px-1">
+						<p class="text-md break-all text-ink-muted">{server}</p>
 
-						<div aria-live="polite">
-							{#if signInError !== ''}
-								<p class="text-sm font-bold text-danger">{signInError}</p>
+						{#if !credentialled}
+							<!-- Connected and signed out, which is a state the app runs in
+						     rather than a door it stands behind: everything logged here
+						     still works, and this form is how sync starts. -->
+							<p class="text-md text-pretty text-ink-muted">
+								Sign in to sync this phone with that server.
+							</p>
+
+							{#if data.google}
+								<Button
+									variant="secondary"
+									disabled={googlePending || signInPending}
+									onclick={withGoogle}
+								>
+									<GoogleLogo size={18} />
+									{googlePending ? 'Waiting for Google…' : 'Continue with Google'}
+								</Button>
 							{/if}
-						</div>
-					{/if}
 
-					<Button variant="destructive" onclick={() => (disconnectOpen = true)}>
-						<Plugs size={18} />
-						Disconnect
-					</Button>
-				</div>
+							<Input
+								label="Email"
+								name="email"
+								type="email"
+								autocapitalize="none"
+								autocorrect="off"
+								spellcheck="false"
+								inputmode="email"
+								autocomplete="email"
+								bind:value={email}
+								error={emailError}
+							/>
 
-				<!-- Three-way, so a Sheet rather than the AlertDialog the rest of this
+							<Input
+								label="Password"
+								name="password"
+								type="password"
+								autocomplete="current-password"
+								bind:value={password}
+								error={passwordError}
+							/>
+
+							<Button
+								variant="secondary"
+								disabled={signInPending || googlePending}
+								onclick={signIn}
+							>
+								{signInPending ? 'Signing in…' : 'Sign in'}
+							</Button>
+
+							<div aria-live="polite">
+								{#if signInError !== ''}
+									<p class="text-sm font-bold text-danger">{signInError}</p>
+								{/if}
+							</div>
+						{/if}
+
+						<Button variant="destructive" onclick={() => (disconnectOpen = true)}>
+							<Plugs size={18} />
+							Disconnect
+						</Button>
+					</div>
+
+					<!-- Three-way, so a Sheet rather than the AlertDialog the rest of this
 				     screen uses: the destructive option is one of the choices, not the
 				     whole question, and it keeps its own confirm below. -->
+					<Sheet
+						bind:open={mismatchOpen}
+						title="This phone belongs to another account"
+						description="Everything logged here was synced as somebody else. Choose what happens to it before {arriving?.email ??
+							'the new account'} takes over."
+					>
+						<div class="flex flex-col gap-5 pt-2">
+							<div class="flex flex-col gap-2">
+								<Button variant="secondary" onclick={() => void handOver('adopt')}>
+									Move it to this account
+								</Button>
+								<p class="px-1 text-sm text-pretty text-ink-muted">
+									Every workout, template and weight on this phone is copied across. The other
+									account keeps its own.
+								</p>
+							</div>
+
+							<div class="flex flex-col gap-2">
+								<Button variant="destructive" onclick={() => (wipeOpen = true)}>
+									Erase this phone
+								</Button>
+								<p class="px-1 text-sm text-pretty text-ink-muted">
+									Local data is deleted and replaced with whatever the new account has on the
+									server.
+								</p>
+							</div>
+
+							<Button variant="chrome" caps onclick={() => void abandon()}>CANCEL</Button>
+						</div>
+					</Sheet>
+
+					<AlertDialog
+						bind:open={wipeOpen}
+						title="Erase everything on this phone?"
+						description="Every workout, template and body weight held here is deleted, including any that never reached a server. There is no undo."
+						confirmLabel="Erase"
+						onconfirm={() => void handOver('wipe')}
+					/>
+
+					<AlertDialog
+						bind:open={disconnectOpen}
+						title="Disconnect this server?"
+						description="Your workouts stay on this phone. Sync and the account stop until you connect again."
+						confirmLabel="Disconnect"
+						onconfirm={() => void disconnect()}
+					/>
+				{/if}
+			</section>
+		{/if}
+
+		{#if data.tokens !== null}
+			<section class="flex flex-col gap-3">
+				<h2 class="px-1 label-caps text-ink-faint">API tokens</h2>
+
+				{#if minted !== null}
+					<!-- Never in the row it belongs to: the list shows hashes' shadows,
+				     and this is the secret itself, once. -->
+					<div class="flex flex-col gap-2 rounded-2xl border border-line bg-surface px-4 py-3">
+						<p class="text-sm font-bold text-ink-muted">
+							The token for “{minted.label}”. Copy it now — it is shown this once and stored only as
+							a hash.
+						</p>
+
+						<code class="rounded-xl bg-surface-2 px-3 py-2 text-sm break-all">{minted.token}</code>
+
+						<div class="flex gap-2">
+							<Button variant="chrome" caps onclick={copyMinted}>
+								{copied ? 'COPIED' : 'COPY'}
+							</Button>
+							<Button variant="chrome" caps onclick={() => (minted = null)}>DONE</Button>
+						</div>
+					</div>
+				{/if}
+
+				<ul class="list-group">
+					{#each data.tokens as token (token.id)}
+						<li>
+							<ListRow
+								title={token.label}
+								meta={`${token.kind} · ${token.prefix}… · ${
+									token.lastUsedAt === null
+										? 'never used'
+										: `last used ${day.format(token.lastUsedAt)}`
+								}`}
+							>
+								{#snippet trailing()}
+									{#if token.current}
+										<Badge tone="accent">This session</Badge>
+									{:else}
+										<Button
+											variant="chrome"
+											caps
+											onclick={() => {
+												revoking = token;
+												revokeOpen = true;
+											}}
+										>
+											REVOKE
+										</Button>
+									{/if}
+								{/snippet}
+							</ListRow>
+						</li>
+					{/each}
+				</ul>
+
+				<div aria-live="polite">
+					{#if revokeError !== ''}
+						<p class="px-1 text-sm font-bold text-danger">{revokeError}</p>
+					{/if}
+				</div>
+
+				<div class="px-1">
+					<Button variant="secondary" onclick={() => (createOpen = true)}>New API token</Button>
+				</div>
+
 				<Sheet
-					bind:open={mismatchOpen}
-					title="This phone belongs to another account"
-					description="Everything logged here was synced as somebody else. Choose what happens to it before {arriving?.email ??
-						'the new account'} takes over."
+					bind:open={createOpen}
+					title="New API token"
+					description="Authenticates a tool against the server. The secret is shown once."
 				>
 					<div class="flex flex-col gap-5 pt-2">
-						<div class="flex flex-col gap-2">
-							<Button variant="secondary" onclick={() => void handOver('adopt')}>
-								Move it to this account
-							</Button>
-							<p class="px-1 text-sm text-pretty text-ink-muted">
-								Every workout, template and weight on this phone is copied across. The other account
-								keeps its own.
-							</p>
-						</div>
+						<Input
+							label="Label"
+							name="label"
+							placeholder="MCP on the desk"
+							bind:value={label}
+							error={labelError}
+						/>
 
-						<div class="flex flex-col gap-2">
-							<Button variant="destructive" onclick={() => (wipeOpen = true)}>
-								Erase this phone
-							</Button>
-							<p class="px-1 text-sm text-pretty text-ink-muted">
-								Local data is deleted and replaced with whatever the new account has on the server.
-							</p>
-						</div>
-
-						<Button variant="chrome" caps onclick={() => void abandon()}>CANCEL</Button>
+						<Button variant="secondary" disabled={createPending} onclick={create}>
+							{createPending ? 'Creating…' : 'Create token'}
+						</Button>
 					</div>
 				</Sheet>
 
 				<AlertDialog
-					bind:open={wipeOpen}
-					title="Erase everything on this phone?"
-					description="Every workout, template and body weight held here is deleted, including any that never reached a server. There is no undo."
-					confirmLabel="Erase"
-					onconfirm={() => void handOver('wipe')}
+					bind:open={revokeOpen}
+					title={`Revoke “${revoking?.label ?? ''}”?`}
+					description="Whatever holds this token loses access immediately. There is no undo."
+					confirmLabel="Revoke"
+					onconfirm={() => void revoke()}
 				/>
-
-				<AlertDialog
-					bind:open={disconnectOpen}
-					title="Disconnect this server?"
-					description="Your workouts stay on this phone. Sync and the account stop until you connect again."
-					confirmLabel="Disconnect"
-					onconfirm={() => void disconnect()}
-				/>
-			{/if}
-		</section>
-	{/if}
-
-	{#if data.tokens !== null}
-		<section class="flex flex-col gap-3">
-			<h2 class="px-1 label-caps text-ink-faint">API tokens</h2>
-
-			{#if minted !== null}
-				<!-- Never in the row it belongs to: the list shows hashes' shadows,
-				     and this is the secret itself, once. -->
-				<div class="flex flex-col gap-2 rounded-2xl border border-line bg-surface px-4 py-3">
-					<p class="text-sm font-bold text-ink-muted">
-						The token for “{minted.label}”. Copy it now — it is shown this once and stored only as a
-						hash.
-					</p>
-
-					<code class="rounded-xl bg-surface-2 px-3 py-2 text-sm break-all">{minted.token}</code>
-
-					<div class="flex gap-2">
-						<Button variant="chrome" caps onclick={copyMinted}>
-							{copied ? 'COPIED' : 'COPY'}
-						</Button>
-						<Button variant="chrome" caps onclick={() => (minted = null)}>DONE</Button>
-					</div>
-				</div>
-			{/if}
-
-			<ul class="list-group">
-				{#each data.tokens as token (token.id)}
-					<li>
-						<ListRow
-							title={token.label}
-							meta={`${token.kind} · ${token.prefix}… · ${
-								token.lastUsedAt === null
-									? 'never used'
-									: `last used ${day.format(token.lastUsedAt)}`
-							}`}
-						>
-							{#snippet trailing()}
-								{#if token.current}
-									<Badge tone="accent">This session</Badge>
-								{:else}
-									<Button
-										variant="chrome"
-										caps
-										onclick={() => {
-											revoking = token;
-											revokeOpen = true;
-										}}
-									>
-										REVOKE
-									</Button>
-								{/if}
-							{/snippet}
-						</ListRow>
-					</li>
-				{/each}
-			</ul>
-
-			<div aria-live="polite">
-				{#if revokeError !== ''}
-					<p class="px-1 text-sm font-bold text-danger">{revokeError}</p>
-				{/if}
-			</div>
-
-			<div class="px-1">
-				<Button variant="secondary" onclick={() => (createOpen = true)}>New API token</Button>
-			</div>
-
-			<Sheet
-				bind:open={createOpen}
-				title="New API token"
-				description="Authenticates a tool against the server. The secret is shown once."
-			>
-				<div class="flex flex-col gap-5 pt-2">
-					<Input
-						label="Label"
-						name="label"
-						placeholder="MCP on the desk"
-						bind:value={label}
-						error={labelError}
-					/>
-
-					<Button variant="secondary" disabled={createPending} onclick={create}>
-						{createPending ? 'Creating…' : 'Create token'}
-					</Button>
-				</div>
-			</Sheet>
-
-			<AlertDialog
-				bind:open={revokeOpen}
-				title={`Revoke “${revoking?.label ?? ''}”?`}
-				description="Whatever holds this token loses access immediately. There is no undo."
-				confirmLabel="Revoke"
-				onconfirm={() => void revoke()}
-			/>
-		</section>
-	{/if}
-</main>
+			</section>
+		{/if}
+	</main>
+</div>

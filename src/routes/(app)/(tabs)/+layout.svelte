@@ -135,22 +135,28 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
-	<!-- `vt-page` is the box the route transitions slide — the content and
-	     nothing else. The bar below stays out of it on purpose: it is the same
-	     bar on both sides of every navigation, and chrome that travels with the
-	     page it belongs *over* reads as the whole screen tearing away. See
-	     `nav/transitions.ts`. -->
-	<div class="vt-page flex min-h-0 flex-1 flex-col">
-		{#if ownsPane}
+	{#if ownsPane}
+		{@render children()}
+	{:else}
+		<div bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
 			{@render children()}
-		{:else}
-			<div bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
-				{@render children()}
-			</div>
-		{/if}
-	</div>
+		</div>
+	{/if}
 
-	<nav aria-label="Main" class="shrink-0 border-t border-line-soft bg-surface pb-safe-b lg:hidden">
+	<!-- `vt-tabbar` is what keeps this bar out of the sliding pane. The box that
+	     travels is `(app)`'s, and this bar is inside it — but an element with a
+	     `view-transition-name` of its own is lifted out of its ancestor's
+	     snapshot, so naming it here is what makes it stand still while the page
+	     under it moves. That is the whole trick, and it also answers the one
+	     case where the bar *should* move: Settings renders none, so on the way
+	     in and out `nav/transitions.ts` stamps `data-bar="travel"`, the name is
+	     dropped, and the bar goes back to being part of the pane it belongs to
+	     rather than blinking out from under a page still in motion. See the
+	     `vt-tabbar` rules in app.css. -->
+	<nav
+		aria-label="Main"
+		class="vt-tabbar shrink-0 border-t border-line-soft bg-surface pb-safe-b lg:hidden"
+	>
 		<div class="mx-auto flex max-w-sm">
 			{#each navTabs() as tab (tab.href)}
 				{@const active = isActive(page.url.pathname, tab.href)}

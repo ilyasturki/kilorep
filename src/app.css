@@ -929,14 +929,30 @@
 	}
 }
 
-/* Route changes slide; `nav/transitions.ts` decides which way and stamps it
-   on <html>. The box that travels is whichever element wears `vt-page` — one
-   per screen, the content between the bars — and the two snapshots move in
-   lockstep, edge to edge, so no fade is needed to cover a seam: same
-   distance, same curve, no gap. `root` is pinned still because its two
-   snapshots are the chrome, identical on both sides of the navigation, and
-   the UA's default is to crossfade them anyway — the one fade this app has
-   no use for.
+/* Route changes slide; `nav/transitions.ts` decides how and stamps three
+   attributes on <html> — `data-nav` for direction, `data-axis` for whether the
+   screens are peers or stacked, `data-bar` for whether the tab bar is the same
+   bar on both sides. The box that travels is `vt-page`, which the `(app)`
+   layout owns so that both halves of every navigation are the same rectangle.
+
+   NOTE THE MISSING SPACE, in every rule below that names an attribute. These
+   pseudo-elements originate from the *document element itself*, not from
+   anything inside it, so `html[data-nav='push'] ::view-transition-old(page)`
+   with a descendant combinator asks for a snapshot originating from some
+   descendant of <html> — which never exists, and the rule silently never
+   matches. That was the bug: written with the space, all four direction rules
+   were dead, the UA's default crossfade survived underneath them, and every
+   route change in this app was a 250ms fade. It looked like nothing at all on
+   a phone, where the two screens are similar enough that a fade reads as a
+   repaint, and like a morphing blur on a desk. Rules without a combinator —
+   the duration below, `root` — matched all along, which is why the layer
+   looked half-alive rather than absent.
+
+   Lateral is lockstep: both panes cross the full width, same distance, same
+   curve, no gap, so no fade is needed to cover a seam. Depth is parallax: the
+   pane being covered gives up 30% while the arriving one crosses everything,
+   and that difference is what says one went behind the other. `root` stays
+   pinned because its snapshots are the desk's top bar, identical on both sides.
 
    No reduced-motion rule here because none is needed: the JS never opens a
    transition when the preference is set, per the app's existing idiom. */
@@ -955,43 +971,101 @@
 	animation-timing-function: var(--ease-sheet);
 }
 
-html[data-nav='push'] ::view-transition-old(page) {
-	animation-name: vt-page-exit-left;
+/* The arriving pane crosses the whole width in both axes; only the departing
+   one knows the difference between a peer and a screen it is going behind. */
+html[data-nav='push']::view-transition-new(page) {
+	animation-name: vt-enter-right;
 }
 
-html[data-nav='push'] ::view-transition-new(page) {
-	animation-name: vt-page-enter-right;
+html[data-nav='pop']::view-transition-old(page) {
+	animation-name: vt-exit-right;
 }
 
-html[data-nav='pop'] ::view-transition-old(page) {
-	animation-name: vt-page-exit-right;
+html[data-nav='push'][data-axis='lateral']::view-transition-old(page) {
+	animation-name: vt-exit-left;
 }
 
-html[data-nav='pop'] ::view-transition-new(page) {
-	animation-name: vt-page-enter-left;
+html[data-nav='pop'][data-axis='lateral']::view-transition-new(page) {
+	animation-name: vt-enter-left;
 }
 
-@keyframes vt-page-enter-right {
+html[data-nav='push'][data-axis='depth']::view-transition-old(page) {
+	animation-name: vt-recede-left;
+}
+
+html[data-nav='pop'][data-axis='depth']::view-transition-new(page) {
+	animation-name: vt-return-left;
+}
+
+/* Popping off a stack, the screen being dismissed has to travel *over* the one
+   it uncovers — the returning pane starts at -30%, so it still covers most of
+   the width, and painted on top it would hide the very thing sliding away.
+   Only this one case needs saying: everywhere else the arriving pane belongs
+   in front, which is the paint order the UA already gives. */
+html[data-nav='pop'][data-axis='depth']::view-transition-old(page) {
+	z-index: 1;
+}
+
+/* The phone's tab bar. Naming it lifts it out of the pane's snapshot even
+   though it sits inside the box, which is what lets the page slide underneath
+   a bar that does not move — the same bar on both sides of a navigation must
+   not travel, or the whole screen reads as tearing away.
+
+   Dropping the name on `data-bar='travel'` puts it back *into* the pane, for
+   the one move where the bar is not on both sides: Settings renders none, so
+   there it has to leave with the screen it belongs to. `transitions.ts` stamps
+   the attribute before the browser captures, so the old snapshot and the new
+   one agree about which of the two the bar is. */
+.vt-tabbar {
+	view-transition-name: tabbar;
+}
+
+html[data-bar='travel'] .vt-tabbar {
+	view-transition-name: none;
+}
+
+::view-transition-group(tabbar),
+::view-transition-old(tabbar),
+::view-transition-new(tabbar) {
+	animation: none;
+}
+
+@keyframes vt-enter-right {
 	from {
 		transform: translateX(100%);
 	}
 }
 
-@keyframes vt-page-exit-left {
+@keyframes vt-exit-right {
+	to {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes vt-exit-left {
 	to {
 		transform: translateX(-100%);
 	}
 }
 
-@keyframes vt-page-enter-left {
+@keyframes vt-enter-left {
 	from {
 		transform: translateX(-100%);
 	}
 }
 
-@keyframes vt-page-exit-right {
+/* The parallax pair. 30% and not 50%: far enough that the eye reads two planes
+   rather than one sheet, near enough that the covered screen is still legibly
+   the place you came from while it goes. */
+@keyframes vt-recede-left {
 	to {
-		transform: translateX(100%);
+		transform: translateX(-30%);
+	}
+}
+
+@keyframes vt-return-left {
+	from {
+		transform: translateX(-30%);
 	}
 }
 
