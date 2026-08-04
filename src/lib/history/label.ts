@@ -125,3 +125,76 @@ export function formatSince(then: number, now: number): string {
 
 	return `${Math.floor(days / 30)}mo`;
 }
+
+/**
+ * The two spellings of one date: what the History row prints on a phone, and
+ * what it prints once there is room. Both are returned together because they
+ * are the same fact — the row renders both and lets CSS pick at `lg`, which is
+ * the only width in this app where anything changes shape.
+ */
+export type When = { short: string; long: string };
+
+// One instance each, at module scope: `Intl.DateTimeFormat` is the expensive
+// part of formatting, and a list is hundreds of rows.
+const dayMonth = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+const dayMonthYear = new Intl.DateTimeFormat('en-GB', {
+	day: 'numeric',
+	month: 'short',
+	year: 'numeric'
+});
+// The weekday alone, joined on by hand below. Asking Intl for it inline gives
+// `Mon 12 Jan` without a year and `Mon, 12 Jan 2026` with one — en-GB's own
+// comma rule, and a column where half the rows carry a comma reads as a bug.
+const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
+
+/** Local midnight before `ms`. The calendar day is the unit, not the clock. */
+function startOfDay(ms: number): number {
+	const date = new Date(ms);
+
+	date.setHours(0, 0, 0, 0);
+
+	return date.getTime();
+}
+
+/**
+ * When a session happened, in the words a lifter would use for it: `Today`,
+ * `Yesterday`, `3 days ago`, and a date once counting stops being an answer.
+ *
+ * Calendar days, unlike `formatSince` above — that one measures elapsed time
+ * because it answers "am I neglecting this", where a fortnight is a fortnight
+ * whatever the clock says. Here the words are the calendar's own, and a set
+ * logged at 23:00 has to read `Yesterday` at 01:00 rather than `Today`. The
+ * rounding is what makes that survive a DST boundary, where the gap between
+ * two midnights is 23 or 25 hours.
+ *
+ * The handover is a week: `6 days ago` is still countable, `9 days ago` is a
+ * number you convert to a date anyway, so the row shows the date instead. The
+ * year rides along only when it is not this one — on recent rows it is noise,
+ * and on a row from December 2025 it is the whole point.
+ *
+ * A future timestamp reads as `Today` rather than counting backwards, the same
+ * clock-skew guard `formatSince` carries and for the same reason: these records
+ * arrive from other devices.
+ */
+export function formatWhen(then: number, now: number): When {
+	const days = Math.round((startOfDay(now) - startOfDay(then)) / DAY);
+
+	if (days < 1) {
+		return { short: 'Today', long: 'Today' };
+	}
+
+	if (days === 1) {
+		return { short: 'Yesterday', long: 'Yesterday' };
+	}
+
+	if (days < 7) {
+		const said = `${days} days ago`;
+
+		return { short: said, long: said };
+	}
+
+	const sameYear = new Date(then).getFullYear() === new Date(now).getFullYear();
+	const date = sameYear ? dayMonth.format(then) : dayMonthYear.format(then);
+
+	return { short: date, long: `${weekday.format(then)}, ${date}` };
+}

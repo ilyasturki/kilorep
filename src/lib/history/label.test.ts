@@ -1,7 +1,13 @@
 import { describe, expect, test } from 'vitest';
 
 import { catalog } from '$lib/catalog';
-import { completedSetCount, exerciseCount, formatSince, workoutTitle } from '$lib/history/label';
+import {
+	completedSetCount,
+	exerciseCount,
+	formatSince,
+	formatWhen,
+	workoutTitle
+} from '$lib/history/label';
 import type { Workout, WorkoutSet } from '$lib/domain/workout';
 
 /**
@@ -141,5 +147,53 @@ describe('formatSince', () => {
 
 	test('a clock-skewed future timestamp reads as today, never negative', () => {
 		expect(formatSince(10 * DAY, 0)).toBe('today');
+	});
+});
+
+// Local time throughout, because `formatWhen`'s whole claim is about the
+// calendar the phone is holding rather than about UTC.
+const at = (y: number, m: number, d: number, h = 12): number => new Date(y, m - 1, d, h).getTime();
+
+describe('formatWhen', () => {
+	const now = at(2026, 8, 4);
+
+	test('the near days are words, not numbers', () => {
+		expect(formatWhen(at(2026, 8, 4, 8), now).short).toBe('Today');
+		expect(formatWhen(at(2026, 8, 3), now).short).toBe('Yesterday');
+		expect(formatWhen(at(2026, 8, 2), now).short).toBe('2 days ago');
+		expect(formatWhen(at(2026, 7, 29), now).short).toBe('6 days ago');
+	});
+
+	test('the words carry no date, at either width', () => {
+		const yesterday = formatWhen(at(2026, 8, 3), now);
+
+		expect(yesterday.long).toBe(yesterday.short);
+	});
+
+	test('a week back the date takes over, weekday only where there is room', () => {
+		expect(formatWhen(at(2026, 7, 28), now)).toEqual({
+			short: '28 Jul',
+			long: 'Tue, 28 Jul'
+		});
+	});
+
+	test('the year rides along only when it is not this one', () => {
+		expect(formatWhen(at(2026, 1, 12), now)).toEqual({ short: '12 Jan', long: 'Mon, 12 Jan' });
+		expect(formatWhen(at(2025, 12, 3), now)).toEqual({
+			short: '3 Dec 2025',
+			long: 'Wed, 3 Dec 2025'
+		});
+	});
+
+	test('the calendar decides, not the clock', () => {
+		// 23:00 yesterday read at 01:00 today is nine hours ago and still
+		// Yesterday — the failure the elapsed-time `formatSince` would make.
+		expect(formatWhen(at(2026, 8, 3, 23), at(2026, 8, 4, 1)).short).toBe('Yesterday');
+		// And twenty-six hours inside one long day is still Today.
+		expect(formatWhen(at(2026, 8, 4, 1), at(2026, 8, 4, 23)).short).toBe('Today');
+	});
+
+	test('a clock-skewed future timestamp reads as Today, never counts backwards', () => {
+		expect(formatWhen(at(2026, 8, 9), now).short).toBe('Today');
 	});
 });

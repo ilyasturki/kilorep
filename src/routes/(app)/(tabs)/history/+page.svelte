@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { completedSetCount, exerciseCount, workoutTitle } from '$lib/history/label';
-	import type { FinishedWorkout } from '$lib/store/derive';
+	import { completedSetCount, exerciseCount, formatWhen, workoutTitle } from '$lib/history/label';
+	import type { Workout } from '$lib/domain/workout';
+	import { activeWorkout } from '$lib/workout/active.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -22,7 +23,28 @@
 
 	const workouts = $derived(data.workouts.toReversed());
 
-	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+	/**
+	 * The session still being logged, pinned above the list.
+	 *
+	 * Read straight off the holder rather than through the load: it is module
+	 * state the `(app)` layout refills from the snapshot before any load runs,
+	 * so it is already true on the first frame, and a `depends` here would only
+	 * buy a re-run that changes nothing this screen writes. The counts below it
+	 * move as sets are checked on another screen, which is the point — this row
+	 * is the running session, not a copy of it.
+	 *
+	 * It goes to `/workout/live`, not `/history/{id}`: there is no record yet.
+	 * Which is also why it stands outside the list below rather than leading it
+	 * — every row in that group opens a finished workout, and one row in the
+	 * same card that went somewhere else would be a lie the card tells.
+	 */
+	const live = $derived(activeWorkout.session);
+
+	// Captured once per mount, the idiom every read-only screen here uses. A
+	// list left open across midnight keeps yesterday's wording until you
+	// navigate, which is a smaller surprise than labels rewriting themselves
+	// under a thumb.
+	const now = Date.now();
 
 	/**
 	 * How big the session was, in the two numbers a lifter scans for: how much
@@ -30,8 +52,12 @@
 	 * absent — a session is a day in this app, not a stopwatch reading, and the
 	 * clock a record carries is plumbing (the sort key, the finished marker)
 	 * rather than something to answer for.
+	 *
+	 * Takes a plain `Workout`, so the live row is described by the same
+	 * sentence as the finished ones. A session with nothing checked yet reads
+	 * `0 sets` honestly — warmups and unchecked sets never count, live or not.
 	 */
-	function meta(workout: FinishedWorkout): string {
+	function meta(workout: Workout): string {
 		const exercises = exerciseCount(workout);
 		const sets = completedSetCount(workout);
 
@@ -53,6 +79,26 @@
 		<h1 class="text-2xl font-extrabold tracking-tight">History</h1>
 	</header>
 
+	{#if live !== null}
+		<!-- Its own card, above the group and never inside it: this row resumes,
+		     the rows below it read. The dot is the accent, which in this app means
+		     "this logs a set" — the one thing on the screen that still does. -->
+		<section class="list-group">
+			<ListRow
+				title={workoutTitle(live.workout, data.templates)}
+				meta={meta(live.workout)}
+				href="/workout/live"
+			>
+				{#snippet leading()}
+					<span class="size-1.5 rounded-full bg-accent"></span>
+				{/snippet}
+				{#snippet trailing()}
+					Now
+				{/snippet}
+			</ListRow>
+		</section>
+	{/if}
+
 	{#if workouts.length === 0}
 		<!-- Not a dead end: the tab that records sessions points at the tab that
 		     starts them. Outlined — the lit commit belongs to Workout's own Start. -->
@@ -67,13 +113,19 @@
 	{:else}
 		<section class="list-group">
 			{#each workouts as workout (workout.id)}
+				{@const when = formatWhen(workout.startedAt, now)}
+
 				<ListRow
 					title={workoutTitle(workout, data.templates)}
 					meta={meta(workout)}
 					href="/history/{workout.id}"
 				>
+					<!-- Both spellings rendered, one hidden: the swap is `lg`, the app's
+					     single shape breakpoint, and picking in CSS keeps the choice out
+					     of a width the component would have to measure. -->
 					{#snippet trailing()}
-						{day.format(workout.startedAt)}
+						<span class="lg:hidden">{when.short}</span>
+						<span class="hidden lg:inline">{when.long}</span>
 					{/snippet}
 				</ListRow>
 			{/each}
