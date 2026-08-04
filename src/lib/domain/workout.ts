@@ -501,13 +501,29 @@ export function insertedSetCount(history: History, exerciseId: string): number {
 export type NewExerciseIds = { entry: string; exercise: string; sets: string[] };
 
 /**
- * Inserts an exercise as a new entry at the end of the session. Null when no
- * set ids were provided: an exercise with no sets is not an exercise, the same
- * rule `removeSet` enforces from the other side.
+ * Inserts an exercise as a new entry. Null when no set ids were provided: an
+ * exercise with no sets is not an exercise, the same rule `removeSet` enforces
+ * from the other side.
  *
- * At the end, always — the one placement rule, decided over insert-after-here.
- * Predictable beats clever mid-session, and positioning is reorder's job when
- * reorder lands, not a second thing insertion does.
+ * `after` is the entry the new one lands behind — where the ask was made, which
+ * on the workout pane is the block whose add row was tapped. Omitted, it lands
+ * at the end.
+ *
+ * End-always was the rule here for a while, and the argument was that
+ * positioning is reorder's job when reorder lands. Reorder has landed, which
+ * retires that argument on its own terms: a pane that can be dragged into order
+ * does not need insertion to stay dumb, and an exercise appearing at the foot of
+ * a session scrolled somewhere else is a drag the user did not ask to perform.
+ * The tap said where.
+ *
+ * An unknown or absent `after` falls to the end rather than refusing —
+ * `moveEntry` shows the same forgiveness when it clamps a drag held past the
+ * last row. Nothing here can fail for a placement the caller half-remembered.
+ *
+ * The entry and not the exercise, because an entry holding two of them is a
+ * superset performed together: landing between the halves of one would be a
+ * superset edit, a different gesture against a level of the tree the UI does not
+ * expose.
  *
  * The sets arrive blank with `plannedReps: null`, not copied from anywhere:
  * nothing prescribed them — plans live in templates, and this exercise joined
@@ -515,14 +531,14 @@ export type NewExerciseIds = { entry: string; exercise: string; sets: string[] }
  * working set resolves its prefill from history by index, so an exercise
  * performed last week opens on last week's numbers untouched.
  *
- * A new entry rather than a slot in an existing one, because an entry holding
- * several exercises is a superset, and inserting into one is a superset edit —
- * a different gesture against a different level of the tree.
+ * A new entry rather than a slot in an existing one, for the superset reason
+ * above read from the other side: inserting into one is that same edit.
  */
 export function addExercise(
 	workout: Workout,
 	exerciseId: string,
-	ids: NewExerciseIds
+	ids: NewExerciseIds,
+	after?: string
 ): WorkoutEntry | null {
 	if (ids.sets.length === 0) {
 		return null;
@@ -539,7 +555,13 @@ export function addExercise(
 		]
 	};
 
-	workout.entries.push(entry);
+	const at = after === undefined ? -1 : workout.entries.findIndex((e) => e.id === after);
+
+	if (at === -1) {
+		workout.entries.push(entry);
+	} else {
+		workout.entries.splice(at + 1, 0, entry);
+	}
 
 	return entry;
 }

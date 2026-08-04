@@ -440,6 +440,46 @@ describe('addExercise', () => {
 		).toBeNull();
 		expect(workout.entries).toHaveLength(4);
 	});
+
+	// Where the ask was made is where the exercise lands. The pane's add row
+	// belongs to a block, and an exercise appearing at the foot of a session
+	// scrolled somewhere else is a drag the user never asked to perform.
+	test('lands directly behind the entry it was asked from', () => {
+		const workout = freshWorkout(0);
+
+		addExercise(workout, 'barbell-row', ids, 'entry-2');
+
+		expect(orderOf(workout)).toEqual([
+			'bench-press',
+			'incline-dumbbell-press',
+			'barbell-row',
+			'cable-fly',
+			'pec-deck'
+		]);
+
+		// The sets travel with it: position is the entry's, and the cursor walk
+		// reads the tree rather than a second ordering.
+		expect(idsOf(workout).slice(8, 11)).toEqual(['row-1', 'row-2', 'row-3']);
+	});
+
+	test('behind the last entry is the end, with nothing special about it', () => {
+		const workout = freshWorkout(0);
+
+		addExercise(workout, 'barbell-row', ids, 'entry-4');
+
+		expect(workout.entries.at(-1)!.id).toBe('entry-5');
+	});
+
+	// The same forgiveness `moveEntry` shows when it clamps a drag held past the
+	// last row: a placement the caller half-remembered is not worth refusing an
+	// insert over, and the end is where an unplaced exercise goes anyway.
+	test('an unknown anchor falls to the end rather than refusing the insert', () => {
+		const workout = freshWorkout(0);
+		const entry = addExercise(workout, 'barbell-row', ids, 'entry-nope');
+
+		expect(entry).not.toBeNull();
+		expect(workout.entries.at(-1)).toBe(entry);
+	});
 });
 
 describe('insertedSetCount', () => {

@@ -241,10 +241,35 @@
 		swipe = null;
 	}
 
-	// One insert sheet for the screen, reached from the rail and from the
-	// overview alike — the overview closes itself first, so the two are never
-	// open at once.
+	/**
+	 * One insert sheet for the screen, reached from three doors: a block's own
+	 * add row, the rail and the overview, and the empty session's button. The
+	 * overview closes itself first, so no two are ever open at once.
+	 *
+	 * `insertAfter` is which door, in the only form the domain cares about — the
+	 * entry the picks land behind, or null for the end. A block's add row names
+	 * its entry because the tap said where. The rail and the empty state name
+	 * nothing: the rail's add row stands at the foot of the session list and the
+	 * empty session has nothing to follow, so the end is what both of them
+	 * already promise by where they sit.
+	 *
+	 * Set by the door on the way in rather than read back on the way out, so the
+	 * two ways of asking cannot both be live at once. It is cleared when the
+	 * picks are applied, not when the sheet closes: a dismissed sheet leaves it
+	 * standing, and the next door overwrites it before the sheet reopens.
+	 */
 	let insertOpen = $state(false);
+	let insertAfter = $state<string | null>(null);
+
+	function insertFrom(entryId: string | null) {
+		insertAfter = entryId;
+		insertOpen = true;
+	}
+
+	function insertPicks(exerciseIds: string[]) {
+		session?.addExercises(exerciseIds, insertAfter ?? undefined);
+		insertAfter = null;
+	}
 
 	/**
 	 * The exercise-level sheet, and the picker a swap opens behind it.
@@ -449,7 +474,7 @@
 						activeSetId={session.activeSetId}
 						onjump={jumpTo}
 						onfocus={(id) => session.select(id)}
-						oninsert={() => (insertOpen = true)}
+						oninsert={() => insertFrom(null)}
 						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 						ondrop={() => void revealActive()}
 					/>
@@ -486,7 +511,7 @@
 								ondraft={(id, w, r) => session.draft(id, w, r)}
 								onselect={(id) => session.select(id)}
 								onadd={() => session.addSet(group.cursors[0].exercise.id)}
-								oninsert={() => (insertOpen = true)}
+								oninsert={() => insertFrom(group.entryId)}
 								onoptions={options}
 								onexercise={(anchor) => exerciseOptions(group.entryId, anchor)}
 							/>
@@ -503,7 +528,7 @@
 								<Stack size={24} />
 							{/snippet}
 							{#snippet action()}
-								<Button variant="commit" onclick={() => (insertOpen = true)}>Add exercise</Button>
+								<Button variant="commit" onclick={() => insertFrom(null)}>Add exercise</Button>
 							{/snippet}
 						</EmptyState>
 					{:else}
@@ -570,7 +595,7 @@
 		{groups}
 		activeSetId={session.activeSetId}
 		onjump={jumpTo}
-		oninsert={() => (insertOpen = true)}
+		oninsert={() => insertFrom(null)}
 		onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 		ondrop={() => void revealActive()}
 	/>
@@ -578,8 +603,9 @@
 	<!-- `multiple`, because this sheet is how an empty session becomes a session:
 	     checking off a day's movements and committing once beats reopening the
 	     panel per exercise, and mid-session the same bar costs a tap nobody
-	     making a single insert would notice. The cursor lands on the first of
-	     what arrives — see `addExercises`. -->
+	     making a single insert would notice. The picks land where the door that
+	     opened this said — see `insertAfter` — and the cursor goes to the first
+	     of them, see `addExercises`. -->
 	<ExercisePickerSheet
 		bind:open={insertOpen}
 		title="Add exercise"
@@ -587,7 +613,7 @@
 		frequent={data.frequent}
 		lastPerformed={data.lastPerformed}
 		mains={data.mains}
-		onpick={(ids) => session.addExercises(ids)}
+		onpick={insertPicks}
 	/>
 
 	<!-- The same picker, asking a different question. It opens as the options sheet

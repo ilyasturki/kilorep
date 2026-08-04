@@ -226,38 +226,53 @@ export class WorkoutSession {
 	}
 
 	/**
-	 * Mid-workout insert: a new entry per exercise at the end of the session, in
-	 * the order they were picked, sets and ids minted here for the same reason
-	 * `addSet`'s are. How many sets each gets is `insertedSetCount`'s rule, read
-	 * against the store-derived history the session was constructed with.
+	 * Mid-workout insert: a new entry per exercise, in the order they were
+	 * picked, sets and ids minted here for the same reason `addSet`'s are. How
+	 * many sets each gets is `insertedSetCount`'s rule, read against the
+	 * store-derived history the session was constructed with.
 	 *
 	 * A list rather than one at a time because the sheet answers in lists now —
 	 * an empty session is built by checking off a day's worth of movements and
 	 * committing once, and a method taking one would have the caller loop and
 	 * the cursor land on the last pick.
 	 *
+	 * `after` is the entry the run lands behind, and it comes from the door the
+	 * ask was made at: the block's own add row names its entry, the rail and the
+	 * empty session name nothing and take the end. The picks stay contiguous —
+	 * each one anchors on the one before it, so a run keeps the order it was
+	 * picked in rather than reversing itself by repeatedly inserting at the same
+	 * slot.
+	 *
 	 * The cursor goes to the first of them, always. Adding an exercise
-	 * mid-session is a statement about what is being done next, and it is the one
-	 * insertion the user has to go looking for otherwise: the entries land at the
-	 * end of a session that is scrolled somewhere else entirely, so leaving the
-	 * cursor behind means the answer to "add exercise" is a scroll. First and not
-	 * last because the picks are in the order they will be performed.
+	 * mid-session is a statement about what is being done next, and first rather
+	 * than last because the picks are in the order they will be performed. What
+	 * the set being left holds is not lost by it: `draft` writes onto the set
+	 * itself, so a half-typed pair is there on the way back.
 	 */
-	public addExercises(exerciseIds: string[]): void {
+	public addExercises(exerciseIds: string[], after?: string): void {
 		let first: string | null = null;
+		let anchor = after;
 
 		for (const exerciseId of exerciseIds) {
 			const count = insertedSetCount(this.history, exerciseId);
 
-			const entry = insertExercise(this.workout, exerciseId, {
-				entry: crypto.randomUUID(),
-				exercise: crypto.randomUUID(),
-				sets: Array.from({ length: count }, () => crypto.randomUUID())
-			});
+			const entry = insertExercise(
+				this.workout,
+				exerciseId,
+				{
+					entry: crypto.randomUUID(),
+					exercise: crypto.randomUUID(),
+					sets: Array.from({ length: count }, () => crypto.randomUUID())
+				},
+				anchor
+			);
 
-			if (entry !== null && first === null) {
-				first = entry.exercises[0].sets[0].id;
+			if (entry === null) {
+				continue;
 			}
+
+			anchor = anchor === undefined ? undefined : entry.id;
+			first ??= entry.exercises[0].sets[0].id;
 		}
 
 		if (first !== null) {

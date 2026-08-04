@@ -10,6 +10,7 @@
 	import { revealNearest } from '$lib/ui/scroll';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
+	import More from '$lib/ui/icons/More.svelte';
 	import ActiveSet from '$lib/workout/ActiveSet.svelte';
 
 	/**
@@ -24,11 +25,18 @@
 		ondraft: (setId: string, weight: number | null, reps: number | null) => void;
 		onselect: (setId: string) => void;
 		onadd: () => void;
-		/** The way in for an exercise the plan did not hold, on the add-set row. */
+		/**
+		 * The way in for an exercise the plan did not hold, on the add-set row.
+		 * What arrives lands directly under this block — the tap said where.
+		 */
 		oninsert?: () => void;
 		/** Handed the element that asked as well, so the desktop menu can hang from it. */
 		onoptions: (setId: string, anchor: HTMLElement) => void;
-		/** The exercise itself: swap it, or take it out of the session. */
+		/**
+		 * The ⋯ beside the name: swap the exercise, or take it out of the session.
+		 * Handed its own element for the same reason, and the name hands its own
+		 * when the menu is reached by right-click instead.
+		 */
 		onexercise: (anchor: HTMLElement) => void;
 	};
 
@@ -122,21 +130,57 @@
 	     and a fraction beside the name only restates them in a form that has to
 	     be read rather than seen.
 
-	     The name is the button, and the whole header is its target: what a tap
-	     is about is the exercise, and the sheet it opens is titled with the name
-	     the thumb landed on. Left-aligned like the heading it still is — a
-	     centred label here would be a control impersonating a title bar. -->
-	<button
-		type="button"
-		onclick={(e) => onexercise(e.currentTarget)}
-		class="min-w-0 rounded-xl px-1 py-1 text-left focus-ring hover:bg-hover
-			active:bg-surface-2"
-	>
-		<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
-		<p class="truncate text-sm font-bold text-ink-faint">
-			{meta.equipment}{meta.loadMode === 'per-hand' ? ' · per hand' : ''}
-		</p>
-	</button>
+	     Two targets, the shape `SetRow` already has one level down: the name is a
+	     link to the exercise, and the ⋯ beside it is what can be done to the
+	     exercise in this session. Siblings and not nested because they have to be
+	     — a button inside an anchor is invalid — and the split is the honest one
+	     anyway. The header used to be a single button opening the menu, which
+	     put the one question the name itself raises mid-set (which grip, what did
+	     this lift last month) two taps away behind it.
+
+	     A real `<a>` rather than a button running `goto`: a desk can middle-click
+	     it and the phone's own long-press-to-share works on it. Leaving the live
+	     screen is safe and always was — the holder outlives the page, and the
+	     menu's own View walked out this same door.
+
+	     Left-aligned like the heading it still is; a centred label here would be
+	     a control impersonating a title bar. -->
+	<div class="flex items-center gap-1">
+		<a
+			href="/exercises/{meta.id}"
+			oncontextmenu={(e) => {
+				e.preventDefault();
+				onexercise(e.currentTarget);
+			}}
+			class="min-w-0 flex-1 rounded-xl px-1 py-1 text-left focus-ring hover:bg-hover
+				active:bg-surface-2"
+		>
+			<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
+			<p class="truncate text-sm font-bold text-ink-faint">
+				{meta.equipment}{meta.loadMode === 'per-hand' ? ' · per hand' : ''}
+			</p>
+		</a>
+
+		<!-- Always drawn, where the set row's ⋯ appears only under a mouse. What
+		     differs is the neighbour it would hide behind: a tap on a set row
+		     selects it and costs nothing, so a long-press there is a bonus — a tap
+		     here leaves the screen, and Swap and Remove reachable by long-press
+		     alone would be unreachable in practice on the device this app is for.
+
+		     `sunken` on hover, the set row's own argument: the surface beside it
+		     already lights `hover`, so a button hovering that same swatch never
+		     changes colour at all. -->
+		<button
+			type="button"
+			aria-label="Exercise options"
+			onclick={(e) => onexercise(e.currentTarget)}
+			class="grid size-9 shrink-0 place-items-center rounded-lg text-ink-faint focus-ring
+				hover:bg-sunken hover:text-ink-muted pointer-fine:transition-[background-color,color]
+				pointer-fine:duration-100"
+		>
+			<More size={20} />
+		</button>
+	</div>
 
 	{#each cursors as cursor (cursor.set.id)}
 		{#if cursor.set.id === activeSetId}
