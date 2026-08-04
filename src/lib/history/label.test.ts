@@ -157,17 +157,18 @@ const at = (y: number, m: number, d: number, h = 12): number => new Date(y, m - 
 describe('formatWhen', () => {
 	const now = at(2026, 8, 4);
 
-	test('the near days are words, not numbers', () => {
-		expect(formatWhen(at(2026, 8, 4, 8), now).short).toBe('Today');
-		expect(formatWhen(at(2026, 8, 3), now).short).toBe('Yesterday');
-		expect(formatWhen(at(2026, 8, 2), now).short).toBe('2 days ago');
-		expect(formatWhen(at(2026, 7, 29), now).short).toBe('6 days ago');
+	test('the two nearest days are words at both widths', () => {
+		expect(formatWhen(at(2026, 8, 4, 8), now)).toEqual({ short: 'Today', long: 'Today' });
+		expect(formatWhen(at(2026, 8, 3), now)).toEqual({ short: 'Yesterday', long: 'Yesterday' });
 	});
 
-	test('the words carry no date, at either width', () => {
-		const yesterday = formatWhen(at(2026, 8, 3), now);
+	test('the counted days spell out only where there is room', () => {
+		expect(formatWhen(at(2026, 8, 2), now)).toEqual({ short: '2d', long: '2 days ago' });
+		expect(formatWhen(at(2026, 7, 29), now)).toEqual({ short: '6d', long: '6 days ago' });
+	});
 
-		expect(yesterday.long).toBe(yesterday.short);
+	test('the short count borrows formatSince, so the app has one spelling', () => {
+		expect(formatWhen(at(2026, 8, 2), now).short).toBe(formatSince(at(2026, 8, 2), now));
 	});
 
 	test('a week back the date takes over, weekday only where there is room', () => {

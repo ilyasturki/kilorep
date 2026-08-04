@@ -158,7 +158,7 @@ function startOfDay(ms: number): number {
 
 /**
  * When a session happened, in the words a lifter would use for it: `Today`,
- * `Yesterday`, `3 days ago`, and a date once counting stops being an answer.
+ * `Yesterday`, `3d`, and a date once counting stops being an answer.
  *
  * Calendar days, unlike `formatSince` above — that one measures elapsed time
  * because it answers "am I neglecting this", where a fortnight is a fortnight
@@ -171,6 +171,12 @@ function startOfDay(ms: number): number {
  * number you convert to a date anyway, so the row shows the date instead. The
  * year rides along only when it is not this one — on recent rows it is noise,
  * and on a row from December 2025 it is the whole point.
+ *
+ * The counted days shorten to `3d` on a phone, borrowing `formatSince`'s
+ * spelling rather than minting a second one — the app already says `9d` beside
+ * an exercise, and a column that said `3 days ago` there would be two
+ * vocabularies for one idea. `Today` and `Yesterday` do not shorten: they are
+ * already two syllables, and `1d` is a worse word than the one everybody uses.
  *
  * A future timestamp reads as `Today` rather than counting backwards, the same
  * clock-skew guard `formatSince` carries and for the same reason: these records
@@ -188,9 +194,7 @@ export function formatWhen(then: number, now: number): When {
 	}
 
 	if (days < 7) {
-		const said = `${days} days ago`;
-
-		return { short: said, long: said };
+		return { short: `${days}d`, long: `${days} days ago` };
 	}
 
 	const sameYear = new Date(then).getFullYear() === new Date(now).getFullYear();
