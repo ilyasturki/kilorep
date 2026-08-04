@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 
-import { isRecord } from '../json.ts';
+import { jsonObject } from '../json.ts';
 
 /**
  * Reading a JSON request body without trusting a byte of it.
@@ -10,21 +10,13 @@ import { isRecord } from '../json.ts';
  */
 
 export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
-	let parsed: unknown;
+	const body = await jsonObject(request);
 
-	// `error()` is called outside the try on purpose — it works by throwing, and
-	// a throw inside the try would be caught by its own catch.
-	try {
-		parsed = await request.json();
-	} catch {
-		parsed = undefined;
-	}
-
-	if (!isRecord(parsed)) {
+	if (body === undefined) {
 		error(400, 'expected a JSON object');
 	}
 
-	return parsed;
+	return body;
 }
 
 /**

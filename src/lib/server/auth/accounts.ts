@@ -2,9 +2,8 @@ import { and, eq } from 'drizzle-orm';
 
 import type { Database } from '../db/client.ts';
 import { isUniqueViolation } from '../db/errors.ts';
-import { createSyncCounter } from '../db/seq.ts';
 import type { AuthToken, User } from '../db/schema.ts';
-import { authTokens, users } from '../db/schema.ts';
+import { authTokens, syncCounters, users } from '../db/schema.ts';
 import type { GoogleIdentity } from './google.ts';
 import { decoyHash, hashPassword, passwordProblem, verifyPassword } from './password.ts';
 import { mintToken } from './tokens.ts';
@@ -29,8 +28,7 @@ export function normalizeEmail(email: string): string {
  * fight with the RFC, and this instance's operator knows their own address.
  */
 export function emailProblem(email: string): string | undefined {
-	const normalized = normalizeEmail(email);
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(normalized)) {
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(normalizeEmail(email))) {
 		return 'email is not a valid address';
 	}
 
@@ -94,7 +92,7 @@ function insertUser(
 			.returning()
 			.get();
 
-		createSyncCounter(tx, user.id);
+		tx.insert(syncCounters).values({ userId: user.id }).run();
 		return user;
 	});
 }
@@ -140,9 +138,7 @@ function syncEmail(db: Database, user: User, email: string): User {
 			.get();
 	} catch (error) {
 		if (isUniqueViolation(error)) {
-			console.warn(
-				`account ${user.id} now signs in as ${normalized}, which another account already holds; keeping ${user.email}`
-			);
+			console.warn(`account ${user.id}: ${normalized} is taken, keeping ${user.email}`);
 			return user;
 		}
 		throw error;
@@ -159,15 +155,9 @@ export type GoogleResolution =
  * about who may create an account and which existing one an identity attaches to
  * is the part worth testing exhaustively, and it is testable here.
  *
- * Three ways in, in order:
- *
- * 1. **A subject we have seen.** Sign in. The address may have moved since; see
- *    below.
- * 2. **A subject we have not, whose verified address we know.** Link, and note
- *    that this happens whether or not the instance is open — linking is not
- *    creation. It is how an operator moves their `account:create` account onto
- *    Google without ever accepting a stranger.
- * 3. **Neither.** A new account, if this instance takes them.
+ * Linking happens whether or not the instance is open, because linking is not
+ * creation: it is how an operator moves their `account:create` account onto
+ * Google without ever accepting a stranger.
  */
 export function resolveGoogleIdentity(
 	db: Database,

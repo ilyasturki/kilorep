@@ -20,16 +20,11 @@ import { allowedOrigins } from '../config.ts';
  * a response it never sees.
  */
 
-/** Everything a client may send. `authorization` is the one that matters. */
 const ALLOWED_HEADERS = 'authorization, content-type';
 const ALLOWED_METHODS = 'GET, POST, DELETE, OPTIONS';
 
 /** A day. Preflights are pure overhead on a phone that syncs over mobile data. */
 const MAX_AGE_SECONDS = 86_400;
-
-function isAllowed(origin: string): boolean {
-	return allowedOrigins().includes(origin);
-}
 
 /**
  * Stamps an API response with its cross-origin verdict.
@@ -41,7 +36,7 @@ function isAllowed(origin: string): boolean {
 export function applyCors(response: Response, origin: string | null): Response {
 	response.headers.append('vary', 'Origin');
 
-	if (origin !== null && isAllowed(origin)) {
+	if (origin !== null && allowedOrigins().includes(origin)) {
 		response.headers.set('access-control-allow-origin', origin);
 	}
 

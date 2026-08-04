@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from 'node:crypto';
 
 import { GOOGLE_CALLBACK_PATH } from '../../api/routes.ts';
-import { isRecord } from '../json.ts';
+import { isRecord, jsonObject } from '../json.ts';
 
 /**
  * The Google half of sign-in: build an authorization URL, turn the code it
@@ -52,7 +52,6 @@ export function callbackUri(origin: string): string {
  */
 const CLOCK_SKEW_MS = 60 * 1000;
 
-/** What the callback needs, once Google has been believed. */
 export type GoogleIdentity = {
 	/** The stable per-client subject id. Identity keys on this, never on `email`. */
 	subject: string;
@@ -187,23 +186,13 @@ export function verifyClaims(idToken: string, clientId: string, now: number): Id
 
 	// Google sends a boolean; some older responses sent the string. Anything that
 	// is not an affirmative one of those two is treated as unverified.
-	const verified = claims.email_verified === true || claims.email_verified === 'true';
-	if (!verified) {
+	if (claims.email_verified !== true && claims.email_verified !== 'true') {
 		return { ok: false, problem: 'unverified-email' };
 	}
 
 	return { ok: true, identity: { subject: claims.sub, email: claims.email } };
 }
 
-/**
- * The id token from the exchange, or nothing — with the reason logged rather
- * than returned.
- *
- * A result and never a throw, so the callback has no `catch` to name: this
- * project's lint insists a caught error be called `error`, and SvelteKit's
- * `error` is in scope in every route. `accounts.ts` learned the same lesson.
- */
-/** What the token endpoint needs to trade a code for an identity. */
 export type CodeExchange = {
 	code: string;
 	redirectUri: string;
@@ -241,19 +230,9 @@ async function fetchIdToken(options: CodeExchange): Promise<string | undefined> 
 		return undefined;
 	}
 
-	let payload: unknown;
-	try {
-		payload = await response.json();
-	} catch {
-		payload = undefined;
-	}
+	const payload = (await jsonObject(response)) ?? {};
+	const idToken = payload.id_token;
 
-	if (!isRecord(payload)) {
-		console.error('google token endpoint returned no id_token');
-		return undefined;
-	}
-
-	const { id_token: idToken } = payload;
 	if (typeof idToken !== 'string') {
 		console.error('google token endpoint returned no usable id_token');
 		return undefined;
@@ -262,7 +241,6 @@ async function fetchIdToken(options: CodeExchange): Promise<string | undefined> 
 	return idToken;
 }
 
-/** Trades the code for a verified identity. */
 export async function exchangeCode(options: CodeExchange): Promise<IdentityResult> {
 	const idToken = await fetchIdToken(options);
 	if (idToken === undefined) {

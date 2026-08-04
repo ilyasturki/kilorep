@@ -19,13 +19,9 @@ try {
 	// No `.env`; the callers' defaults stand. This is the normal case in production.
 }
 
-/** A trimmed value, or the fallback when unset or blank. */
 export function envText(name: string, fallback: string): string {
-	const value = process.env[name];
-	if (value === undefined || value.trim() === '') {
-		return fallback;
-	}
-	return value.trim();
+	const value = (process.env[name] ?? '').trim();
+	return value === '' ? fallback : value;
 }
 
 /**
@@ -36,18 +32,5 @@ export function envText(name: string, fallback: string): string {
  * `ALLOW_REGISTRATON=true` must leave registration shut rather than open it.
  */
 export function envFlag(name: string): boolean {
-	const value = process.env[name];
-	if (value === undefined) {
-		return false;
-	}
-	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
-}
-
-/** A comma- or whitespace-separated list; blank entries dropped. */
-export function envList(name: string): string[] {
-	const value = process.env[name];
-	if (value === undefined) {
-		return [];
-	}
-	return value.split(/[\s,]+/u).filter((entry) => entry !== '');
+	return ['1', 'true', 'yes', 'on'].includes(envText(name, '').toLowerCase());
 }

@@ -45,9 +45,7 @@ export function runMigrations(db: Database, folder: string = migrationsFolder): 
 
 	const violations = sqlite.prepare('pragma foreign_key_check').all();
 	if (violations.length > 0) {
-		throw new Error(
-			`migrations left ${violations.length} foreign key violation(s) behind; the database is not safe to serve`
-		);
+		throw new Error(`migrations left ${violations.length} foreign key violation(s) behind`);
 	}
 }
 

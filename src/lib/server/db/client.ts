@@ -15,7 +15,6 @@ import { databasePath } from './config.ts';
 
 export type Database = NodeSQLiteDatabase & { $client: DatabaseSync };
 
-/** Opens a connection and applies the pragmas SQLite does not default to. */
 export function createDatabase(file: string = databasePath): Database {
 	if (file !== ':memory:') {
 		mkdirSync(path.dirname(file), { recursive: true });

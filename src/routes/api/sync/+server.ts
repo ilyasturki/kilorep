@@ -42,19 +42,11 @@ function readPush(body: Record<string, unknown>): WireRecord[] {
 		error(400, `push holds at most ${MAX_PUSH} records`);
 	}
 
-	// A loop rather than `.every(isWireRecord)`: the guard doubles as the
-	// narrowing, so the array the caller gets is typed by having been checked.
-	const push: WireRecord[] = [];
-
-	for (const item of value) {
-		if (!isWireRecord(item)) {
-			error(400, 'push holds a malformed record');
-		}
-
-		push.push(item);
+	if (!value.every((item) => isWireRecord(item))) {
+		error(400, 'push holds a malformed record');
 	}
 
-	return push;
+	return value;
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {

@@ -13,17 +13,10 @@ import type { AuthToken, User } from '../db/schema.ts';
  * about.
  */
 
-export type PublicUser = {
-	id: string;
-	email: string;
-	createdAt: number;
-};
-
 export type PublicToken = {
 	id: string;
 	label: string;
 	kind: AuthToken['kind'];
-	/** The leading characters of the cleartext, to match a row to a pasted value. */
 	prefix: string;
 	createdAt: number;
 	lastUsedAt: number | null;
@@ -36,7 +29,7 @@ function epoch(value: Date | null): number | null {
 	return value === null ? null : value.getTime();
 }
 
-export function publicUser(user: User): PublicUser {
+export function publicUser(user: User): { id: string; email: string; createdAt: number } {
 	return {
 		id: user.id,
 		email: user.email,

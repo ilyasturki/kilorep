@@ -13,10 +13,6 @@ import type { RequestHandler } from './$types';
  * Unauthenticated, so it says as little as it can get away with: no database
  * path (that is the host's filesystem layout) and no error text (that is the
  * internals). The detail goes to the server log, where the operator is.
- *
- * Clients must reach this through the configured `apiBase`, never as a bare
- * relative `/api/health` — inside the APK the origin is `capacitor://localhost`
- * and this endpoint was omitted from the static build (CLAUDE.md hard rule 4).
  */
 export const GET: RequestHandler = () => {
 	try {

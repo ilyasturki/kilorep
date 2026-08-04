@@ -2,9 +2,9 @@ import { error, json } from '@sveltejs/kit';
 
 import { issueToken } from '$lib/server/auth/accounts';
 import { claimCode } from '$lib/server/auth/device-codes';
-import { googleClient } from '$lib/server/config';
 import { getDatabase } from '$lib/server/db/client';
 import { readJsonBody, requiredString } from '$lib/server/http/body';
+import { requireGoogleClient } from '$lib/server/http/guards';
 import { publicToken } from '$lib/server/http/shapes';
 
 import type { RequestHandler } from './$types';
@@ -25,12 +25,7 @@ import type { RequestHandler } from './$types';
  */
 
 export const POST: RequestHandler = async ({ request }) => {
-	// The same 404 the other Google routes give when no client is configured.
-	// An instance with no identity provider issued no codes, so there are none
-	// to spend — and saying so in any other words would describe its setup.
-	if (googleClient() === undefined) {
-		error(404, 'not found');
-	}
+	requireGoogleClient();
 
 	const body = await readJsonBody(request);
 	const code = requiredString(body, 'code');

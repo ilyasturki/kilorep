@@ -44,11 +44,6 @@ const MIN_KEY_LENGTH = 32;
 
 type StoredHash = { params: ScryptParams; salt: Buffer; expected: Buffer };
 
-/** `128 * N * r` bytes, plus headroom — Node's 32 MB default is far too low. */
-function maxmemFor({ N, r }: ScryptParams): number {
-	return 256 * N * r;
-}
-
 async function deriveKey(
 	password: string,
 	salt: Buffer,
@@ -67,7 +62,8 @@ async function deriveKey(
 			password.normalize('NFKC'),
 			salt,
 			keyLength,
-			{ N, r, p, maxmem: maxmemFor(params) },
+			// `128 * N * r` bytes, plus headroom — Node's 32 MB default is far too low.
+			{ N, r, p, maxmem: 256 * N * r },
 			(error, derived) => {
 				if (error) {
 					reject(error);
@@ -125,18 +121,22 @@ function parseStored(stored: string): StoredHash | undefined {
 	return { params, salt, expected };
 }
 
+/** The self-describing format `parseStored` reads back: `scrypt$N$r$p$salt$key`, all base64. */
+function formatStored(salt: Buffer, key: Buffer): string {
+	const { N, r, p } = PARAMS;
+
+	return ['scrypt', N, r, p, salt.toString('base64'), key.toString('base64')].join('$');
+}
+
 /**
- * Returns a self-describing hash: `scrypt$N$r$p$salt$key`, all base64. The
- * parameters travel with the hash, so raising the cost factor later is a
+ * The parameters travel with the hash, so raising the cost factor later is a
  * write-on-next-login change and never a migration — old hashes keep verifying
  * against the parameters they were made with.
  */
 export async function hashPassword(password: string): Promise<string> {
-	const { N, r, p } = PARAMS;
 	const salt = randomBytes(SALT_LENGTH);
-	const key = await deriveKey(password, salt, KEY_LENGTH, PARAMS);
 
-	return ['scrypt', N, r, p, salt.toString('base64'), key.toString('base64')].join('$');
+	return formatStored(salt, await deriveKey(password, salt, KEY_LENGTH, PARAMS));
 }
 
 /**
@@ -154,16 +154,7 @@ export async function hashPassword(password: string): Promise<string> {
  * The derived key matching these 64 random bytes is a 2**-512 event.
  */
 export function decoyHash(): string {
-	const { N, r, p } = PARAMS;
-
-	return [
-		'scrypt',
-		N,
-		r,
-		p,
-		randomBytes(SALT_LENGTH).toString('base64'),
-		randomBytes(KEY_LENGTH).toString('base64')
-	].join('$');
+	return formatStored(randomBytes(SALT_LENGTH), randomBytes(KEY_LENGTH));
 }
 
 /**
@@ -173,7 +164,6 @@ export function decoyHash(): string {
  */
 export const MIN_PASSWORD_LENGTH = 8;
 
-/** The reason a password is unusable, or undefined if it is fine. */
 export function passwordProblem(password: string): string | undefined {
 	if (password.normalize('NFKC').length < MIN_PASSWORD_LENGTH) {
 		return `password must be at least ${MIN_PASSWORD_LENGTH} characters`;

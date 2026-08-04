@@ -1,8 +1,8 @@
-import { error, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 
 import { authorizationUrl, callbackUri, newSecret } from '$lib/server/auth/google';
 import { setHandshake } from '$lib/server/auth/handshake';
-import { googleClient } from '$lib/server/config';
+import { requireGoogleClient } from '$lib/server/http/guards';
 import { resolveRedirect } from '$lib/api/redirect';
 
 import type { RequestHandler } from './$types';
@@ -24,12 +24,7 @@ import type { RequestHandler } from './$types';
  */
 
 export const GET: RequestHandler = ({ url, cookies }) => {
-	const client = googleClient();
-	if (client === undefined) {
-		// The same answer the endpoint gives when it does not exist. An instance
-		// with no identity provider has nothing to say about one.
-		error(404, 'not found');
-	}
+	const client = requireGoogleClient();
 
 	const state = newSecret();
 	const verifier = newSecret();

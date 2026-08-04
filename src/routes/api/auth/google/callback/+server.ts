@@ -1,4 +1,4 @@
-import { error, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 
 import { resolveGoogleIdentity } from '$lib/server/auth/accounts';
 import { issueCode } from '$lib/server/auth/device-codes';
@@ -6,8 +6,9 @@ import type { IdentityProblem } from '$lib/server/auth/google';
 import { callbackUri, exchangeCode } from '$lib/server/auth/google';
 import { takeHandshake } from '$lib/server/auth/handshake';
 import { SESSION_COOKIE, sessionCookieOptions, startWebSession } from '$lib/server/auth/session';
-import { googleClient, registrationOpen } from '$lib/server/config';
+import { registrationOpen } from '$lib/server/config';
 import { getDatabase } from '$lib/server/db/client';
+import { requireGoogleClient } from '$lib/server/http/guards';
 import { DEVICE_REDIRECT } from '$lib/api/routes';
 import { resolveRedirect } from '$lib/api/redirect';
 
@@ -52,15 +53,14 @@ import type { RequestHandler } from './$types';
  * with it.
  */
 function refusalTo(origin: string, device: boolean): (message: string) => never {
+	const base = device ? DEVICE_REDIRECT : `${origin}/login`;
+
 	return (message: string): never => {
-		if (device) {
-			redirect(303, `${DEVICE_REDIRECT}?error=${encodeURIComponent(message)}`);
+		if (message === '' && !device) {
+			redirect(303, base);
 		}
 
-		redirect(
-			303,
-			message === '' ? `${origin}/login` : `${origin}/login?error=${encodeURIComponent(message)}`
-		);
+		redirect(303, `${base}?error=${encodeURIComponent(message)}`);
 	};
 }
 
@@ -80,10 +80,7 @@ const REFUSALS: Record<IdentityProblem, string> = {
 };
 
 export const GET: RequestHandler = async ({ url, cookies, locals }) => {
-	const client = googleClient();
-	if (client === undefined) {
-		error(404, 'not found');
-	}
+	const client = requireGoogleClient();
 
 	// Taken first, and unconditionally: whatever else happens, this handshake is
 	// spent. Leaving it behind would let a code be retried against a state that
@@ -110,14 +107,10 @@ export const GET: RequestHandler = async ({ url, cookies, locals }) => {
 	const code = url.searchParams.get('code');
 	const state = url.searchParams.get('state');
 
-	if (handshake === undefined || code === null || state === null) {
-		// A stale tab, a cookie that expired mid-consent, or a link somebody sent.
-		refuse('that sign-in expired, try again');
-	}
-
-	// The CSRF check. A callback the browser did not start has a state that
-	// matches nothing here, and this is the line that refuses it.
-	if (state !== handshake.state) {
+	// A stale tab, a cookie that expired mid-consent, or a link somebody sent —
+	// and, in the last clause, the CSRF check: a callback the browser did not
+	// start has a state that matches nothing here.
+	if (handshake === undefined || code === null || state === null || state !== handshake.state) {
 		refuse('that sign-in expired, try again');
 	}
 

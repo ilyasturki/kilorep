@@ -3,7 +3,6 @@ import { eq, sql } from 'drizzle-orm';
 import type { Database } from './client.ts';
 import { syncCounters } from './schema.ts';
 
-/** A `Database` or a transaction handle — both can run the claim. */
 export type Executor = Database | Parameters<Parameters<Database['transaction']>[0]>[0];
 
 /**
@@ -31,9 +30,4 @@ export function claimSeq(executor: Executor, userId: string): number {
 	// `returning` yields the row *after* the update, so the value just claimed
 	// is one behind the counter's new position.
 	return row.nextSeq - 1;
-}
-
-/** Creates a user's counter. Runs once, when the account is created. */
-export function createSyncCounter(executor: Executor, userId: string): void {
-	executor.insert(syncCounters).values({ userId }).run();
 }

@@ -86,14 +86,8 @@ export function sessionCookieOptions(url: URL): SessionCookieOptions {
 	};
 }
 
-/** The secret from an `Authorization: Bearer …` header, if there is one. */
 export function bearerToken(request: Request): string | null {
-	const header = request.headers.get('authorization');
-	if (header === null) {
-		return null;
-	}
-
-	const [scheme, value] = header.split(' ');
+	const [scheme, value] = (request.headers.get('authorization') ?? '').split(' ');
 	if (scheme === undefined || scheme.toLowerCase() !== 'bearer') {
 		return null;
 	}
@@ -187,9 +181,5 @@ export function startWebSession(
 		revokeToken(db, userId, previous.token.id);
 	}
 
-	// `web` alone gets an expiry, matching the cookie carrying it exactly: past
-	// that point the browser has dropped the cookie anyway. Device and API
-	// credentials are revoked from the token list instead — a place their owner
-	// can see them.
 	return issueToken(db, userId, 'Web', 'web', webCredentialExpiry());
 }

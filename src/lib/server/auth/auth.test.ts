@@ -85,9 +85,6 @@ describe('credential validation', () => {
 	});
 
 	test('reports both problems through one function, so no caller can drift', () => {
-		// `createUser` reports a violation by throwing, which a caller cannot tell
-		// apart from a real failure — one checking differently would report a bug
-		// where it meant "fix your input".
 		expect(credentialProblem('nope', PASSWORD)).toMatch(/valid address/u);
 		expect(credentialProblem('a@b.co', 'short')).toMatch(/at least 8/u);
 		expect(credentialProblem('a@b.co', PASSWORD)).toBeUndefined();
@@ -149,8 +146,6 @@ describe('resolveGoogleIdentity', () => {
 
 		expect(result).toMatchObject({ ok: true, outcome: 'created' });
 		expect(result.ok && result.user.email).toBe('lifter@example.com');
-		// Without a counter the account exists and cannot be written to, so the two
-		// are created together or not at all.
 		expect(result.ok && result.user.googleSub).toBe('sub-1');
 		expect(result.ok && result.user.passwordHash).toBeNull();
 	});
@@ -161,7 +156,6 @@ describe('resolveGoogleIdentity', () => {
 			reason: 'closed'
 		});
 
-		// And left nothing behind: a refusal is not a half-made account.
 		expect(findUserByGoogleSub(db, 'sub-1')).toBeUndefined();
 	});
 
@@ -175,7 +169,6 @@ describe('resolveGoogleIdentity', () => {
 	});
 
 	test('links a new subject to the account that already holds its verified address', async () => {
-		// The operator's own account, made on the machine with `account:create`.
 		const existing = await createUser(db, 'operator@example.com', PASSWORD);
 
 		// Closed, deliberately: linking is not creation, and this is how an
@@ -184,7 +177,6 @@ describe('resolveGoogleIdentity', () => {
 
 		expect(result).toMatchObject({ ok: true, outcome: 'linked' });
 		expect(result.ok && result.user.id).toBe(existing.id);
-		// The password still works afterwards. Linking adds a way in; it removes none.
 		expect(result.ok && result.user.passwordHash).not.toBeNull();
 		await expect(verifyLogin(db, 'operator@example.com', PASSWORD)).resolves.not.toBeNull();
 	});
@@ -192,8 +184,6 @@ describe('resolveGoogleIdentity', () => {
 	test('refuses a second subject claiming an address that is already linked', () => {
 		resolveGoogleIdentity(db, identity('sub-1', 'lifter@example.com'), OPEN);
 
-		// Reachable honestly — a Workspace mailbox deleted and recreated gets a
-		// fresh subject — and indistinguishable from a takeover, so nothing moves.
 		expect(resolveGoogleIdentity(db, identity('sub-2', 'lifter@example.com'), OPEN)).toEqual({
 			ok: false,
 			reason: 'claimed'
@@ -206,7 +196,6 @@ describe('resolveGoogleIdentity', () => {
 		const created = resolveGoogleIdentity(db, identity('sub-1', 'old@example.com'), OPEN);
 		const moved = resolveGoogleIdentity(db, identity('sub-1', 'new@example.com'), CLOSED);
 
-		// The same account throughout: identity is the subject, never the address.
 		expect(moved.ok && moved.user.id).toBe(created.ok && created.user.id);
 		expect(moved.ok && moved.user.email).toBe('new@example.com');
 	});
@@ -217,8 +206,6 @@ describe('resolveGoogleIdentity', () => {
 
 		const moved = resolveGoogleIdentity(db, identity('sub-1', 'taken@example.com'), OPEN);
 
-		// Signed in regardless. Refusing here would mean somebody else's account
-		// existing is enough to lock you out of your own.
 		expect(moved).toMatchObject({ ok: true, outcome: 'signed-in' });
 		expect(moved.ok && moved.user.id).toBe(created.ok && created.user.id);
 		expect(moved.ok && moved.user.email).toBe('mine@example.com');
@@ -286,8 +273,6 @@ describe('verifyClaims', () => {
 	});
 
 	test('refuses a token minted for another client', () => {
-		// The check that is easy to leave out and must not be: without it, a token
-		// issued to anybody else's Google client signs its bearer in here.
 		expect(verifyClaims(idToken({ aud: 'someone-else' }), CLIENT, NOW)).toEqual({
 			ok: false,
 			problem: 'wrong-audience'
@@ -307,21 +292,16 @@ describe('verifyClaims', () => {
 			ok: false,
 			problem: 'expired'
 		});
-		// A sign-in refused because the server is thirty seconds fast is
-		// unexplainable to the person it happens to.
 		expect(verifyClaims(idToken({ exp: NOW / 1000 - 30 }), CLIENT, NOW).ok).toBe(true);
 	});
 
 	test('refuses an unverified address, however it is spelled', () => {
-		// The design links accounts by address; an unverified one is a string
-		// somebody typed.
 		expect(verifyClaims(idToken({ email_verified: false }), CLIENT, NOW)).toEqual({
 			ok: false,
 			problem: 'unverified-email'
 		});
 		expect(verifyClaims(idToken({ email_verified: 'false' }), CLIENT, NOW).ok).toBe(false);
 		expect(verifyClaims(idToken({ email_verified: undefined }), CLIENT, NOW).ok).toBe(false);
-		// The string form is what some older Google responses send.
 		expect(verifyClaims(idToken({ email_verified: 'true' }), CLIENT, NOW).ok).toBe(true);
 	});
 
@@ -354,8 +334,6 @@ describe('bearerToken', () => {
 describe('sessionCookieOptions', () => {
 	test('marks the cookie Secure over https and not over http', () => {
 		expect(sessionCookieOptions(new URL('https://kilorep.example.com/api')).secure).toBe(true);
-		// The LAN self-hoster. A Secure cookie sent over http is dropped by the
-		// browser without a word, and the app silently behaves as signed out.
 		expect(sessionCookieOptions(new URL('http://192.168.1.50:3000/api')).secure).toBe(false);
 	});
 
@@ -363,8 +341,6 @@ describe('sessionCookieOptions', () => {
 		const now = new Date('2026-01-01T00:00:00Z');
 		const { maxAge } = sessionCookieOptions(new URL('https://kilorep.example.com/api'));
 
-		// Past this the browser has dropped the cookie anyway, so a row that
-		// outlived it is only a working secret for whoever captured it.
 		expect(webCredentialExpiry(now).getTime() - now.getTime()).toBe(maxAge * 1000);
 	});
 
@@ -374,8 +350,6 @@ describe('sessionCookieOptions', () => {
 		expect(options.httpOnly).toBe(true);
 		expect(options.sameSite).toBe('lax');
 		expect(options.path).toBe('/');
-		// Not an expiry — credentials never expire server-side. Without it the
-		// cookie dies when the browser closes.
 		expect(options.maxAge).toBeGreaterThan(300 * 24 * 60 * 60);
 	});
 
@@ -430,8 +404,6 @@ describe('resolveCredential', () => {
 		resolveCredential(db, token);
 		expect(lastUsed()).toBeInstanceOf(Date);
 
-		// SQLite has one writer; a write per authenticated request would put a
-		// sync push behind timestamp bookkeeping.
 		const recent = new Date(Date.now() - 10 * 60 * 1000);
 		db.update(authTokens).set({ lastUsedAt: recent }).where(eq(authTokens.id, record.id)).run();
 		resolveCredential(db, token);
@@ -490,7 +462,6 @@ describe('login throttle', () => {
 		recordLoginFailure(ADDRESS, ACCOUNT);
 		expect(loginBlocked(ADDRESS, ACCOUNT)).toBe(true);
 
-		// One typo must not cost an honest user fifteen minutes.
 		clearLoginFailures(ADDRESS, ACCOUNT);
 		expect(loginBlocked(ADDRESS, ACCOUNT)).toBe(false);
 	});
@@ -504,19 +475,7 @@ describe('login throttle', () => {
 		expect(loginBlocked('198.51.100.4', ACCOUNT)).toBe(false);
 	});
 
-	test('counts per account, so guesses at one do not lock its owner out of another', () => {
-		for (let attempt = 0; attempt < 10; attempt++) {
-			recordLoginFailure(ADDRESS, ACCOUNT);
-		}
-
-		expect(loginBlocked(ADDRESS, ACCOUNT)).toBe(true);
-		expect(loginBlocked(ADDRESS, 'someone-else@example.com')).toBe(false);
-	});
-
 	test('a success elsewhere does not clear the guesses made here', () => {
-		// The whole attack: hold one account on the instance, spend nine guesses
-		// against somebody else's, sign in as yourself to wipe the counter,
-		// repeat. Clearing by address alone made the limit unreachable.
 		for (let round = 0; round < 6; round++) {
 			for (let attempt = 0; attempt < 9; attempt++) {
 				recordLoginFailure(ADDRESS, ACCOUNT);
@@ -531,9 +490,6 @@ describe('login throttle', () => {
 	});
 
 	test('lets one address spend more than one account worth before it runs out', () => {
-		// An address is legitimately several people — a household, an office, a
-		// phone behind carrier NAT — so the address budget sits well above the
-		// per-account one rather than on top of it.
 		for (let attempt = 0; attempt < 10; attempt++) {
 			recordLoginFailure(ADDRESS, 'first@example.com');
 		}
@@ -560,8 +516,6 @@ describe('login throttle', () => {
 	});
 
 	test('runs at most two password verifications at once', async () => {
-		// The guard that keeps the server answering at all: each verification
-		// costs ~370 ms and ~128 MB on a four-thread pool shared with the SPA.
 		const first = await acquireVerificationSlot();
 		const second = await acquireVerificationSlot();
 

@@ -129,7 +129,6 @@ export const googleCodes = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		/** The app's PKCE challenge: base64url SHA-256 of a verifier only it holds. */
 		challenge: text('challenge').notNull(),
 		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull()
 	},
@@ -183,7 +182,6 @@ export const records = sqliteTable(
 		// `$type` narrows what TypeScript reads out of the column; the endpoint's
 		// `isWireRecord` guard is what keeps anything wider from being written.
 		kind: text('kind').notNull().$type<RecordKind>(),
-		/** Claimed from `sync_counters` in the same transaction as the write. */
 		seq: integer('seq').notNull(),
 		updatedAt: integer('updated_at').notNull(),
 		deletedAt: integer('deleted_at'),
@@ -191,7 +189,6 @@ export const records = sqliteTable(
 	},
 	(table) => [
 		primaryKey({ columns: [table.userId, table.id] }),
-		// The pull: `where user_id = ? and seq > ?`, ordered by seq.
 		index('records_user_seq_idx').on(table.userId, table.seq)
 	]
 );

@@ -102,8 +102,7 @@ export function createHandle(database: () => Database): Handle {
 
 		// Bearer first: a phone that also happens to hold a cookie meant the
 		// header, and a cookie silently overriding it would be surprising.
-		const bearer = bearerToken(event.request);
-		const secret = bearer ?? event.cookies.get(SESSION_COOKIE) ?? null;
+		const secret = bearerToken(event.request) ?? event.cookies.get(SESSION_COOKIE) ?? null;
 
 		let credential: Credential | null;
 		try {
@@ -119,9 +118,6 @@ export function createHandle(database: () => Database): Handle {
 
 		event.locals.credential = credential;
 
-		// Membership is checked against the decoded path — the one the router
-		// agreed on — so `/%61pi/health` is still health and no encoded spelling
-		// of a guarded route can dress itself up as a public one.
 		if (credential === null && !PUBLIC_API_PATHS.has(pathname)) {
 			// Built here rather than thrown as SvelteKit's `error()`: this runs
 			// before routing, where a throw can be rendered as an HTML error page,

@@ -2,7 +2,6 @@ import { error, json } from '@sveltejs/kit';
 
 import { issueToken, listTokens } from '$lib/server/auth/accounts';
 import { getDatabase } from '$lib/server/db/client';
-import type { AuthToken } from '$lib/server/db/schema';
 import { readJsonBody, requiredString } from '$lib/server/http/body';
 import { requireCredential } from '$lib/server/http/guards';
 import { publicToken } from '$lib/server/http/shapes';
@@ -24,18 +23,16 @@ import type { RequestHandler } from './$types';
  * secret is handed to the caller as a string, which is the exact property the
  * cookie exists to avoid.
  */
-function isMintableKind(value: unknown): value is Extract<AuthToken['kind'], 'device' | 'api'> {
+function isMintableKind(value: unknown): value is 'device' | 'api' {
 	return value === 'device' || value === 'api';
 }
 
 export const GET: RequestHandler = ({ locals }) => {
 	const { user, token } = requireCredential(locals);
 
-	const tokens = listTokens(getDatabase(), user.id).map((record) =>
-		publicToken(record, record.id === token.id)
+	return json(
+		listTokens(getDatabase(), user.id).map((record) => publicToken(record, record.id === token.id))
 	);
-
-	return json(tokens);
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {

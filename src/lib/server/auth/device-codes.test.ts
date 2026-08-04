@@ -32,17 +32,10 @@ describe('claiming a device code', () => {
 		const code = issueCode(db, userId, challengeFor(VERIFIER));
 
 		expect(claimCode(db, code, VERIFIER)).toBe(userId);
-		// Spent on claim, so the row is gone and a replay resolves to nothing.
 		expect(claimCode(db, code, VERIFIER)).toBeNull();
 	});
 
-	test('the code alone is worth nothing — the interception case', () => {
-		const code = issueCode(db, userId, challengeFor(VERIFIER));
-
-		expect(claimCode(db, code, 'a guess')).toBeNull();
-	});
-
-	test('a code spends exactly once, even when the first attempt failed', () => {
+	test('the code alone is worth nothing, and spends anyway — the interception case', () => {
 		const code = issueCode(db, userId, challengeFor(VERIFIER));
 
 		expect(claimCode(db, code, 'a guess')).toBeNull();
@@ -64,8 +57,6 @@ describe('claiming a device code', () => {
 	});
 
 	test('a challenge of the wrong length is refused rather than throwing', () => {
-		// `timingSafeEqual` throws on a length mismatch, so the guard in front of
-		// it is what turns a malformed client into a 401 instead of a 500.
 		const code = issueCode(db, userId, 'short');
 
 		expect(claimCode(db, code, VERIFIER)).toBeNull();

@@ -1,4 +1,4 @@
-import { envFlag, envList, envText } from './env.ts';
+import { envFlag, envText } from './env.ts';
 
 /**
  * Settings the HTTP surface reads. Functions rather than constants so a value
@@ -24,8 +24,6 @@ export function registrationOpen(): boolean {
 	return envFlag('ALLOW_REGISTRATION');
 }
 
-export type GoogleClient = { id: string; secret: string };
-
 /**
  * The Google OAuth client, or nothing.
  *
@@ -44,7 +42,7 @@ export type GoogleClient = { id: string; secret: string };
  * systemd `EnvironmentFile` or a container secret, never in the Nix store, which
  * is world-readable.
  */
-export function googleClient(): GoogleClient | undefined {
+export function googleClient(): { id: string; secret: string } | undefined {
 	const id = envText('GOOGLE_CLIENT_ID', '');
 	const secret = envText('GOOGLE_CLIENT_SECRET', '');
 
@@ -107,11 +105,10 @@ export function allowedOrigins(): string[] {
 	if (cached === undefined || cached.raw !== raw) {
 		const configured: string[] = [];
 
-		for (const entry of envList('CORS_ORIGINS')) {
+		for (const entry of raw.split(/[\s,]+/u).filter((part) => part !== '')) {
 			const origin = toOrigin(entry);
 
 			if (origin === undefined) {
-				// The one thing worse than dropping it is dropping it in silence.
 				console.warn(`CORS_ORIGINS: ignoring "${entry}" — not an origin a browser can send`);
 			} else {
 				configured.push(origin);

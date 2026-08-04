@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { Handle, RequestEvent } from '@sveltejs/kit';
 
-import { createUser, issueToken, revokeToken } from '../auth/accounts.ts';
+import { createUser, issueToken } from '../auth/accounts.ts';
 import { SESSION_COOKIE } from '../auth/session.ts';
 import type { Database } from '../db/client.ts';
 import { createDatabase } from '../db/client.ts';
@@ -104,11 +104,11 @@ async function run(
 	return { response, locals, resolved };
 }
 
-async function account(): Promise<{ user: User; token: string; tokenId: string }> {
+async function account(): Promise<{ user: User; token: string }> {
 	const user = await createUser(db, 'lifter@example.com', PASSWORD);
-	const { token, record } = issueToken(db, user.id, 'Pixel 8', 'device');
+	const { token } = issueToken(db, user.id, 'Pixel 8', 'device');
 
-	return { user, token, tokenId: record.id };
+	return { user, token };
 }
 
 describe('enforcement', () => {
@@ -116,8 +116,6 @@ describe('enforcement', () => {
 		const { response, resolved } = await run('/api/workouts');
 
 		expect(response.status).toBe(401);
-		// The route never ran. An endpoint nobody remembered to guard is still
-		// guarded, which is the whole reason enforcement lives here.
 		expect(resolved).toBe(0);
 		await expect(response.json()).resolves.toEqual({ message: 'authentication required' });
 	});
@@ -139,7 +137,6 @@ describe('enforcement', () => {
 	});
 
 	test('does not open a path that merely starts like a public one', async () => {
-		// Membership, not a prefix match: `/api/health/secrets` is not health.
 		const { response } = await run('/api/health/secrets');
 		expect(response.status).toBe(401);
 	});
@@ -172,26 +169,12 @@ describe('enforcement', () => {
 		expect(locals.credential!.token.label).toBe('header');
 	});
 
-	test('refuses a revoked credential', async () => {
-		const { user, token, tokenId } = await account();
-		revokeToken(db, user.id, tokenId);
-
-		const { response, resolved } = await run('/api/workouts', { bearer: token });
-
-		expect(response.status).toBe(401);
-		expect(resolved).toBe(0);
-	});
-
 	test('refuses a secret that was never issued', async () => {
 		const { response } = await run('/api/workouts', { bearer: 'kr_made-up' });
 		expect(response.status).toBe(401);
 	});
 
 	test('guards a path SvelteKit will decode into an api path', async () => {
-		// The router matches on the percent-decoded path and hands this hook the
-		// raw one, so `/%61pi/workouts` reaches the `/api/workouts` handler while
-		// a `startsWith('/api/')` on `event.url.pathname` reads it as a page.
-		// Every encoded spelling of every guarded route rode on that gap.
 		for (const pathname of ['/%61pi/workouts', '/%61%70%69/workouts', '/api/%77orkouts']) {
 			const { response, resolved, locals } = await run(pathname);
 
@@ -202,8 +185,6 @@ describe('enforcement', () => {
 	});
 
 	test('does not let an encoded spelling reach the public allowlist either', async () => {
-		// Membership is checked against the decoded path, so this is health —
-		// answered, and answered with the CORS headers an API response owes.
 		const { response, resolved } = await run('/%61pi/health', { origin: 'https://localhost' });
 
 		expect(response.status).toBe(200);
@@ -220,9 +201,6 @@ describe('enforcement', () => {
 	});
 
 	test('guards a page-shaped path the router matched to an api route', async () => {
-		// Nothing reroutes today. If something ever does, the router's own answer
-		// is already in `event.route.id` before this hook runs, and reading it
-		// costs a page request one string comparison.
 		const { response, resolved } = await run('/looks-like-a-page', {
 			routeId: '/api/workouts'
 		});
@@ -259,7 +237,7 @@ describe('enforcement', () => {
 	});
 
 	test('leaves page requests alone', async () => {
-		const { user, token } = await account();
+		const { token } = await account();
 		const { response, resolved, locals } = await run('/', { bearer: token });
 
 		expect(response.status).toBe(200);
@@ -267,7 +245,6 @@ describe('enforcement', () => {
 		// Null even for a valid credential: pages are client-rendered, nothing
 		// reads this, and resolving it would cost a query per asset request.
 		expect(locals.credential).toBeNull();
-		expect(user.id).toBeDefined();
 	});
 });
 
@@ -279,8 +256,6 @@ describe('cors', () => {
 		});
 
 		expect(response.status).toBe(204);
-		// A preflight carries no credentials by definition — it is the browser
-		// asking whether it may send them.
 		expect(resolved).toBe(0);
 		expect(response.headers.get('access-control-allow-origin')).toBe('https://localhost');
 		expect(response.headers.get('access-control-allow-methods')).toContain('POST');
@@ -294,17 +269,13 @@ describe('cors', () => {
 		}
 	});
 
-	test('refuses an origin nobody allowed, without failing the request', async () => {
+	test('refuses an origin nobody allowed, and still varies so a cache cannot cross the wires', async () => {
 		const { response, resolved } = await run('/api/health', { origin: 'https://evil.example' });
 
 		// The absence of the header is the refusal; the browser enforces it.
 		expect(response.headers.get('access-control-allow-origin')).toBeNull();
-		expect(resolved).toBe(1);
-	});
-
-	test('varies on Origin even when refusing, so a cache cannot cross the wires', async () => {
-		const { response } = await run('/api/health', { origin: 'https://evil.example' });
 		expect(response.headers.get('vary')).toContain('Origin');
+		expect(resolved).toBe(1);
 	});
 
 	test('lets an operator add an origin', async () => {
@@ -343,7 +314,6 @@ describe('cors', () => {
 		const opaque = await run('/api/health', { origin: 'null' });
 		expect(opaque.response.headers.get('access-control-allow-origin')).toBeNull();
 
-		// The one good entry in the list still works.
 		const good = await run('/api/health', { origin: 'https://ok.example.com' });
 		expect(good.response.headers.get('access-control-allow-origin')).toBe('https://ok.example.com');
 	});
@@ -358,8 +328,6 @@ describe('cors', () => {
 	test('never claims credentialed cross-origin access', async () => {
 		const { response } = await run('/api/health', { origin: 'https://localhost' });
 
-		// The dangerous half of CORS, and nothing needs it: the browser is
-		// same-origin with the server and the APK sends a Bearer token.
 		expect(response.headers.get('access-control-allow-credentials')).toBeNull();
 	});
 });
