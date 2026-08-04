@@ -403,10 +403,12 @@ export function commitSet(workout: Workout, setId: string, weight: number, reps:
  *
  * The correction `commitSet` cannot make, because it only ever claims — and a
  * set checked by mistake is exactly as ordinary a mistake as a number typed
- * wrong. Nothing in the live loop calls this: the gym has no un-log gesture,
- * and PRODUCT.md is explicit that an unwanted set is removed rather than
- * demoted. It exists for a session already written to history, where the tap
- * that fixes it is the disc itself.
+ * wrong. Both screens that hold a workout reach it: history's edit mode, where
+ * the tap that fixes it is the disc itself, and the live session, where it is
+ * Unlog in the set's own options — see `WorkoutSession.unlogSet`. The live
+ * screen went without one for a while on the theory that a set logged by
+ * mistake would simply be removed, which asked the gym floor to destroy a row
+ * in order to correct it.
  *
  * Claiming needs both numbers — `canCommit`'s rule, the same one that holds the
  * check inert. A set saying it happened without saying what happened is a

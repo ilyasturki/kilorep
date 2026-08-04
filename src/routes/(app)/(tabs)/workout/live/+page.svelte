@@ -20,7 +20,6 @@
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import { revealNearest } from '$lib/ui/scroll';
-	import Check from '$lib/ui/icons/Check.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 
 	import type { PageProps } from './$types';
@@ -359,6 +358,15 @@
 		optionsOpen = true;
 	}
 
+	function unlogSet() {
+		if (session === null || optionsSetId === null) {
+			return;
+		}
+
+		session.unlogSet(optionsSetId);
+		optionsSetId = null;
+	}
+
 	function removeSet() {
 		if (session === null || optionsSetId === null) {
 			return;
@@ -495,8 +503,9 @@
 			     bar puts its own there too, and padding on opposite sides of the
 			     same cap is how the two columns end up 12px out of true. -->
 				<!-- `min-h-full` only while the session is empty: it hands EmptyState
-			     the height to centre in, and with blocks on screen it would let
-			     the finished-state's flex-1 shove FINISH to the pane's floor. -->
+			     the height to centre in. With blocks on screen it would stretch the
+			     column past its content and leave FINISH stranded at the pane's
+			     floor, a scroll below the last set. -->
 				<div
 					class={['column-content flex flex-col gap-7 px-3', groups.length === 0 && 'min-h-full']}
 				>
@@ -532,35 +541,20 @@
 							{/snippet}
 						</EmptyState>
 					{:else}
-						<!-- Under the session rather than instead of it. Every block keeps its
-					     add-set row while this is on screen, which is the only way a set
-					     added after the last one was logged is reachable at all — and the
-					     workout you just finished is still there to look at.
+						<!-- The end of the session, where a session ends, and the only thing
+					     under the blocks. The `+ Add exercise` that used to sit above it
+					     is gone: the rail carries one from `lg`, the overview sheet carries
+					     one below that and the sheet is a tap from the header, so the pane
+					     was the third copy of an act nobody performs mid-set. It rides
+					     every block's add-set row as the narrow second segment now, which
+					     is how the pane keeps the act without asking for this spot again.
 
-					     It carries no button of its own any more: Finish is below, always,
-					     and two of them stacked would be the screen asking twice. -->
-						<!-- Add-exercise, meanwhile, rides every block's add-set row as the
-					     narrow second segment: the rail from `lg` and the overview sheet
-					     below it still carry the act, but a full-width row of its own at
-					     the pane's foot was retired once for crowding the end of the
-					     session, and the segment is how the pane gets the act back
-					     without asking for that spot again. -->
-						{#if session.finished}
-							<EmptyState title="Every set logged" description="Nothing left in this session.">
-								{#snippet icon()}
-									<Check size={24} />
-								{/snippet}
-							</EmptyState>
-						{/if}
-
-						<!-- The end of the session, where a session ends, and now the only
-					     control under the blocks. The `+ Add exercise` that used to sit
-					     above it is gone: the rail carries one from `lg`, the overview
-					     sheet carries one below that and the sheet is a tap from the
-					     header, so the pane was the third copy of an act nobody performs
-					     mid-set. What it cost was the two things at the bottom of a
-					     session both being buttons, one of them dashed, the other quiet,
-					     neither obviously the end.
+					     What also used to sit above it was an EmptyState for the finished
+					     session — a 56px check disc, a heading and a line of copy, a
+					     screenful — and between the two of them the end of a session said
+					     the same thing twice to a user whose next act was the button
+					     underneath. The rows are the record: every one of them wears a
+					     check, and the button's own change of size is the announcement.
 
 					     The header keeps its FINISH for the thumb that never scrolls down
 					     here; this is for the one that has just logged the last set and is
@@ -573,8 +567,8 @@
 					     button rule — the end of a session is a commit wherever the
 					     session stands. Compact while sets are owed, so `Log set` keeps
 					     the gym scale to itself; the full slab arrives when nothing is
-					     left, which is the same size change the button already made and
-					     the moment it stops competing with anything. -->
+					     left, which is the moment it stops competing with anything and,
+					     since the EmptyState went, the only signal that the moment came. -->
 						<Button
 							variant="commit"
 							compact={!session.finished}
@@ -647,6 +641,7 @@
 		cursor={optionsCursor}
 		anchor={optionsAnchor}
 		removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
+		onunlog={unlogSet}
 		onremove={removeSet}
 	/>
 

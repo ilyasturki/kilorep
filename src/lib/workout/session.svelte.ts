@@ -28,6 +28,7 @@ import {
 	draftSet,
 	firstUncompleted,
 	insertedSetCount,
+	markSet,
 	moveEntry as relocateEntry,
 	prefillFor,
 	removeEntry as dropEntry,
@@ -210,17 +211,53 @@ export class WorkoutSession {
 	}
 
 	/**
+	 * Taking the check back: the set stops claiming it happened, and keeps every
+	 * number it was holding.
+	 *
+	 * The cursor goes onto it rather than staying where it was, because a set is
+	 * only ever un-logged in order to do something about it — a mistap to undo,
+	 * a weight that was wrong, a set about to be redone — and all three of those
+	 * are the editor. It is the same statement `addSet` makes one line down.
+	 *
+	 * Which also means un-logging is how a finished session comes back: the
+	 * cursor was null and there was nothing left owed, and now there is one and
+	 * the screen is mid-workout again. Nothing has to say so — `finished` reads
+	 * the cursor.
+	 *
+	 * No confirm, unlike removing a logged set. Nothing is destroyed here; the
+	 * numbers stay on the row, and this *is* the undo whose absence is the whole
+	 * reason that removal asks first.
+	 */
+	public unlogSet(setId: string): void {
+		if (!markSet(this.workout, setId, false)) {
+			return;
+		}
+
+		this.#focus(setId);
+	}
+
+	/**
 	 * One more set on an exercise, minted here because the domain has no
 	 * randomness of its own.
 	 *
-	 * A session with nothing left owed has no active set, so the set just added
-	 * becomes it — otherwise the one thing the user asked for would land on
-	 * screen unreachable, under a finish block saying there was nothing to do.
+	 * The set just added becomes the active one, always. Adding a set is a
+	 * statement about what is being done next — the same statement inserting an
+	 * exercise makes, and answered the same way — and the cursor arriving is
+	 * what saves the tap that would otherwise follow every single add.
+	 *
+	 * It used to move only out of the finished state, where the alternative was
+	 * a row landing on screen unreachable under a block saying nothing was left
+	 * to do. Mid-session it stayed put, so the ordinary case — one more set on
+	 * the exercise you are standing at — added a row and then made you tap it.
+	 *
+	 * Taking the cursor off a half-typed set elsewhere costs nothing: `draft`
+	 * writes onto the set itself, so those numbers are still there on the way
+	 * back.
 	 */
 	public addSet(exerciseId: string): void {
 		const set = appendSet(this.workout, exerciseId, crypto.randomUUID());
 
-		if (set !== null && this.activeSetId === null) {
+		if (set !== null) {
 			this.#focus(set.id);
 		}
 	}
