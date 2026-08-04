@@ -33,6 +33,12 @@
 		/** Suppress the chevron on a row that acts in place rather than navigating. */
 		chevron?: boolean;
 		/**
+		 * The 44px row of a screen read rather than tapped through — the
+		 * Dashboard's, and nothing on the workout loop. `--target-row-dense` in
+		 * `app.css` carries the reasoning and the rule.
+		 */
+		dense?: boolean;
+		/**
 		 * A row whose tap toggles rather than fires, and where it stands — the
 		 * picker's multi-select. Left undefined the row is an action, which is what
 		 * every other row in the app is, and nothing is announced.
@@ -54,6 +60,7 @@
 		href,
 		onclick,
 		chevron = true,
+		dense = false,
 		pressed,
 		leading,
 		trailing,
@@ -68,7 +75,8 @@
 	// and the button says the same thing to the compiler that the props already
 	// say to a reader.
 	const shape = $derived([
-		'flex min-h-row w-full items-center gap-3 rounded-xl px-3 py-2 text-left',
+		'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left',
+		dense ? 'min-h-row-dense' : 'min-h-row',
 		interactive && 'focus-ring hover:bg-hover active:bg-surface-2',
 		interactive && 'pointer-fine:transition-[background-color] pointer-fine:duration-100',
 		klass

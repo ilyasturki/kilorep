@@ -192,11 +192,20 @@
    its mouse affordances at thumb size.
 
    The consequence is deliberate: a hybrid device follows its primary input and
-   lands on 44px rows, still above the 44pt/48dp touch minimums. */
+   lands on 44px rows, still above the 44pt/48dp touch minimums.
+
+   `row-dense` is the one that does not shrink, because it is already the small
+   one: 44px on every pointer. It belongs to a row you *read* rather than tap
+   through — the Dashboard's, where eight rows at thumb size were the reason the
+   screen scrolled past its own first card on a phone. The gym-floor 62 is for
+   the surfaces a sweaty hand works, and a screen of standing answers is not
+   one; 44 still clears both platform minimums, which is what makes the trade
+   payable at all. Nothing on the workout loop may reach for it — rule 7. */
 :root {
 	--target-chrome: 2.5rem; /* 40 */
 	--target-chip: 3.25rem; /* 52 */
 	--target-row: 3.875rem; /* 62 */
+	--target-row-dense: 2.75rem; /* 44 */
 	--target-commit: 4.875rem; /* 78 */
 }
 
@@ -289,6 +298,7 @@
 	--spacing-chrome: var(--target-chrome);
 	--spacing-chip: var(--target-chip);
 	--spacing-row: var(--target-row);
+	--spacing-row-dense: var(--target-row-dense);
 	--spacing-commit: var(--target-commit);
 }
 
@@ -354,21 +364,32 @@
 	--spacing-safe-r: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
 }
 
-/* The app has two content widths, named here rather than written as a `max-w-*`
-   at each call site. Written by hand they had already drifted to four different
-   numbers across five screens, none of which was a decision — a new screen
-   should reach for the job it is doing, not guess a number.
+/* The app has three content widths, named here rather than written as a
+   `max-w-*` at each call site. Written by hand they had already drifted to four
+   different numbers across five screens, none of which was a decision — a new
+   screen should reach for the job it is doing, not guess a number.
 
    `column-content` is a screen that holds content: Exercises and its detail,
-   the Workout pane, History and the Dashboard when they land. The cap is not
-   generosity, it is the set row — stretched across a wide monitor it puts the
-   weight and the reps a hand apart, and the pair has to be read as one thing.
+   the Workout pane, History. The cap is not generosity, it is the set row —
+   stretched across a wide monitor it puts the weight and the reps a hand apart,
+   and the pair has to be read as one thing.
 
    `column-action` is a screen that is one decision: Start, sign-in. These do
    not grow with the window, because a lone button 768px wide is worse than a
    narrow column, not better.
 
-   Both centre themselves and neither sets a gutter: horizontal padding belongs
+   `column-board` is a screen of cards read side by side, which today is the
+   Dashboard alone. It exists because that screen cannot take the step *down*
+   the next paragraph describes: four standing answers stacked in a 576px column
+   made a desk window scroll to reach a figure a phone could already see, and
+   the cap that pays for the Workout rail buys nothing on a screen that has no
+   rail. Wider, but still capped and still one step of the same scale — a row of
+   name-then-number has the set row's problem in miniature, and 56rem in two
+   columns puts each pair back within one glance. It grows at `lg` and not
+   before: below it there is no room for a second column and the phone cap is
+   already right.
+
+   All three centre themselves and none sets a gutter: horizontal padding belongs
    to the screen, which knows whether its rows bleed to the edge. It goes inside
    the cap — on the element carrying it or on a child, never on a wrapper around
    it. The top bar's column and the page's column are two different boxes with
@@ -404,6 +425,23 @@
 
 	@media (width >= theme(--breakpoint-lg)) {
 		max-width: var(--container-xl);
+	}
+}
+
+@utility column-board {
+	width: 100%;
+	max-width: var(--container-3xl);
+	margin-inline: auto;
+
+	/* Up rather than down, the one cap that moves the other way — and only one
+	   step, to 4xl. It is `column-content`'s phone width below `lg`, because a
+	   single column of cards is what a phone has room for either way, so the two
+	   screens either side of a tab tap are the same width until the layout
+	   actually changes. 56rem leaves 32px of gutter at 1024px, the width this
+	   fires at; the same step again would have the cards touching the window
+	   edge there, and `xl` is spoken for. */
+	@media (width >= theme(--breakpoint-lg)) {
+		max-width: var(--container-4xl);
 	}
 }
 
