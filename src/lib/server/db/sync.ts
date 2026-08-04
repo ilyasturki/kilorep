@@ -23,14 +23,8 @@ import { claimSeq } from './seq.ts';
  * the server's ordering detail (the client only ever sees it aggregated into
  * the watermark), and the second is the tenant boundary itself.
  */
-function wireOf(row: RecordRow): WireRecord {
-	return {
-		id: row.id,
-		kind: row.kind,
-		updatedAt: row.updatedAt,
-		deletedAt: row.deletedAt,
-		payload: row.payload
-	};
+function wireOf({ id, kind, updatedAt, deletedAt, payload }: RecordRow): WireRecord {
+	return { id, kind, updatedAt, deletedAt, payload };
 }
 
 /**
@@ -43,26 +37,21 @@ function wins(pushed: WireRecord, existing: RecordRow | undefined): boolean {
 }
 
 function upsert(tx: Executor, userId: string, seq: number, pushed: WireRecord): void {
+	// One object for both halves, as `scripts/seed.ts` writes it: `set` then also
+	// assigns the conflict-target columns, to the values they already hold.
+	const values = {
+		userId,
+		id: pushed.id,
+		kind: pushed.kind,
+		seq,
+		updatedAt: pushed.updatedAt,
+		deletedAt: pushed.deletedAt,
+		payload: pushed.payload
+	};
+
 	tx.insert(records)
-		.values({
-			userId,
-			id: pushed.id,
-			kind: pushed.kind,
-			seq,
-			updatedAt: pushed.updatedAt,
-			deletedAt: pushed.deletedAt,
-			payload: pushed.payload
-		})
-		.onConflictDoUpdate({
-			target: [records.userId, records.id],
-			set: {
-				kind: pushed.kind,
-				seq,
-				updatedAt: pushed.updatedAt,
-				deletedAt: pushed.deletedAt,
-				payload: pushed.payload
-			}
-		})
+		.values(values)
+		.onConflictDoUpdate({ target: [records.userId, records.id], set: values })
 		.run();
 }
 
@@ -71,12 +60,7 @@ function upsert(tx: Executor, userId: string, seq: number, pushed: WireRecord): 
  * validation is the endpoint's job, tenancy is the caller passing a
  * credentialled user id — and everything happens inside a single transaction.
  *
- * The response's `records` are what the client has not applied: rows past its
- * watermark, minus the pushes just accepted (the client already holds those,
- * and echoing them back would only re-clone them), plus the server's copy of
- * every push that lost — sent regardless of its seq, because the client just
- * proved it holds something older and its watermark may already be past the
- * row that corrects it.
+ * What the response's `records` hold is `SyncResponse`'s contract.
  */
 export function syncExchange(db: Database, userId: string, request: SyncRequest): SyncResponse {
 	return db.transaction((tx) => {

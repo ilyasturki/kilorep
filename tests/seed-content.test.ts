@@ -152,11 +152,7 @@ describe('the sets', () => {
 			workout.entries.some((entry) =>
 				entry.exercises.some((exercise) => exercise.sets.includes(unchecked[0]))
 			)
-		);
-
-		if (session === undefined) {
-			throw new Error('the unchecked set belongs to no session');
-		}
+		)!;
 
 		const total = session.entries.flatMap((entry) =>
 			entry.exercises.flatMap((exercise) => exercise.sets.filter((set) => set.type !== 'warmup'))
@@ -181,12 +177,8 @@ describe('the sets', () => {
 describe('the planted states', () => {
 	it('sets the bench PR before the last bench session', () => {
 		const sessions = pastSessionsFrom(content.workouts, 'bench-press');
-		const pr = rawPr(sessions);
-		const last = sessions.at(-1);
-
-		if (pr === null || last === undefined) {
-			throw new Error('the seed plants no bench PR');
-		}
+		const pr = rawPr(sessions)!;
+		const last = sessions.at(-1)!;
 
 		expect(pr.set.weight).toBe(82.5);
 		expect(pr.date).not.toBe(last.date);
@@ -195,11 +187,7 @@ describe('the planted states', () => {
 	it('drifts the last leg day against its plan, and nothing else', () => {
 		const legs = templateNamed('Leg Day');
 		const sessions = sessionsOf(legs.id);
-		const last = sessions.at(-1);
-
-		if (last === undefined) {
-			throw new Error('no leg sessions');
-		}
+		const last = sessions.at(-1)!;
 
 		const drift = driftFrom(last, legs);
 		const setDrift = Object.values(drift.matched);
@@ -230,19 +218,10 @@ describe('the planted states', () => {
 	});
 
 	it('names the orphaned session by its contents', () => {
-		const tombstoned = content.templates.find((entry) => entry.deletedAt !== null);
-
-		if (tombstoned === undefined) {
-			throw new Error('no tombstoned template');
-		}
-
+		const tombstoned = content.templates.find((entry) => entry.deletedAt !== null)!;
 		const orphan = content.workouts.find(
 			(workout) => workout.templateId === tombstoned.template.id
-		);
-
-		if (orphan === undefined) {
-			throw new Error('the tombstoned template has no session');
-		}
+		)!;
 
 		// The live list is what the History screen holds — the tombstone is
 		// filtered out of it long before the title is asked for.
@@ -258,11 +237,7 @@ describe('the weigh-ins', () => {
 		expect(dates).toStrictEqual(dates.toSorted());
 		expect(new Set(dates).size).toBe(dates.length);
 
-		const last = content.bodyweight.at(-1);
-
-		if (last === undefined) {
-			throw new Error('no weigh-ins planted');
-		}
+		const last = content.bodyweight.at(-1)!;
 
 		expect(last.loggedAt).toBeLessThan(NOW);
 		expect(NOW - last.loggedAt).toBeLessThan(2 * DAY);

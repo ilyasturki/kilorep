@@ -10,11 +10,9 @@
  * and a database seeded today both open on an app that was last used
  * yesterday.
  *
- * Shaped on a real log rather than invented. The split, the exercise mix, the
- * starting loads and the rep ranges are six months of the author's own
- * training compressed into eight weeks, which is why so few numbers are round:
- * a seed where every lift is a multiple of ten reads as test data on sight, and
- * the screens that render it were designed against weights like 77.5.
+ * So few numbers are round on purpose: a seed where every lift is a multiple of
+ * ten reads as test data on sight, and the screens that render it were designed
+ * against weights like 77.5.
  *
  * Data only — no framework, no catalog import. Exercise ids are catalog slugs
  * as bare strings and `tests/seed-content.test.ts` is what proves they still
@@ -362,9 +360,8 @@ function loadFor(exercise: PlannedExercise, sessionIndex: number): number {
  */
 function weightFor(exercise: PlannedExercise, sessionIndex: number, setIndex: number): number {
 	const load = loadFor(exercise, sessionIndex);
-	const isLast = setIndex === exercise.sets - 1;
 
-	return isLast && load - exercise.step > 0 ? load - exercise.step : load;
+	return setIndex === exercise.sets - 1 && load - exercise.step > 0 ? load - exercise.step : load;
 }
 
 /**
@@ -479,13 +476,11 @@ function workoutOf(plan: Plan, id: string, startedAt: number, sessionIndex: numb
 	return { id, templateId: plan.id, startedAt, entries };
 }
 
-/** Every exercise node in a workout, flattened — what the planting below edits. */
-function exerciseNodes(workout: Workout): WorkoutExercise[] {
-	return workout.entries.flatMap((entry) => entry.exercises);
-}
-
+/** The workout's exercise node for a catalog slug — what the planting below edits. */
 function nodeFor(workout: Workout, exerciseId: string): WorkoutExercise | undefined {
-	return exerciseNodes(workout).find((node) => node.exerciseId === exerciseId);
+	return workout.entries
+		.flatMap((entry) => entry.exercises)
+		.find((node) => node.exerciseId === exerciseId);
 }
 
 /**
@@ -677,9 +672,8 @@ export function seedContent(now: number): SeedContent {
 	const [legacyDay, ...blockDays] = days;
 
 	const workouts: FinishedWorkout[] = [];
-	// Stamped onto the workout rather than copied into a new object: every caller
-	// below hands in a `workoutOf` result that exists for this one call, and object
-	// spread is linted out of everything but a component.
+	// Stamped onto the workout rather than copied: every caller below hands in a
+	// `workoutOf` result that exists for this one call.
 	const finish = (plan: Plan, workout: Workout): FinishedWorkout =>
 		Object.assign(workout, { finishedAt: workout.startedAt + DURATIONS[plan.id] * MINUTE });
 

@@ -86,10 +86,6 @@ function plant(db: Database, userId: string, now: number): number {
 		];
 
 		for (const row of rows) {
-			// Spelled field by field for the reason `store.finishWorkout` gives: object
-			// spread is linted out of everything but a component, and the explicit shape
-			// means a column added to `records` fails the build here rather than going
-			// quietly unwritten on every seeded row.
 			const values = {
 				userId,
 				seq: claimSeq(tx, userId),
@@ -120,24 +116,18 @@ const force = process.argv.includes('--force');
 const db = getDatabase();
 runMigrations(db);
 
-const existing = db.select().from(users).where(eq(users.email, EMAIL)).get();
+let user = db.select().from(users).where(eq(users.email, EMAIL)).get();
 
-if (existing) {
-	console.log(`account already seeded: ${EMAIL} (${existing.id}) in ${databasePath}`);
-} else {
-	const created = await createUser(db, EMAIL, PASSWORD);
-	const { token } = issueToken(db, created.id, 'seed device', 'device');
+if (user === undefined) {
+	user = await createUser(db, EMAIL, PASSWORD);
+	const { token } = issueToken(db, user.id, 'seed device', 'device');
 
 	console.log(`seeded ${databasePath}`);
 	console.log(`  email:    ${EMAIL}`);
 	console.log(`  password: ${PASSWORD}`);
 	console.log(`  token:    ${token}`);
-}
-
-const user = existing ?? db.select().from(users).where(eq(users.email, EMAIL)).get();
-
-if (user === undefined) {
-	throw new Error(`the account went missing right after it was written: ${EMAIL}`);
+} else {
+	console.log(`account already seeded: ${EMAIL} (${user.id}) in ${databasePath}`);
 }
 
 const planted = db

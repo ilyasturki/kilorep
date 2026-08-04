@@ -73,42 +73,14 @@ function exercisesIn(workout: Workout): string[] {
 }
 
 /**
- * One exercise's past, oldest first — the shape the exercise detail renders.
- * A workout where the exercise was present but nothing was completed
- * contributes no session: nothing was performed, and a row of zero sets would
- * draw as a workout that did not happen.
- */
-export function pastSessionsFrom(workouts: FinishedWorkout[], exerciseId: string): PastSession[] {
-	const sorted = workouts.toSorted((a, b) => a.startedAt - b.startedAt);
-	const out: PastSession[] = [];
-
-	for (const workout of sorted) {
-		const sets = performedSets(workout, exerciseId);
-
-		if (sets.length > 0) {
-			out.push({
-				date: workout.startedAt,
-				workoutId: workout.id,
-				position: exercisesIn(workout).indexOf(exerciseId) + 1,
-				sets
-			});
-		}
-	}
-
-	return out;
-}
-
-/**
- * Every exercise's past in one walk — the Dashboard's read, which needs all
- * of them at once where the exercise detail needs one. Entry by entry it is
- * exactly what `pastSessionsFrom` returns for that exercise: sessions oldest
- * first, a workout where nothing was completed contributing none.
+ * Every exercise's past in one walk — the source the two projections below
+ * read, and the Dashboard's own read. Sessions oldest first, a workout where
+ * nothing was completed contributing none.
  */
 export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, PastSession[]> {
-	const sorted = workouts.toSorted((a, b) => a.startedAt - b.startedAt);
 	const out: Record<string, PastSession[]> = {};
 
-	for (const workout of sorted) {
+	for (const workout of workouts.toSorted((a, b) => a.startedAt - b.startedAt)) {
 		for (const [index, exerciseId] of exercisesIn(workout).entries()) {
 			const sets = performedSets(workout, exerciseId);
 
@@ -127,34 +99,28 @@ export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, 
 }
 
 /**
+ * One exercise's past, oldest first — the shape the exercise detail renders.
+ * A workout where the exercise was present but nothing was completed
+ * contributes no session: nothing was performed, and a row of zero sets would
+ * draw as a workout that did not happen.
+ */
+export function pastSessionsFrom(workouts: FinishedWorkout[], exerciseId: string): PastSession[] {
+	return sessionsByExercise(workouts)[exerciseId] ?? [];
+}
+
+/**
  * For every exercise ever performed, its last session — the working sets, and
- * the day they were lifted. `PastSession` rather than a shape of its own: it
- * is one entry of what `pastSessionsFrom` returns, and the catalog rows that
- * read this render the same two facts the detail's history list does.
- *
- * Walked oldest to newest with later workouts overwriting, so "last" is
- * literal; an exercise nothing has completed is absent rather than empty,
- * which is the shape `hintFor` reads as "never performed".
+ * the day they were lifted. An exercise nothing has completed is absent rather
+ * than empty, which is the shape `hintFor` reads as "never performed".
  */
 export type LastPerformed = Record<string, PastSession | undefined>;
 
 export function lastPerformedFrom(workouts: FinishedWorkout[]): LastPerformed {
-	const sorted = workouts.toSorted((a, b) => a.startedAt - b.startedAt);
 	const out: LastPerformed = {};
 
-	for (const workout of sorted) {
-		for (const [index, exerciseId] of exercisesIn(workout).entries()) {
-			const sets = performedSets(workout, exerciseId);
-
-			if (sets.length > 0) {
-				out[exerciseId] = {
-					date: workout.startedAt,
-					workoutId: workout.id,
-					position: index + 1,
-					sets
-				};
-			}
-		}
+	// Oldest first from `sessionsByExercise`, so the last entry is the latest.
+	for (const [exerciseId, sessions] of Object.entries(sessionsByExercise(workouts))) {
+		out[exerciseId] = sessions.at(-1);
 	}
 
 	return out;
@@ -179,21 +145,13 @@ export function hintsOf(last: LastPerformed): History {
 	return out;
 }
 
-export function historyFrom(workouts: FinishedWorkout[]): History {
-	return hintsOf(lastPerformedFrom(workouts));
-}
-
 /**
- * How many finished workouts back the shelf below looks.
- *
  * A count of sessions rather than a calendar window, which was the other
  * candidate. A window in weeks measures the calendar, and what the shelf is
  * actually asking is "what do you train" — so a fortnight away from the gym
- * would blank it for someone whose routine had not changed at all, and someone
- * training five times a week would be judged on the same span as someone
- * training twice. Ten is roughly a training block either way: long enough that
- * an upper/lower split shows both halves, short enough that a movement dropped
- * two months ago has fallen out.
+ * would blank it for someone whose routine had not changed at all. Ten is
+ * roughly a training block: long enough that an upper/lower split shows both
+ * halves, short enough that a movement dropped two months ago has fallen out.
  */
 const RECENT_SESSIONS = 10;
 
@@ -209,11 +167,6 @@ const SHELF = 8;
  * outrank the squat trained every week. Which is also why an exercise
  * performed twice in one workout counts once — `exercisesIn` already dedupes,
  * and the second appearance is one session's shape, not a second session.
- *
- * "Performed" means what it means everywhere else in this module: a workout
- * where the exercise was on screen but nothing was completed contributes
- * nothing. A row this shelf carries is a claim about training done, and the
- * whole point of the tie-break below is that the claim can be trusted.
  *
  * Ties go to the more recent, so a rotation that has just changed sorts ahead
  * of the one it replaced while both still count the same. Below that the order
@@ -234,14 +187,11 @@ export function frequentFrom(workouts: FinishedWorkout[], limit: number = SHELF)
 				continue;
 			}
 
-			const seen = counts.get(exerciseId);
+			const seen = counts.get(exerciseId) ?? { sessions: 0, last: workout.startedAt };
 
-			if (seen === undefined) {
-				counts.set(exerciseId, { sessions: 1, last: workout.startedAt });
-			} else {
-				seen.sessions += 1;
-				seen.last = Math.max(seen.last, workout.startedAt);
-			}
+			seen.sessions += 1;
+			seen.last = Math.max(seen.last, workout.startedAt);
+			counts.set(exerciseId, seen);
 		}
 	}
 

@@ -6,7 +6,7 @@ import { envText } from '../env.ts';
  * Where the database lives. Separate from `../config.ts` — which holds the
  * settings the HTTP surface reads — because `drizzle.config.ts` imports this
  * module and must not drag the server's request-time configuration along with
- * it. Both read the environment through `../env.ts`, which is what loads `.env`.
+ * it.
  */
 
 /** The SQLite file. One per instance; `:memory:` is honoured, for tests. */

@@ -21,12 +21,12 @@ import {
 import type { PastSession } from '$lib/domain/stats';
 import type { Template } from '$lib/domain/template';
 import type { History, Workout } from '$lib/domain/workout';
-import type { SyncAck, WireRecord } from '$lib/sync/protocol';
+import type { RecordKind, SyncAck, WireRecord } from '$lib/sync/protocol';
 
 import type { KilorepDatabase } from './db.ts';
 import { openDatabase } from './db.ts';
 import type { FinishedWorkout, LastPerformed } from './derive.ts';
-import { frequentFrom, historyFrom, lastPerformedFrom, pastSessionsFrom } from './derive.ts';
+import { frequentFrom, hintsOf, lastPerformedFrom, pastSessionsFrom } from './derive.ts';
 
 /**
  * The in-flight session, exactly as the screen holds it: the tree plus where
@@ -61,7 +61,76 @@ export class Store {
 		this.db = db;
 	}
 
-	// --- workouts -----------------------------------------------------------
+	/**
+	 * A record born syncable: dirty from birth, the caller's clock on
+	 * `updatedAt`. Every write path below goes through here, so the sync
+	 * envelope is decided in one place rather than five.
+	 */
+	private async write(
+		id: string,
+		kind: RecordKind,
+		updatedAt: number,
+		payload: unknown
+	): Promise<void> {
+		await this.db.put('records', { id, kind, updatedAt, deletedAt: null, payload, dirty: true });
+	}
+
+	/**
+	 * A delete is a tombstone, not a removal — CLAUDE.md: without one, the next
+	 * pull resurrects the record. `updatedAt` is bumped along with `deletedAt`,
+	 * because last-write-wins compares nothing else: a tombstone carrying the
+	 * old timestamp would lose to the server's live copy and undelete itself.
+	 *
+	 * Read-modify-write, so an id of the wrong kind is silently no-op'd rather
+	 * than tombstoned.
+	 */
+	private async tombstone(id: string, kind: RecordKind, deletedAt: number): Promise<void> {
+		const tx = this.db.transaction('records', 'readwrite');
+		const record = await tx.store.get(id);
+
+		if (record !== undefined && record.kind === kind) {
+			record.deletedAt = deletedAt;
+			record.updatedAt = deletedAt;
+			record.dirty = true;
+			await tx.store.put(record);
+		}
+
+		await tx.done;
+	}
+
+	/**
+	 * Every live record of a kind, ordered by `compare`. Tombstones stay in the
+	 * box.
+	 *
+	 * The one assertion, and it is the storage boundary's: a payload re-read
+	 * from IndexedDB is `unknown`, and this store is the only writer of the
+	 * kinds that reach here. Same bargain `request<T>` strikes at the network
+	 * boundary — which is why `preference` reads guard instead, another app
+	 * version being a writer of that kind too.
+	 */
+	private async live<T>(kind: RecordKind, compare: (a: T, b: T) => number): Promise<T[]> {
+		const records = await this.db.getAllFromIndex('records', 'kind', kind);
+
+		return (
+			records
+				.filter((record) => record.deletedAt === null)
+				// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+				.map((record) => record.payload as T)
+				.toSorted(compare)
+		);
+	}
+
+	/** One live record by id, or null — unknown, tombstoned, or another kind. */
+	private async liveOne<T>(id: string, kind: RecordKind): Promise<T | null> {
+		const record = await this.db.get('records', id);
+
+		if (record === undefined || record.kind !== kind || record.deletedAt !== null) {
+			return null;
+		}
+
+		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+		return record.payload as T;
+	}
 
 	/**
 	 * A finished session becomes a record: dirty from birth, `updatedAt`
@@ -80,45 +149,24 @@ export class Store {
 			finishedAt
 		};
 
-		await this.db.put('records', {
-			id: workout.id,
-			kind: 'workout',
-			updatedAt: finishedAt,
-			deletedAt: null,
-			payload,
-			dirty: true
-		});
+		await this.write(workout.id, 'workout', finishedAt, payload);
 	}
 
-	/** Every live workout, oldest first. Tombstones stay in the box. */
+	/** Every live workout, oldest first. */
 	public async listWorkouts(): Promise<FinishedWorkout[]> {
-		const records = await this.db.getAllFromIndex('records', 'kind', 'workout');
-
-		return (
-			records
-				.filter((record) => record.deletedAt === null)
-				// The one assertion, and it is the storage boundary's: a payload
-				// re-read from IndexedDB is `unknown`, and this store is the only
-				// writer of the `workout` kind. Same bargain `request<T>` strikes at
-				// the network boundary.
-				// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-				.map((record) => record.payload as FinishedWorkout)
-				.toSorted((a, b) => a.startedAt - b.startedAt)
+		const workouts = await this.live<FinishedWorkout>(
+			'workout',
+			(a, b) => a.startedAt - b.startedAt
 		);
+
+		return workouts;
 	}
 
 	/** One finished workout by id, or null — unknown, tombstoned, or another kind. */
 	public async getWorkout(id: string): Promise<FinishedWorkout | null> {
-		const record = await this.db.get('records', id);
+		const workout = await this.liveOne<FinishedWorkout>(id, 'workout');
 
-		if (record === undefined || record.kind !== 'workout' || record.deletedAt !== null) {
-			return null;
-		}
-
-		// The storage-boundary assertion `listWorkouts` already makes, for the
-		// same reason: this store is the only writer of the kind.
-		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-		return record.payload as FinishedWorkout;
+		return workout;
 	}
 
 	/**
@@ -139,9 +187,6 @@ export class Store {
 	 * editing is already gone.
 	 */
 	public async updateWorkout(workout: FinishedWorkout, updatedAt: number): Promise<void> {
-		// Spelled field by field, the same bargain `finishWorkout` strikes: a
-		// field added to `Workout` fails the build here rather than silently
-		// dropping out of an edited record.
 		const payload: FinishedWorkout = {
 			id: workout.id,
 			templateId: workout.templateId,
@@ -164,28 +209,16 @@ export class Store {
 	}
 
 	/**
-	 * A delete is a tombstone, not a removal — the same bargain as
-	 * `deleteTemplate`, and the derivations need no telling: every read path
-	 * filters tombstones, so the workout leaves history, hints and PRs in the
-	 * one move.
+	 * The derivations need no telling: every read path filters tombstones, so
+	 * the workout leaves history, hints and PRs in the one move.
 	 */
 	public async deleteWorkout(id: string, deletedAt: number): Promise<void> {
-		const tx = this.db.transaction('records', 'readwrite');
-		const record = await tx.store.get(id);
-
-		if (record !== undefined && record.kind === 'workout') {
-			record.deletedAt = deletedAt;
-			record.updatedAt = deletedAt;
-			record.dirty = true;
-			await tx.store.put(record);
-		}
-
-		await tx.done;
+		await this.tombstone(id, 'workout', deletedAt);
 	}
 
-	/** The hint map for the workout screen — see `historyFrom` for the rules. */
+	/** The hint map for the workout screen — see `lastPerformedFrom` for the rules. */
 	public async history(): Promise<History> {
-		return historyFrom(await this.listWorkouts());
+		return hintsOf(lastPerformedFrom(await this.listWorkouts()));
 	}
 
 	/**
@@ -227,8 +260,6 @@ export class Store {
 		return pastSessionsFrom(await this.listWorkouts(), exerciseId);
 	}
 
-	// --- templates ----------------------------------------------------------
-
 	/**
 	 * Upsert, because the editor autosaves: the same record is written on every
 	 * edit, dirty each time, `updatedAt` stamped by the caller so the clock
@@ -245,64 +276,26 @@ export class Store {
 			entries: template.entries
 		};
 
-		await this.db.put('records', {
-			id: template.id,
-			kind: 'template',
-			updatedAt,
-			deletedAt: null,
-			payload,
-			dirty: true
-		});
+		await this.write(template.id, 'template', updatedAt, payload);
 	}
 
-	/** Every live template, creation order. Tombstones stay in the box. */
+	/** Every live template, creation order. */
 	public async listTemplates(): Promise<Template[]> {
-		const records = await this.db.getAllFromIndex('records', 'kind', 'template');
+		const templates = await this.live<Template>('template', (a, b) => a.createdAt - b.createdAt);
 
-		return (
-			records
-				.filter((record) => record.deletedAt === null)
-				// The storage-boundary assertion `listWorkouts` already makes, for the
-				// same reason: this store is the only writer of the kind.
-				// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-				.map((record) => record.payload as Template)
-				.toSorted((a, b) => a.createdAt - b.createdAt)
-		);
+		return templates;
 	}
 
 	/** One template by id, or null — unknown, tombstoned, or not a template at all. */
 	public async getTemplate(id: string): Promise<Template | null> {
-		const record = await this.db.get('records', id);
+		const template = await this.liveOne<Template>(id, 'template');
 
-		if (record === undefined || record.kind !== 'template' || record.deletedAt !== null) {
-			return null;
-		}
-
-		// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-		return record.payload as Template;
+		return template;
 	}
 
-	/**
-	 * A delete is a tombstone, not a removal — CLAUDE.md: without one, the next
-	 * pull resurrects the record. `updatedAt` is bumped along with `deletedAt`,
-	 * because last-write-wins compares nothing else: a tombstone carrying the
-	 * old timestamp would lose to the server's live copy and undelete itself.
-	 */
 	public async deleteTemplate(id: string, deletedAt: number): Promise<void> {
-		const tx = this.db.transaction('records', 'readwrite');
-		const record = await tx.store.get(id);
-
-		if (record !== undefined && record.kind === 'template') {
-			record.deletedAt = deletedAt;
-			record.updatedAt = deletedAt;
-			record.dirty = true;
-			await tx.store.put(record);
-		}
-
-		await tx.done;
+		await this.tombstone(id, 'template', deletedAt);
 	}
-
-	// --- body weight ----------------------------------------------------------
 
 	/**
 	 * Upsert by day: the id is derived from the entry's date, so "one per day,
@@ -320,53 +313,21 @@ export class Store {
 			kg: entry.kg
 		};
 
-		await this.db.put('records', {
-			id: bodyweightId(entry.date),
-			kind: 'bodyweight',
-			updatedAt,
-			deletedAt: null,
-			payload,
-			dirty: true
-		});
+		await this.write(bodyweightId(entry.date), 'bodyweight', updatedAt, payload);
 	}
 
-	/** Every live entry, oldest day first. Tombstones stay in the box. */
+	/** Every live entry, oldest day first — ISO dates, so the calendar sort is a string sort. */
 	public async listBodyweight(): Promise<BodyweightEntry[]> {
-		const records = await this.db.getAllFromIndex('records', 'kind', 'bodyweight');
-
-		return (
-			records
-				.filter((record) => record.deletedAt === null)
-				// The storage-boundary assertion `listWorkouts` already makes, for the
-				// same reason: this store is the only writer of the kind.
-				// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-				.map((record) => record.payload as BodyweightEntry)
-				// ISO dates order lexicographically, so the calendar sort is a string
-				// sort.
-				.toSorted((a, b) => (a.date < b.date ? -1 : 1))
+		const entries = await this.live<BodyweightEntry>('bodyweight', (a, b) =>
+			a.date < b.date ? -1 : 1
 		);
+
+		return entries;
 	}
 
-	/**
-	 * A delete is a tombstone, not a removal — CLAUDE.md's rule, same as
-	 * `deleteTemplate`, and `updatedAt` moves with it or the tombstone loses
-	 * last-write-wins to the live copy and undeletes itself on the next pull.
-	 */
 	public async deleteBodyweight(date: string, deletedAt: number): Promise<void> {
-		const tx = this.db.transaction('records', 'readwrite');
-		const record = await tx.store.get(bodyweightId(date));
-
-		if (record !== undefined && record.kind === 'bodyweight') {
-			record.deletedAt = deletedAt;
-			record.updatedAt = deletedAt;
-			record.dirty = true;
-			await tx.store.put(record);
-		}
-
-		await tx.done;
+		await this.tombstone(bodyweightId(date), 'bodyweight', deletedAt);
 	}
-
-	// --- preferences ----------------------------------------------------------
 
 	/**
 	 * Upsert by family: the id is derived from the family's slug, so "one choice
@@ -383,14 +344,7 @@ export class Store {
 			main: preference.main
 		};
 
-		await this.db.put('records', {
-			id: mainVariantId(preference.family),
-			kind: 'preference',
-			updatedAt,
-			deletedAt: null,
-			payload,
-			dirty: true
-		});
+		await this.write(mainVariantId(preference.family), 'preference', updatedAt, payload);
 	}
 
 	/**
@@ -421,19 +375,12 @@ export class Store {
 	 * and whatever was there is exactly what it replaces.
 	 */
 	public async setExertionScale(scale: ExertionScale, updatedAt: number): Promise<void> {
-		// Spelled field by field, same bargain as `finishWorkout`: a field added
-		// to `ExertionScalePreference` fails the build here instead of silently
-		// syncing.
+		// The annotation is the only thing typing `{ scale }`, same bargain as
+		// `finishWorkout`: a field added to `ExertionScalePreference` fails the
+		// build here instead of silently syncing.
 		const payload: ExertionScalePreference = { scale };
 
-		await this.db.put('records', {
-			id: EXERTION_SCALE_ID,
-			kind: 'preference',
-			updatedAt,
-			deletedAt: null,
-			payload,
-			dirty: true
-		});
+		await this.write(EXERTION_SCALE_ID, 'preference', updatedAt, payload);
 	}
 
 	/**
@@ -454,8 +401,6 @@ export class Store {
 		return isExertionScalePreference(record.payload) ? record.payload.scale : 'rpe';
 	}
 
-	// --- the active session -------------------------------------------------
-
 	public async saveSnapshot(snapshot: Snapshot): Promise<void> {
 		await this.db.put('meta', snapshot, SNAPSHOT_KEY);
 	}
@@ -469,8 +414,6 @@ export class Store {
 	public async clearSnapshot(): Promise<void> {
 		await this.db.delete('meta', SNAPSHOT_KEY);
 	}
-
-	// --- sync ---------------------------------------------------------------
 
 	/** Everything still owed to the server, as the wire will carry it. */
 	public async dirtyRecords(): Promise<WireRecord[]> {

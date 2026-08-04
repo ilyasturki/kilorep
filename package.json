@@ -24,7 +24,6 @@
 		"nix:deps-hash": "nix/refresh-deps-hash.sh",
 		"illustrations:trace": "node scripts/illustrations/trace.ts",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
 		"db:seed": "node scripts/seed.ts",
 		"account:create": "node scripts/account.ts create",

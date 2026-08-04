@@ -52,8 +52,7 @@ let instance: Database | undefined;
  * one writer; a pool would buy nothing and cost lock contention.
  */
 export function getDatabase(): Database {
-	instance ??= createDatabase();
-	return instance;
+	return (instance ??= createDatabase());
 }
 
 // Dev only. Editing any server file re-evaluates this module, and without a

@@ -37,9 +37,8 @@ export type WireRecord = {
  * One round trip: everything dirty goes up, everything unseen comes down.
  *
  * `watermark` is the highest server `seq` this client has applied — never a
- * timestamp, because sync order is the server counter's and a device clock in
- * a gym has no say. Zero is the new-device state, and makes the first sync the
- * full pull PRODUCT.md promises.
+ * timestamp; see `claimSeq`. Zero is the new-device state, and makes the first
+ * sync the full pull PRODUCT.md promises.
  */
 export type SyncRequest = {
 	watermark: number;
@@ -98,21 +97,16 @@ function isShape(value: unknown): value is Record<string, unknown> {
  * it back out.
  */
 export function isWireRecord(value: unknown): value is WireRecord {
-	if (!isShape(value)) {
-		return false;
-	}
-
-	const record = value;
-
 	return (
-		typeof record.id === 'string' &&
-		record.id !== '' &&
-		isRecordKind(record.kind) &&
-		typeof record.updatedAt === 'number' &&
-		Number.isFinite(record.updatedAt) &&
-		(record.deletedAt === null ||
-			(typeof record.deletedAt === 'number' && Number.isFinite(record.deletedAt))) &&
-		'payload' in record &&
-		record.payload !== undefined
+		isShape(value) &&
+		typeof value.id === 'string' &&
+		value.id !== '' &&
+		isRecordKind(value.kind) &&
+		typeof value.updatedAt === 'number' &&
+		Number.isFinite(value.updatedAt) &&
+		(value.deletedAt === null ||
+			(typeof value.deletedAt === 'number' && Number.isFinite(value.deletedAt))) &&
+		'payload' in value &&
+		value.payload !== undefined
 	);
 }

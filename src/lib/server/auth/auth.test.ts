@@ -7,7 +7,6 @@ import { eq } from 'drizzle-orm';
 
 import type { Database } from '../db/client.ts';
 import { createDatabase } from '../db/client.ts';
-import { migrationsFolder } from '../db/config.ts';
 import { runMigrations } from '../db/migrate.ts';
 import { authTokens } from '../db/schema.ts';
 import {
@@ -54,7 +53,7 @@ let db: Database;
 beforeEach(() => {
 	directory = mkdtempSync(path.join(os.tmpdir(), 'kilorep-auth-'));
 	db = createDatabase(path.join(directory, 'test.db'));
-	runMigrations(db, migrationsFolder);
+	runMigrations(db);
 	resetLoginThrottle();
 });
 

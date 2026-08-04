@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test } from 'vitest';
 
 import type { Database } from '../db/client.ts';
 import { createDatabase } from '../db/client.ts';
-import { migrationsFolder } from '../db/config.ts';
 import { runMigrations } from '../db/migrate.ts';
 import { googleCodes } from '../db/schema.ts';
 import { createUser } from './accounts.ts';
@@ -22,17 +21,19 @@ const VERIFIER = 'a-verifier-only-the-app-holds';
 
 beforeEach(async () => {
 	db = createDatabase(':memory:');
-	runMigrations(db, migrationsFolder);
+	runMigrations(db);
 
 	const user = await createUser(db, 'lifter@example.com', 'a-long-enough-password');
 	userId = user.id;
 });
 
 describe('claiming a device code', () => {
-	test('a code plus its verifier resolves to the account', () => {
+	test('a code plus its verifier resolves to the account, exactly once', () => {
 		const code = issueCode(db, userId, challengeFor(VERIFIER));
 
 		expect(claimCode(db, code, VERIFIER)).toBe(userId);
+		// Spent on claim, so the row is gone and a replay resolves to nothing.
+		expect(claimCode(db, code, VERIFIER)).toBeNull();
 	});
 
 	test('the code alone is worth nothing — the interception case', () => {
@@ -72,13 +73,6 @@ describe('claiming a device code', () => {
 });
 
 describe('the pending-code table', () => {
-	test('a claim leaves no row behind', () => {
-		const code = issueCode(db, userId, challengeFor(VERIFIER));
-		claimCode(db, code, VERIFIER);
-
-		expect(db.select().from(googleCodes).all()).toHaveLength(0);
-	});
-
 	test('issuing sweeps codes that expired, and keeps the ones that did not', () => {
 		const early = new Date(1_000_000);
 		issueCode(db, userId, challengeFor('abandoned'), early);

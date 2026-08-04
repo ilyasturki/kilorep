@@ -6,7 +6,7 @@
  * `drizzle.config.ts`, `scripts/account.ts` and `scripts/seed.ts` run outside
  * SvelteKit entirely, and they must resolve the same configuration the server
  * does. `drizzle-kit` reads `.env` on its own and nothing else does, so without
- * this `bun run db:migrate` would happily migrate a file the server never opens.
+ * this `bun run db:generate` would happily diff a file the server never opens.
  *
  * A real environment variable always wins — `loadEnvFile` fills gaps rather
  * than overwriting — so a container is unaffected by a `.env` that happens to

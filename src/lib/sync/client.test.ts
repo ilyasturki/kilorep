@@ -6,7 +6,6 @@ import { setApiBase } from '$lib/api/client';
 import { createUser } from '$lib/server/auth/accounts';
 import type { Database } from '$lib/server/db/client';
 import { createDatabase } from '$lib/server/db/client';
-import { migrationsFolder } from '$lib/server/db/config';
 import { runMigrations } from '$lib/server/db/migrate';
 import { syncExchange } from '$lib/server/db/sync';
 import { openDatabase } from '$lib/store/db';
@@ -37,7 +36,7 @@ function isRequestShape(value: unknown): value is SyncRequest {
 
 beforeEach(async () => {
 	server = createDatabase(':memory:');
-	runMigrations(server, migrationsFolder);
+	runMigrations(server);
 	const user = await createUser(server, 'lifter@example.com', 'a-long-enough-password');
 	userId = user.id;
 
@@ -134,13 +133,7 @@ describe('syncNow', () => {
 					kind: 'workout',
 					updatedAt: 999,
 					deletedAt: null,
-					payload: {
-						id: theirs.id,
-						templateId: theirs.templateId,
-						startedAt: theirs.startedAt,
-						entries: theirs.entries,
-						finishedAt: 999
-					}
+					payload: Object.assign(theirs, { finishedAt: 999 })
 				}
 			]
 		});

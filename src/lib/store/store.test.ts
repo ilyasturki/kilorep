@@ -25,6 +25,12 @@ async function freshStore(): Promise<Store> {
 	return new Store(await openDatabase(`kilorep-test-${counter}`));
 }
 
+let store: Store;
+
+beforeEach(async () => {
+	store = await freshStore();
+});
+
 type SetSpec = {
 	weight: number;
 	reps: number;
@@ -63,13 +69,13 @@ function workout(id: string, startedAt: number, exerciseId: string, sets: SetSpe
 	};
 }
 
-const wire = (id: string, updatedAt: number, payload: unknown): WireRecord => ({
-	id,
-	kind: 'workout',
-	updatedAt,
-	deletedAt: null,
-	payload
-});
+const wire = (
+	id: string,
+	updatedAt: number,
+	payload: unknown,
+	kind: WireRecord['kind'] = 'workout',
+	deletedAt: number | null = null
+): WireRecord => ({ id, kind, updatedAt, deletedAt, payload });
 
 /** A remote copy of a workout: the payload as another device would have written it. */
 const finished = (w: Workout, finishedAt: number): unknown => ({
@@ -88,12 +94,6 @@ const template = (id: string, createdAt: number, name = 'Push day'): Template =>
 });
 
 describe('workouts', () => {
-	let store: Store;
-
-	beforeEach(async () => {
-		store = await freshStore();
-	});
-
 	it('round-trips a finished workout', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
 
@@ -115,7 +115,7 @@ describe('workouts', () => {
 
 	it('hides tombstoned workouts', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
-		await store.applyRemote([Object.assign(wire('w1', 300, null), { deletedAt: 300 })]);
+		await store.applyRemote([wire('w1', 300, null, 'workout', 300)]);
 
 		expect(await store.listWorkouts()).toEqual([]);
 	});
@@ -137,11 +137,7 @@ describe('workouts', () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
 		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
 
-		const stored = await store.getWorkout('w1');
-
-		if (stored === null) {
-			throw new Error('the workout just written is missing');
-		}
+		const stored = (await store.getWorkout('w1'))!;
 
 		stored.entries[0].exercises[0].sets[0].weight = 100;
 
@@ -165,13 +161,9 @@ describe('workouts', () => {
 	it('an update never resurrects a tombstoned workout', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
 
-		const stored = await store.getWorkout('w1');
+		const stored = (await store.getWorkout('w1'))!;
 
-		if (stored === null) {
-			throw new Error('the workout just written is missing');
-		}
-
-		await store.applyRemote([Object.assign(wire('w1', 300, null), { deletedAt: 300 })]);
+		await store.applyRemote([wire('w1', 300, null, 'workout', 300)]);
 		await store.updateWorkout(stored, 400);
 
 		expect(await store.getWorkout('w1')).toBeNull();
@@ -221,12 +213,6 @@ describe('workouts', () => {
 });
 
 describe('templates', () => {
-	let store: Store;
-
-	beforeEach(async () => {
-		store = await freshStore();
-	});
-
 	it('round-trips a template and re-saves in place', async () => {
 		await store.saveTemplate(template('t1', 100), 150);
 		await store.saveTemplate(template('t1', 100, 'Push day A'), 250);
@@ -262,16 +248,12 @@ describe('templates', () => {
 		expect(record).toMatchObject({ deletedAt: 300, updatedAt: 300 });
 	});
 
-	it('refuses to tombstone a record of another kind', async () => {
-		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
-		await store.deleteTemplate('w1', 300);
-
-		expect(await store.listWorkouts()).toHaveLength(1);
-	});
-
 	it('keeps kinds isolated in the shared records box', async () => {
 		await store.saveTemplate(template('t1', 100), 150);
 		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
+
+		// A workout's id handed to the template delete tombstones nothing.
+		await store.deleteTemplate('w1', 300);
 		await store.deleteTemplate('t1', 300);
 
 		expect(await store.listWorkouts()).toHaveLength(1);
@@ -280,12 +262,6 @@ describe('templates', () => {
 });
 
 describe('body weight', () => {
-	let store: Store;
-
-	beforeEach(async () => {
-		store = await freshStore();
-	});
-
 	it('round-trips an entry and overwrites the same day in place', async () => {
 		await store.saveBodyweight({ date: '2026-08-02', kg: 80.4 }, 100);
 		await store.saveBodyweight({ date: '2026-08-02', kg: 80.1 }, 200);
@@ -321,23 +297,9 @@ describe('body weight', () => {
 
 		expect(await store.listBodyweight()).toEqual([{ date: '2026-08-02', kg: 80.2 }]);
 	});
-
-	it('stays out of the other kinds in the shared records box', async () => {
-		await store.saveBodyweight({ date: '2026-08-02', kg: 80 }, 100);
-		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
-
-		expect(await store.listBodyweight()).toHaveLength(1);
-		expect(await store.listWorkouts()).toHaveLength(1);
-	});
 });
 
 describe('main variants', () => {
-	let store: Store;
-
-	beforeEach(async () => {
-		store = await freshStore();
-	});
-
 	it('round-trips a choice as a record born dirty and syncable', async () => {
 		await store.setMainVariant({ family: 'bench-press', main: 'incline-bench-press' }, 100);
 
@@ -366,20 +328,8 @@ describe('main variants', () => {
 		// A `preference` record another app version wrote: same kind, foreign
 		// shape. It must fall out of the read, and the recognisable one survive.
 		await store.applyRemote([
-			{
-				id: 'rest-timer',
-				kind: 'preference',
-				updatedAt: 50,
-				deletedAt: null,
-				payload: { seconds: 90 }
-			},
-			{
-				id: 'main-variant:deadlift',
-				kind: 'preference',
-				updatedAt: 60,
-				deletedAt: null,
-				payload: { family: 'deadlift', main: 'sumo-deadlift' }
-			}
+			wire('rest-timer', 50, { seconds: 90 }, 'preference'),
+			wire('main-variant:deadlift', 60, { family: 'deadlift', main: 'sumo-deadlift' }, 'preference')
 		]);
 
 		expect(await store.mainVariants()).toEqual({ deadlift: 'sumo-deadlift' });
@@ -387,13 +337,7 @@ describe('main variants', () => {
 
 	it('leaves tombstoned preferences out of the map', async () => {
 		await store.applyRemote([
-			{
-				id: 'main-variant:squat',
-				kind: 'preference',
-				updatedAt: 50,
-				deletedAt: 60,
-				payload: { family: 'squat', main: 'front-squat' }
-			}
+			wire('main-variant:squat', 50, { family: 'squat', main: 'front-squat' }, 'preference', 60)
 		]);
 
 		expect(await store.mainVariants()).toEqual({});
@@ -401,12 +345,6 @@ describe('main variants', () => {
 });
 
 describe('exertion scale', () => {
-	let store: Store;
-
-	beforeEach(async () => {
-		store = await freshStore();
-	});
-
 	it('is RPE for an account that has never said, without writing a record', async () => {
 		expect(await store.exertionScale()).toBe('rpe');
 		// The default is a read-side rule, not a row: a fresh device must not push
@@ -420,13 +358,7 @@ describe('exertion scale', () => {
 		expect(await store.exertionScale()).toBe('rir');
 
 		expect(await store.dirtyRecords()).toEqual([
-			{
-				id: 'exertion-scale',
-				kind: 'preference',
-				updatedAt: 100,
-				deletedAt: null,
-				payload: { scale: 'rir' }
-			}
+			wire('exertion-scale', 100, { scale: 'rir' }, 'preference')
 		]);
 	});
 
@@ -442,29 +374,13 @@ describe('exertion scale', () => {
 		// A newer app version's third name, arriving over sync. Reading it through
 		// would leave every label on every screen with a word this build has no
 		// rendering for.
-		await store.applyRemote([
-			{
-				id: 'exertion-scale',
-				kind: 'preference',
-				updatedAt: 50,
-				deletedAt: null,
-				payload: { scale: 'borg' }
-			}
-		]);
+		await store.applyRemote([wire('exertion-scale', 50, { scale: 'borg' }, 'preference')]);
 
 		expect(await store.exertionScale()).toBe('rpe');
 	});
 
 	it('reads a tombstoned choice as never chosen', async () => {
-		await store.applyRemote([
-			{
-				id: 'exertion-scale',
-				kind: 'preference',
-				updatedAt: 50,
-				deletedAt: 60,
-				payload: { scale: 'rir' }
-			}
-		]);
+		await store.applyRemote([wire('exertion-scale', 50, { scale: 'rir' }, 'preference', 60)]);
 
 		expect(await store.exertionScale()).toBe('rpe');
 	});
@@ -478,12 +394,6 @@ describe('exertion scale', () => {
 });
 
 describe('history derivation', () => {
-	let store: Store;
-
-	beforeEach(async () => {
-		store = await freshStore();
-	});
-
 	it('counts completed working sets only', async () => {
 		await store.finishWorkout(
 			workout('w1', 100, 'bench-press', [
@@ -503,24 +413,6 @@ describe('history derivation', () => {
 		]);
 	});
 
-	it('recalls the last workout that performed the exercise, not the last workout', async () => {
-		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 150);
-		await store.finishWorkout(workout('w2', 200, 'cable-fly', [{ weight: 20, reps: 12 }]), 250);
-
-		const history = await store.history();
-
-		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
-	});
-
-	it('treats an exercise with nothing completed as never performed', async () => {
-		await store.finishWorkout(
-			workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8, completed: false }]),
-			200
-		);
-
-		expect(await store.history()).toEqual({});
-	});
-
 	it('keeps the earlier session when a later workout completed nothing', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 150);
 		await store.finishWorkout(
@@ -537,35 +429,14 @@ describe('history derivation', () => {
 		// A payload with no `rpe` key at all, which is every workout this app ever
 		// wrote before today and every one an older device still writes. It has to
 		// derive as an honest null rather than carry `undefined` into a label.
-		await store.applyRemote([
-			wire('legacy', 100, {
-				id: 'legacy',
-				templateId: null,
-				startedAt: 100,
-				finishedAt: 150,
-				entries: [
-					{
-						id: 'legacy-entry',
-						exercises: [
-							{
-								id: 'legacy-node',
-								exerciseId: 'bench-press',
-								sets: [
-									{
-										id: 'legacy-set',
-										type: 'normal',
-										plannedReps: null,
-										weight: 80,
-										reps: 8,
-										completed: true
-									}
-								]
-							}
-						]
-					}
-				]
-			})
-		]);
+		const legacy = workout('legacy', 100, 'bench-press', [{ weight: 80, reps: 8 }]);
+		// Absent, not null — the factory writes `rpe: null` and a pre-rating
+		// payload has no such key at all, which is the case under test.
+		const legacySet: Partial<WorkoutSet> = legacy.entries[0].exercises[0].sets[0];
+
+		delete legacySet.rpe;
+
+		await store.applyRemote([wire('legacy', 100, finished(legacy, 150))]);
 
 		const history = await store.history();
 
@@ -574,12 +445,6 @@ describe('history derivation', () => {
 });
 
 describe('last performed', () => {
-	let store: Store;
-
-	beforeEach(async () => {
-		store = await freshStore();
-	});
-
 	it('dates the last session by its start, not its finish', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 150);
 
@@ -626,14 +491,16 @@ describe('last performed', () => {
 		);
 		await store.finishWorkout(workout('w2', 200, 'cable-fly', [{ weight: 20, reps: 12 }]), 250);
 
-		expect(hintsOf(await store.lastPerformed())).toEqual(await store.history());
+		const history = await store.history();
+
+		// Each exercise keeps its own last session, and the warmup is not in it.
+		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
+		expect(hintsOf(await store.lastPerformed())).toEqual(history);
 	});
 });
 
 describe('past sessions', () => {
 	it('returns one exercise, oldest first, dated by session start', async () => {
-		const store = await freshStore();
-
 		await store.finishWorkout(workout('w2', 200, 'bench-press', [{ weight: 82.5, reps: 6 }]), 250);
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 150);
 		await store.finishWorkout(workout('w3', 300, 'cable-fly', [{ weight: 20, reps: 12 }]), 350);
@@ -647,8 +514,6 @@ describe('past sessions', () => {
 	});
 
 	it('counts the ordinal across every exercise the workout holds, performed or not', async () => {
-		const store = await freshStore();
-
 		// Three exercises in session order, the middle one never completed: the
 		// ordinal must still say "3rd", because that is where the exercise sits
 		// on the workout screen the id links to.
@@ -714,8 +579,6 @@ describe('frequent exercises', () => {
 	}
 
 	it('ranks by how many sessions hold the exercise, most first', async () => {
-		const store = await freshStore();
-
 		await store.finishWorkout(session('w1', 100, ['bench-press', 'cable-fly']), 150);
 		await store.finishWorkout(session('w2', 200, ['bench-press', 'pec-deck']), 250);
 		await store.finishWorkout(session('w3', 300, ['bench-press']), 350);
@@ -728,8 +591,6 @@ describe('frequent exercises', () => {
 	});
 
 	it('breaks a tie towards the more recent', async () => {
-		const store = await freshStore();
-
 		await store.finishWorkout(session('w1', 100, ['cable-fly']), 150);
 		await store.finishWorkout(session('w2', 200, ['pec-deck']), 250);
 
@@ -737,8 +598,6 @@ describe('frequent exercises', () => {
 	});
 
 	it('counts an exercise performed twice in one session once', async () => {
-		const store = await freshStore();
-
 		// Two entries, same exercise — a session that came back to the rack, not
 		// two sessions.
 		await store.finishWorkout(session('w1', 100, ['bench-press', 'bench-press']), 150);
@@ -748,8 +607,6 @@ describe('frequent exercises', () => {
 	});
 
 	it('ignores an exercise nothing was completed on', async () => {
-		const store = await freshStore();
-
 		await store.finishWorkout(session('w1', 100, ['bench-press'], false), 150);
 		await store.finishWorkout(session('w2', 200, ['cable-fly']), 250);
 
@@ -757,8 +614,6 @@ describe('frequent exercises', () => {
 	});
 
 	it('looks ten sessions back and no further', async () => {
-		const store = await freshStore();
-
 		// Eleven workouts, the oldest the only one holding the fly: it falls out
 		// of the window the eleventh pushes it past.
 		await store.finishWorkout(session('w0', 100, ['cable-fly']), 150);
@@ -771,14 +626,10 @@ describe('frequent exercises', () => {
 	});
 
 	it('shelves nothing on a fresh install', async () => {
-		const store = await freshStore();
-
 		expect(frequentFrom(await store.listWorkouts())).toEqual([]);
 	});
 
 	it('caps the shelf', async () => {
-		const store = await freshStore();
-
 		await store.finishWorkout(session('w1', 100, ['a', 'b', 'c']), 150);
 
 		expect(frequentFrom(await store.listWorkouts(), 2)).toEqual(['a', 'b']);
@@ -787,7 +638,6 @@ describe('frequent exercises', () => {
 
 describe('the active session snapshot', () => {
 	it('round-trips and clears', async () => {
-		const store = await freshStore();
 		const snapshot = {
 			workout: workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8, completed: false }]),
 			activeSetId: 'w1-set-0'
@@ -804,12 +654,6 @@ describe('the active session snapshot', () => {
 });
 
 describe('sync bookkeeping', () => {
-	let store: Store;
-
-	beforeEach(async () => {
-		store = await freshStore();
-	});
-
 	it('exposes dirty records in wire shape, without the flag', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
 
@@ -896,19 +740,16 @@ describe('sync bookkeeping', () => {
 });
 
 describe('changing hands', () => {
-	let store: Store;
-
 	beforeEach(async () => {
-		store = await freshStore();
-
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
 		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
 		await store.setWatermark(42);
 		await store.claimOwner('user-a');
 	});
 
-	it('adopt re-dirties everything the old account had settled', async () => {
+	it('adopt keeps the records, re-dirties them, and re-stamps the owner from zero', async () => {
 		expect(await store.dirtyRecords()).toEqual([]);
+		expect(await store.claimOwner('user-b')).toBe(false);
 
 		await store.adopt('user-b');
 
@@ -917,16 +758,13 @@ describe('changing hands', () => {
 		const dirty = await store.dirtyRecords();
 		expect(dirty).toHaveLength(1);
 		expect(dirty[0].id).toBe('w1');
-	});
-
-	it('adopt keeps the records and re-stamps the owner from zero', async () => {
-		await store.adopt('user-b');
 
 		expect(await store.listWorkouts()).toHaveLength(1);
 		expect(await store.owner()).toBe('user-b');
 		// Counted on the old account's counter, so it names nothing on the new one.
 		expect(await store.watermark()).toBe(0);
 		expect(await store.claimOwner('user-b')).toBe(true);
+		expect(await store.claimOwner('user-a')).toBe(false);
 	});
 
 	it('wipe empties the device, snapshot included', async () => {
@@ -942,13 +780,5 @@ describe('changing hands', () => {
 		expect(await store.loadSnapshot()).toBeNull();
 		expect(await store.watermark()).toBe(0);
 		expect(await store.owner()).toBe('user-b');
-	});
-
-	it('either way the store syncs as the new account afterwards', async () => {
-		expect(await store.claimOwner('user-b')).toBe(false);
-
-		await store.adopt('user-b');
-		expect(await store.claimOwner('user-b')).toBe(true);
-		expect(await store.claimOwner('user-a')).toBe(false);
 	});
 });

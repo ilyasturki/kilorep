@@ -8,7 +8,6 @@ import { createUser, issueToken, revokeToken } from '../auth/accounts.ts';
 import { SESSION_COOKIE } from '../auth/session.ts';
 import type { Database } from '../db/client.ts';
 import { createDatabase } from '../db/client.ts';
-import { migrationsFolder } from '../db/config.ts';
 import { runMigrations } from '../db/migrate.ts';
 import type { User } from '../db/schema.ts';
 import { createHandle } from './handle.ts';
@@ -52,7 +51,7 @@ let handle: Handle;
 beforeEach(() => {
 	directory = mkdtempSync(path.join(os.tmpdir(), 'kilorep-hook-'));
 	db = createDatabase(path.join(directory, 'test.db'));
-	runMigrations(db, migrationsFolder);
+	runMigrations(db);
 	handle = createHandle(() => db);
 });
 

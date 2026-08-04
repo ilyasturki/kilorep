@@ -5,7 +5,6 @@ import type { WireRecord } from '$lib/sync/protocol';
 import { createUser } from '../auth/accounts.ts';
 import type { Database } from './client.ts';
 import { createDatabase } from './client.ts';
-import { migrationsFolder } from './config.ts';
 import { runMigrations } from './migrate.ts';
 import { syncExchange } from './sync.ts';
 
@@ -19,7 +18,7 @@ let userId: string;
 
 beforeEach(async () => {
 	db = createDatabase(':memory:');
-	runMigrations(db, migrationsFolder);
+	runMigrations(db);
 	// `createUser` also creates the sync counter, same as production.
 	const user = await createUser(db, 'lifter@example.com', 'a-long-enough-password');
 	userId = user.id;

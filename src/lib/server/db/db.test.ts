@@ -26,7 +26,7 @@ let db: Database;
 beforeEach(() => {
 	directory = mkdtempSync(path.join(os.tmpdir(), 'kilorep-test-'));
 	db = createDatabase(path.join(directory, 'test.db'));
-	runMigrations(db, migrationsFolder);
+	runMigrations(db);
 });
 
 afterEach(() => {
@@ -38,13 +38,12 @@ afterEach(() => {
 });
 
 describe('migrations', () => {
-	test('apply from the committed folder', () => {
-		expect(appliedMigrationCount(db)).toBeGreaterThan(0);
-	});
-
 	test('are idempotent, as a restarting container replays them', () => {
 		const applied = appliedMigrationCount(db);
-		runMigrations(db, migrationsFolder);
+
+		expect(applied).toBeGreaterThan(0);
+
+		runMigrations(db);
 		expect(appliedMigrationCount(db)).toBe(applied);
 	});
 

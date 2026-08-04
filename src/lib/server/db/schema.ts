@@ -30,13 +30,8 @@ import type { RecordKind } from '../../sync/protocol.ts';
  * hosted instance is a deploy rather than a migration. Every domain row will
  * hang off `id`.
  *
- * Two ways in, and an account may hold either or both. `password_hash` is what
- * `bun run account:create` writes and the only way a self-hosted instance
- * bootstraps; `google_sub` is the only way a *new* account is created over the
- * network. Both are nullable, and neither is redundant: a row with only a hash
- * is every CLI-made account, a row with only a subject is every account that
- * signed up with Google, and a row with both is a CLI account whose owner later
- * signed in with Google and got linked.
+ * Two ways in, and an account may hold either or both — see the two nullable
+ * columns below for what each one buys.
  */
 export const users = sqliteTable(
 	'users',
@@ -67,7 +62,6 @@ export const users = sqliteTable(
 );
 
 export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
 
 /**
  * Every credential in the system, for every client. The web session and the
@@ -102,7 +96,6 @@ export const authTokens = sqliteTable(
 );
 
 export type AuthToken = typeof authTokens.$inferSelect;
-export type NewAuthToken = typeof authTokens.$inferInsert;
 
 /**
  * A Google sign-in that has finished on the server but not yet reached the app
@@ -143,8 +136,6 @@ export const googleCodes = sqliteTable(
 	(table) => [primaryKey({ columns: [table.codeHash] })]
 );
 
-export type GoogleCode = typeof googleCodes.$inferSelect;
-
 /**
  * The sync watermark source. Every write to a user's data claims the next
  * value inside the same transaction and stamps it on the row's `seq`, so a
@@ -152,8 +143,7 @@ export type GoogleCode = typeof googleCodes.$inferSelect;
  *
  * Per-user rather than global: the counter sits on the same tenant boundary as
  * every other row, and a user's watermark never jumps because of someone
- * else's activity. Ordering is by this number and never by a device clock —
- * clocks disagree, and one of them is in a gym.
+ * else's activity.
  */
 export const syncCounters = sqliteTable(
 	'sync_counters',
@@ -165,8 +155,6 @@ export const syncCounters = sqliteTable(
 	},
 	(table) => [primaryKey({ columns: [table.userId] })]
 );
-
-export type SyncCounter = typeof syncCounters.$inferSelect;
 
 /**
  * Every domain record, all kinds in one table. The server's half of the sync
@@ -209,4 +197,3 @@ export const records = sqliteTable(
 );
 
 export type RecordRow = typeof records.$inferSelect;
-export type NewRecordRow = typeof records.$inferInsert;
