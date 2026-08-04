@@ -10,8 +10,8 @@
  * story.
  */
 
-/** Where the app opens when nothing asked for anywhere else: the Workout tab, home. */
-export const AFTER_LOGIN = '/workout';
+/** Where the app opens when nothing asked for anywhere else: the Dashboard, home. */
+export const AFTER_LOGIN = '/dashboard';
 
 const LOGIN = '/login';
 

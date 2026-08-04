@@ -16,11 +16,13 @@
 	 * already the app's face on the launcher, the favicon and the sign-in card,
 	 * so the bar says the same thing in the register the other three use.
 	 *
-	 * The mark is a link to home, which is the Workout tab — the logo-goes-home
+	 * The mark is a link to home, which is the Dashboard — the logo-goes-home
 	 * convention, pointed at the same address in both builds. It was a plain
 	 * picture while home was `/`: the marketing page on the web, nothing at all
 	 * in the APK, so a clickable logo would have left the app or gone nowhere
-	 * depending on which build you were standing in. `/workout` exists in both.
+	 * depending on which build you were standing in. `/dashboard` exists in
+	 * both, as `/workout` did while that tab led the bar; `navTabs` is where
+	 * the two moved together.
 	 * The accessible name is on the link, per the icons contract; the image
 	 * underneath is decoration to a reader, so its `alt` is empty here unlike
 	 * the landing page and sign-in card, where the mark stands unlabelled in
@@ -59,8 +61,8 @@
 	     centre while the two ends weigh differently. -->
 	<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 py-2">
 		<a
-			href="/workout"
-			aria-label="Kilorep — workout"
+			href="/dashboard"
+			aria-label="Kilorep — dashboard"
 			class="grid place-items-center justify-self-start rounded-md focus-ring"
 		>
 			<img src={favicon} alt="" class="size-5" />

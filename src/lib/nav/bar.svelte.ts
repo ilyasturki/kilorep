@@ -50,12 +50,19 @@ export type NavTab = {
 };
 
 /**
- * A function rather than a list, because the first tab's dot is conditional:
- * Workout is home — the screen that starts a session when none is running and
- * logs into it when one is — so the tab itself never changes, only the fact it
+ * A function rather than a list, because the Workout tab's dot is conditional:
+ * Workout is the screen that starts a session when none is running and logs
+ * into it when one is — so the tab itself never changes, only the fact it
  * badges. The Start tab that used to share this slot is gone with the Start
  * page; one address for the workout means there is no second page to fall out
  * of step with it.
+ *
+ * The Dashboard leads and Workout sits second. Home moved with the slot rather
+ * than staying behind it: `/` in the APK, `AFTER_LOGIN` and the top bar's mark
+ * all point at `/dashboard` now, so the leftmost tab and the address the app
+ * opens at are one place instead of two. The cost is a tap on the way from a
+ * cold boot into a session, paid knowingly — Workout is still one press from
+ * anywhere in the app in both bars, and a live session badges it.
  *
  * `live` is the one departure from ink-on-faint: an accent dot on the tab, the
  * label itself still ink. The accent means "this logs a set", and a tab leading
@@ -71,6 +78,11 @@ export type NavTab = {
  */
 export function navTabs(): NavTab[] {
 	return [
+		// The Dashboard holds the slot Weight used to: six capsules do not fit
+		// a 360px bar, and the Weight screen is one tap inside the Dashboard's
+		// own weight card — the allocation PRODUCT.md left to be judged on the
+		// phone, shipped this way to be judged.
+		{ href: '/dashboard', label: 'Dashboard', icon: ChartBar, iconActive: ChartBarFill },
 		{
 			href: '/workout',
 			label: 'Workout',
@@ -78,17 +90,11 @@ export function navTabs(): NavTab[] {
 			iconActive: BarbellFill,
 			live: activeWorkout.session !== null
 		},
-		{ href: '/templates', label: 'Templates', icon: Stack },
-		{ href: '/exercises', label: 'Exercises', icon: ListBullets },
-		// The Dashboard holds the slot Weight used to: six capsules do not fit
-		// a 360px bar, and the Weight screen is one tap inside the Dashboard's
-		// own weight card — the allocation PRODUCT.md left to be judged on the
-		// phone, shipped this way to be judged.
-		{ href: '/dashboard', label: 'Dashboard', icon: ChartBar, iconActive: ChartBarFill },
 		// Bold alone, like Exercises — see the glyph's own header for why the
-		// fill is no partner. PRODUCT.md still owes the bar its final order,
-		// judged on the phone; History lands last until then.
-		{ href: '/history', label: 'History', icon: ClockCounterClockwise }
+		// fill is no partner.
+		{ href: '/history', label: 'History', icon: ClockCounterClockwise },
+		{ href: '/templates', label: 'Templates', icon: Stack },
+		{ href: '/exercises', label: 'Exercises', icon: ListBullets }
 	];
 }
 

@@ -12,9 +12,11 @@
 
 	/**
 	 * The Dashboard: PRODUCT.md's four standing questions, one card each, no
-	 * configuration — and never the landing screen; Workout stays home. Every
-	 * answer is derived in `$lib/domain/dashboard` from what the load already
-	 * read; nothing here writes, so there is no store and no sync to hold.
+	 * configuration. It is the landing screen now — it leads the bar, and `/`
+	 * in the APK, `AFTER_LOGIN` and the top bar's mark were pointed here with
+	 * it; `navTabs` is where that was decided and why. Every answer is derived
+	 * in `$lib/domain/dashboard` from what the load already read; nothing here
+	 * writes, so there is no store and no sync to hold.
 	 *
 	 * The windows are the derivation's defaults, stated in each card's own
 	 * small print: four weeks back for bests, balance and the weight rate,

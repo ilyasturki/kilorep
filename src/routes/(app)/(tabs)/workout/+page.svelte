@@ -32,8 +32,8 @@
 	 * And it is written as a screen rather than as an empty state, which it was.
 	 * `EmptyState` is what a screen shows *before it has anything to show*, and
 	 * this one always has the only thing it is for: a way to begin. Drawn as one
-	 * it centred a title reading "No workout running" — home introducing itself
-	 * by what is absent — and the templates had to ride inside the action slot,
+	 * it centred a title reading "No workout running" — the tab introducing
+	 * itself by what is absent — and the templates had to ride inside the action slot,
 	 * a left-aligned list inside a centred block, undoing the centring on the way
 	 * past. The start is at the foot now, where the template editor's Start and
 	 * History's Repeat already are: the same act in the same corner, under the
@@ -97,10 +97,14 @@
 		return count === 1 ? '1 exercise' : `${count} exercises`;
 	}
 
-	// The bar's right-hand slot, given back on the way out. Home is where
-	// PRODUCT.md pins "gear to Settings", and this screen is home. The loop fills
-	// the same slot with FINISH; neither screen has to know about the other's,
-	// which is one more thing the split took out of a branch.
+	// The bar's right-hand slot, given back on the way out. PRODUCT.md pins
+	// "gear to Settings" to home, and this screen was home until the bar was
+	// reordered around the Dashboard — see `navTabs`. The gear did not move with
+	// it, so `/settings` now hangs off the one screen in the app that links to
+	// it rather than off the one the app opens at. Open: either the gear follows
+	// home or the rule stops meaning home. The loop fills the same slot with
+	// FINISH; neither screen has to know about the other's, which is one more
+	// thing the split took out of a branch.
 	const bar = appBarSlot();
 
 	$effect(() => {
