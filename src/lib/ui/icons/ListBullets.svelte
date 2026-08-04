@@ -1,25 +1,17 @@
 <script lang="ts">
-	// Phosphor `list-bullets`, bold. Provenance and the rules for adding one:
-	// README.md.
-	//
-	// The Exercises tab, and the one nav glyph with no fill partner. Phosphor
-	// draws `fill` for a line icon as a *boxed* variant — `list-bullets-fill` is
-	// a solid rounded square with the bars knocked out of it, not the same
-	// silhouette in solid. Beside `BarbellFill`, which is a true solid of its
-	// own outline, that reads as a different icon rather than a heavier one, so
-	// this tab wears the bold in both states and lets the capsule and the ink
-	// carry active on its own. Swapping the glyph for one with a real pair
-	// (`books`, `squares-four`) is the alternative, and is a two-line change in
+	// Phosphor `list-bullets`, bold. The Exercises tab, and the one nav glyph with
+	// no fill partner. Phosphor draws `fill` for a line icon as a *boxed* variant —
+	// `list-bullets-fill` is a solid rounded square with the bars knocked out of it,
+	// not the same silhouette in solid. Beside `BarbellFill`, which is a true solid
+	// of its own outline, that reads as a different icon rather than a heavier one,
+	// so this tab wears the bold in both states and lets the capsule and the ink
+	// carry active on its own. Swapping the glyph for one with a real pair (`books`,
+	// `squares-four`) is the alternative, and is a two-line change in
 	// `bar.svelte.ts`.
 	//
 	// Not `Stack`: that is three bars with a short third and already means the
 	// workout's session overview. Bullets is what keeps the two apart.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

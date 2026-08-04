@@ -50,12 +50,7 @@
 
 	// Hardware back cancels the confirm — the safe direction, same as Escape.
 	// See `ui/overlays.ts`.
-	$effect(() => {
-		if (!open) {
-			return;
-		}
-		return registerOverlay(() => (open = false));
-	});
+	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
 	// Bits UI focuses the panel itself, which is correct for a dialog you are
 	// about to read and wrong for one you are about to dismiss. The safe choice
@@ -78,9 +73,7 @@
 
 <AlertDialog.Root bind:open>
 	{#if trigger}
-		<AlertDialog.Trigger>
-			{@render trigger()}
-		</AlertDialog.Trigger>
+		<AlertDialog.Trigger>{@render trigger()}</AlertDialog.Trigger>
 	{/if}
 
 	<AlertDialog.Portal>
@@ -91,9 +84,7 @@
 			class={['overlay-panel overlay-centred gap-5 p-5', klass]}
 		>
 			<div class="flex flex-col gap-1.5">
-				<AlertDialog.Title class="title-panel">
-					{title}
-				</AlertDialog.Title>
+				<AlertDialog.Title class="title-panel">{title}</AlertDialog.Title>
 				{#if description}
 					<AlertDialog.Description class="text-md font-bold text-ink-faint">
 						{description}
@@ -104,9 +95,7 @@
 			<div class="flex gap-2">
 				<AlertDialog.Cancel bind:ref={cancel}>
 					{#snippet child({ props })}
-						<Button {...props} variant="secondary" class="flex-1">
-							{cancelLabel}
-						</Button>
+						<Button {...props} variant="secondary" class="flex-1">{cancelLabel}</Button>
 					{/snippet}
 				</AlertDialog.Cancel>
 

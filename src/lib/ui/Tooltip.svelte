@@ -44,24 +44,16 @@
 	let { text, children, class: klass }: Props = $props();
 </script>
 
-<!-- The mark and the bubble body are the same on both branches; only which
-     primitive wraps them differs, so they are written once. -->
-{#snippet mark()}
-	<Info size={16} />
-{/snippet}
-
 <span class={['inline-flex items-center gap-1', klass]}>
 	{@render children()}
 
 	{#if coarsePointer}
 		<Popover.Root>
 			<Popover.Trigger class={trigger} aria-label="More information">
-				{@render mark()}
+				<Info size={16} />
 			</Popover.Trigger>
 			<Popover.Portal>
-				<Popover.Content sideOffset={6} class={bubble}>
-					{text}
-				</Popover.Content>
+				<Popover.Content sideOffset={6} class={bubble}>{text}</Popover.Content>
 			</Popover.Portal>
 		</Popover.Root>
 	{:else}
@@ -69,12 +61,10 @@
 		     state, and one per instance means one window scroll listener per ⓘ. -->
 		<Tooltip.Root>
 			<Tooltip.Trigger class={trigger} aria-label="More information">
-				{@render mark()}
+				<Info size={16} />
 			</Tooltip.Trigger>
 			<Tooltip.Portal>
-				<Tooltip.Content sideOffset={6} class={bubble}>
-					{text}
-				</Tooltip.Content>
+				<Tooltip.Content sideOffset={6} class={bubble}>{text}</Tooltip.Content>
 			</Tooltip.Portal>
 		</Tooltip.Root>
 	{/if}

@@ -13,16 +13,6 @@
 	 * one. Colouring the number itself rather than parking a mark above it puts
 	 * that on the thing it is about — a dot in the corner of a 76px well is a
 	 * legend the user has to learn.
-	 *
-	 * Stepping from 40 to 100 is twenty-four taps on the arms, so an arm held
-	 * down repeats and the arms stay the accelerator for the common case rather
-	 * than becoming the only way in. Anything further away than that is typed
-	 * into the number itself, which raises whatever keyboard the device has.
-	 *
-	 * `value` is the caller's. The field renders it, proposes the next one, and
-	 * owns nothing: a nudge is `onchange`, and what comes back down is the
-	 * answer. `bind:value` is the shorthand for that round trip when the caller
-	 * has nothing more interesting to do with it.
 	 */
 	type Props = {
 		/**
@@ -114,12 +104,8 @@
 	 * touchscreen the pointer is destroyed at release, so `pointerleave` arrived
 	 * *before* that click, cleared the guard, and let every tap step twice.
 	 *
-	 * `pointerdown` is left with one job: arm the hold.
-	 *
 	 * Neither of the two below is `$state`: both are written and read inside
-	 * handlers, and nothing renders from either. `repeating` is set only once a
-	 * hold has actually fired, and cleared again by the next press, so it cannot
-	 * be left standing across gestures the way the old claim could.
+	 * handlers, and nothing renders from either.
 	 */
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let repeating = false;
@@ -198,7 +184,6 @@
 	// A caret placed in "82.5" means editing the wrong two digits; the gesture
 	// is always "this weight, not that one". `select()` in `onfocus` is undone
 	// by the mouseup that follows a click, so that one mouseup is swallowed.
-	// Not `$state`: written and read inside handlers, nothing renders from it.
 	let selectPending = false;
 
 	function start(event: FocusEvent & { currentTarget: HTMLInputElement }) {
@@ -217,9 +202,7 @@
 	// number deleted is a decision, so it is answered as null and the field
 	// goes back to `–`. `parseEntry` answers null for both cases — nothing
 	// typed and nothing sensible typed — which is why emptiness is tested here
-	// rather than read off that null. The field used to restore what it had
-	// either way, so a weight the user cleared reappeared under the thumb that
-	// had just cleared it, and no keystroke could take it back out.
+	// rather than read off that null.
 	//
 	// One reading, taken at two moments: per keystroke for `onpreview`, and at
 	// blur for `commit`. Split, the preview would drift from what blur then

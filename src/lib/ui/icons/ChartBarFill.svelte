@@ -1,12 +1,7 @@
 <script lang="ts">
-	// Phosphor `chart-bar`, fill — the bold outline's selected-state partner; a
-	// true solid of the same bars, so the pair holds. See README.md.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// Phosphor `chart-bar`, fill — the bold outline's selected-state partner; a true
+	// solid of the same bars, so the pair holds.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

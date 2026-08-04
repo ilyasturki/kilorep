@@ -2,12 +2,7 @@
 	// Phosphor `dots-three`, bold. The set-options affordance shown when there is
 	// a mouse. Same reason as Backspace: ⋯ (U+22EF) is absent from the shipped
 	// Nunito subset.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

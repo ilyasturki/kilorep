@@ -21,8 +21,6 @@
 		'data-disabled:pointer-events-none data-disabled:opacity-30 ' +
 		'data-unavailable:pointer-events-none data-unavailable:line-through';
 
-	// Neither depends on an instance, and both are the kind of thing that is
-	// cheap once and wasteful per field.
 	const zone = getLocalTimeZone();
 
 	const formatter = new Intl.DateTimeFormat(undefined, {
@@ -106,12 +104,7 @@
 	let open = $state(false);
 
 	// Hardware back closes the month before it navigates — see `ui/overlays.ts`.
-	$effect(() => {
-		if (!open) {
-			return;
-		}
-		return registerOverlay(() => (open = false));
-	});
+	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
 	const max = $derived(maxValue ?? (maxToday ? today(zone) : undefined));
 

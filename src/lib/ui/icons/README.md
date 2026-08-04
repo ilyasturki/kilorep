@@ -22,8 +22,4 @@ Phosphor's `fill` weight is the intended partner for active/selected states — 
 
 ## Adding one
 
-```
-node_modules/@phosphor-icons/core/assets/bold/<name>-bold.svg
-```
-
-Copy the `<path d="…">` verbatim, drop `xmlns` (inline SVG in HTML does not need it), and paste into a copy of `Check.svelte`. Do not re-space or re-fit the path — the whole point is that the family stays optically consistent without anyone eyeballing it.
+Copy the `<path d="…">` from `node_modules/@phosphor-icons/core/assets/bold/<name>-bold.svg` verbatim into a copy of `Check.svelte`, dropping `xmlns` (inline SVG in HTML does not need it). Do not re-space or re-fit the path — the whole point is that the family stays optically consistent without anyone eyeballing it.

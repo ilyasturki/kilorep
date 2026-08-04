@@ -19,10 +19,6 @@
 	 */
 	type Variant = 'commit' | 'secondary' | 'destructive' | 'chrome' | 'raised';
 
-	/**
-	 * A disabled commit is its own look, not a state of `commit`, so it is a
-	 * fifth row here rather than a branch at the call site.
-	 */
 	type Look = Variant | 'inert';
 
 	// The design is explicit that a press is instant — "sweaty hands need the
@@ -167,7 +163,6 @@
 
 	const key = $derived(disabled && variant === 'commit' ? ('inert' as const) : variant);
 	const look = $derived((compact ? compacts[key] : undefined) ?? looks[key]);
-	const klasses = $derived([base, look.shape, caps ? look.caps : look.text, klass]);
 </script>
 
 <!--
@@ -184,7 +179,7 @@
 	this={href ? 'a' : 'button'}
 	{href}
 	disabled={href ? undefined : disabled}
-	class={klasses}
+	class={[base, look.shape, caps ? look.caps : look.text, klass]}
 	{...rest}
 >
 	{@render children()}

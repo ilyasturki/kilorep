@@ -8,26 +8,6 @@ describe('overlay registry', () => {
 		expect(closeTopOverlay()).toBe(false);
 	});
 
-	it('closes the most recently opened overlay first', () => {
-		const closed: string[] = [];
-		const unregisterSheet = registerOverlay(() => {
-			closed.push('sheet');
-		});
-		const unregisterConfirm = registerOverlay(() => {
-			closed.push('confirm');
-		});
-
-		expect(closeTopOverlay()).toBe(true);
-		expect(closed).toEqual(['confirm']);
-
-		expect(closeTopOverlay()).toBe(true);
-		expect(closed).toEqual(['confirm', 'sheet']);
-
-		expect(hasOpenOverlay()).toBe(false);
-		unregisterSheet();
-		unregisterConfirm();
-	});
-
 	it('unregisters an overlay that closed on its own', () => {
 		const unregister = registerOverlay(() => {
 			throw new Error('closed overlays must not be called');
@@ -39,24 +19,24 @@ describe('overlay registry', () => {
 		expect(closeTopOverlay()).toBe(false);
 	});
 
-	it('tolerates the double cleanup of a closer that also unregisters', () => {
+	it('closes the most recent first, and survives a double unregister', () => {
 		const closed: string[] = [];
-		const unregisterFirst = registerOverlay(() => {
-			closed.push('first');
+		registerOverlay(() => {
+			closed.push('sheet');
 		});
-		const unregisterSecond = registerOverlay(() => {
-			closed.push('second');
+		const unregisterConfirm = registerOverlay(() => {
+			closed.push('confirm');
 		});
 
-		// Back press pops `second`, whose effect cleanup then unregisters again.
-		closeTopOverlay();
-		unregisterSecond();
-		unregisterSecond();
+		// Back press pops `confirm`, whose effect cleanup then unregisters again.
+		expect(closeTopOverlay()).toBe(true);
+		unregisterConfirm();
+		unregisterConfirm();
 
-		// `first` must still be the top, not collateral of the double cleanup.
+		// `sheet` must still be the top, not collateral of the double cleanup.
 		expect(hasOpenOverlay()).toBe(true);
 		expect(closeTopOverlay()).toBe(true);
-		expect(closed).toEqual(['second', 'first']);
-		unregisterFirst();
+		expect(closed).toEqual(['confirm', 'sheet']);
+		expect(hasOpenOverlay()).toBe(false);
 	});
 });

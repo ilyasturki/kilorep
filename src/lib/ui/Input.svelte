@@ -6,10 +6,6 @@
 	 * A labelled single-line field: exercise and template names, the server URL,
 	 * the credentials on sign-in.
 	 *
-	 * The label, the error and the `id` binding them belong to `Field`, which
-	 * every labelled control in the library shares. What is left here is the one
-	 * thing only an input can say.
-	 *
 	 * Not for weights and reps. Those go through StepperField, which exists
 	 * because a bare text field is the wrong control for a number you are
 	 * nudging with a thumb between sets.

@@ -15,9 +15,6 @@ async function buzz(style: ImpactStyle): Promise<void> {
 }
 
 /**
- * The two physical acknowledgements the app makes, and the rule that keeps
- * there being two.
- *
  * A buzz is spent on a gesture the screen cannot confirm on its own. Logging a
  * set is one: it is the claim the whole app exists to record, and it happens
  * with a phone at arm's length on a bench. Lifting a row to reorder it is the

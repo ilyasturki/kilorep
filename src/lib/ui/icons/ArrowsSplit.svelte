@@ -1,13 +1,7 @@
 <script lang="ts">
 	// Phosphor `arrows-split`, bold. One path becoming two — breaking a superset,
-	// and the partner of `ArrowsMerge`, which makes one. Provenance and the rules
-	// for adding one: README.md.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// and the partner of `ArrowsMerge`, which makes one.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

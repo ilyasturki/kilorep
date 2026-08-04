@@ -3,8 +3,6 @@
 		'inline-flex min-h-chip items-center justify-center rounded-xl ' +
 		'text-base font-extrabold select-none focus-ring ' +
 		'bg-sunken text-ink-muted ' +
-		// Selected is the one place a chip carries the accent as a fill, so it
-		// gets on-accent ink with it.
 		'data-[state=on]:bg-accent data-[state=on]:text-on-accent ' +
 		// Scoped to the off state so it cannot race the selected fill: Tailwind
 		// resolves conflicts by stylesheet order, not by which variant is "more
@@ -26,10 +24,6 @@
 	// rows on a phone; nine columns are a ninth of the card each, no floor and no
 	// padding to defend, which is what makes the ladder readable in one glance
 	// rather than reassembled from three rows.
-	//
-	// The two are exclusive rather than layered, so nothing has to out-order
-	// `shrink-0` — Tailwind settles `flex-1` against it by stylesheet order, and
-	// that is not a fight worth entering.
 	const column = 'min-w-0 flex-1 px-1';
 </script>
 

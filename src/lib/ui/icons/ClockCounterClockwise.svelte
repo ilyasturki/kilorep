@@ -1,14 +1,8 @@
 <script lang="ts">
-	// Phosphor `clock-counter-clockwise`, bold. Provenance and the rules for
-	// adding one: README.md. Bold alone, like ListBullets: the fill weight
-	// redraws the ring at regular-weight strokes rather than filling a
+	// Phosphor `clock-counter-clockwise`, bold. Bold alone, like ListBullets: the
+	// fill weight redraws the ring at regular-weight strokes rather than filling a
 	// silhouette, so beside a true solid it reads thinner, not selected.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

@@ -62,12 +62,7 @@
 	// While open, the hardware back button owns the first press — see
 	// `ui/overlays.ts`. Registered from the effect so the cleanup runs on close
 	// and on unmount alike.
-	$effect(() => {
-		if (!open) {
-			return;
-		}
-		return registerOverlay(() => (open = false));
-	});
+	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 </script>
 
 <!-- CLOSE belongs to the dialog branch alone: the drawer wears the handle and
@@ -122,9 +117,7 @@
 {#if wideViewport.current}
 	<Dialog.Root bind:open>
 		{#if trigger}
-			<Dialog.Trigger>
-				{@render trigger()}
-			</Dialog.Trigger>
+			<Dialog.Trigger>{@render trigger()}</Dialog.Trigger>
 		{/if}
 
 		<Dialog.Portal>
@@ -139,9 +132,7 @@
 {:else}
 	<Drawer.Root bind:open>
 		{#if trigger}
-			<Drawer.Trigger>
-				{@render trigger()}
-			</Drawer.Trigger>
+			<Drawer.Trigger>{@render trigger()}</Drawer.Trigger>
 		{/if}
 
 		<Drawer.Portal>

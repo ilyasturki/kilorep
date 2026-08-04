@@ -42,19 +42,12 @@
 	// Hardware back closes the menu before it navigates — a fine pointer and a
 	// hardware back button coexist on a tablet with a mouse. The sheet branch
 	// registers through Sheet itself. See `ui/overlays.ts`.
-	$effect(() => {
-		if (coarsePointer || !open) {
-			return;
-		}
-		return registerOverlay(() => (open = false));
-	});
+	$effect(() => (open && !coarsePointer ? registerOverlay(() => (open = false)) : undefined));
 </script>
 
 {#if coarsePointer}
 	<Sheet bind:open {title}>
-		<div class="flex flex-col gap-2">
-			{@render children()}
-		</div>
+		<div class="flex flex-col gap-2">{@render children()}</div>
 	</Sheet>
 {:else}
 	<DropdownMenu.Root bind:open>

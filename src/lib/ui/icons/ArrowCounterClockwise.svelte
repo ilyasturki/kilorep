@@ -1,14 +1,9 @@
 <script lang="ts">
-	// Phosphor `arrow-counter-clockwise`, bold. Provenance and the rules for
-	// adding one: README.md. The bare arc, not `ClockCounterClockwise`'s dialled
-	// version — that one is History's glyph, and a clock face on Unlog would say
-	// the set is being sent somewhere rather than being un-said.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// Phosphor `arrow-counter-clockwise`, bold. The bare arc, not
+	// `ClockCounterClockwise`'s dialled version — that one is History's glyph, and a
+	// clock face on Unlog would say the set is being sent somewhere rather than
+	// being un-said.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

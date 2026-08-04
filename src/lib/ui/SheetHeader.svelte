@@ -16,9 +16,7 @@
 	 * that wiring. They share the typography through `title-panel` instead,
 	 * which is the part that was actually duplicated.
 	 */
-	type Props = {
-		title: string;
-	};
+	type Props = { title: string };
 
 	let { title }: Props = $props();
 </script>

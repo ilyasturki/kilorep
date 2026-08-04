@@ -1,11 +1,6 @@
 <script lang="ts">
-	// Phosphor `check`, bold. Provenance and the rules for adding one: README.md.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// Phosphor `check`, bold.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

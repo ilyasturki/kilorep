@@ -5,10 +5,6 @@
 	/**
 	 * Multi-line free text: the set note, an exercise's own note.
 	 *
-	 * Same box and same frame as Input — the two differ only in height and in
-	 * the padding that a wrapped line needs, so `field-box` carries the box and
-	 * `Field` the label and error, and neither owns a private copy of either.
-	 *
 	 * Resize is left to the browser on the vertical axis only: dragging a field
 	 * wider than its column is never wanted, and on touch the handle does not
 	 * exist at all.

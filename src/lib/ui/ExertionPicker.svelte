@@ -34,11 +34,6 @@
 	 * off the ladder. `mode` is local and resets with the component, which is
 	 * keyed on the set id by both callers — so a new set always opens collapsed
 	 * rather than inheriting the view the last one was left in.
-	 *
-	 * Nothing here holds the value. Every pick goes straight out through
-	 * `onchange` and comes back down as `value`, the same round trip
-	 * `StepperField` makes, so the pill and the row above it cannot disagree
-	 * about what the set holds.
 	 */
 	type Props = {
 		/** The rating as stored — always RPE, whatever the chips are wearing. */
@@ -65,13 +60,9 @@
 	const name = $derived(scaleName(scale));
 
 	/**
-	 * The pill wears the number and the scale on two lines, the dress the two
-	 * fields beside it wear — so what it shows is the bare value, and `–` for a
-	 * set nobody rated.
-	 *
-	 * Which leaves the accessible name to put the two halves back together, and
-	 * to say what the button *does*: read aloud, `8.5` over `RPE` is two labels
-	 * on a control with no verb.
+	 * The accessible name puts the two halves back together, and says what the
+	 * button *does*: read aloud, `8.5` over `RPE` is two labels on a control
+	 * with no verb.
 	 */
 	const shown = $derived(rating === null ? '–' : String(shownExertion(rating, scale)));
 	const rated = $derived(exertionLabel(rating, scale));

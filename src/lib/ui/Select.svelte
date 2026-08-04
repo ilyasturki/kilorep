@@ -68,12 +68,7 @@
 	let open = $state(false);
 
 	// Hardware back closes the list before it navigates — see `ui/overlays.ts`.
-	$effect(() => {
-		if (!open) {
-			return;
-		}
-		return registerOverlay(() => (open = false));
-	});
+	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
 	const selected = $derived(
 		type === 'multiple'

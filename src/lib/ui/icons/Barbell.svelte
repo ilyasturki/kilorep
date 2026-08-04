@@ -1,13 +1,7 @@
 <script lang="ts">
-	// Phosphor `barbell`, bold. Provenance and the rules for adding one:
-	// README.md. The inactive half of the nav's first tab while a session is
-	// live; `BarbellFill.svelte` is the active one.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// Phosphor `barbell`, bold. The inactive half of the nav's first tab while a
+	// session is live; `BarbellFill.svelte` is the active one.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

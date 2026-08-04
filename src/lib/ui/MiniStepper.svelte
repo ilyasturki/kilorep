@@ -43,20 +43,24 @@
 		'disabled:pointer-events-none disabled:opacity-40';
 </script>
 
+{#snippet end(verb: string, on: (() => void) | null, corner: string, glyph: string)}
+	<button
+		type="button"
+		aria-label="{verb} {label}"
+		disabled={on === null}
+		onclick={on ?? undefined}
+		class="{arm} {corner}"
+	>
+		{glyph}
+	</button>
+{/snippet}
+
 <div
 	role="group"
 	aria-label={label}
 	class={['flex min-h-11 items-stretch rounded-xl bg-sunken', klass]}
 >
-	<button
-		type="button"
-		aria-label="Lower {label}"
-		disabled={ondec === null}
-		onclick={ondec ?? undefined}
-		class="{arm} rounded-l-xl"
-	>
-		−
-	</button>
+	{@render end('Lower', ondec, 'rounded-l-xl', '−')}
 
 	<span
 		class={[
@@ -67,13 +71,5 @@
 		{value}
 	</span>
 
-	<button
-		type="button"
-		aria-label="Raise {label}"
-		disabled={oninc === null}
-		onclick={oninc ?? undefined}
-		class="{arm} rounded-r-xl"
-	>
-		+
-	</button>
+	{@render end('Raise', oninc, 'rounded-r-xl', '+')}
 </div>

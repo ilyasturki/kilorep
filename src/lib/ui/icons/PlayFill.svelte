@@ -1,13 +1,7 @@
 <script lang="ts">
-	// Phosphor `play`, fill. Provenance and the rules for adding one: README.md.
-	// The active half of the pair `Play.svelte` opens — see the README on why
-	// fill is the partner of bold and never a second family.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// Phosphor `play`, fill. The active half of the pair `Play.svelte` opens — see
+	// the README on why fill is the partner of bold and never a second family.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

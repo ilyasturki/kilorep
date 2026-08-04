@@ -1,17 +1,10 @@
 <script lang="ts">
-	// Phosphor `google-logo`, bold. Provenance and the rules for adding one: README.md.
-	//
-	// Phosphor's mark rather than Google's four-colour one, which keeps this in the
-	// family the rest of the app draws from: one weight, one optical size,
-	// `currentColor`. It also avoids shipping a trademark that may only be
-	// reproduced exactly, in a codebase where every other icon inherits its colour
-	// from a parent.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// Phosphor `google-logo`, bold — Phosphor's mark rather than Google's four-colour
+	// one, which keeps this in the family the rest of the app draws from: one weight,
+	// one optical size, `currentColor`. It also avoids shipping a trademark that may
+	// only be reproduced exactly, in a codebase where every other icon inherits its
+	// colour from a parent.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

@@ -3,12 +3,7 @@
 	// No character to reach for first: the six-dot grip is a convention with no
 	// codepoint behind it, which is the second half of the README's rule rather
 	// than an exception to the first.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

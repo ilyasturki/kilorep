@@ -1,14 +1,8 @@
 <script lang="ts">
-	// Phosphor `play`, bold. Provenance and the rules for adding one: README.md.
-	// The inactive half of the nav's first tab; `PlayFill.svelte` is the active
-	// one, and the two are the same triangle so the swap reads as a weight
-	// change rather than a different icon.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// Phosphor `play`, bold. The inactive half of the nav's first tab;
+	// `PlayFill.svelte` is the active one, and the two are the same triangle so the
+	// swap reads as a weight change rather than a different icon.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

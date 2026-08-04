@@ -2,8 +2,6 @@
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 
 	/**
-	 * One set in the list. Four states, one fixed numeral grid, one right slot.
-	 *
 	 * Weight and reps sit on the same three-column grid in every status, so the
 	 * digits line up vertically down the whole list and the eye can scan one
 	 * column instead of hunting. The grid is in rem, not px, so it grows with

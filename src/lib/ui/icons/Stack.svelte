@@ -6,12 +6,7 @@
 	// rounded, inset 40, centred on y 64/128/192) with the third bar cut to 110.
 	// In-family by construction: swap the third width back to 176 and this file
 	// is byte-equivalent to the real thing.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

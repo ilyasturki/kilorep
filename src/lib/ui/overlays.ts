@@ -1,6 +1,4 @@
 /**
- * The overlays currently open, as the hardware back button sees them.
- *
  * Android's back means "leave the innermost thing first", and the innermost
  * thing is whatever panel is over the page — a sheet, a picker, a confirm.
  * Navigation cannot know that: overlays are component state, not routes. So
@@ -40,8 +38,6 @@ export function hasOpenOverlay(): boolean {
 }
 
 /**
- * Closes the most recently opened overlay. Returns whether there was one.
- *
  * Pops before calling: the closer flips the component's `open` back to false,
  * whose effect cleanup unregisters again — see above for why that is safe —
  * but a closer that somehow failed to clean up must not leave back-presses

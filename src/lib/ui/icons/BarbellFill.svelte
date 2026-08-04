@@ -1,12 +1,6 @@
 <script lang="ts">
-	// Phosphor `barbell`, fill. Provenance and the rules for adding one:
-	// README.md. The active half of the pair `Barbell.svelte` opens.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	// Phosphor `barbell`, fill. The active half of the pair `Barbell.svelte` opens.
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg

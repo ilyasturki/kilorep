@@ -15,11 +15,6 @@
 	 * slot spans the pane, so a wider action than a button can stand in it, while
 	 * the inherited `text-center` keeps a lone button exactly where it was.
 	 *
-	 * What it is not is a screen that always has something to show. The idle
-	 * Workout screen was drawn with this for a while and stacked its template
-	 * list in the slot; it is written as itself now, because "no workout running"
-	 * described the one page in the app that is never empty of its purpose.
-	 *
 	 * It grows and centres itself: on a screen whose column is `min-h-full`, an
 	 * empty list leaves this the only child with height to claim, so the state
 	 * sits in the middle of the pane rather than huddled under the header. In a

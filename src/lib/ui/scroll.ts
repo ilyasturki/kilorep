@@ -1,15 +1,4 @@
 /**
- * Bringing an element back on screen, but only when it actually left, and only
- * as far as it has to go.
- *
- * The workout pane used to pull the active set to centre; before that it did so
- * unconditionally, which meant tapping a row already on screen still slid the
- * whole page underneath the thumb. The visibility test is the fix for the
- * second half, and it lives beside the scroll it gates so no caller can take
- * one without the other.
- */
-
-/**
  * The nearest ancestor that scrolls, so the rail, the sheet and the pane all
  * work without being told which one they are. Falls back to the document,
  * which is what a list on an unconstrained page scrolls.

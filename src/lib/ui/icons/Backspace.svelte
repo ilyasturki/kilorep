@@ -3,12 +3,7 @@
 	// (U+232B); our Nunito build is the latin subset and does not contain it, so
 	// it renders as tofu — measured in Chrome, not guessed. It was always a
 	// glyph; this is the glyph.
-	type Props = {
-		size?: number;
-		class?: string;
-	};
-
-	let { size = 24, class: klass }: Props = $props();
+	let { size = 24, class: klass }: { size?: number; class?: string } = $props();
 </script>
 
 <svg
