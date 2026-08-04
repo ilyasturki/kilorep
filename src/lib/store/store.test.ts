@@ -330,6 +330,75 @@ describe('body weight', () => {
 	});
 });
 
+describe('main variants', () => {
+	let store: Store;
+
+	beforeEach(async () => {
+		store = await freshStore();
+	});
+
+	it('round-trips a choice as a record born dirty and syncable', async () => {
+		await store.setMainVariant({ family: 'bench-press', main: 'incline-bench-press' }, 100);
+
+		expect(await store.mainVariants()).toEqual({ 'bench-press': 'incline-bench-press' });
+
+		expect(await store.dirtyRecords()).toEqual([
+			{
+				id: 'main-variant:bench-press',
+				kind: 'preference',
+				updatedAt: 100,
+				deletedAt: null,
+				payload: { family: 'bench-press', main: 'incline-bench-press' }
+			}
+		]);
+	});
+
+	it('re-choosing overwrites in place: one record per family', async () => {
+		await store.setMainVariant({ family: 'bench-press', main: 'incline-bench-press' }, 100);
+		await store.setMainVariant({ family: 'bench-press', main: 'close-grip-bench-press' }, 200);
+
+		expect(await store.mainVariants()).toEqual({ 'bench-press': 'close-grip-bench-press' });
+		expect(await store.dirtyRecords()).toHaveLength(1);
+	});
+
+	it('drops payloads it does not recognise rather than poisoning the map', async () => {
+		// A `preference` record another app version wrote: same kind, foreign
+		// shape. It must fall out of the read, and the recognisable one survive.
+		await store.applyRemote([
+			{
+				id: 'rest-timer',
+				kind: 'preference',
+				updatedAt: 50,
+				deletedAt: null,
+				payload: { seconds: 90 }
+			},
+			{
+				id: 'main-variant:deadlift',
+				kind: 'preference',
+				updatedAt: 60,
+				deletedAt: null,
+				payload: { family: 'deadlift', main: 'sumo-deadlift' }
+			}
+		]);
+
+		expect(await store.mainVariants()).toEqual({ deadlift: 'sumo-deadlift' });
+	});
+
+	it('leaves tombstoned preferences out of the map', async () => {
+		await store.applyRemote([
+			{
+				id: 'main-variant:squat',
+				kind: 'preference',
+				updatedAt: 50,
+				deletedAt: 60,
+				payload: { family: 'squat', main: 'front-squat' }
+			}
+		]);
+
+		expect(await store.mainVariants()).toEqual({});
+	});
+});
+
 describe('history derivation', () => {
 	let store: Store;
 

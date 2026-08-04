@@ -2,6 +2,7 @@
 	import { catalog, catalogById } from '$lib/catalog';
 	import { MUSCLES } from '$lib/domain/exercise';
 	import type { Exercise, Muscle } from '$lib/domain/exercise';
+	import type { MainVariants } from '$lib/domain/preference';
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
 	import { similarTo } from '$lib/exercises/browse';
 	import type { LastPerformed } from '$lib/store/derive';
@@ -62,6 +63,8 @@
 		multiple?: boolean;
 		/** Straight through to the list, which renders it under each name. */
 		lastPerformed: LastPerformed;
+		/** Straight through to the list, which reseats each family around it. */
+		mains: MainVariants;
 		/**
 		 * The answer, always a list even when the sheet only allows one: one shape
 		 * for both postures beats a callback whose arity the caller has to work out
@@ -77,6 +80,7 @@
 		frequent = [],
 		multiple = false,
 		lastPerformed,
+		mains,
 		onpick
 	}: Props = $props();
 
@@ -203,6 +207,7 @@
 			muscle={narrowed}
 			{shelf}
 			{lastPerformed}
+			{mains}
 			selected={multiple ? picked : undefined}
 			onpick={choose}
 		/>

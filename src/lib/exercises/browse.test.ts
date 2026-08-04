@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { familyOf, sections, similarTo } from '$lib/exercises/browse';
+import { applyMains, familyOf, sections, similarTo } from '$lib/exercises/browse';
 import type { Equipment, Exercise, Muscle } from '$lib/domain/exercise';
 
 /**
@@ -55,6 +55,17 @@ const squat = ex('squat', 'Squat', 'Barbell', 'Quads');
 const pool = [bench, closeGrip, incline, floor, dbBench, dbIncline, overhead, fly, pecDeck, squat];
 
 const idsOf = (result: Exercise[]): string[] => result.map((e) => e.id);
+
+/** A pool member by id, or a loud failure — a reseat must never lose one. */
+function entryOf(reseated: Exercise[], id: string): Exercise {
+	const found = reseated.find((entry) => entry.id === id);
+
+	if (found === undefined) {
+		throw new Error(`the reseated pool lost ${id}`);
+	}
+
+	return found;
+}
 
 describe('sections', () => {
 	test('a family shelves under its parent, empty muscles are absent', () => {
@@ -142,5 +153,68 @@ describe('familyOf', () => {
 
 	test('a parent the pool lacks resolves to none', () => {
 		expect(familyOf(pool, ex('orphan', 'Orphan', 'Barbell', 'Chest', 'typo')).parent).toBeNull();
+	});
+});
+
+describe('applyMains', () => {
+	test('no honourable choice is the identity, by reference', () => {
+		expect(applyMains(pool, {})).toBe(pool);
+
+		// The parent itself, a member of another family, a slug the pool lacks:
+		// stale taste means the default, never a broken screen.
+		expect(
+			applyMains(pool, {
+				'bench-press': 'bench-press',
+				'db-bench': 'incline-bench',
+				squat: 'smith-squat'
+			})
+		).toBe(pool);
+	});
+
+	test('seats the chosen main and points the family at it, parent included', () => {
+		const reseated = applyMains(pool, { 'bench-press': 'incline-bench' });
+
+		expect(entryOf(reseated, 'incline-bench').variantOf).toBeUndefined();
+		expect(entryOf(reseated, 'bench-press').variantOf).toBe('incline-bench');
+		expect(entryOf(reseated, 'close-grip-bench').variantOf).toBe('incline-bench');
+
+		// Untouched families pass through by reference, not as copies.
+		expect(entryOf(reseated, 'db-incline')).toBe(dbIncline);
+	});
+
+	test('the fold then shelves the family under the chosen main', () => {
+		const shelved = sections(applyMains(pool, { 'bench-press': 'close-grip-bench' }));
+
+		// Close-Grip leads now, so the family stands in *its* section — Triceps —
+		// with the old head folded into the chips like any other member.
+		const triceps = shelved.find((section) => section.muscle === 'Triceps');
+		const family =
+			triceps === undefined
+				? undefined
+				: triceps.families.find((entry) => entry.parent.id === 'close-grip-bench');
+
+		if (family === undefined) {
+			throw new Error('the reseated family is not shelved under Triceps');
+		}
+
+		expect(idsOf(family.variants)).toEqual(['bench-press', 'incline-bench']);
+
+		const chest = shelved.find((section) => section.muscle === 'Chest');
+
+		if (chest === undefined) {
+			throw new Error('the Chest section is gone');
+		}
+
+		expect(chest.families.some((entry) => entry.parent.id === 'bench-press')).toBe(false);
+	});
+
+	test('familyOf answers both directions from the new head', () => {
+		const reseated = applyMains(pool, { 'bench-press': 'incline-bench' });
+		const head = entryOf(reseated, 'incline-bench');
+		const demoted = entryOf(reseated, 'bench-press');
+
+		expect(familyOf(reseated, head).parent).toBeNull();
+		expect(idsOf(familyOf(reseated, head).variants)).toEqual(['bench-press', 'close-grip-bench']);
+		expect(familyOf(reseated, demoted).parent).toBe(head);
 	});
 });

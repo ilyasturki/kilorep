@@ -10,6 +10,8 @@
 
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
 import { bodyweightId } from '$lib/domain/bodyweight';
+import type { MainVariant, MainVariants } from '$lib/domain/preference';
+import { isMainVariant, mainVariantId } from '$lib/domain/preference';
 import type { PastSession } from '$lib/domain/stats';
 import type { Template } from '$lib/domain/template';
 import type { History, Workout } from '$lib/domain/workout';
@@ -200,10 +202,18 @@ export class Store {
 	 * same records, and every consumer needs both, so asking twice would read
 	 * every stored workout twice to fill one sheet.
 	 */
-	public async pickerData(): Promise<{ lastPerformed: LastPerformed; frequent: string[] }> {
+	public async pickerData(): Promise<{
+		lastPerformed: LastPerformed;
+		frequent: string[];
+		mains: MainVariants;
+	}> {
 		const workouts = await this.listWorkouts();
 
-		return { lastPerformed: lastPerformedFrom(workouts), frequent: frequentFrom(workouts) };
+		return {
+			lastPerformed: lastPerformedFrom(workouts),
+			frequent: frequentFrom(workouts),
+			mains: await this.mainVariants()
+		};
 	}
 
 	/** One exercise's past for the detail screen, oldest first. */
@@ -348,6 +358,53 @@ export class Store {
 		}
 
 		await tx.done;
+	}
+
+	// --- preferences ----------------------------------------------------------
+
+	/**
+	 * Upsert by family: the id is derived from the family's slug, so "one choice
+	 * per family, re-choosing overwrites" is a same-key put rather than a rule
+	 * anyone enforces. A blind put like `saveBodyweight`'s, and for the same
+	 * reason — choosing a main is an affirmative claim about the family, and
+	 * whatever an earlier record held is exactly what the choice replaces.
+	 */
+	public async setMainVariant(preference: MainVariant, updatedAt: number): Promise<void> {
+		// Spelled field by field, same bargain as `finishWorkout`: a field added
+		// to `MainVariant` fails the build here instead of silently syncing.
+		const payload: MainVariant = {
+			family: preference.family,
+			main: preference.main
+		};
+
+		await this.db.put('records', {
+			id: mainVariantId(preference.family),
+			kind: 'preference',
+			updatedAt,
+			deletedAt: null,
+			payload,
+			dirty: true
+		});
+	}
+
+	/**
+	 * Every family's chosen main, as the browse fold reads it. Guarded rather
+	 * than asserted, unlike the other kinds' reads: `preference` is a kind other
+	 * app versions will grow shapes into, and an unrecognised payload must fall
+	 * out of the map rather than poison it — see `isMainVariant`.
+	 */
+	public async mainVariants(): Promise<MainVariants> {
+		const records = await this.db.getAllFromIndex('records', 'kind', 'preference');
+
+		const mains: MainVariants = {};
+
+		for (const record of records) {
+			if (record.deletedAt === null && isMainVariant(record.payload)) {
+				mains[record.payload.family] = record.payload.main;
+			}
+		}
+
+		return mains;
 	}
 
 	// --- the active session -------------------------------------------------

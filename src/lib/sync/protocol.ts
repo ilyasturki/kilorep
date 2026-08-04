@@ -12,7 +12,7 @@
  * Every kind of record the protocol carries, and nothing else — client store
  * and server table are both kind-agnostic past this point.
  */
-export const RECORD_KINDS = ['workout', 'template', 'bodyweight'] as const;
+export const RECORD_KINDS = ['workout', 'template', 'bodyweight', 'preference'] as const;
 
 export type RecordKind = (typeof RECORD_KINDS)[number];
 

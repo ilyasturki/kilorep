@@ -48,7 +48,15 @@ export function weightStep(equipment: Equipment): number {
  * spell the same rack two ways.
  */
 export type Equipment =
-	'Barbell' | 'Dumbbell' | 'Cable' | 'Machine' | 'Bodyweight' | 'Kettlebell' | 'Band';
+	| 'Barbell'
+	| 'EZ-Bar'
+	| 'Dumbbell'
+	| 'Cable'
+	| 'Machine'
+	| 'Smith Machine'
+	| 'Bodyweight'
+	| 'Kettlebell'
+	| 'Band';
 
 /**
  * Deliberately coarse: eleven groups, not thirty muscles. The consumer that

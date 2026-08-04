@@ -1,23 +1,31 @@
 <script lang="ts">
+	import { invalidate } from '$app/navigation';
+
 	import { catalog } from '$lib/catalog';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { rawPr } from '$lib/domain/stats';
-	import { familyOf } from '$lib/exercises/browse';
+	import { applyMains, familyOf } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, loadModeNote, ordinal } from '$lib/exercises/label';
 	import BackLink from '$lib/nav/BackLink.svelte';
+	import { syncSoon } from '$lib/sync/client';
 	import Badge from '$lib/ui/Badge.svelte';
+	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Calendar from '$lib/ui/icons/Calendar.svelte';
+	import Star from '$lib/ui/icons/Star.svelte';
 
 	import type { PageProps } from './$types';
 
 	/**
-	 * One exercise, read-only: what it is, the family around it, the raw best,
-	 * the sessions behind it. Catalog entries are immutable and customs are a
-	 * later slice, so the only actions here are navigations — the family links,
-	 * and each history entry through to the workout it came from.
+	 * One exercise: what it is, the family around it, the raw best, the
+	 * sessions behind it. Catalog entries are immutable and customs are a later
+	 * slice, so nearly every action here is a navigation — the family links,
+	 * and each history entry through to the workout it came from. The one
+	 * write is `Set as main`: which member heads this family is the account's
+	 * taste, not the catalog's fact, and this screen is where the family is
+	 * laid out to choose from.
 	 *
 	 * The est-1RM trend is settled but still absent: charting is decided now
 	 * — the Dashboard's sparklines, drawn from the same `estTrend` — and the
@@ -30,8 +38,32 @@
 	const exercise = $derived(data.exercise);
 
 	// Hints never cross the family's rows — the links exist exactly because
-	// each one is its own history.
-	const family = $derived(familyOf(catalog, exercise));
+	// each one is its own history. The fold runs over the reseated pool, so
+	// "Variant of" names the account's chosen main and "Variants" is everyone
+	// standing behind it — the catalog's own parent included, once demoted.
+	const pool = $derived(applyMains(catalog, data.mains));
+	const seated = $derived(pool.find((entry) => entry.id === exercise.id) ?? exercise);
+	const family = $derived(familyOf(pool, seated));
+
+	// The family's permanent name — the catalog's canonical parent — which is
+	// what preference records key on, whoever currently heads the fold.
+	const familyId = $derived(exercise.variantOf ?? exercise.id);
+
+	/**
+	 * Seats `id` at the head of this family, everywhere at once: the browse
+	 * row, the picker's family tap, and both sections below re-fold around it
+	 * on the invalidate. Choosing the canonical parent back writes
+	 * `main === family`, which every reader treats as no preference at all.
+	 */
+	async function promote(id: string) {
+		await data.store.setMainVariant({ family: familyId, main: id }, Date.now());
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+
+		await invalidate('app:mains');
+	}
 
 	// Oldest first in the data — the order `rawPr` reads; the screen wants
 	// latest first.
@@ -54,22 +86,64 @@
 </svelte:head>
 
 <!-- A family link is a choice between entries, so it reads like a catalog row:
-     last time's best set under the name, how long since on the right, and
-     nothing at all when the entry has never been trained. Spelled here rather
-     than reusing `ExerciseList` — that component is the browse-and-search
-     posture, and these two sections are neither. -->
-{#snippet familyRow(entry: Exercise)}
+     the line-art thumb, last time's best set under the name, how long since on
+     the right, and nothing at all when the entry has never been trained.
+     Spelled here rather than reusing `ExerciseList` — that component is the
+     browse-and-search posture, and these two sections are neither.
+
+     `star` rides beside a row that can be seated at the family's head — every
+     row under Variants, never the main under "Variant of". It sits outside
+     the anchor, its own column at the row's edge, because ListRow's rule
+     stands: a control inside a clickable row is two elements competing for
+     one tap. The chevron yields its place — on these rows the star is what
+     lives at the edge, and both marks at once would crowd it. -->
+{#snippet familyRow(entry: Exercise, star: boolean)}
 	{@const last = data.lastPerformed[entry.id]}
 	{@const since = lastSinceLabel(last, now)}
 
 	{#snippet recency()}{since}{/snippet}
 
-	<ListRow
-		title={entry.name}
-		meta={lastSetLabel(last)}
-		trailing={since === undefined ? undefined : recency}
-		href="/exercises/{entry.id}"
-	/>
+	<!-- The slot is reserved even when the entry has no art, exactly like the
+	     catalog rows: a missing thumb must not unalign the one title in the
+	     column that lacks it. -->
+	{#snippet thumb()}
+		<span class="size-11 shrink-0">
+			<ExerciseIllustration id={entry.id} name={entry.name} class="size-full" />
+		</span>
+	{/snippet}
+
+	{#if star}
+		<div class="flex items-center">
+			<ListRow
+				title={entry.name}
+				meta={lastSetLabel(last)}
+				leading={thumb}
+				trailing={since === undefined ? undefined : recency}
+				chevron={false}
+				href="/exercises/{entry.id}"
+				class="min-w-0 flex-1"
+			/>
+
+			<button
+				type="button"
+				aria-label="Make {entry.name} the main variant"
+				onclick={() => promote(entry.id)}
+				class="mr-1 grid size-11 shrink-0 place-items-center rounded-xl text-ink-muted
+					focus-ring hover:bg-hover active:bg-surface-2
+					pointer-fine:transition-[background-color] pointer-fine:duration-100"
+			>
+				<Star size={20} />
+			</button>
+		</div>
+	{:else}
+		<ListRow
+			title={entry.name}
+			meta={lastSetLabel(last)}
+			leading={thumb}
+			trailing={since === undefined ? undefined : recency}
+			href="/exercises/{entry.id}"
+		/>
+	{/if}
 {/snippet}
 
 <main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
@@ -141,7 +215,16 @@
 	{#if family.parent !== null}
 		<section class="flex flex-col gap-2">
 			<h2 class="px-3 label-caps">Variant of</h2>
-			<div class="list-group">{@render familyRow(family.parent)}</div>
+			<div class="list-group">{@render familyRow(family.parent, false)}</div>
+
+			<!-- Under the section that says this entry stands behind another:
+			     the claim and the lever to reverse it, side by side. Promoting
+			     re-folds the family everywhere the fold is read — this screen,
+			     the browse row, the picker's family tap. -->
+			<Button onclick={() => promote(seated.id)} class="w-fit">
+				<Star size={18} />
+				Set as main variant
+			</Button>
 		</section>
 	{/if}
 
@@ -150,7 +233,7 @@
 			<h2 class="px-3 label-caps">Variants</h2>
 			<div class="list-group">
 				{#each family.variants as variant (variant.id)}
-					{@render familyRow(variant)}
+					{@render familyRow(variant, true)}
 				{/each}
 			</div>
 		</section>

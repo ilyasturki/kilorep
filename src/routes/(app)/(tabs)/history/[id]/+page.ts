@@ -35,10 +35,10 @@ export const load: PageLoad = async ({ params }) => {
 	// boundary's assertion is what lets an older shape through it.
 	const templateId = workout.templateId ?? null;
 
-	const [template, { lastPerformed, frequent }] = await Promise.all([
+	const [template, { lastPerformed, frequent, mains }] = await Promise.all([
 		templateId === null ? null : store.getTemplate(templateId),
 		store.pickerData()
 	]);
 
-	return { store, workout, template, lastPerformed, frequent };
+	return { store, workout, template, lastPerformed, frequent, mains };
 };

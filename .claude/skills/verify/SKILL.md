@@ -44,7 +44,7 @@ const context = await chromium.launchPersistentContext('<scratch>/driver/profile
 
 ## Driving the workout screen
 
-- Login form: fill email + password inputs, press Enter, `waitForURL('**/start')`.
+- Login form: fill email + password inputs, press Enter, `waitForURL('**/dashboard')`.
 - Steppers are labeled `increase kg` / `increase reps` (2.5 kg and 1 rep per tap, from 0).
 - The commit button's text is `Log set` when live, `Enter a weight to log` when inert.
 - Two finish buttons exist when the session is done: header `FINISH` and empty-state

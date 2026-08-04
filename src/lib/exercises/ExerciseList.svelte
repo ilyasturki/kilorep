@@ -1,22 +1,28 @@
 <script lang="ts" module>
 	import { catalog } from '$lib/catalog';
-	import { sections } from '$lib/exercises/browse';
-
-	// Once per app, not per mount: the catalog is immutable and the insert
-	// sheet re-mounts this list on every open.
-	const browse = sections(catalog);
+	import { applyMains, sections } from '$lib/exercises/browse';
 
 	// The same posture as `Chip.svelte`'s resting state, minus the toggle
 	// machinery: these chips navigate or pick, they never stay pressed.
+	// `relative` lifts each chip above the strip's backdrop, which is what
+	// keeps a chip's tap its own.
 	const chip =
-		'inline-flex min-h-chip items-center rounded-xl bg-sunken px-3 text-sm font-bold ' +
+		'relative inline-flex min-h-chip items-center rounded-xl bg-sunken px-3 text-sm font-bold ' +
 		'text-ink-muted select-none focus-ring hover:bg-hover active:bg-surface-2 ' +
+		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
+
+	// Everything in the strip that is not a chip — the inset, the gutters, the
+	// trailing run — answers as the parent row above it. Skipped by keyboard
+	// and reader on purpose: the row is the same target, already announced.
+	const backdrop =
+		'absolute inset-0 hover:bg-hover active:bg-surface-2 ' +
 		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
 </script>
 
 <script lang="ts">
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Exercise, Muscle } from '$lib/domain/exercise';
+	import type { MainVariants } from '$lib/domain/preference';
 	import type { Family } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, variantLabel } from '$lib/exercises/label';
@@ -76,6 +82,15 @@
 		 * the store on the way in.
 		 */
 		lastPerformed: LastPerformed;
+		/**
+		 * Each family's chosen main, from the store's `preference` records. The
+		 * fold reseats a family around its choice before shelving — see
+		 * `applyMains` — so the headline row, the chips under it and the muscle
+		 * section it stands in all follow the choice together. Passed in like
+		 * `lastPerformed`, and for the same reason: this component stays
+		 * store-free.
+		 */
+		mains: MainVariants;
 		/** Row action. Absent, rows navigate to the exercise detail instead. */
 		onpick?: (exercise: Exercise) => void;
 		/**
@@ -99,7 +114,15 @@
 		selected?: ReadonlySet<string>;
 	};
 
-	let { query, muscle = null, lastPerformed, onpick, shelf = null, selected }: Props = $props();
+	let {
+		query,
+		muscle = null,
+		lastPerformed,
+		mains,
+		onpick,
+		shelf = null,
+		selected
+	}: Props = $props();
 
 	/**
 	 * Read once per mount, not per render: nothing on screen is worth a ticking
@@ -107,6 +130,12 @@
 	 * on every open — so the reading is fresh exactly when a row is being read.
 	 */
 	const now = Date.now();
+
+	// The catalog reseated around the account's chosen mains, then folded. Per
+	// mount rather than once per app now that a preference can change it — the
+	// fold over ~80 entries is nothing against the render it feeds.
+	const pool = $derived(applyMains(catalog, mains));
+	const browse = $derived(sections(pool));
 
 	// The empty-query answer ("the pool, untouched") is `searchExercises`' own
 	// rule; `searching` only picks which posture the template draws.
@@ -117,15 +146,15 @@
 	// whole catalog and dropping the rest. Doing it this way keeps the one
 	// ranking every consumer sees.
 	const results = $derived(
-		searchExercises(catalog, query).filter(
+		searchExercises(pool, query).filter(
 			(exercise) => muscle === null || exercise.muscles.primary === muscle
 		)
 	);
 
-	// The sections are built once for the app; narrowing is picking one of them
-	// out, never rebuilding them for a filter. Filtering the *pool* first and
-	// re-folding would split families apart — a triceps-primary close-grip bench
-	// would be promoted to a row of its own the moment Triceps was lit.
+	// Narrowing picks a section out of the built fold, never rebuilds it for a
+	// filter. Filtering the *pool* first and re-folding would split families
+	// apart — a triceps-primary close-grip bench would be promoted to a row of
+	// its own the moment Triceps was lit.
 	const shelves = $derived(
 		muscle === null ? browse : browse.filter((section) => section.muscle === muscle)
 	);
@@ -190,8 +219,27 @@
 {#snippet variantChips(family: Family)}
 	<!-- Left edge on the title's column, under the thumb's width: the chips
 	     belong to the name above them, not to the card. `aria-label` restores
-	     the full name the chip's stripped label elides. -->
-	<div class="flex flex-wrap gap-1.5 pt-0.5 pr-3 pb-2.5 pl-17">
+	     the full name the chip's stripped label elides.
+
+	     Under the chips, the rest of the strip is the parent's: the backdrop
+	     answers a tap on the inset, the gutters or the trailing run exactly as
+	     the row above would, because to a thumb the strip *is* still that row.
+	     `aria-hidden` with `tabindex="-1"` keeps it out of the keyboard and
+	     reader orders — it is the same target as the row, already reachable
+	     and already announced, and a second stop would be the row read twice. -->
+	<div class="relative flex flex-wrap gap-1.5 pt-0.5 pr-3 pb-2.5 pl-17">
+		{#if onpick === undefined}
+			<a href="/exercises/{family.parent.id}" aria-hidden="true" tabindex="-1" class={backdrop}></a>
+		{:else}
+			<button
+				type="button"
+				aria-hidden="true"
+				tabindex="-1"
+				onclick={() => onpick?.(family.parent)}
+				class={backdrop}
+			></button>
+		{/if}
+
 		{#each family.variants as variant (variant.id)}
 			{@const label = variantLabel(variant.name, family.parent.name)}
 

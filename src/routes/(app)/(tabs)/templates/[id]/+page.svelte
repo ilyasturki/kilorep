@@ -544,6 +544,7 @@
 	multiple
 	frequent={data.frequent}
 	lastPerformed={data.lastPerformed}
+	mains={data.mains}
 	onpick={plan}
 />
 
@@ -561,6 +562,7 @@
 	title="Swap exercise"
 	replacing={actingGroup === null ? null : actingGroup.meta}
 	lastPerformed={data.lastPerformed}
+	mains={data.mains}
 	onpick={([id]) => swapPick(id)}
 />
 

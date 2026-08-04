@@ -7,9 +7,80 @@
 
 import { MUSCLES } from '$lib/domain/exercise';
 import type { Exercise, Muscle } from '$lib/domain/exercise';
+import type { MainVariants } from '$lib/domain/preference';
 
 /** A canonical entry and the variations folded under its row. */
 export type Family = { parent: Exercise; variants: Exercise[] };
+
+/**
+ * The pool with each family's chosen main seated at its head: the choice's
+ * member loses its `variantOf`, and every other member — the canonical parent
+ * included — points at it instead. Everything downstream then just works on
+ * the reseated pool: `sections` shelves the family under the chosen main's
+ * primary and folds the rest into its chips, `familyOf` answers both
+ * directions from the new head, and the picker's family-row tap takes it.
+ *
+ * The catalog stays what it was — `variantOf` in the data is the family's
+ * permanent name, and this reseating is one account's taste laid over it,
+ * which is why it happens here in presentation and not in the data.
+ *
+ * A choice is honoured only when the pool can vouch for it: the chosen main
+ * must be a member of exactly that family *by the pool's own links*. Anything
+ * else — a slug this catalog does not hold yet (a record synced down from a
+ * newer app), a member of another family, the canonical parent itself — is
+ * the identity, never an error: a preference is taste, and stale taste means
+ * the default, not a broken screen.
+ */
+export function applyMains(pool: Exercise[], mains: MainVariants): Exercise[] {
+	const byId = new Map(pool.map((exercise) => [exercise.id, exercise]));
+
+	const chosen = new Map<string, string>();
+
+	for (const [family, main] of Object.entries(mains)) {
+		const entry = byId.get(main);
+
+		if (main !== family && entry !== undefined && entry.variantOf === family) {
+			chosen.set(family, main);
+		}
+	}
+
+	if (chosen.size === 0) {
+		return pool;
+	}
+
+	// Spelled field by field like every reshape in this repo — a field added to
+	// `Exercise` fails the build here instead of silently vanishing from every
+	// reseated family. The chosen main's copy simply omits `variantOf`.
+	return pool.map((exercise) => {
+		const family = exercise.variantOf ?? exercise.id;
+		const main = chosen.get(family);
+
+		if (main === undefined) {
+			return exercise;
+		}
+
+		if (exercise.id === main) {
+			return {
+				id: exercise.id,
+				name: exercise.name,
+				aliases: exercise.aliases,
+				equipment: exercise.equipment,
+				loadMode: exercise.loadMode,
+				muscles: exercise.muscles
+			};
+		}
+
+		return {
+			id: exercise.id,
+			name: exercise.name,
+			aliases: exercise.aliases,
+			equipment: exercise.equipment,
+			loadMode: exercise.loadMode,
+			muscles: exercise.muscles,
+			variantOf: main
+		};
+	});
+}
 
 export type Section = { muscle: Muscle; families: Family[] };
 
