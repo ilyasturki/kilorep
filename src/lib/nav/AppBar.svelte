@@ -3,18 +3,20 @@
 
 	import favicon from '$lib/assets/favicon.svg';
 	import { appBarSlot, isActive, navTabs } from '$lib/nav/bar.svelte';
+	import Gear from '$lib/ui/icons/Gear.svelte';
 
 	/**
 	 * The top bar, from `lg` up and nowhere else. Below it the same tabs are a
 	 * bar at the bottom of the screen — see `bar.svelte.ts` for why the swap is
 	 * one navigation and not two.
 	 *
-	 * Mark, tabs, then the page's own action. The mark is the rest ring and not
-	 * the word: set beside the tabs, "kilorep" at 16px tight extrabold against
-	 * an 11px tracked cap was two typefaces having an argument, and the fix that
-	 * survives is to stop setting the name in type here at all. The ring is
-	 * already the app's face on the launcher, the favicon and the sign-in card,
-	 * so the bar says the same thing in the register the other three use.
+	 * Mark and gear, tabs, then the page's own action. The mark is the rest ring
+	 * and not the word: set beside the tabs, "kilorep" at 16px tight extrabold
+	 * against an 11px tracked cap was two typefaces having an argument, and the
+	 * fix that survives is to stop setting the name in type here at all. The
+	 * ring is already the app's face on the launcher, the favicon and the
+	 * sign-in card, so the bar says the same thing in the register the other
+	 * three use.
 	 *
 	 * The mark is a link to home, which is the Dashboard — the logo-goes-home
 	 * convention, pointed at the same address in both builds. It was a plain
@@ -27,6 +29,22 @@
 	 * underneath is decoration to a reader, so its `alt` is empty here unlike
 	 * the landing page and sign-in card, where the mark stands unlabelled in
 	 * flowing content.
+	 *
+	 * The gear stands beside it, on the left and not in the action slot on the
+	 * right. That slot belongs to the page — FINISH while a session runs, the
+	 * template editor's own pair — and a destination that is true on every
+	 * screen cannot take turns with one that is true on a single screen: the
+	 * gear would blink out the moment a page had something of its own to say.
+	 * Pinned by the mark it is constant, and constant is the whole point, this
+	 * being the answer to a gear that used to hang off the idle Workout screen
+	 * alone and vanished the moment a workout started. Drawn in the tabs' idiom
+	 * rather than as the phone's bordered button, because at this width it sits
+	 * in a row of nav pills and a border would make it the loudest thing in the
+	 * bar; it wears the `nav-selected` pill on `/settings` for the same reason a
+	 * tab does — the bar's job is to say where you are, and standing on Settings
+	 * with every tab dark says nothing. A pill and not a tab: it is outside the
+	 * centred group, which is where PRODUCT.md's "behind the gear, not a tab"
+	 * lives now that the phone's copy hangs on the Dashboard.
 	 *
 	 * The tabs are 14px sentence case, which is the other half of the same fix:
 	 * `label-caps` is the app's *section heading* voice, and a destination you
@@ -47,6 +65,10 @@
 	 * and its reasons live in `navTabs`.
 	 */
 	const slot = appBarSlot();
+
+	// `isActive` and not an equality, so a screen added under `/settings` later
+	// keeps the pill lit rather than turning it off on the way in.
+	const onSettings = $derived(isActive(page.url.pathname, '/settings'));
 </script>
 
 <header class="hidden shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:block">
@@ -60,13 +82,29 @@
 	     layout rather than the column. `1fr auto 1fr` is what holds the tabs on
 	     centre while the two ends weigh differently. -->
 	<div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 py-2">
-		<a
-			href="/dashboard"
-			aria-label="Kilorep — dashboard"
-			class="grid place-items-center justify-self-start rounded-md focus-ring"
-		>
-			<img src={favicon} alt="" class="size-5" />
-		</a>
+		<div class="flex items-center gap-2 justify-self-start">
+			<a
+				href="/dashboard"
+				aria-label="Kilorep — dashboard"
+				class="grid place-items-center rounded-md focus-ring"
+			>
+				<img src={favicon} alt="" class="size-5" />
+			</a>
+
+			<a
+				href="/settings"
+				aria-label="Settings"
+				aria-current={onSettings ? 'page' : undefined}
+				class={[
+					'grid min-h-chrome w-10 place-items-center rounded-xl focus-ring transition-colors',
+					onSettings
+						? 'bg-nav-selected text-ink'
+						: 'text-ink-faint pointer-fine:hover:bg-nav-hover pointer-fine:hover:text-ink-muted'
+				]}
+			>
+				<Gear size={18} />
+			</a>
+		</div>
 
 		<nav aria-label="Main" class="flex items-center gap-1">
 			{#each navTabs() as tab (tab.href)}

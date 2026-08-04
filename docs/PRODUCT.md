@@ -32,15 +32,15 @@ Math:
 
 Every screen must justify its existence.
 
-- **Workout** — home. The loop above while a session runs; idle, the place one starts, wearing the gear to Settings. One tab, two screens, one address each.
+- **Workout** — the loop above while a session runs; idle, the place one starts. One tab, two screens, one address each.
 - **Templates** — the list; a template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
 - **History** — workout list + detail; repeat-this-workout; drift-vs-template on the detail.
 - **Exercises** — catalog + customs; detail carries history, raw best set, est-1RM trend.
 - **Weight** — log + trend.
-- **Dashboard** — four standing questions, one card each, no configuration: **Progressing?** (recent raw PRs, est-1RM direction on main lifts) · **Consistent?** (sessions this week vs your own habit — facts, never streaks) · **Balanced?** (working volume by muscle, recent weeks) · **Weight on track?** (trend). Never the landing screen. Anything that can't be phrased as a standing question stays off it.
-- **Settings** — behind the gear, not a tab.
+- **Dashboard** — four standing questions, one card each, no configuration: **Progressing?** (recent raw PRs, est-1RM direction on main lifts) · **Consistent?** (sessions this week vs your own habit — facts, never streaks) · **Balanced?** (working volume by muscle, recent weeks) · **Weight on track?** (trend). Home, and where the gear to Settings hangs. Anything that can't be phrased as a standing question stays off it.
+- **Settings** — behind the gear, not a tab: on home below `lg`, beside the mark in the top bar above it.
 
-The app opens into Workout, always.
+The app opens into the Dashboard, always.
 
 ## Offline
 

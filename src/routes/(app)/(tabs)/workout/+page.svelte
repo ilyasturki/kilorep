@@ -3,11 +3,9 @@
 
 	import { startFrom } from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
-	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
-	import Gear from '$lib/ui/icons/Gear.svelte';
 
 	import type { Template } from '$lib/domain/template';
 	import type { PageProps } from './$types';
@@ -44,6 +42,17 @@
 	 * survives the split unchanged: the `+page.ts` beside this file picks up a
 	 * *handoff* — a snapshot another screen wrote on purpose — and never invents
 	 * one.
+	 *
+	 * No gear here any more, and no bar slot filled: "gear to Settings" always
+	 * meant *home*, and home moved to the Dashboard when the bar was reordered —
+	 * see `navTabs`. The gear stayed behind for a commit, which left the app's
+	 * only door to Settings on a screen it no longer opens at, and one standing
+	 * behind a redirect at that: `+page.ts` hands off to the loop the moment a
+	 * session exists, so a live workout had no door at all. It followed home
+	 * rather than growing a second copy, and the Dashboard's header carries the
+	 * reasoning. This screen wants nothing in the bar's right-hand slot now, so
+	 * it takes nothing — FINISH is the loop's, and neither address has to know
+	 * about the other's, which is one more thing the split took out of a branch.
 	 */
 	let { data }: PageProps = $props();
 
@@ -96,36 +105,7 @@
 
 		return count === 1 ? '1 exercise' : `${count} exercises`;
 	}
-
-	// The bar's right-hand slot, given back on the way out. PRODUCT.md pins
-	// "gear to Settings" to home, and this screen was home until the bar was
-	// reordered around the Dashboard — see `navTabs`. The gear did not move with
-	// it, so `/settings` now hangs off the one screen in the app that links to
-	// it rather than off the one the app opens at. Open: either the gear follows
-	// home or the rule stops meaning home. The loop fills the same slot with
-	// FINISH; neither screen has to know about the other's, which is one more
-	// thing the split took out of a branch.
-	const bar = appBarSlot();
-
-	$effect(() => {
-		bar.action = gear;
-
-		return () => {
-			bar.action = null;
-		};
-	});
 </script>
-
-{#snippet gear()}
-	<a
-		href="/settings"
-		aria-label="Settings"
-		class="grid min-h-chrome w-11 place-items-center rounded-full border border-line
-			text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
-	>
-		<Gear size={20} />
-	</a>
-{/snippet}
 
 <svelte:head>
 	<title>Workout | Kilorep</title>
@@ -136,10 +116,8 @@
 	     gone at that width and the first thing on the page is a section heading,
 	     which flush under the bar's hairline reads as part of the bar. -->
 	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-3">
-		<header class="flex items-start justify-between gap-3 pt-10 lg:hidden">
+		<header class="pt-10 lg:hidden">
 			<h1 class="text-2xl font-extrabold tracking-tight">Kilorep</h1>
-
-			{@render gear()}
 		</header>
 
 		{#if data.templates.length === 0}

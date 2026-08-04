@@ -7,6 +7,7 @@
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import ChartBar from '$lib/ui/icons/ChartBar.svelte';
+	import Gear from '$lib/ui/icons/Gear.svelte';
 
 	import type { PageProps } from './$types';
 
@@ -149,9 +150,29 @@
 
 <main class="column-content flex min-h-full flex-col gap-4 px-3 pt-safe-t pb-4 lg:pt-3">
 	<!-- Gone from `lg` up, same bargain as Weight: the bar above already says
-	     Dashboard in the lit tab. -->
-	<header class="px-1 pt-6 lg:hidden">
+	     Dashboard in the lit tab — and carries the gear beside its mark, which is
+	     why this one goes with the header rather than staying on screen.
+
+	     The gear is here because this is home. It hung off the idle Workout
+	     screen while that tab led the bar, and stayed there when home moved,
+	     which left the app's one door to Settings on a screen the app no longer
+	     opens at — and behind a redirect, since `/workout` hands off to the loop
+	     the moment a session exists. Two taps from any tab now, and none at all
+	     from a live session on a phone: the account, the server and the tokens
+	     are the definition of not-mid-workout, so that is a price and not a hole.
+	     The desk bar keeps its own gear through a session, a 1080px window not
+	     being the floor rule 7 protects. -->
+	<header class="flex items-start justify-between gap-3 px-1 pt-6 lg:hidden">
 		<h1 class="text-2xl font-extrabold tracking-tight">Dashboard</h1>
+
+		<a
+			href="/settings"
+			aria-label="Settings"
+			class="grid min-h-chrome w-11 place-items-center rounded-full border border-line
+				text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+		>
+			<Gear size={20} />
+		</a>
 	</header>
 
 	{#if bare}
