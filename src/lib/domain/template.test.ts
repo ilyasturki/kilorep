@@ -5,20 +5,25 @@ import {
 	addExerciseTo,
 	addSet,
 	blankTemplate,
+	byRank,
+	drawableMark,
+	isArchived,
 	isBlank,
 	joinEntry,
 	moveEntry,
 	moveExercise,
 	removeExercise,
 	removeSet,
+	reorder,
 	replaceExercise,
 	setExerciseReps,
 	setPlannedReps,
 	splitEntry,
+	templateRank,
 	startFrom,
 	supersetWith
 } from '$lib/domain/template';
-import type { Template } from '$lib/domain/template';
+import type { Template, TemplateMark } from '$lib/domain/template';
 
 let n = 0;
 
@@ -479,5 +484,161 @@ describe('copy-on-start', () => {
 
 		expect(workout.entries).toEqual([]);
 		expect(workout.templateId).toBe('t9');
+	});
+});
+
+function at(id: string, createdAt: number, order?: number): Template {
+	const template = blankTemplate(id, createdAt);
+
+	template.order = order;
+
+	return template;
+}
+
+function list(): Template[] {
+	return [blankTemplate('a', 100), blankTemplate('b', 200), blankTemplate('c', 300)];
+}
+
+function applied(templates: Template[], id: string, index: number): string[] {
+	const order = reorder(templates, id, index);
+	const moved = templates.find((t) => t.id === id);
+
+	if (moved === undefined || order === null) {
+		throw new Error('the drag under test did not move anything');
+	}
+
+	moved.order = order;
+
+	return templates.toSorted(byRank).map((t) => t.id);
+}
+
+describe('rank', () => {
+	test('an undragged template ranks by its birthday', () => {
+		expect(templateRank(at('t1', 100))).toBe(100);
+	});
+
+	test('order and createdAt sort on one number line', () => {
+		const mixed = [at('c', 300), at('a', 100, 50), at('b', 200)];
+
+		expect(mixed.toSorted(byRank).map((t) => t.id)).toEqual(['a', 'b', 'c']);
+	});
+
+	test('an order of zero is a placement, not an absence', () => {
+		expect(templateRank(at('t1', 100, 0))).toBe(0);
+	});
+});
+
+describe('reorder', () => {
+	test('moving down lands between the new neighbours', () => {
+		expect(applied(list(), 'a', 1)).toEqual(['b', 'a', 'c']);
+	});
+
+	test('moving up lands between the new neighbours', () => {
+		expect(applied(list(), 'c', 1)).toEqual(['a', 'c', 'b']);
+	});
+
+	test('the index means the same thing in both directions', () => {
+		expect(applied(list(), 'a', 2)).toEqual(['b', 'c', 'a']);
+		expect(applied(list(), 'c', 0)).toEqual(['c', 'a', 'b']);
+	});
+
+	test('a drop where it already sits writes nothing', () => {
+		expect(reorder(list(), 'b', 1)).toBeNull();
+	});
+
+	test('an unknown id writes nothing', () => {
+		expect(reorder(list(), 'zz', 0)).toBeNull();
+	});
+
+	test('an out-of-range index writes nothing', () => {
+		expect(reorder(list(), 'a', 3)).toBeNull();
+		expect(reorder(list(), 'a', -1)).toBeNull();
+	});
+
+	test('repeated drags into the same gap keep their order', () => {
+		let templates = list();
+
+		// Halving the same gap again and again is the known cost of writing one
+		// record per drag. Always dragging whichever card is currently on top
+		// into the middle is what actually walks the gap down — dragging the same
+		// card twice is a no-op the second time, which the guard already answers.
+		for (let i = 0; i < 40; i += 1) {
+			const top = templates[0];
+			const order = reorder(templates, top.id, 1);
+
+			if (order === null) {
+				throw new Error('dragging the top card into the middle is never a no-op');
+			}
+
+			top.order = order;
+			templates = templates.toSorted(byRank);
+		}
+
+		const ranks = templates.map((t) => templateRank(t));
+		const last = templates.at(-1);
+
+		expect(new Set(ranks).size).toBe(3);
+		expect(ranks).toEqual(ranks.toSorted((a, b) => a - b));
+		expect(last === undefined ? null : last.id).toBe('c');
+	});
+});
+
+function archivedAt(stamp: number | null): Template {
+	const template = blankTemplate('t1', 100);
+
+	template.archivedAt = stamp;
+
+	return template;
+}
+
+describe('archive', () => {
+	test('a fresh template is not archived', () => {
+		expect(isArchived(blankTemplate('t1', 100))).toBe(false);
+	});
+
+	test('a null archivedAt is not archived', () => {
+		expect(isArchived(archivedAt(null))).toBe(false);
+	});
+
+	test('a stamped archivedAt is archived', () => {
+		expect(isArchived(archivedAt(500))).toBe(true);
+	});
+
+	test('archiving at epoch zero still counts as archived', () => {
+		expect(isArchived(archivedAt(0))).toBe(true);
+	});
+});
+
+function marked(icon: string, colour: string): Template {
+	const template = blankTemplate('t1', 100);
+
+	template.mark = { icon, colour } as unknown as TemplateMark;
+
+	return template;
+}
+
+describe('drawableMark', () => {
+	test('an unmarked template draws nothing', () => {
+		const cleared = blankTemplate('t1', 100);
+
+		cleared.mark = null;
+
+		expect(drawableMark(blankTemplate('t1', 100))).toBeNull();
+		expect(drawableMark(cleared)).toBeNull();
+	});
+
+	test('a known mark draws', () => {
+		expect(drawableMark(marked('push', 'blue'))).toEqual({ icon: 'push', colour: 'blue' });
+	});
+
+	test('a glyph this build does not know draws nothing', () => {
+		const template = marked('hinge', 'blue');
+
+		expect(drawableMark(template)).toBeNull();
+		expect(template.mark).not.toBeNull();
+	});
+
+	test('a hue this build does not know draws nothing', () => {
+		expect(drawableMark(marked('push', 'chartreuse'))).toBeNull();
 	});
 });

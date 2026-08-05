@@ -221,6 +221,67 @@ describe('templates', () => {
 		expect(listed.map((t) => t.id)).toEqual(['early', 'late']);
 	});
 
+	it('an explicit order outranks the birthday it stands in for', async () => {
+		const placed = template('new', 300);
+
+		placed.order = 50;
+
+		await store.saveTemplate(template('old', 100), 400);
+		await store.saveTemplate(placed, 600);
+
+		const listed = await store.listTemplates();
+
+		expect(listed.map((t) => t.id)).toEqual(['new', 'old']);
+	});
+
+	// `saveTemplate` builds its payload field by field rather than copying the
+	// object, so every field added to `Template` has to be added there too or it
+	// is dropped silently on the way to disk. This is the test that says so.
+	it('persists the mark, the order and the archive stamp', async () => {
+		const marked = template('t1', 100);
+
+		marked.mark = { icon: 'push', colour: 'blue' };
+		marked.order = 42;
+		marked.archivedAt = 900;
+
+		await store.saveTemplate(marked, 150);
+
+		const stored = await store.getTemplate('t1');
+
+		expect(stored).toMatchObject({
+			mark: { icon: 'push', colour: 'blue' },
+			order: 42,
+			archivedAt: 900
+		});
+	});
+
+	it('an archived template is still listed', async () => {
+		const put = template('t1', 100);
+
+		put.archivedAt = 900;
+
+		await store.saveTemplate(put, 150);
+
+		const listed = await store.listTemplates();
+
+		expect(listed.map((t) => t.id)).toEqual(['t1']);
+	});
+
+	it('unarchiving clears the stamp rather than dropping the field', async () => {
+		const put = template('t1', 100);
+		const back = template('t1', 100);
+
+		put.archivedAt = 900;
+		back.archivedAt = null;
+
+		await store.saveTemplate(put, 150);
+		await store.saveTemplate(back, 250);
+
+		const stored = await store.getTemplate('t1');
+
+		expect(stored).toMatchObject({ archivedAt: null });
+	});
+
 	it('deletes as a tombstone that wins last-write-wins', async () => {
 		await store.saveTemplate(template('t1', 100), 150);
 		await store.deleteTemplate('t1', 300);

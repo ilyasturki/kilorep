@@ -20,6 +20,7 @@ import { defaultRestSettings, settleRestSeconds } from '$lib/domain/rest';
 import type { RestSettings } from '$lib/domain/rest';
 import type { PastSession } from '$lib/domain/stats';
 import type { Template } from '$lib/domain/template';
+import { byRank } from '$lib/domain/template';
 import type { History, Workout } from '$lib/domain/workout';
 import type { RecordKind, SyncAck, WireRecord } from '$lib/sync/protocol';
 
@@ -256,14 +257,27 @@ export class Store {
 			id: template.id,
 			name: template.name,
 			createdAt: template.createdAt,
-			entries: template.entries
+			entries: template.entries,
+			mark: template.mark ?? null,
+			order: template.order,
+			archivedAt: template.archivedAt ?? null
 		};
 
 		await this.write(template.id, 'template', updatedAt, payload);
 	}
 
+	/**
+	 * Every live template, marked and unmarked, archived and not, in list order.
+	 *
+	 * The archived ones come back with the rest rather than being filtered here,
+	 * because two screens want different halves of the same answer — the list
+	 * draws both in two groups and the idle Train screen draws only the active
+	 * ones — and a store method per audience would have them disagreeing about
+	 * ordering the first time one of them changed. `isArchived` splits it at the
+	 * call site.
+	 */
 	public async listTemplates(): Promise<Template[]> {
-		const templates = await this.live<Template>('template', (a, b) => a.createdAt - b.createdAt);
+		const templates = await this.live<Template>('template', byRank);
 
 		return templates;
 	}

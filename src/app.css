@@ -113,6 +113,40 @@
 	   alpha over it reads as two different colours. */
 	--danger-soft: var(--color-red-100);
 	--scrim: rgb(0 0 0 / 0.4);
+
+	/* The six template marks: a soft tile with a saturated glyph on it, the
+	   shape `accent-soft` and `danger-soft` already establish. Six because a
+	   list of plans is a handful and a seventh hue would be told apart by
+	   nobody; `slate` is the sixth on purpose, so "a mark without a colour" is
+	   a choice the set can express rather than a gap in it.
+
+	   None of them is lime, and that is the constraint the set was picked
+	   under: the accent means "this logs a set" and a template that borrowed it
+	   would be making a promise the planning surface cannot keep. The hues run
+	   49° (amber) → 186° (teal) → 264° (blue) → 293° (violet) → 324°
+	   (fuchsia), stepping around lime's 130° rather than through it, with slate
+	   sitting at blue's angle and near-zero chroma — it reads as grey beside a
+	   saturated blue, never as a second one.
+
+	   Measured, not eyeballed: glyph-on-tile clears 4.5:1 in both themes, the
+	   floor being amber in light at 4.54:1. That bar is reachable at all only
+	   because the glyph is judged against its *own* tile rather than against
+	   the card — both sides move together per theme, which is exactly what
+	   `--accent-text` has no way to do and why it needs a per-theme pair. */
+	--tpl-amber: var(--color-amber-700);
+	--tpl-amber-soft: var(--color-amber-100);
+	--tpl-teal: var(--color-teal-700);
+	--tpl-teal-soft: var(--color-teal-100);
+	--tpl-blue: var(--color-blue-700);
+	--tpl-blue-soft: var(--color-blue-100);
+	--tpl-violet: var(--color-violet-700);
+	--tpl-violet-soft: var(--color-violet-100);
+	--tpl-fuchsia: var(--color-fuchsia-700);
+	--tpl-fuchsia-soft: var(--color-fuchsia-100);
+	/* Slate takes the 600 on a 200: its 700 on a 100 is a grey-on-grey pair
+	   that reads as disabled rather than as a mark. */
+	--tpl-slate: var(--color-slate-600);
+	--tpl-slate-soft: var(--color-slate-200);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -175,6 +209,34 @@
 		--danger-soft: oklch(29.5% 0.095 26.042);
 		/* A lighter page needs less dimming to read as dimmed. */
 		--scrim: rgb(0 0 0 / 0.55);
+
+		/* The marks lift the way the two soft fills above them do, and are built
+		   the same way: the tint keeps its swatch's hue and lands just clear of
+		   `surface`, the glyph drops to the 300 rung. Measured on the lifted
+		   ground — glyph-on-tile 7.4:1 (violet, blue) to 9.3:1 (amber), and the
+		   tiles sit 1.12–1.23 off `surface`, which brackets the shipped
+		   `accent-soft` at 1.23 and `danger-soft` at 1.08. A mark is a tint on
+		   the card, not a hole in it.
+
+		   Amber and teal carry less chroma than the rest because that is all
+		   sRGB has at 30.5% lightness on those hues — 0.064 and 0.056 are the
+		   gamut edge, solved for rather than guessed, and a bigger number would
+		   be clamped by the browser into a colour nobody chose. */
+		--tpl-amber: var(--color-amber-300);
+		--tpl-amber-soft: oklch(30.5% 0.064 95.746);
+		--tpl-teal: var(--color-teal-300);
+		--tpl-teal-soft: oklch(30.5% 0.056 180.426);
+		--tpl-blue: var(--color-blue-300);
+		--tpl-blue-soft: oklch(30.5% 0.075 254.128);
+		--tpl-violet: var(--color-violet-300);
+		--tpl-violet-soft: oklch(30.5% 0.085 293.283);
+		--tpl-fuchsia: var(--color-fuchsia-300);
+		--tpl-fuchsia-soft: oklch(30.5% 0.085 319.62);
+		/* Slate needs the extra 1.5 points its near-zero chroma denies it: at
+		   30.5% the other five are lifted by their colour as much as by their
+		   lightness, and a grey tile at that number disappeared. */
+		--tpl-slate: var(--color-slate-300);
+		--tpl-slate-soft: oklch(32% 0.015 255.508);
 	}
 }
 
@@ -343,6 +405,21 @@
 	--color-danger: var(--danger);
 	--color-danger-soft: var(--danger-soft);
 	--color-scrim: var(--scrim);
+
+	/* Exposed as utilities rather than consumed through a `style` attribute;
+	   `marks.ts` holds the six class pairs as literals, and says why. */
+	--color-tpl-amber: var(--tpl-amber);
+	--color-tpl-amber-soft: var(--tpl-amber-soft);
+	--color-tpl-teal: var(--tpl-teal);
+	--color-tpl-teal-soft: var(--tpl-teal-soft);
+	--color-tpl-blue: var(--tpl-blue);
+	--color-tpl-blue-soft: var(--tpl-blue-soft);
+	--color-tpl-violet: var(--tpl-violet);
+	--color-tpl-violet-soft: var(--tpl-violet-soft);
+	--color-tpl-fuchsia: var(--tpl-fuchsia);
+	--color-tpl-fuchsia-soft: var(--tpl-fuchsia-soft);
+	--color-tpl-slate: var(--tpl-slate);
+	--color-tpl-slate-soft: var(--tpl-slate-soft);
 
 	/* `inline` matters here: the value stays a live `var()`, so `min-h-row`
 	   resolves through the pointer media query above instead of being frozen

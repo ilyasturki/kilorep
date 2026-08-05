@@ -2,13 +2,14 @@
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
-	import { startFrom } from '$lib/domain/template';
+	import { drawableMark, isArchived, startFrom } from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
 	import { formatWhen, workoutMeta, workoutTitle } from '$lib/history/label';
 	import { launchRepeat } from '$lib/history/repeat';
 	import WorkoutRowMenu from '$lib/history/WorkoutRowMenu.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { planLine } from '$lib/templates/plan';
+	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -105,8 +106,15 @@
 		await launchRepeat(data.store, workout);
 	}
 
+	/**
+	 * Archived plans are gone from here, which is most of what archiving is for:
+	 * this is the mid-stride glance, and a list you have stopped training from
+	 * is exactly the noise it exists to take out.
+	 */
+	const startable = $derived(data.templates.filter((template) => !isArchived(template)));
+
 	/** Both glances stay glances, not pages: the tabs hold the rest. */
-	const idleTemplates = $derived(data.templates.slice(0, 4));
+	const idleTemplates = $derived(startable.slice(0, 4));
 
 	// Newest first, which is the order the question is asked in — "what did I do
 	// last time" long before "what did I do in March".
@@ -156,7 +164,7 @@
 
 <main class="min-h-0 flex-1 overflow-y-auto">
 	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
-		{#if data.templates.length === 0 && recent.length === 0}
+		{#if startable.length === 0 && recent.length === 0}
 			<!-- The whole of what this screen has to say before there is a plan to
 			     name or a session to repeat: one line, no icon, no second button.
 			     The act is at the foot where it always is, and a graphic over an
@@ -167,7 +175,7 @@
 			<p class="px-3 text-md font-bold text-ink-faint">Start empty and build as you go.</p>
 		{/if}
 
-		{#if data.templates.length > 0}
+		{#if startable.length > 0}
 			<section class="flex flex-col gap-2">
 				<!-- The heading is what makes a tap on a row unambiguous. On the
 				     Templates tab the same row opens a plan, and PRODUCT.md is
@@ -177,6 +185,14 @@
 
 				<div class="list-group">
 					{#each idleTemplates as template (template.id)}
+						{@const mark = drawableMark(template)}
+
+						{#snippet tile()}
+							{#if mark !== null}
+								<TemplateMark {mark} />
+							{/if}
+						{/snippet}
+
 						<!-- Named movements rather than a count, `planLine`'s doing and the
 						     Templates tab's verbatim: the two screens print the same plan and
 						     have to word it identically, which is why the wording is one
@@ -189,6 +205,7 @@
 							meta={planLine(template, catalogById)}
 							stacked
 							chevron={false}
+							leading={mark === null ? undefined : tile}
 							onclick={() => void startTemplate(template)}
 						/>
 					{/each}
@@ -197,7 +214,7 @@
 				<!-- Outside the card on purpose, the arrangement the Templates tab
 				     already uses: inside it this would be a fifth row that looked
 				     like a plan and started nothing. -->
-				{#if data.templates.length > idleTemplates.length}
+				{#if startable.length > idleTemplates.length}
 					<ListRow title="See all templates" href="/templates" />
 				{/if}
 			</section>

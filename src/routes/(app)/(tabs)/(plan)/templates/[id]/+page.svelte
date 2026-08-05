@@ -7,6 +7,8 @@
 	import {
 		addExercise,
 		addSet,
+		drawableMark,
+		isArchived,
 		isBlank,
 		moveEntry,
 		moveExercise,
@@ -23,10 +25,12 @@
 	import { firstUncompleted } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
+	import MarkPickerSheet from '$lib/templates/MarkPickerSheet.svelte';
 	import { plannedEntries } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanList from '$lib/templates/PlanList.svelte';
 	import PlanOptionsMenu from '$lib/templates/PlanOptionsMenu.svelte';
+	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
@@ -36,7 +40,10 @@
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import { revealNearest } from '$lib/ui/scroll';
+	import Archive from '$lib/ui/icons/Archive.svelte';
+	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
+	import Plus from '$lib/ui/icons/Plus.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 	import { press } from '$lib/ui/press';
@@ -321,6 +328,21 @@
 		await goto('/workout');
 	}
 
+	let markOpen = $state(false);
+
+	const mark = $derived(drawableMark(template));
+
+	const archived = $derived(isArchived(template));
+
+	/**
+	 * Only a persisted template can be put away, which needs no guard here: the
+	 * button is behind `persisted` at both widths, and a plan that has never
+	 * said anything has nothing to archive.
+	 */
+	function toggleArchived() {
+		template.archivedAt = archived ? null : Date.now();
+	}
+
 	let discardOpen = $state(false);
 
 	/**
@@ -369,6 +391,26 @@
 	</button>
 {/snippet}
 
+<!-- Beside the trash and shaped like it, in the neutral ink the trash spends on
+     red: putting a plan away is not destroying it. No dialog either, for the
+     same reason — the act is its own undo, the row is one tap from coming back,
+     and a confirmation would price a reversible thing like an irreversible one.
+     The trash keeps its dialog and its colour. -->
+{#snippet archive(size: number)}
+	{@const Glyph = archived ? ArrowCounterClockwise : Archive}
+
+	<button
+		type="button"
+		aria-label={archived ? 'Unarchive template' : 'Archive template'}
+		onclick={toggleArchived}
+		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line
+			text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+		{@attach press()}
+	>
+		<Glyph {size} />
+	</button>
+{/snippet}
+
 <!-- START, not "Start workout": the same word the pane's button says, in the
      register a 44px pill can carry — `Button`'s caps size follows the box, so
      the two are one label at two scales rather than two labels. Same shape the
@@ -380,6 +422,7 @@
 {#snippet deskActions()}
 	<div class="hidden items-center gap-2 lg:flex">
 		{#if persisted}
+			{@render archive(20)}
 			{@render trash(20)}
 		{/if}
 
@@ -440,14 +483,43 @@
 				     form with one field in it. It scrolls away with the cards, which a
 				     name read once on arrival should, and the bar overhead keeps a
 				     copy for when it has. -->
-				<input
-					bind:value={template.name}
-					aria-label="Template name"
-					placeholder="Push day"
-					autocomplete="off"
-					class="w-full rounded-lg bg-transparent px-1 text-2xl font-extrabold
-						tracking-tight text-ink focus-ring placeholder:text-ink-faint"
-				/>
+				<!-- The mark rides in the title's line rather than above it, because it
+				     is part of what the plan is called: the list draws the two together
+				     and this is the one screen where both are editable, so they are
+				     edited side by side. Unpicked it is an outline the size of a tile
+				     — a slot that says a mark could go here, which the row it will
+				     appear on deliberately does not. -->
+				<div class="flex items-center gap-2">
+					<button
+						type="button"
+						aria-label={mark === null ? 'Pick a template icon' : 'Change the template icon'}
+						onclick={() => (markOpen = true)}
+						class="grid size-11 shrink-0 place-items-center rounded-xl focus-ring
+							hover:bg-hover press:bg-surface-2"
+						{@attach press()}
+					>
+						{#if mark === null}
+							<span
+								aria-hidden="true"
+								class="grid size-8 place-items-center rounded-lg border border-dashed
+									border-line text-ink-faint"
+							>
+								<Plus size={16} />
+							</span>
+						{:else}
+							<TemplateMark {mark} />
+						{/if}
+					</button>
+
+					<input
+						bind:value={template.name}
+						aria-label="Template name"
+						placeholder="Push day"
+						autocomplete="off"
+						class="min-w-0 flex-1 rounded-lg bg-transparent px-1 text-2xl font-extrabold
+							tracking-tight text-ink focus-ring placeholder:text-ink-faint"
+					/>
+				</div>
 
 				{#each entries as entry (entry.id)}
 					{@const lifted = drag.isLifted(entry.id)}
@@ -554,7 +626,8 @@
 				     act can sit without being under a thumb that is aiming at Start.
 				     Icon alone: the dialog behind it does the spelling out. -->
 				{#if persisted}
-					<div class="flex justify-center pt-2 pb-1 lg:hidden">
+					<div class="flex justify-center gap-2 pt-2 pb-1 lg:hidden">
+						{@render archive(18)}
 						{@render trash(18)}
 					</div>
 				{/if}
@@ -614,6 +687,17 @@
 	pinned={supersetShelf}
 	lastPerformed={data.lastPerformed}
 	onpick={supersetPicks}
+/>
+
+<!-- It stays open on a pick: the glyph and the hue are two halves of one
+     choice, and a sheet that closed on the first half would have to be
+     reopened to finish it. -->
+<MarkPickerSheet
+	bind:open={markOpen}
+	{mark}
+	onpick={(picked) => {
+		template.mark = picked;
+	}}
 />
 
 <PlanOptionsMenu
