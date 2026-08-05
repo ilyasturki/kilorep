@@ -737,7 +737,10 @@
 		     `swipeClick` for why the pane also has to eat one click. The a11y
 		     ignore is honest: this is not an interaction, it is a shortcut to the
 		     header's own Session-overview button, which keyboards and screen
-		     readers already have. -->
+		     readers already have.
+
+		     The listeners are here; the `touch-action` that keeps them fed is on
+		     `main` below, and the split is not a choice — see the note there. -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="relative flex min-h-0 flex-1"
@@ -794,8 +797,26 @@
 			<!-- `max(…)` and not `pb-safe-b` alone: on the many devices whose inset
 		     is zero the bare token put FINISH flush against the screen's edge,
 		     and the floor of a page deserves the air the drawers already claim
-		     the same way. -->
-			<main class="min-h-0 flex-1 overflow-y-auto py-3 pb-[max(1.5rem,var(--spacing-safe-b))]">
+		     the same way.
+
+		     `touch-pan-y` is what makes the overview swipe possible at all, and it
+		     has to be *here*, on the scroller, however much it looks like it
+		     belongs on the wrapper that carries the listeners. Left at `auto`, the
+		     browser reserves both axes for scrolling and takes the touch the
+		     moment it clears its own slop: `pointercancel` lands about 16px in,
+		     one move after `swipeMove` commits, and every swipe died as a panel
+		     that flashed and retreated. The rule only reaches the gesture from the
+		     scroller because the browser intersects `touch-action` from the
+		     touched element up to whatever would scroll and stops there — a
+		     declaration on the wrapper above `main` is never read, which is why
+		     putting it there fixed nothing. Nothing scrolls sideways in here, so
+		     the axis costs nothing to give up, and vertical stays the browser's:
+		     that is the wander `swipeMove` bails on. Descendants that need the
+		     whole pointer keep it — `touch-none` on a drag handle or the ruler
+		     intersects to `none` regardless of what this says. -->
+			<main
+				class="min-h-0 flex-1 touch-pan-y overflow-y-auto py-3 pb-[max(1.5rem,var(--spacing-safe-b))]"
+			>
 				<!-- Capped and centred in the window, which is where the bar centres
 			     its tabs — so the tabs land over the set rows, and Exercises'
 			     column lands under them too. The mark and FINISH pin to the
