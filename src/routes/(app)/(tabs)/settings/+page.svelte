@@ -619,11 +619,7 @@
      a scroller inside a scroller — and would have kept it out of that layout's
      scroll snapshot, which is the thing that gives a screen its offset back on
      the way in from history. -->
-<main class="column-content flex flex-col gap-6 px-3 pt-safe-t pb-4 lg:pt-0">
-	<header class="flex flex-col gap-3 pt-3">
-		<h1 class="px-1 text-2xl font-extrabold tracking-tight">Settings</h1>
-	</header>
-
+<main class="column-content flex flex-col gap-6 px-3 pt-3 pb-4">
 	<!-- First, and above the account: it is the only section here that answers to
 		     the gym rather than to plumbing, and it exists whether or not a server
 		     was ever connected. -->

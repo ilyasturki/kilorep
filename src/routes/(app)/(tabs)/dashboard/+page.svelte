@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { catalogById } from '$lib/catalog';
 	import Sparkline from '$lib/dashboard/Sparkline.svelte';
-	import WorkoutBanner from '$lib/dashboard/WorkoutBanner.svelte';
 	import { rollingAverage, localDateOf, weeklyRate, windowed } from '$lib/domain/bodyweight';
 	import { consistency, estTrend, mainLifts, muscleVolume, recentPrs } from '$lib/domain/dashboard';
 	import { loadFactor } from '$lib/domain/exercise';
@@ -14,12 +13,13 @@
 	import type { PageProps } from './$types';
 
 	/**
-	 * The Dashboard: PRODUCT.md's four standing questions, one card each, no
-	 * configuration. It is the landing screen now — it leads the bar, and `/`
-	 * in the APK, `AFTER_LOGIN` and the top bar's mark were pointed here with
-	 * it; `navTabs` is where that was decided and why. Every answer is derived
-	 * in `$lib/domain/dashboard` from what the load already read; nothing here
-	 * writes, so there is no store and no sync to hold.
+	 * Progress: PRODUCT.md's four standing questions, one card each, no
+	 * configuration — and nothing else. The banner that used to sit above them
+	 * was the one stated exception to that rule, entitled by home owing the user
+	 * a way into a workout; home is Train now, which *is* that way in, so the
+	 * exception went with it. Every answer is derived in `$lib/domain/dashboard`
+	 * from what the load already read; nothing here writes, so there is no store
+	 * and no sync to hold.
 	 *
 	 * The windows are the derivation's defaults, stated in each card's own
 	 * small print: four weeks back for bests, balance and the weight rate,
@@ -27,12 +27,13 @@
 	 * the phone ever disagrees — never by the user; a dashboard with knobs is a
 	 * screen that asks questions instead of answering them.
 	 *
-	 * Two cards are doors: Consistent? opens History and Weight on track?
-	 * opens the Weight screen, whose bar slot this screen took — the whole
-	 * card is the link, which is why neither may hold a link of its own.
-	 * Progressing?'s rows go to their exercise details instead, so that card
-	 * is a plain section. The banner above all four is the way into a workout,
-	 * and its own file states why home is entitled to one.
+	 * Two cards are doors, and they are how History and Weight are reached at
+	 * all: Consistent? opens History, Weight on track? opens Weight. Both are
+	 * this tab's children rather than tabs of their own — `parentOf` in
+	 * `nav/bar.svelte` is where back learns that, their addresses having stayed
+	 * flat. The whole card is the link, which is why neither may hold a link of
+	 * its own. Progressing?'s rows go to their exercise details instead, so that
+	 * card is a plain section.
 	 *
 	 * ## Two columns, and why they are uneven
 	 *
@@ -209,31 +210,7 @@
 	<title>Progress | Kilorep</title>
 </svelte:head>
 
-<main class="column-board flex min-h-full flex-col gap-4 px-3 pt-safe-t pb-4 lg:pt-3">
-	<!-- Gone from `lg` up, same bargain as Weight: the bar above already says
-	     Dashboard in the lit tab — and carries the gear beside its mark, which is
-	     why this one goes with the header rather than staying on screen.
-
-	     One compact row rather than the other tabs' 28px title under 24px of
-	     padding. Those screens open on a list and can spend 80px introducing
-	     themselves; this one opens on four answers, and the lit tab has already
-	     said the word once. The heading stays — a screen owes a reader an h1 —
-	     it just stops being the largest thing on a phone screen it has no
-	     business leading.
-
-	     No gear. Settings is a tab of its own now, reachable from every screen
-	     including a live session, so a door hanging off this one screen would be
-	     a second way to the same place and the only one that depended on where
-	     you happened to be standing. -->
-	<header class="flex items-center justify-between gap-3 px-1 pt-2 lg:hidden">
-		<h1 class="text-lg font-extrabold tracking-tight">Progress</h1>
-	</header>
-
-	<!-- Above the questions and outside the `bare` branch both: a first install
-	     has nothing to answer *and* nothing to answer it with, and the way to fix
-	     that is the one thing this screen should still offer. -->
-	<WorkoutBanner />
-
+<main class="column-board flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
 	{#if bare}
 		<EmptyState
 			title="Nothing to ask yet"

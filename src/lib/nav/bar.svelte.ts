@@ -72,7 +72,48 @@ export function tabRoots(): string[] {
 	return navTabs().flatMap((tab) => rootsOf(tab));
 }
 
+/**
+ * Where a screen that is not a tab root goes when back walks off the end of
+ * history. Path prefix answers most of them — `/exercises/{id}` sits under
+ * `/exercises` — and this covers the two it cannot: History and Weight are
+ * Progress' children by the nav's design, not by their addresses, which stayed
+ * flat so nothing had to be renamed.
+ */
+const PARENTS: Record<string, string> = {
+	'/history': '/dashboard',
+	'/weight': '/dashboard'
+};
+
+export function parentOf(pathname: string): string | null {
+	const named = PARENTS[pathname];
+
+	if (named !== undefined) {
+		return named;
+	}
+
+	// Longest first, so `/exercises/{id}` cannot be claimed by a shorter root
+	// that happens to prefix it.
+	return (
+		tabRoots()
+			.toSorted((a, b) => b.length - a.length)
+			.find((root) => pathname.startsWith(`${root}/`)) ?? null
+	);
+}
+
+/**
+ * What a screen hands the bar above it.
+ *
+ * `title` is the phone bar's middle; unset, the bar falls back to the lit tab's
+ * label, which is right for every tab root and wrong for nothing else, because
+ * a screen deeper than a root always has a name of its own to give.
+ *
+ * `leading` is the phone bar's left, for the screens that want something there
+ * other than the back button the bar would otherwise draw — the loop's session
+ * overview being the only one.
+ */
 export class AppBarSlot {
+	public title: string | null = $state(null);
+	public leading: Snippet | null = $state(null);
 	public action: Snippet | null = $state(null);
 }
 

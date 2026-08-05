@@ -112,14 +112,7 @@
 </svelte:head>
 
 <main class="min-h-0 flex-1 overflow-y-auto">
-	<!-- `lg:pt-3` is the Templates and Exercises tabs' own: the phone header is
-	     gone at that width and the first thing on the page is a section heading,
-	     which flush under the bar's hairline reads as part of the bar. -->
-	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-3">
-		<header class="pt-10 lg:hidden">
-			<h1 class="text-2xl font-extrabold tracking-tight">Kilorep</h1>
-		</header>
-
+	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
 		{#if data.templates.length === 0}
 			<!-- The whole of what this screen has to say before there is a plan to
 			     name: one line, no icon, no second button. The act is at the foot

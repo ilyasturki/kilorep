@@ -2,6 +2,7 @@
 	import type { DateValue } from '@internationalized/date';
 	import { parseDate } from '@internationalized/date';
 
+	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import type { BodyweightEntry } from '$lib/domain/bodyweight';
 	import { localDateOf, rollingAverage, windowed } from '$lib/domain/bodyweight';
 	import { syncSoon } from '$lib/sync/client';
@@ -228,19 +229,27 @@
 		menuAnchor = anchor;
 		menuOpen = true;
 	}
+
+	/**
+	 * This screen is a child of Progress rather than a tab, so the bar has no lit
+	 * tab to take a word from — it says its own name or it says nothing.
+	 */
+	const bar = appBarSlot();
+
+	$effect(() => {
+		bar.title = 'Weight';
+
+		return () => {
+			bar.title = null;
+		};
+	});
 </script>
 
 <svelte:head>
 	<title>Weight | Kilorep</title>
 </svelte:head>
 
-<main class="column-content flex min-h-full flex-col gap-4 px-3 pt-safe-t pb-4 lg:pt-3">
-	<!-- Gone from `lg` up, same bargain as History: the bar above already says
-	     Weight in the lit tab. -->
-	<header class="px-1 pt-6 lg:hidden">
-		<h1 class="text-2xl font-extrabold tracking-tight">Weight</h1>
-	</header>
-
+<main class="column-content flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
 	<section class="flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-3">
 		<div class="flex items-baseline justify-between px-1">
 			<h2 class="label-caps">Today · {day.format(Date.parse(today))}</h2>

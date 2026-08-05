@@ -22,7 +22,7 @@
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
-	import BackLink from '$lib/nav/BackLink.svelte';
+	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
 	import { syncSoon } from '$lib/sync/client';
 	import { entriesWithMeta, legOf } from '$lib/workout/groups';
@@ -424,7 +424,54 @@
 
 		await launch();
 	}
+
+	/**
+	 * The bar carries this screen's name and its actions. Back it draws itself:
+	 * `/history/{id}` is no tab root, and `parentOf` walks it up to the list.
+	 *
+	 * Assigned inside the effect so both follow `editing` — the posture swaps
+	 * REPEAT and the menu for the one way out, and DONE landing where the thumb
+	 * just left is what makes edit mode read as a mode rather than a place.
+	 */
+	const bar = appBarSlot();
+
+	$effect(() => {
+		bar.title = title;
+		bar.action = actions;
+
+		return () => {
+			bar.title = null;
+			bar.action = null;
+		};
+	});
 </script>
+
+{#snippet actions()}
+	{#if editing}
+		<Button variant="chrome" caps onclick={stopEditing}>DONE</Button>
+	{:else}
+		<div class="flex items-center gap-2">
+			<!-- Outlined, not the accent: the lit Repeat is the one pinned at the
+			     foot, and Button's rule is one filled button per screen. This is the
+			     same act within reach of the eye rather than the thumb. -->
+			<Button variant="chrome" caps onclick={() => void repeat()}>REPEAT</Button>
+
+			<button
+				type="button"
+				aria-label="Workout options"
+				onclick={(e) => {
+					menuAnchor = e.currentTarget;
+					menuOpen = true;
+				}}
+				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full
+					text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+				{@attach press()}
+			>
+				<More size={20} />
+			</button>
+		</div>
+	{/if}
+{/snippet}
 
 <svelte:head>
 	<title>{title} | Kilorep</title>
@@ -456,63 +503,15 @@
 <!-- No bottom padding of its own: the sticky Repeat bar carries the foot of
      the page, the same bargain the template editor strikes — and pays it back
      for the stretch where editing takes that bar away. -->
-<main
-	class={[
-		'column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t lg:pt-0',
-		editing && 'pb-4'
-	]}
->
-	<!-- Back, name and actions on one line. The title pays for it — `text-xl` and
-	     truncated, where it used to have a row of its own at `text-2xl` — and that
-	     is the trade: what a bar of chrome above a heading was spending was a
-	     screenful of vertical space on a screen that is read by scrolling. -->
-	<header class="flex flex-col gap-1 pt-3">
-		<div class="flex items-center gap-2">
-			<!-- It stays navigation in both postures: Done is beside it, and a back
-			     arrow that sometimes went back and sometimes did not would be the
-			     surprise DESIGN.md rules out. This screen is the one the exercise
-			     page links into, which is why `/history` alone was not enough — see
-			     `BackLink`. -->
-			<BackLink href="/history" label="Back to history" />
-
-			<h1 class="min-w-0 flex-1 truncate text-xl font-extrabold tracking-tight">{title}</h1>
-
-			<!-- Editing swaps both actions for the one way out. Repeating a session
-			     mid-correction is not a gesture anyone means, and DONE landing in the
-			     slot the thumb just left is what makes edit mode feel like a mode
-			     rather than a place. -->
-			{#if editing}
-				<Button variant="chrome" caps onclick={stopEditing}>DONE</Button>
-			{:else}
-				<!-- Outlined, not the accent: the lit Repeat is the one pinned at the
-				     foot, and Button's rule is one filled button per screen. This is the
-				     same act within reach of the eye rather than the thumb. -->
-				<Button variant="chrome" caps onclick={() => void repeat()}>REPEAT</Button>
-
-				<button
-					type="button"
-					aria-label="Workout options"
-					onclick={(e) => {
-						menuAnchor = e.currentTarget;
-						menuOpen = true;
-					}}
-					class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full
-						text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
-					{@attach press()}
-				>
-					<More size={20} />
-				</button>
-			{/if}
-		</div>
-
-		<!-- The date and nothing about the clock: a session is a day here, and how
-		     many minutes it ran was a number the record happened to be able to
-		     compute rather than one anybody came to read. -->
-		<p class="px-1 text-md font-bold text-ink-faint">
-			{when.format(workout.startedAt)}
-			{#if drift !== null && !hasDrift(drift)}· as planned{/if}
-		</p>
-	</header>
+<main class={['column-content flex min-h-full flex-col gap-5 px-3 pt-3', editing && 'pb-4']}>
+	<!-- The date and nothing about the clock: a session is a day here, and how
+	     many minutes it ran was a number the record happened to be able to
+	     compute rather than one anybody came to read. The name and the actions
+	     that used to sit above it are the bar's now. -->
+	<p class="px-1 text-md font-bold text-ink-faint">
+		{when.format(workout.startedAt)}
+		{#if drift !== null && !hasDrift(drift)}· as planned{/if}
+	</p>
 
 	<div class="flex flex-1 flex-col gap-3">
 		<!-- The drag wrapper stands in both postures: nothing can lift without the

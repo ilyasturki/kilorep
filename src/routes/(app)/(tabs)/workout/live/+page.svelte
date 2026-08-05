@@ -500,26 +500,51 @@
 		optionsSetId = null;
 	}
 
-	// The bar's right-hand slot, given back on the way out — leaving it set would
-	// carry FINISH onto Exercises, which is a button that resets a workout
-	// sitting on a screen that has none. The idle screen fills the same slot with
-	// the gear, and neither page has to know that: one address, one action.
+	/**
+	 * What the bar carries while a session runs, given back on the way out —
+	 * leaving any of it set would put FINISH on a screen with no workout to
+	 * finish.
+	 *
+	 * The leading slot is the session overview rather than a back button, which
+	 * is the whole reason that slot exists: this address is a tab root, so the
+	 * bar would otherwise draw nothing there, and the overview is what a thumb
+	 * reaches for mid-session. FINISH keeps the right-hand slot on both
+	 * viewports — the thumb that never scrolls still finds it without leaving
+	 * the top of the screen, which is rule 7's whole claim on this bar.
+	 */
 	const bar = appBarSlot();
 
 	$effect(() => {
+		bar.title = 'Workout';
+		bar.leading = overviewButton;
 		bar.action = finish;
 
 		return () => {
+			bar.title = null;
+			bar.leading = null;
 			bar.action = null;
 		};
 	});
 </script>
 
-<!-- Declared once and rendered twice — into this screen's own header on a phone,
-     and into the app bar's slot on a desk. Finish has no ceremony: no summary,
-     no confetti, one question and out. What follows the question is
-     `finishSession` — the session recorded or discarded, and the idle screen,
-     where a second run is one tap away. -->
+{#snippet overviewButton()}
+	<button
+		type="button"
+		aria-label="Session overview"
+		onclick={() => (overview = true)}
+		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
+			border-line text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+		{@attach press()}
+	>
+		<Stack size={20} />
+	</button>
+{/snippet}
+
+<!-- Handed to the bar, which is the only place it is drawn now — one header for
+     both viewports rather than this screen's own below `lg` and the bar's above.
+     Finish has no ceremony: no summary, no confetti, one question and out. What
+     follows the question is `finishSession` — the session recorded or discarded,
+     and the idle screen, where a second run is one tap away. -->
 {#snippet finish()}
 	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
 {/snippet}
@@ -535,27 +560,6 @@
      that no longer exists is worse than a pane briefly drawn from nothing. -->
 {#if session !== null}
 	<div class="flex min-h-0 flex-1 flex-col">
-		<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:hidden">
-			<div class="flex items-center gap-2 px-3 py-2">
-				<button
-					type="button"
-					aria-label="Session overview"
-					onclick={() => (overview = true)}
-					class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
-					{@attach press()}
-				>
-					<Stack size={20} />
-				</button>
-
-				<div class="min-w-0 flex-1 text-center">
-					<span class="label-caps">Workout</span>
-				</div>
-
-				{@render finish()}
-			</div>
-		</header>
-
 		<!-- The swipe listeners ride the pane's wrapper — every set row, every gap —
 		     because the gesture belongs to the screen, not to a strip of it. See
 		     `swipeStart` for why they observe rather than claim the pointer. The

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { catalog } from '$lib/catalog';
+	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { rawPr } from '$lib/domain/stats';
 	import { kin } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, loadModeNote, ordinal } from '$lib/exercises/label';
-	import BackLink from '$lib/nav/BackLink.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -30,6 +30,21 @@
 	let { data }: PageProps = $props();
 
 	const exercise = $derived(data.exercise);
+
+	/**
+	 * The bar names the exercise, which is what the pane's `h1` used to do. The
+	 * variant chips below walk exercise to exercise without leaving this route,
+	 * so the title is assigned inside the effect rather than once at mount.
+	 */
+	const bar = appBarSlot();
+
+	$effect(() => {
+		bar.title = exercise.name;
+
+		return () => {
+			bar.title = null;
+		};
+	});
 
 	// One list and no direction: whoever is on screen, the rest of the family is
 	// what they might have meant instead, and the parent has no claim to be read
@@ -86,20 +101,8 @@
 	/>
 {/snippet}
 
-<main class="column-content flex min-h-full flex-col gap-5 px-3 pt-safe-t pb-4 lg:pt-0">
-	<header class="flex flex-col gap-2 pt-3">
-		<div class="flex items-center gap-3">
-			<!-- The variant chips below walk exercise to exercise, so the fixed
-			     parent was wrong on this screen before any other: `/exercises` is
-			     the catalog root, not the exercise the user pressed a chip from.
-			     A plan card's title is now a third way in, and `BackLink` answers
-			     all of them the same way: it walks history and keeps the root as
-			     its fallback. -->
-			<BackLink href="/exercises" label="Back to exercises" />
-
-			<h1 class="min-w-0 text-2xl font-extrabold tracking-tight">{exercise.name}</h1>
-		</div>
-
+<main class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
+	<header class="flex flex-col gap-2">
 		<!-- The art beside what describes the exercise, vertically centred against
 		     it, so neither column floats in space the other left empty. Absent,
 		     not reserved, when there is no art: the notes column simply takes the

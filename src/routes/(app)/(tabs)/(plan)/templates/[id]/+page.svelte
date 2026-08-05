@@ -20,7 +20,6 @@
 		supersetWith
 	} from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
-	import BackLink from '$lib/nav/BackLink.svelte';
 	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { plannedEntries } from '$lib/templates/plan';
@@ -339,24 +338,30 @@
 	}
 
 	/**
-	 * The bar's right-hand slot from `lg`, given back on the way out.
+	 * What this screen hands the bar.
 	 *
-	 * Start and delete both live up here on a desk, where there is a bar to hold
-	 * them: the pane keeps its own Start under the thumb, and delete has left the
-	 * foot of the plan entirely rather than sitting under the last exercise
-	 * competing with it. On a phone there is no bar, so the header carries Start
-	 * and the plan's foot keeps the trash — the same control, anchored where each
-	 * device has room for it, which is the split the nav bars already make.
+	 * The title is the one place in the app where a screen's name is also a
+	 * field: the plan is renamed by typing into the pane, so the bar mirrors it
+	 * rather than owning it, and a plan that says nothing yet is called what the
+	 * document title calls it.
 	 *
-	 * The body reads nothing reactive, so this runs once and the snippet
-	 * re-renders itself; `persisted` inside it is read where it is rendered.
+	 * The action stays a desk affordance and says so in its own markup rather
+	 * than by being withheld here — the pane already pins Start under the thumb
+	 * and keeps the trash at the plan's foot, and a phone bar repeating both
+	 * would put two Starts on one screen.
+	 *
+	 * `title` is assigned inside the effect so it re-runs as the name is typed;
+	 * the snippet re-renders itself, and `persisted` inside it is read where it
+	 * is rendered.
 	 */
 	const bar = appBarSlot();
 
 	$effect(() => {
+		bar.title = template.name.trim() === '' ? 'New template' : template.name;
 		bar.action = deskActions;
 
 		return () => {
+			bar.title = null;
 			bar.action = null;
 		};
 	});
@@ -384,7 +389,7 @@
 {/snippet}
 
 {#snippet deskActions()}
-	<div class="flex items-center gap-2">
+	<div class="hidden items-center gap-2 lg:flex">
 		{#if persisted}
 			{@render trash(20)}
 		{/if}
@@ -400,36 +405,6 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
 <div class="flex min-h-0 flex-1 flex-col">
-	<!-- Back, the name and Start on one line, on a phone and nowhere else. The
-	     name is the page's title and its one field at once, so it is a bare input
-	     with no caps label over it: a label here would push the field onto a
-	     second row and say "Name" above a box that already reads "Push day".
-
-	     Bordered and opaque because the pane below scrolls under it.
-
-	     Gone from `lg` up — the same `lg:hidden` the workout screen's header
-	     wears, and now for the same reason. This bar used to stand at every
-	     width, on the argument that the app bar has nowhere to put a text field:
-	     true, and beside the point, because the pane does. Two bars stacked is
-	     what that argument bought, and the field has moved into the pane below
-	     rather than the chrome shrinking to accommodate it. START and the trash
-	     are already up in the bar from `lg` — see `deskActions`. -->
-	<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t lg:hidden">
-		<div class="column-content flex items-center gap-2 px-3 py-2">
-			<BackLink href="/templates" label="Back to templates" />
-
-			<input
-				bind:value={template.name}
-				aria-label="Template name"
-				placeholder="Push day"
-				autocomplete="off"
-				class="field-box min-h-chrome min-w-0 flex-1 border-line focus-ring"
-			/>
-
-			{@render go()}
-		</div>
-	</header>
-
 	<div class="relative flex min-h-0 flex-1">
 		<!-- The plan, floating in the margin the window has left over. The geometry
 		     is the workout rail's, to the pixel, and the reasoning lives there in
@@ -469,19 +444,20 @@
 			     lift returned on its first guard. The sidebar's list has bound its own
 			     since the day it was written, which is why that one worked. -->
 			<div bind:this={drag.root} class="column-content flex min-h-full flex-col gap-3 px-3 pt-3">
-				<!-- The name, from `lg` up, where the header that used to carry it is
-				     gone. A title that happens to be typable: no border, no fill, no
-				     caps label above it — the same 2xl extrabold the Exercises and
-				     History detail screens set their `h1` in, so it reads as the page's
-				     name and not as a form with one field in it. It scrolls away with
-				     the cards, which a name read once on arrival should. -->
+				<!-- The name, at every width now that no screen draws its own header.
+				     A title that happens to be typable: no border, no fill, no caps
+				     label above it — the same 2xl extrabold the other detail screens
+				     set their heading in, so it reads as the page's name and not as a
+				     form with one field in it. It scrolls away with the cards, which a
+				     name read once on arrival should, and the bar overhead keeps a
+				     copy for when it has. -->
 				<input
 					bind:value={template.name}
 					aria-label="Template name"
 					placeholder="Push day"
 					autocomplete="off"
-					class="hidden w-full rounded-lg bg-transparent px-1 text-2xl font-extrabold
-						tracking-tight text-ink focus-ring placeholder:text-ink-faint lg:block"
+					class="w-full rounded-lg bg-transparent px-1 text-2xl font-extrabold
+						tracking-tight text-ink focus-ring placeholder:text-ink-faint"
 				/>
 
 				{#each entries as entry (entry.id)}

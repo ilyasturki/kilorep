@@ -5,6 +5,7 @@
 	import type { Workout } from '$lib/domain/workout';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import WorkoutRowMenu from '$lib/history/WorkoutRowMenu.svelte';
+	import { appBarSlot } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -123,19 +124,27 @@
 		// to leave the screen under the finger that deleted it.
 		await invalidateAll();
 	}
+
+	/**
+	 * This screen is a child of Progress rather than a tab, so the bar has no lit
+	 * tab to take a word from — it says its own name or it says nothing.
+	 */
+	const bar = appBarSlot();
+
+	$effect(() => {
+		bar.title = 'History';
+
+		return () => {
+			bar.title = null;
+		};
+	});
 </script>
 
 <svelte:head>
 	<title>History | Kilorep</title>
 </svelte:head>
 
-<main class="column-content flex min-h-full flex-col gap-4 px-3 pt-safe-t pb-4 lg:pt-3">
-	<!-- Gone from `lg` up, same bargain as Exercises: the bar above already
-	     says History in the lit tab. -->
-	<header class="px-1 pt-6 lg:hidden">
-		<h1 class="text-2xl font-extrabold tracking-tight">History</h1>
-	</header>
-
+<main class="column-content flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
 	{#if live !== null}
 		<!-- Its own card, above the group and never inside it: this row resumes,
 		     the rows below it read. The dot is the accent, which in this app means

@@ -13,8 +13,7 @@
 	 * one level down, and a segment on them would offer to swap the screen you
 	 * are standing on for a sibling of its parent.
 	 *
-	 * Not sticky, and where each list's `h1` used to be: on this tab the segment
-	 * *is* the title, and the one screen below with a sticky element of its own —
+	 * Not sticky: the one screen below with a sticky element of its own —
 	 * Exercises' search field, which its comment says must never be a scroll away
 	 * — already owns `top-0` in this scroll box.
 	 */
@@ -29,11 +28,7 @@
 </script>
 
 {#if onList}
-	<div class="column-content flex flex-col gap-3 px-3 pt-safe-t">
-		<!-- Gone from `lg` up, like the headings it replaces: the bar above already
-		     says Plan in the tab that is lit. -->
-		<h1 class="px-1 pt-6 text-2xl font-extrabold tracking-tight lg:hidden">Plan</h1>
-
+	<div class="column-content flex flex-col px-3 pt-3">
 		<!-- A raised pill on a well, not the accent: `Chip` paints its selected
 		     state with the accent fill, and the accent means "this logs a set".
 		     `surface` over `sunken` is the depth ramp saying the same thing
