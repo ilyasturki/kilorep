@@ -42,6 +42,15 @@
 		rating !== null && EXERTION_RUNGS.includes(rating) ? String(shownExertion(rating, scale)) : ''
 	);
 
+	/**
+	 * `''` is the toggle group deselecting — re-tapping the lit chip — and it is
+	 * the only way to clear a rating now that the `–` chip is gone. Eight items
+	 * fill four columns exactly and nine did not, and the one this spends is the
+	 * one the control already had a gesture for.
+	 *
+	 * The gap it leaves is honest and small: a custom value lights no chip, so
+	 * clearing an RPE of 6 means opening ⋯ and emptying the field.
+	 */
 	function pick(next: string) {
 		if (next === 'custom') {
 			mode = 'custom';
@@ -49,9 +58,30 @@
 			return;
 		}
 
-		onchange(next === 'clear' || next === '' ? null : storedExertion(Number(next), scale));
+		onchange(next === '' ? null : storedExertion(Number(next), scale));
 		mode = 'pill';
 	}
+
+	/**
+	 * One height for both expanded states, so entering and leaving ⋯ does not
+	 * move the commit button underneath — a button that shifts under a thumb
+	 * already travelling toward it is the logging loop's own kind of bug.
+	 *
+	 * Under a thumb the chip grid is the tall one: two rows of `chip` plus the
+	 * `gap-2` between them. Written as a calc off the token rather than as 112px,
+	 * so it still fits when the OS text size grows the chips. At a fine pointer
+	 * the chips are one 40px line and the stepper's 76px is the tall one instead,
+	 * which is what `min-h-19` restores.
+	 *
+	 * Alignment is not in here, and deliberately: the chips are centred in the box
+	 * so a desk's one-line row is never stretched into slabs, and the custom row
+	 * fills it, because a stepper as tall as the box is a fatter target and
+	 * nothing else is competing for the space. Two `align-items` utilities in one
+	 * class list would be settled by Tailwind's own ordering rather than by which
+	 * was written last, so each branch states its own.
+	 */
+	const reserved =
+		'flex basis-full min-h-[calc(2*var(--spacing-chip)+0.5rem)] pointer-fine:min-h-19';
 </script>
 
 {#if mode === 'pill'}
@@ -76,24 +106,24 @@
 		<span class="label-caps">{name}</span>
 	</button>
 {:else if mode === 'chips'}
-	<ChipGroup
-		bind:value={() => selected, pick}
-		layout="line"
-		label="{name} for this set"
-		class="basis-full py-0.5"
-	>
-		<Chip value="clear" column>–</Chip>
+	<div class="{reserved} items-center">
+		<ChipGroup
+			bind:value={() => selected, pick}
+			layout="rungs"
+			label="{name} for this set"
+			class="w-full"
+		>
+			{#each rungs as rung (rung)}
+				<Chip value={rung} column>{rung}</Chip>
+			{/each}
 
-		{#each rungs as rung (rung)}
-			<Chip value={rung} column>{rung}</Chip>
-		{/each}
-
-		<Chip value="custom" column aria-label="Other {name} value">
-			<More size={20} />
-		</Chip>
-	</ChipGroup>
+			<Chip value="custom" column aria-label="Other {name} value">
+				<More size={20} />
+			</Chip>
+		</ChipGroup>
+	</div>
 {:else}
-	<div class="flex basis-full items-stretch gap-2">
+	<div class="{reserved} items-stretch gap-2">
 		<button
 			type="button"
 			aria-label="Back to the {name} chips"

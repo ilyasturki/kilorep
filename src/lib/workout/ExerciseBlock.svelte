@@ -5,6 +5,7 @@
 	import { exertionLabel } from '$lib/domain/exertion';
 	import { hintLabel } from '$lib/domain/workout';
 	import { weightStep } from '$lib/domain/exercise';
+	import { loadUnitLabel } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
@@ -82,9 +83,10 @@
 				active:bg-surface-2"
 		>
 			<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
-			<p class="truncate text-sm font-bold text-ink-faint">
-				{meta.equipment}{meta.loadMode === 'per-hand' ? ' · per hand' : ''}
-			</p>
+			<!-- Equipment alone. The load mode used to ride here as `· per hand`,
+			     which put it two lines above the box it is a rule about; it is the
+			     weight field's label now — see `loadUnitLabel`. -->
+			<p class="truncate text-sm font-bold text-ink-faint">{meta.equipment}</p>
 		</a>
 
 		<button
@@ -112,6 +114,7 @@
 						{cursor}
 						{history}
 						step={weightStep(meta.equipment)}
+						unit={loadUnitLabel(meta.loadMode)}
 						{oncommit}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
 						onrate={(rpe) => onrate(cursor.set.id, rpe)}

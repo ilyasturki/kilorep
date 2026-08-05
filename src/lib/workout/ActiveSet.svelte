@@ -16,13 +16,16 @@
 		cursor: SetCursor;
 		history: History;
 		step: number;
+		/** What the weight field calls itself — `kg`, or `kg / hand` on a load
+		 * mode where the number typed is not the number lifted. */
+		unit: string;
 		oncommit: (weight: number, reps: number) => void;
 		ondraft: (weight: number | null, reps: number | null) => void;
 		onrate: (rpe: number | null) => void;
 		onoptions: (anchor: HTMLElement) => void;
 	};
 
-	let { cursor, history, step, oncommit, ondraft, onrate, onoptions }: Props = $props();
+	let { cursor, history, step, unit, oncommit, ondraft, onrate, onoptions }: Props = $props();
 
 	const hint = $derived(hintLabel(history, cursor, exertionScale.current));
 
@@ -136,7 +139,7 @@
 
 		<div class="grid grid-cols-2 gap-2">
 			<StepperField
-				label="kg"
+				label={unit}
 				value={weight}
 				recalled={opened.weight}
 				{step}

@@ -204,7 +204,15 @@
 				touched ? 'text-accent-text' : 'text-ink'
 			]}
 		/>
-		<div class="label-caps">{label}</div>
+		<!-- `nowrap`, and it is load-bearing rather than tidy: the column between the
+		     two arms is 62px on a 360px phone and 42px on a 320px one, while
+		     `KG / HAND` measures 63. Left to wrap it broke across two lines and took
+		     the number up with it, so the weight and the reps beside it no longer
+		     sat on the same line. The label is the one thing in the field allowed to
+		     bleed past the column — it overhangs the dead space under the `−` and
+		     `+`, which are centred a line above it, and the column paints after the
+		     arms so a hover on one cannot cover it. -->
+		<div class="label-caps whitespace-nowrap">{label}</div>
 	</div>
 
 	{@render arm(1, 'increase', 'rounded-r-2xl')}
