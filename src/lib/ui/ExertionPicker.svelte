@@ -144,6 +144,7 @@
 			step={EXERTION_STEP}
 			min={shownMin(scale)}
 			max={shownMax(scale)}
+			ruler
 			class="flex-1"
 			onchange={(v) => onchange(v === null ? null : storedExertion(v, scale))}
 		/>

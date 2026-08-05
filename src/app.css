@@ -1152,6 +1152,35 @@ html[data-nav='pop']::view-transition-old(page) {
 	}
 }
 
+/* The caret the ruler's band draws while a value is being typed.
+
+   It is a picture of a caret and not one: the real insertion point belongs to
+   the stepper's own input, which the ruler is covering. The band is the only
+   place the value shows once the panel is up, so it has to show the state the
+   field is in as well as the number, and a bar that blinks is the one mark
+   every user already reads as "keep typing".
+
+   `steps(1, end)` rather than a fade — a caret that dissolves is a caret that
+   looks like it is being deleted, and nothing in this app fades. */
+@utility caret-band {
+	display: inline-block;
+	width: 2px;
+	height: 1.4em;
+	margin-left: 1px;
+	vertical-align: -0.25em;
+	background-color: var(--accent-text);
+
+	@media (prefers-reduced-motion: no-preference) {
+		animation: caret-blink 1.06s steps(1, end) infinite;
+	}
+}
+
+@keyframes caret-blink {
+	50% {
+		opacity: 0;
+	}
+}
+
 /* Every small caps label in the app — section headings, field names, the
    add-set row. Five utilities that had drifted to four in one place before
    this became a single name. */

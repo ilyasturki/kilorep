@@ -145,6 +145,7 @@
 				value={weight}
 				recalled={opened.weight}
 				{step}
+				ruler
 				onchange={(v) => ondraft(v, reps)}
 				onpreview={(v) => (previewWeight = v)}
 			/>
@@ -153,6 +154,7 @@
 				value={reps}
 				recalled={opened.reps}
 				step={1}
+				ruler
 				onchange={(v) => ondraft(weight, v === null ? null : Math.round(v))}
 				onpreview={(v) => (previewReps = v)}
 			/>

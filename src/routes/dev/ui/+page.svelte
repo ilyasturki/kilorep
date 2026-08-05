@@ -82,8 +82,30 @@
 	// specimen has to hold the value for the arms to move it, and the dot has to
 	// have a fixed thing to be measured against.
 	const steppers = $state([
-		{ value: 82.5 as number | null, recalled: 82.5, label: 'kg', step: 2.5, prop: 'step={2.5}' },
-		{ value: 7 as number | null, recalled: 7, label: 'reps', step: 1, prop: 'step={1}' }
+		{
+			value: 82.5 as number | null,
+			recalled: 82.5,
+			label: 'kg',
+			step: 2.5,
+			ruler: false,
+			prop: 'step={2.5}'
+		},
+		{
+			value: 7 as number | null,
+			recalled: 7,
+			label: 'reps',
+			step: 1,
+			ruler: false,
+			prop: 'step={1}'
+		},
+		{
+			value: 100 as number | null,
+			recalled: 100,
+			label: 'kg',
+			step: 2.5,
+			ruler: true,
+			prop: 'ruler (touch only)'
+		}
 	]);
 
 	const exercises = [
@@ -368,13 +390,14 @@
 			<article class={card}>
 				<h2 class="label-caps">StepperField</h2>
 				<div class="flex gap-2">
-					{#each steppers as stepper (stepper.label)}
+					{#each steppers as stepper (stepper.prop)}
 						<div class="flex flex-1 flex-col gap-1.5">
 							<StepperField
 								bind:value={stepper.value}
 								recalled={stepper.recalled}
 								label={stepper.label}
 								step={stepper.step}
+								ruler={stepper.ruler}
 							/>
 							<span class={caption}>{stepper.prop}</span>
 						</div>

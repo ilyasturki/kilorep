@@ -2,7 +2,9 @@
 	import type { ClassValue } from 'svelte/elements';
 	import { parseEntry, settle } from '$lib/domain/workout';
 	import { tapLift } from '$lib/ui/haptics';
+	import { coarsePointer } from '$lib/ui/pointer';
 	import { press } from '$lib/ui/press';
+	import Ruler from '$lib/ui/Ruler.svelte';
 
 	type Props = {
 		value: number | null;
@@ -11,6 +13,12 @@
 		step?: number;
 		min?: number;
 		max?: number;
+		/** Open the ruler when the number is tapped. Opt-in, and only three fields
+		 * take it: the two on the active set and the custom exertion value. The
+		 * body-weight page and the history editor keep the bare keyboard — they are
+		 * not the logging loop, and a full-screen panel is a lot of screen to spend
+		 * on a number typed once a week. */
+		ruler?: boolean;
 		onchange?: (value: number | null) => void;
 		onpreview?: (value: number | null) => void;
 		class?: ClassValue;
@@ -23,10 +31,16 @@
 		step = 2.5,
 		min = 0,
 		max = Infinity,
+		ruler = false,
 		onchange,
 		onpreview,
 		class: klass
 	}: Props = $props();
+
+	/* At a fine pointer, focusing the field does exactly what it always did. The
+	   ruler is a gesture, and a gesture aimed with a mouse is a worse way to reach
+	   a number than the keyboard already sitting under the hand. */
+	const scrubbable = $derived(ruler && coarsePointer);
 
 	const touched = $derived(value !== recalled);
 
@@ -110,11 +124,42 @@
 
 	let selectPending = false;
 
+	let box = $state<HTMLInputElement | null>(null);
+	let open = $state(false);
+
+	/* What the ruler's band shows instead of the value, and `null` until the first
+	   keystroke. `draft` alone cannot answer this: focusing the field seeds it with
+	   the current value and selects it, and a band showing "102.5" behind a
+	   blinking caret would be claiming something was typed when nothing was. */
+	let typed = $state<string | null>(null);
+
 	function start(event: FocusEvent & { currentTarget: HTMLInputElement }) {
 		draft = value === null ? '' : display;
 		editing = true;
 		selectPending = true;
+		typed = null;
+		open = scrubbable;
 		event.currentTarget.select();
+	}
+
+	/**
+	 * A detent crossed, or a number taken off the strip.
+	 *
+	 * `onchange` per step and not `onpreview`, which is the same contract a held
+	 * `+` already has: a scrub is a run of discrete steps, each one as committed
+	 * as a tap on the arm, and the commit button lighting up has to follow the
+	 * number the band is showing.
+	 *
+	 * `draft` is rewritten along with it, because the blur that closes the panel
+	 * runs `commit()` and `commit()` reads `draft` — left alone it would still
+	 * hold whatever was in the field when the ruler opened, and the whole gesture
+	 * would be undone at the moment it ended.
+	 */
+	function scrub(next: number) {
+		value = next;
+		draft = String(next);
+		typed = null;
+		onchange?.(next);
 	}
 
 	function landing(): number | null {
@@ -129,6 +174,8 @@
 
 	function commit() {
 		editing = false;
+		open = false;
+		typed = null;
 
 		const next = landing();
 		if (next !== value) {
@@ -185,9 +232,11 @@
 		     input clear of the keyboard it just raised, and the margin is what
 		     makes it carry the commit bar underneath along with it. -->
 		<input
+			bind:this={box}
 			value={editing ? draft : display}
 			oninput={(event) => {
 				draft = event.currentTarget.value;
+				typed = draft;
 				onpreview?.(landing());
 			}}
 			onfocus={start}
@@ -226,3 +275,29 @@
 
 	{@render arm(1, 'increase', 'rounded-r-2xl')}
 </div>
+
+<!-- Rendered here rather than at the app root, and it is only `position: fixed`
+     that makes that legal: the panel has to stay inside the active set's card so
+     that opening it is not a `focusout` of the card, which is what clears the
+     commit button's live preview. Nothing inside it takes focus, so the field
+     behind keeps it — and the keyboard with it — for as long as the panel is up.
+
+     `recalled` is where an empty field starts the strip: last session's number is
+     a far better place to begin a drag than 0 kg, and until a detent is crossed
+     it is the ruler's cursor rather than the field's value. -->
+{#if open}
+	<Ruler
+		value={value ?? recalled ?? min}
+		{typed}
+		{label}
+		{step}
+		{min}
+		{max}
+		onscrub={scrub}
+		onpick={(next) => {
+			scrub(next);
+			box?.blur();
+		}}
+		ondismiss={() => box?.blur()}
+	/>
+{/if}
