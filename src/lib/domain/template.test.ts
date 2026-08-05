@@ -685,7 +685,7 @@ describe('archive', () => {
 	});
 });
 
-function marked(icon: string, colour: string): Template {
+function marked(icon: string | null, colour: string | null): Template {
 	const template = blankTemplate('t1', 100);
 
 	template.mark = { icon, colour } as unknown as TemplateMark;
@@ -707,14 +707,30 @@ describe('drawableMark', () => {
 		expect(drawableMark(marked('push', 'blue'))).toEqual({ icon: 'push', colour: 'blue' });
 	});
 
-	test('a glyph this build does not know draws nothing', () => {
-		const template = marked('hinge', 'blue');
-
-		expect(drawableMark(template)).toBeNull();
-		expect(template.mark).not.toBeNull();
+	test('half a mark draws that half', () => {
+		expect(drawableMark(marked(null, 'blue'))).toEqual({ icon: null, colour: 'blue' });
+		expect(drawableMark(marked('push', null))).toEqual({ icon: 'push', colour: null });
 	});
 
-	test('a hue this build does not know draws nothing', () => {
-		expect(drawableMark(marked('push', 'chartreuse'))).toBeNull();
+	test('a mark with neither half draws nothing', () => {
+		expect(drawableMark(marked(null, null))).toBeNull();
+	});
+
+	test('a glyph this build does not know leaves the hue standing', () => {
+		const template = marked('hinge', 'blue');
+
+		expect(drawableMark(template)).toEqual({ icon: null, colour: 'blue' });
+		// Read-only: the record keeps the key, so the device that knows it still
+		// draws it and an upgrade here restores the glyph rather than finding it
+		// erased.
+		expect(template.mark).toEqual({ icon: 'hinge', colour: 'blue' });
+	});
+
+	test('a hue this build does not know leaves the glyph standing', () => {
+		expect(drawableMark(marked('push', 'chartreuse'))).toEqual({ icon: 'push', colour: null });
+	});
+
+	test('a mark whose halves are both unknown draws nothing', () => {
+		expect(drawableMark(marked('hinge', 'chartreuse'))).toBeNull();
 	});
 });

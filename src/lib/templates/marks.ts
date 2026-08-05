@@ -76,3 +76,24 @@ export const MARK_TILES: Record<MarkColour, string> = {
 	fuchsia: 'bg-tpl-fuchsia-soft text-tpl-fuchsia',
 	slate: 'bg-tpl-slate-soft text-tpl-slate'
 };
+
+/**
+ * The same six at full strength: the hue as the fill, `tpl-on` as the ink.
+ *
+ * Two places need a hue to be the loudest thing in its box rather than a tint
+ * behind a glyph. The picker's chosen tile, where the soft pair cannot carry
+ * selection — it is what every *unchosen* tile would wear once the grid
+ * previews the hue, so the two states would differ by fill strength alone. And
+ * a mark that has a colour and no glyph, where the soft tile is a 32px square
+ * of near-nothing.
+ *
+ * Literal strings for the same reason `MARK_TILES` spells its pairs out.
+ */
+export const MARK_FILLS: Record<MarkColour, string> = {
+	amber: 'bg-tpl-amber text-tpl-on',
+	teal: 'bg-tpl-teal text-tpl-on',
+	blue: 'bg-tpl-blue text-tpl-on',
+	violet: 'bg-tpl-violet text-tpl-on',
+	fuchsia: 'bg-tpl-fuchsia text-tpl-on',
+	slate: 'bg-tpl-slate text-tpl-on'
+};

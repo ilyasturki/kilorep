@@ -42,13 +42,13 @@
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import { revealNearest } from '$lib/ui/scroll';
+	import TipButton from '$lib/ui/TipButton.svelte';
 	import Archive from '$lib/ui/icons/Archive.svelte';
 	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Plus from '$lib/ui/icons/Plus.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
-	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
 
@@ -349,6 +349,10 @@
 
 	const archived = $derived(isArchived(template));
 
+	const CHROME_BUTTON =
+		'grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line ' +
+		'focus-ring hover:bg-hover press:bg-surface-2';
+
 	/**
 	 * Only a persisted template can be put away, which needs no guard here: the
 	 * button is behind `persisted` at both widths, and a plan that has never
@@ -393,37 +397,37 @@
 	fillAppBar(() => ({ title, action: deskActions }));
 </script>
 
+<!-- The round chrome button both of these wear, spelled once: they are the same
+     44px target in the same slot and differ only in which ink they spend. -->
 {#snippet trash(size: number)}
-	<button
-		type="button"
-		aria-label="Delete template"
+	<TipButton
+		label="Delete template"
 		onclick={() => (deleteOpen = true)}
-		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line
-			text-danger focus-ring hover:bg-hover press:bg-surface-2"
-		{@attach press()}
+		class="{CHROME_BUTTON} text-danger"
 	>
 		<Trash {size} />
-	</button>
+	</TipButton>
 {/snippet}
 
 <!-- Beside the trash and shaped like it, in the neutral ink the trash spends on
      red: putting a plan away is not destroying it. No dialog either, for the
      same reason — the act is its own undo, the row is one tap from coming back,
      and a confirmation would price a reversible thing like an irreversible one.
-     The trash keeps its dialog and its colour. -->
+     The trash keeps its dialog and its colour.
+
+     Which makes the pair the case for a tooltip: two 20px Phosphor outlines a
+     thumb's width apart, one reversible and one not, telling them apart on the
+     drawing alone. -->
 {#snippet archive(size: number)}
 	{@const Glyph = archived ? ArrowCounterClockwise : Archive}
 
-	<button
-		type="button"
-		aria-label={archived ? 'Unarchive template' : 'Archive template'}
+	<TipButton
+		label={archived ? 'Unarchive template' : 'Archive template'}
 		onclick={toggleArchived}
-		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line
-			text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
-		{@attach press()}
+		class="{CHROME_BUTTON} text-ink-muted"
 	>
 		<Glyph {size} />
-	</button>
+	</TipButton>
 {/snippet}
 
 <!-- START, not "Start workout": the same word the pane's button says, in the
@@ -505,13 +509,11 @@
 				     — a slot that says a mark could go here, which the row it will
 				     appear on deliberately does not. -->
 				<div class="flex items-center gap-2">
-					<button
-						type="button"
-						aria-label={mark === null ? 'Pick a template icon' : 'Change the template icon'}
+					<TipButton
+						label={mark === null ? 'Pick a template icon' : 'Change the template icon'}
 						onclick={() => (markOpen = true)}
 						class="grid size-11 shrink-0 place-items-center rounded-xl focus-ring
 							hover:bg-hover press:bg-surface-2"
-						{@attach press()}
 					>
 						{#if mark === null}
 							<span
@@ -524,7 +526,7 @@
 						{:else}
 							<TemplateMark {mark} />
 						{/if}
-					</button>
+					</TipButton>
 
 					<input
 						bind:value={template.name}

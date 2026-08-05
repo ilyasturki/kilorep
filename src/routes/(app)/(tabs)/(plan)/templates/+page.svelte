@@ -123,7 +123,7 @@
      room — fair where the meta is a glance's convenience, and not here: this
      line *is* what the row has to say, and a plan under a long name would be
      painted nowhere. -->
-{#snippet planRow(template: Template, klass?: string, chevron?: boolean)}
+{#snippet planRow(template: Template, klass?: string, draggable = false)}
 	{@const mark = drawableMark(template)}
 
 	{#snippet tile()}
@@ -132,12 +132,43 @@
 		{/if}
 	{/snippet}
 
+	<!-- The grip rides inside the anchor, in the trailing slot ahead of the
+	     chevron, and the row is whole again — one box, one outline, one target
+	     that fills its own width. It sat outside as a sibling for a while, which
+	     cost the row a strip of itself and put a 44px hole in the middle of a
+	     card.
+
+	     `presentation`, because the grip is nothing but a place to hear the
+	     pointer from: the anchor around it keeps the role and the name, and is
+	     what a keyboard and a screen reader reach. Nothing interactive is nested
+	     in the link — a `<button>` here would be invalid inside an `<a>` and
+	     would take a tab stop that leads nowhere.
+
+	     A plain tap on it needs no handler of its own: the grip lifts the row on
+	     `pointerdown` without waiting for a hold, so the click that ends the tap
+	     is a click a drag has already spent, and the capture listener upstream
+	     is the same one that stops a reorder from opening the plan it moved. -->
+	{#snippet grip()}
+		<span
+			role="presentation"
+			aria-hidden="true"
+			onpointerdown={(event) => drag.handleDown(event, template.id)}
+			onpointermove={(event) => drag.move(event)}
+			onpointerup={(event) => drag.up(event)}
+			onpointercancel={(event) => drag.up(event)}
+			class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
+				text-ink-faint select-none"
+		>
+			<DotsSixVertical size={18} />
+		</span>
+	{/snippet}
+
 	<ListRow
 		title={title(template)}
 		meta={planLine(template, catalogById)}
 		stacked
-		{chevron}
 		leading={mark === null ? undefined : tile}
+		trailing={draggable ? grip : undefined}
 		href="/templates/{template.id}"
 		class={klass}
 	/>
@@ -159,74 +190,56 @@
 		</EmptyState>
 	{:else}
 		<section class="flex flex-col gap-3">
-			<!-- Separate rows on a gap, not the single `list-group` card this used to
-			     be. The card clips — `overflow: hidden` is what gives it one outline
-			     and one set of corners — and a lifted row is a card that has left the
-			     page, translated past its neighbours with a shadow under it. Inside
-			     the group it was sheared off at the edge mid-drag. Every reorderable
-			     list in the app wears this shape for the same reason; `PlanList` is
-			     the other one. -->
-			<div bind:this={drag.root} class="flex flex-col gap-1">
+			<!-- The card, which the list wears everywhere else a row means "open
+			     this": one outline, one set of corners, hairlines between. It was
+			     traded for separate rows on a gap while the drag was built, because
+			     `overflow: hidden` is what gives a card those corners and it shears
+			     a lifted row off at the edge — the fix belongs in the utility, where
+			     the clip is suspended for the length of a lift, and not in every
+			     list that would rather not be a card for one gesture's sake.
+
+			     `drag.root` is this box because this box is the one that lays the
+			     rows out: the geometry is measured off real rects — the seam between
+			     the first two is the gap, whether a flex rule or a hairline border
+			     put it there. -->
+			<div bind:this={drag.root} class="list-group">
 				{#each active as template (template.id)}
 					{@const lifted = drag.isLifted(template.id)}
 					{@const settling = drag.settlingId === template.id}
 
+					<!-- The pointer handlers sit out here rather than on the row, because
+					     the row is an anchor and stays one: middle-click and open-in-new-tab
+					     are the whole reason a template row is a link, and a `<button>` with
+					     a `goto` would quietly drop both. Pointer events bubble, so this box
+					     hears the press that lands on the anchor — and hears the grip's
+					     first, which lifts on the spot and leaves the hold-to-lift below it
+					     with nothing to do.
+
+					     `data-lifted` is what the card reads to stop clipping. An attribute
+					     and not a class, because it is a fact about the row that CSS asks
+					     about from the outside, and `:has()` is the one selector that can. -->
 					<div
 						data-drag-id={template.id}
+						data-lifted={lifted ? '' : undefined}
+						role="presentation"
 						animate:flip={{ duration: grow }}
+						onpointerdown={(event) => drag.rowDown(event, template.id)}
+						onpointermove={(event) => drag.move(event)}
+						onpointerup={(event) => drag.up(event)}
+						onpointercancel={(event) => drag.up(event)}
+						onclickcapture={(event) => {
+							if (drag.swallowClick(event)) {
+								event.preventDefault();
+							}
+						}}
 						class={lifted ? 'relative z-10 rounded-xl bg-sunken' : ''}
 					>
 						<div
 							style:transform={lifted ? `translateY(${drag.offset}px) scale(1.02)` : null}
 							style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
-							class={[
-								'flex items-center gap-1 rounded-xl pr-1',
-								lifted ? 'bg-surface shadow-lg' : ''
-							]}
+							class={lifted ? 'rounded-xl bg-surface shadow-lg' : ''}
 						>
-							<!-- The pointer handlers sit on a wrapper rather than on the row,
-							     because the row is an anchor and stays one: middle-click and
-							     open-in-new-tab are the whole reason a template row is a link,
-							     and a `<button>` with a `goto` would quietly drop both. Pointer
-							     events bubble, so the wrapper hears the press that lands on the
-							     anchor; the click is caught on the way down and cancelled when
-							     a drag has already spent it, which is what stops a reorder from
-							     also opening the plan it moved. -->
-							<!-- `presentation`, because this box is nothing but a place to hear
-							     the pointer from: the row inside it is the anchor, keeps its
-							     own role and its own name, and is what a keyboard and a screen
-							     reader reach. Same declaration the grip beside it makes. -->
-							<div
-								role="presentation"
-								class="min-w-0 flex-1"
-								onpointerdown={(event) => drag.rowDown(event, template.id)}
-								onpointermove={(event) => drag.move(event)}
-								onpointerup={(event) => drag.up(event)}
-								onpointercancel={(event) => drag.up(event)}
-								onclickcapture={(event) => {
-									if (drag.swallowClick(event)) {
-										event.preventDefault();
-									}
-								}}
-							>
-								<!-- The chevron goes where the grip arrives. Both say "this row
-								     is yours to act on" and two marks saying it at opposite ends
-								     of one row is the noise, not the reassurance. -->
-								{@render planRow(template, undefined, false)}
-							</div>
-
-							<span
-								role="presentation"
-								aria-hidden="true"
-								onpointerdown={(event) => drag.handleDown(event, template.id)}
-								onpointermove={(event) => drag.move(event)}
-								onpointerup={(event) => drag.up(event)}
-								onpointercancel={(event) => drag.up(event)}
-								class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
-									text-ink-faint select-none"
-							>
-								<DotsSixVertical size={18} />
-							</span>
+							{@render planRow(template, undefined, true)}
 						</div>
 					</div>
 				{/each}
@@ -261,7 +274,7 @@
 				</button>
 
 				{#if showArchived}
-					<div transition:slide={{ duration: grow }} class="flex flex-col gap-1">
+					<div transition:slide={{ duration: grow }} class="list-group">
 						{#each archived as template (template.id)}
 							<!-- Still a link to its editor, which is where the way back out
 							     lives. Not draggable: order is a property of the list you

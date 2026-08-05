@@ -80,15 +80,22 @@ export const MARK_COLOURS = ['amber', 'teal', 'blue', 'violet', 'fuchsia', 'slat
 export type MarkColour = (typeof MARK_COLOURS)[number];
 
 /**
- * Glyph and hue, picked together and stored together.
+ * Glyph and hue, stored together and chosen apart.
  *
  * One object rather than two fields, because they are chosen in one surface
  * and because "no mark yet" is then a single absent value rather than two
- * half-states the list would have to decide between.
+ * half-states every reader would have to reconcile.
+ *
+ * Either half may be null, and that is the whole of what makes the picker's
+ * two grids independent: a hue with no glyph is a filled tile, a glyph with no
+ * hue is a neutral one, and a mark is `null` — not `{ icon: null, colour:
+ * null }` — the moment both are gone. Nothing infers one half from the other;
+ * an app that picks a glyph for you because you touched a colour has made a
+ * choice and not mentioned it.
  */
 export type TemplateMark = {
-	icon: MarkIcon;
-	colour: MarkColour;
+	icon: MarkIcon | null;
+	colour: MarkColour | null;
 };
 
 export type Template = {
@@ -203,6 +210,11 @@ export function reorder(templates: Template[], id: string, index: number): numbe
  * that still took up space. Falling back to unmarked is the honest read: this
  * build genuinely does not know what that glyph is.
  *
+ * Each half falls back on its own, which is what the two halves being
+ * independent buys here: a glyph from a newer build leaves the hue standing
+ * rather than blanking a row that still has something to say. Only when
+ * neither half survives is there no mark to draw.
+ *
  * It is deliberately not a write path — the payload keeps whatever it arrived
  * with, so the device that understands the key still draws it, and an upgrade
  * here restores the mark rather than finding it erased.
@@ -217,7 +229,10 @@ export function drawableMark(template: Template): TemplateMark | null {
 	const icons: readonly string[] = MARK_ICONS;
 	const colours: readonly string[] = MARK_COLOURS;
 
-	return icons.includes(mark.icon) && colours.includes(mark.colour) ? mark : null;
+	const icon = mark.icon !== null && icons.includes(mark.icon) ? mark.icon : null;
+	const colour = mark.colour !== null && colours.includes(mark.colour) ? mark.colour : null;
+
+	return icon === null && colour === null ? null : { icon, colour };
 }
 
 /**

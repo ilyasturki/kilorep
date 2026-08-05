@@ -27,7 +27,9 @@
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import Switch from '$lib/ui/Switch.svelte';
 	import Textarea from '$lib/ui/Textarea.svelte';
+	import TipButton from '$lib/ui/TipButton.svelte';
 	import Tooltip from '$lib/ui/Tooltip.svelte';
+	import Archive from '$lib/ui/icons/Archive.svelte';
 	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
 	import Backspace from '$lib/ui/icons/Backspace.svelte';
 	import Barbell from '$lib/ui/icons/Barbell.svelte';
@@ -62,6 +64,11 @@
 	const tile = 'grid size-8 place-items-center text-ink-muted';
 	// One instance and the prop that names it.
 	const specimen = 'flex flex-col items-start gap-1.5';
+	// The round icon button the template editor's chrome wears, borrowed so the
+	// TipButton card demonstrates the real thing rather than a shape near it.
+	const chromeButton =
+		'grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line ' +
+		'text-ink-muted focus-ring hover:bg-hover press:bg-surface-2';
 
 	// `as const` so each `variant` is the literal Button expects, not `string`.
 	const outlined = [
@@ -687,6 +694,34 @@
 					</Tooltip>
 					<span class={caption}>hover on a mouse, tap on a touchscreen</span>
 				</div>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">TipButton</h2>
+				<!-- The other half of Tooltip: there the ⓘ is the trigger and a word is
+				     the thing explained, here the button is both. For a glyph that is
+				     the button's only label — an archive box and a stack are one drawing
+				     at 20px until you have met both. -->
+				<div class={specimen}>
+					<div class="flex items-center gap-2">
+						<TipButton label="Archive template" onclick={() => {}} class={chromeButton}>
+							<Archive size={20} />
+						</TipButton>
+						<TipButton
+							label="Delete template"
+							onclick={() => {}}
+							class="{chromeButton} text-danger"
+						>
+							<Trash size={20} />
+						</TipButton>
+					</div>
+					<span class={caption}>label — said aloud, and shown on demand</span>
+				</div>
+				<p class="text-sm font-bold text-ink-faint">
+					A cursor hovers and the bubble follows on the provider's delay. A finger has no hover, so
+					the label rides the {HOLD_MS}ms hold instead — and the hold swallows the tap, so asking
+					what a button is never also presses it.
+				</p>
 			</article>
 
 			<article class={card}>

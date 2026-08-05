@@ -147,6 +147,17 @@
 	   that reads as disabled rather than as a mark. */
 	--tpl-slate: var(--color-slate-600);
 	--tpl-slate-soft: var(--color-slate-200);
+
+	/* What sits *on* a hue used as a fill rather than as ink — the picker's
+	   chosen tile, and a mark that has a colour and no glyph yet.
+
+	   One token for all six, and it can be one because within a theme the six
+	   are all on the same side of the lightness line: the 700s in light, the
+	   300s in dark. So white clears every light fill — floor amber at 5.02:1 —
+	   and `sunken`'s near-black clears every dark one, floor blue at 11.6:1.
+	   Two tokens' worth of contrast checking collapses into one because the
+	   ramp was picked per theme in the first place. */
+	--tpl-on: var(--color-white);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -237,6 +248,10 @@
 		   lightness, and a grey tile at that number disappeared. */
 		--tpl-slate: var(--color-slate-300);
 		--tpl-slate-soft: oklch(32% 0.015 255.508);
+		/* `sunken`'s own value, spelled out rather than `var(--sunken)`: this is
+		   the ink a fill takes, and it must not follow the depth ramp if that
+		   ramp is ever re-spaced. */
+		--tpl-on: oklch(17.3% 0 0);
 	}
 }
 
@@ -420,6 +435,7 @@
 	--color-tpl-fuchsia-soft: var(--tpl-fuchsia-soft);
 	--color-tpl-slate: var(--tpl-slate);
 	--color-tpl-slate-soft: var(--tpl-slate-soft);
+	--color-tpl-on: var(--tpl-on);
 
 	/* `inline` matters here: the value stays a live `var()`, so `min-h-row`
 	   resolves through the pointer media query above instead of being frozen
@@ -1290,6 +1306,19 @@ html[data-nav='pop']::view-transition-old(page) {
 
 	& [data-list-row]:focus-visible {
 		outline-offset: -2px;
+	}
+
+	/* Mid-drag the card stops clipping, because what it clips is the gesture. A
+	   lifted row is translated, scaled 2% and carrying a shadow, and every one
+	   of those is drawn outside the box `overflow: hidden` keeps it in — at the
+	   ends of the list it was sheared off outright.
+
+	   The clip costs nothing to give up for the length of a lift: what it buys
+	   the rest of the time is corners on the first and last row's fill, and a
+	   row is only filled under a finger. During a lift that finger is on the
+	   airborne row, and the row it left behind is the sunken slot. */
+	&:has([data-lifted]) {
+		overflow: visible;
 	}
 }
 
