@@ -213,12 +213,23 @@
 
 					     `data-lifted` is what the card reads to stop clipping. An attribute
 					     and not a class, because it is a fact about the row that CSS asks
-					     about from the outside, and `:has()` is the one selector that can. -->
+					     about from the outside, and `:has()` is the one selector that can.
+
+					     `dragstart` is refused because a row is a link and a mouse offers
+					     to drag links somewhere: the browser claims the gesture on the
+					     first few pixels, and claiming it fires `pointercancel`, which is
+					     the drag ending before it has moved. A finger never asks — which
+					     is exactly how this survived being tested on one. Refused here on
+					     the way past rather than with `draggable={false}` on the anchor,
+					     because dragging a link out to a window is a real thing to want
+					     and it is only this list, where the gesture is already spoken for,
+					     that has to give it up. -->
 					<div
 						data-drag-id={template.id}
 						data-lifted={lifted ? '' : undefined}
 						role="presentation"
 						animate:flip={{ duration: grow }}
+						ondragstart={(event) => event.preventDefault()}
 						onpointerdown={(event) => drag.rowDown(event, template.id)}
 						onpointermove={(event) => drag.move(event)}
 						onpointerup={(event) => drag.up(event)}
