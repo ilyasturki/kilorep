@@ -5,10 +5,9 @@ import type { Move } from './move';
 import { classifyMove } from './move';
 
 const tabRoots = ['/dashboard', '/workout', '/history', '/templates', '/exercises'];
-const barless = ['/settings'];
 
 function move(from: string, to: string, delta?: number): Move | undefined {
-	return classifyMove({ from, to, delta, tabRoots, barless });
+	return classifyMove({ from, to, delta, tabRoots });
 }
 
 describe('classifyMove — whether it travels', () => {
@@ -30,7 +29,7 @@ describe('classifyMove — whether it travels', () => {
 		expect(move('/workout', '/workout/live')).toMatchObject({ direction: 'push' });
 	});
 
-	it('travels off the bar — Settings, and Weight, which is no tab', () => {
+	it('travels to a screen that is no tab root — Settings, and Weight', () => {
 		expect(move('/workout', '/settings')).toMatchObject({ direction: 'push' });
 		expect(move('/dashboard', '/weight')).toMatchObject({ direction: 'push' });
 	});
@@ -42,21 +41,5 @@ describe('classifyMove — whether it travels', () => {
 
 	it('does not mistake a shared prefix for a tab', () => {
 		expect(move('/dashboard', '/workout-notes')).toMatchObject({ direction: 'push' });
-	});
-});
-
-describe('classifyMove — bar', () => {
-	it('holds the bar wherever both sides render one', () => {
-		expect(move('/history', '/history/abc')).toMatchObject({ bar: 'hold' });
-		expect(move('/dashboard', '/weight')).toMatchObject({ bar: 'hold' });
-	});
-
-	it('travels the bar in and out of Settings, the one screen without one', () => {
-		expect(move('/workout', '/settings')).toMatchObject({ bar: 'travel' });
-		expect(move('/settings', '/workout', -1)).toMatchObject({ bar: 'travel' });
-	});
-
-	it('holds the bar for a move within Settings, where there is none on either side', () => {
-		expect(move('/settings', '/settings/tokens')).toMatchObject({ bar: 'hold' });
 	});
 });

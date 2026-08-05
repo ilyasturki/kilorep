@@ -149,12 +149,9 @@
 	     travels is `(app)`'s, and this bar is inside it — but an element with a
 	     `view-transition-name` of its own is lifted out of its ancestor's
 	     snapshot, so naming it here is what makes it stand still while the page
-	     under it moves. That is the whole trick, and it also answers the one
-	     case where the bar *should* move: Settings renders none, so on the way
-	     in and out `nav/transitions.ts` stamps `data-bar="travel"`, the name is
-	     dropped, and the bar goes back to being part of the pane it belongs to
-	     rather than blinking out from under a page still in motion. See the
-	     `vt-tabbar` rules in app.css. -->
+	     under it moves. That is the whole trick, and it has no exceptions: every
+	     screen this layout navigates to renders the bar. See the `vt-tabbar`
+	     rule in app.css. -->
 	<nav
 		aria-label="Main"
 		class="vt-tabbar shrink-0 border-t border-line-soft bg-surface pb-safe-b lg:hidden"

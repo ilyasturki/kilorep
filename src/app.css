@@ -975,9 +975,8 @@
 	}
 }
 
-/* Route changes slide; `nav/transitions.ts` decides how and stamps two
-   attributes on <html> — `data-nav` for direction, `data-bar` for whether the
-   tab bar is the same bar on both sides. The box that travels is `vt-page`,
+/* Route changes slide; `nav/transitions.ts` decides how and stamps one
+   attribute on <html> — `data-nav`, the direction. The box that travels is `vt-page`,
    which the `(app)` layout owns so that both halves of every navigation are
    the same rectangle. Only stacked screens travel, and only on a touchscreen;
    `nav/move.ts` and `slidingWanted` own those two rules respectively, so
@@ -1045,19 +1044,10 @@ html[data-nav='pop']::view-transition-old(page) {
 /* The phone's tab bar. Naming it lifts it out of the pane's snapshot even
    though it sits inside the box, which is what lets the page slide underneath
    a bar that does not move — the same bar on both sides of a navigation must
-   not travel, or the whole screen reads as tearing away.
-
-   Dropping the name on `data-bar='travel'` puts it back *into* the pane, for
-   the one move where the bar is not on both sides: Settings renders none, so
-   there it has to leave with the screen it belongs to. `transitions.ts` stamps
-   the attribute before the browser captures, so the old snapshot and the new
-   one agree about which of the two the bar is. */
+   not travel, or the whole screen reads as tearing away. Unconditional,
+   because every screen the app navigates to now renders one. */
 .vt-tabbar {
 	view-transition-name: tabbar;
-}
-
-html[data-bar='travel'] .vt-tabbar {
-	view-transition-name: none;
 }
 
 ::view-transition-group(tabbar),

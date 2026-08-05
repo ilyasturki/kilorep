@@ -31,12 +31,10 @@ import type { Direction, Move } from '$lib/nav/move';
  * change cannot morph mid-slide. A browser without `startViewTransition`
  * navigates instantly, which is the fallback and the whole fallback.
  *
- * The two stamps are separate attributes rather than one compound value
- * because CSS reads them separately: the panes' animations depend on
- * `data-nav`, and the tab bar's on `data-bar` alone.
+ * One stamp, `data-nav`, and the panes' animations are all that read it. The
+ * tab bar needs none: it is on both sides of every navigation now that Settings
+ * is a tab, so it never leaves with a screen.
  */
-
-const BARLESS = ['/settings'];
 
 function outsideShell(pathname: string): boolean {
 	return pathname === '/' || pathname === '/login' || pathname.startsWith('/dev');
@@ -77,7 +75,6 @@ async function unstamp(transition: ViewTransition): Promise<void> {
 			const { dataset } = document.documentElement;
 
 			delete dataset.nav;
-			delete dataset.bar;
 		}
 	}
 }
@@ -101,18 +98,14 @@ async function absorb(settling: Promise<void>): Promise<void> {
 /**
  * Stamp the move where the CSS can read it, then run the transition.
  *
- * Stamped *before* `startViewTransition`, which matters for more than the
- * animation names: `data-bar` decides whether the tab bar carries a
- * `view-transition-name` of its own, and that has to be true of the old
- * snapshot as well as the new one. The browser captures during the rendering
- * update that follows this call, so a `dataset` write on the line above is
- * already in the style it captures.
+ * Stamped *before* `startViewTransition`: the browser captures during the
+ * rendering update that follows this call, so a `dataset` write on the line
+ * above is already in the style it captures.
  */
-function slide({ direction, bar }: Move, update: () => Promise<void>): void {
+function slide({ direction }: Move, update: () => Promise<void>): void {
 	const { dataset } = document.documentElement;
 
 	dataset.nav = direction;
-	dataset.bar = bar;
 
 	const transition = document.startViewTransition(update);
 
@@ -141,8 +134,7 @@ function navigationMove(navigation: OnNavigate): Move | undefined {
 		from: a,
 		to: b,
 		delta: navigation.delta ?? undefined,
-		tabRoots: navTabs().map((tab) => tab.href),
-		barless: BARLESS
+		tabRoots: navTabs().map((tab) => tab.href)
 	});
 }
 
@@ -175,7 +167,7 @@ export function pageSlide(direction: Direction, mutate: () => void): void {
 		return;
 	}
 
-	slide({ direction, bar: 'hold' }, async () => {
+	slide({ direction }, async () => {
 		mutate();
 		await tick();
 	});
