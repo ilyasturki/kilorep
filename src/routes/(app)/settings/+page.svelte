@@ -2,7 +2,16 @@
 	import { goto, invalidateAll } from '$app/navigation';
 
 	import { createToken, logout, revokeToken, setPassword, signInDevice } from '$lib/api/auth';
-	import { ApiError, apiBase, checkServer, deviceToken, setApiBase } from '$lib/api/client';
+	import {
+		ApiError,
+		DEFAULT_SERVER,
+		apiBase,
+		checkServer,
+		deviceToken,
+		lastServer,
+		setApiBase,
+		setLastServer
+	} from '$lib/api/client';
 	import { signInWithGoogle } from '$lib/api/google-device';
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
@@ -18,7 +27,6 @@
 	import Sheet from '$lib/ui/Sheet.svelte';
 	import Switch from '$lib/ui/Switch.svelte';
 	import GoogleLogo from '$lib/ui/icons/GoogleLogo.svelte';
-	import Plugs from '$lib/ui/icons/Plugs.svelte';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 
 	import type { Account, PublicToken } from '$lib/api/auth';
@@ -30,17 +38,22 @@
 	 * that each earn their place by state rather than by build flag alone:
 	 *
 	 * - Account and API tokens exist when someone is signed in.
-	 * - Server exists only in the app build, where connecting one is a choice.
-	 *   On the web the origin serving the page *is* the server, and a field for
-	 *   it would be a question with one answer.
+	 * - Server exists only in the app build, where having one is a choice. On the
+	 *   web the origin serving the page *is* the server, and a field for it would
+	 *   be a question with one answer.
 	 *
-	 * Local-only in the app is all three collapsed to the connect form — the
+	 * Local-only in the app is all three collapsed to the sign-in form — the
 	 * layout reads "no server" as an ordinary state and hands `user: null`, so
 	 * this screen is where that state can end. It is also the only place the
 	 * phone signs in: `/login` is a card centred in a viewport, which DESIGN.md
 	 * names as an anti-goal on a phone, and the credential it mints is a cookie
-	 * the WebView could not use. Address, then account, in the section that owns
-	 * both.
+	 * the WebView could not use.
+	 *
+	 * The section asks for an account rather than for an address. kilorep.com is
+	 * where it means to sign in and the address is never on screen unless someone
+	 * wants a different one — which is a fork in the form, not a step in front of
+	 * it. Connecting stops being a thing the user does at all on that path: it is
+	 * what signing in did.
 	 */
 	let { data }: PageProps = $props();
 
@@ -86,6 +99,29 @@
 		return deviceToken() !== null;
 	});
 
+	// Up here with `credentialled` and not down in the Server section that owns
+	// the rest of it, for the reason that one is up here: signing out is what
+	// disconnects this phone now, so the address is a fact two sections share.
+	//
+	// Mirrored into state because `apiBase()` is module memory the template
+	// cannot track. The mirror carries a second meaning the module cannot: it
+	// moves only where the user's own action put an address in place, which is
+	// what makes an implicit one rollable — see `standTo`.
+	const connected = apiBase();
+
+	let server = $state(connected);
+
+	/**
+	 * The typed-address fork. False is the kilorep.com form; true is the address
+	 * panel and whatever it connects to.
+	 *
+	 * Starts open for a server that is not the default, because that phone is
+	 * already down the fork and the way back out belongs on screen. `null` is not
+	 * one of those: a phone with no server has not chosen, and the shorter path
+	 * is the one it is offered.
+	 */
+	let custom = $state(connected !== null && connected !== DEFAULT_SERVER);
+
 	// ——— Account ———
 
 	let signOutError = $state('');
@@ -111,8 +147,17 @@
 		// token and leaves the app local-only — the state PRODUCT.md calls the
 		// ordinary one — with the sign-in form appearing in this same section.
 		// Navigating to `/login` would draw the web's card over a working app.
+		//
+		// The address goes with the credential, and the section returns to what a
+		// fresh install shows. Signing in is what connected this phone, so nothing
+		// else can honestly disconnect it; `lastServer` survives, which is what
+		// stops a self-hoster retyping theirs.
 		if (import.meta.env.APP_BUILD) {
 			credentialled = false;
+			setApiBase(null);
+			server = null;
+			custom = false;
+
 			await invalidateAll();
 			signOutPending = false;
 			return;
@@ -230,13 +275,14 @@
 
 	// ——— Server (app build only) ———
 
-	// Mirrored into state because `apiBase()` is module memory the template
-	// cannot track; connect and disconnect keep the mirror honest.
-	let server = $state(apiBase());
-	let address = $state('');
+	// `server` and `custom`, which this section is otherwise the owner of, are
+	// declared above the Account section — signing out clears the address, so
+	// that handler reads them too.
+	let address = $state(lastServer() ?? '');
 	let serverError = $state('');
 	let connectPending = $state(false);
-	let disconnectOpen = $state(false);
+
+	const defaultHost = new URL(DEFAULT_SERVER).host;
 
 	/**
 	 * "gym.example.com" is what someone types; a scheme-carrying URL with no
@@ -272,7 +318,12 @@
 		}
 
 		setApiBase(base);
+		setLastServer(base);
 		server = base;
+
+		// What `normalize` made of it, so the field agrees with the address the
+		// requests will carry rather than with the shorthand that was typed.
+		address = base;
 
 		// Connected, and not signed in — which is a complete state, not a
 		// half-finished one. The section below turns into the sign-in form, and
@@ -281,21 +332,45 @@
 		connectPending = false;
 	}
 
-	// Best-effort revocation before forgetting the address: a server that
-	// cannot be reached to take the credential back must not be able to hold
-	// the phone in the connected state. Local data is untouched either way —
-	// disconnecting ends sync, not the records.
-	async function disconnect() {
-		try {
-			await logout();
-		} catch {
-			// The credential outlives this on the server; its list is where it dies.
-		}
-
+	/**
+	 * Back out of a typed address without having signed in to it.
+	 *
+	 * The one exit this section still needs: the kilorep.com path never holds an
+	 * address without a credential, and a signed-in phone leaves through Sign
+	 * out. Nothing to revoke — there is no credential yet, which is the whole
+	 * definition of this state — and the address stays in the field to be
+	 * corrected rather than retyped.
+	 */
+	async function forget() {
 		setApiBase(null);
 		server = null;
 
 		await invalidateAll();
+	}
+
+	/**
+	 * The address the credential is about to be minted against, put in place
+	 * before the request that needs it: `signInDevice` and `googleStartUrl` both
+	 * read `apiBase()`, so there is no signing in to a server the client is not
+	 * already pointed at.
+	 *
+	 * The mirror is deliberately left where it is. It is what the template
+	 * branches on, and moving it here would swap the form for the connected panel
+	 * underneath a request still in flight — and it is what makes the rollback
+	 * decidable: `server === null` says this address was the sign-in's doing and
+	 * not the user's, so a wrong password takes it back out again rather than
+	 * leaving the phone half-connected to somewhere nobody chose.
+	 */
+	function standTo(): void {
+		if (server === null) {
+			setApiBase(DEFAULT_SERVER);
+		}
+	}
+
+	function standDown(): void {
+		if (server === null) {
+			setApiBase(null);
+		}
 	}
 
 	// ——— Signing in (app build only) ———
@@ -339,6 +414,11 @@
 			return;
 		}
 
+		// The mirror catches up here and not in `standTo`: the address is the
+		// user's own from the moment a credential exists for it, and until then it
+		// is on loan.
+		server = apiBase();
+
 		await invalidateAll();
 	}
 
@@ -355,6 +435,7 @@
 
 		signInError = '';
 		signInPending = true;
+		standTo();
 
 		try {
 			const user = await signInDevice(email.trim(), password);
@@ -362,6 +443,7 @@
 			password = '';
 			await settle(user);
 		} catch (error) {
+			standDown();
 			reportSignIn(error);
 		}
 
@@ -371,10 +453,12 @@
 	async function withGoogle() {
 		signInError = '';
 		googlePending = true;
+		standTo();
 
 		try {
 			await settle(await signInWithGoogle());
 		} catch (error) {
+			standDown();
 			reportSignIn(error);
 		}
 
@@ -418,6 +502,10 @@
 			await store.adopt(id);
 		}
 
+		// Answered, so signed in, so the address is theirs — the leg `settle` did
+		// not reach when it stopped to ask.
+		server = apiBase();
+
 		await invalidateAll();
 	}
 
@@ -440,6 +528,11 @@
 			// The credential is dropped locally regardless; the token list on the
 			// server is where a row that outlived this gets revoked.
 		}
+
+		// After the revocation, which needs the address to reach the server it is
+		// giving the credential back to — and only if the sign-in is what put that
+		// address there. Refusing the question leaves the phone exactly as it was.
+		standDown();
 
 		await invalidateAll();
 	}
@@ -641,11 +734,64 @@
 			<section class="flex flex-col gap-3">
 				<h2 class="px-1 label-caps text-ink-faint">Server</h2>
 
-				{#if server === null}
-					<div class="flex max-w-sm flex-col gap-3 px-1">
+				<!-- One form, two servers. Which one it signs in to is the address in
+				     `apiBase` when the button is pressed, and that is the only
+				     difference between the two paths this section offers. -->
+				{#snippet credentials()}
+					{#if data.google}
+						<Button
+							variant="secondary"
+							disabled={googlePending || signInPending}
+							onclick={withGoogle}
+						>
+							<GoogleLogo size={18} />
+							{googlePending ? 'Waiting for Google…' : 'Continue with Google'}
+						</Button>
+					{/if}
+
+					<Input
+						label="Email"
+						name="email"
+						type="email"
+						autocapitalize="none"
+						autocorrect="off"
+						spellcheck="false"
+						inputmode="email"
+						autocomplete="email"
+						bind:value={email}
+						error={emailError}
+					/>
+
+					<Input
+						label="Password"
+						name="password"
+						type="password"
+						autocomplete="current-password"
+						bind:value={password}
+						error={passwordError}
+					/>
+
+					<Button variant="secondary" disabled={signInPending || googlePending} onclick={signIn}>
+						{signInPending ? 'Signing in…' : 'Sign in'}
+					</Button>
+
+					<div aria-live="polite">
+						{#if signInError !== ''}
+							<p class="text-sm font-bold text-danger">{signInError}</p>
+						{/if}
+					</div>
+				{/snippet}
+
+				<div class="flex max-w-sm flex-col gap-3 px-1">
+					{#if server !== null && credentialled}
+						<!-- Signed in, so the address and nothing else. What ends this state
+						     is Sign out, one section up, which is where the account it
+						     belongs to is. -->
+						<p class="text-md break-all text-ink-muted">{server}</p>
+					{:else if custom && server === null}
 						<p class="text-md text-pretty text-ink-muted">
-							Everything lives on this phone. Connecting a self-hosted server adds sync, the web
-							surface and the API.
+							Point this phone at a server you run. It has to be reachable from here — a LAN address
+							works while the phone is on that network, and stops working when it leaves.
 						</p>
 
 						<Input
@@ -663,123 +809,82 @@
 						<Button variant="secondary" disabled={connectPending} onclick={connect}>
 							{connectPending ? 'Checking…' : 'Connect'}
 						</Button>
-					</div>
-				{:else}
-					<div class="flex max-w-sm flex-col gap-3 px-1">
+
+						<Button variant="chrome" caps onclick={() => (custom = false)}>
+							SIGN IN TO {defaultHost.toUpperCase()}
+						</Button>
+					{:else if custom}
+						<!-- Connected and signed out, which is a state the app runs in rather
+						     than a door it stands behind: everything logged here still works,
+						     and this form is how sync starts. -->
 						<p class="text-md break-all text-ink-muted">{server}</p>
 
-						{#if !credentialled}
-							<!-- Connected and signed out, which is a state the app runs in
-						     rather than a door it stands behind: everything logged here
-						     still works, and this form is how sync starts. -->
-							<p class="text-md text-pretty text-ink-muted">
-								Sign in to sync this phone with that server.
-							</p>
+						<p class="text-md text-pretty text-ink-muted">
+							Sign in to sync this phone with that server.
+						</p>
 
-							{#if data.google}
-								<Button
-									variant="secondary"
-									disabled={googlePending || signInPending}
-									onclick={withGoogle}
-								>
-									<GoogleLogo size={18} />
-									{googlePending ? 'Waiting for Google…' : 'Continue with Google'}
-								</Button>
-							{/if}
+						{@render credentials()}
 
-							<Input
-								label="Email"
-								name="email"
-								type="email"
-								autocapitalize="none"
-								autocorrect="off"
-								spellcheck="false"
-								inputmode="email"
-								autocomplete="email"
-								bind:value={email}
-								error={emailError}
-							/>
-
-							<Input
-								label="Password"
-								name="password"
-								type="password"
-								autocomplete="current-password"
-								bind:value={password}
-								error={passwordError}
-							/>
-
-							<Button
-								variant="secondary"
-								disabled={signInPending || googlePending}
-								onclick={signIn}
-							>
-								{signInPending ? 'Signing in…' : 'Sign in'}
-							</Button>
-
-							<div aria-live="polite">
-								{#if signInError !== ''}
-									<p class="text-sm font-bold text-danger">{signInError}</p>
-								{/if}
-							</div>
-						{/if}
-
-						<Button variant="destructive" onclick={() => (disconnectOpen = true)}>
-							<Plugs size={18} />
-							Disconnect
+						<Button variant="chrome" caps onclick={() => void forget()}>
+							USE A DIFFERENT SERVER
 						</Button>
-					</div>
+					{:else}
+						<p class="text-md text-pretty text-ink-muted">
+							Everything lives on this phone. Signing in to {defaultHost} adds sync, the web surface and
+							the API — and takes nothing away: the app works the same offline either way.
+						</p>
 
-					<!-- Three-way, so a Sheet rather than the AlertDialog the rest of this
-				     screen uses: the destructive option is one of the choices, not the
-				     whole question, and it keeps its own confirm below. -->
-					<Sheet
-						bind:open={mismatchOpen}
-						title="This phone belongs to another account"
-						description="Everything logged here was synced as somebody else. Choose what happens to it before {arriving?.email ??
-							'the new account'} takes over."
-					>
-						<div class="flex flex-col gap-5 pt-2">
-							<div class="flex flex-col gap-2">
-								<Button variant="secondary" onclick={() => void handOver('adopt')}>
-									Move it to this account
-								</Button>
-								<p class="px-1 text-sm text-pretty text-ink-muted">
-									Every workout, template and weight on this phone is copied across. The other
-									account keeps its own.
-								</p>
-							</div>
+						{@render credentials()}
 
-							<div class="flex flex-col gap-2">
-								<Button variant="destructive" onclick={() => (wipeOpen = true)}>
-									Erase this phone
-								</Button>
-								<p class="px-1 text-sm text-pretty text-ink-muted">
-									Local data is deleted and replaced with whatever the new account has on the
-									server.
-								</p>
-							</div>
+						<Button variant="chrome" caps onclick={() => (custom = true)}>USE MY OWN SERVER</Button>
+					{/if}
+				</div>
 
-							<Button variant="chrome" caps onclick={() => void abandon()}>CANCEL</Button>
+				<!-- Outside every branch above, because the sign-in that raises it runs
+				     while the screen is still showing the form: on the kilorep.com path
+				     the address is on loan until a credential exists for it, so `server`
+				     is null for exactly as long as this sheet can open. -->
+
+				<!-- Three-way, so a Sheet rather than the AlertDialog the rest of this
+			     screen uses: the destructive option is one of the choices, not the
+			     whole question, and it keeps its own confirm below. -->
+				<Sheet
+					bind:open={mismatchOpen}
+					title="This phone belongs to another account"
+					description="Everything logged here was synced as somebody else. Choose what happens to it before {arriving?.email ??
+						'the new account'} takes over."
+				>
+					<div class="flex flex-col gap-5 pt-2">
+						<div class="flex flex-col gap-2">
+							<Button variant="secondary" onclick={() => void handOver('adopt')}>
+								Move it to this account
+							</Button>
+							<p class="px-1 text-sm text-pretty text-ink-muted">
+								Every workout, template and weight on this phone is copied across. The other account
+								keeps its own.
+							</p>
 						</div>
-					</Sheet>
 
-					<AlertDialog
-						bind:open={wipeOpen}
-						title="Erase everything on this phone?"
-						description="Every workout, template and body weight held here is deleted, including any that never reached a server. There is no undo."
-						confirmLabel="Erase"
-						onconfirm={() => void handOver('wipe')}
-					/>
+						<div class="flex flex-col gap-2">
+							<Button variant="destructive" onclick={() => (wipeOpen = true)}>
+								Erase this phone
+							</Button>
+							<p class="px-1 text-sm text-pretty text-ink-muted">
+								Local data is deleted and replaced with whatever the new account has on the server.
+							</p>
+						</div>
 
-					<AlertDialog
-						bind:open={disconnectOpen}
-						title="Disconnect this server?"
-						description="Your workouts stay on this phone. Sync and the account stop until you connect again."
-						confirmLabel="Disconnect"
-						onconfirm={() => void disconnect()}
-					/>
-				{/if}
+						<Button variant="chrome" caps onclick={() => void abandon()}>CANCEL</Button>
+					</div>
+				</Sheet>
+
+				<AlertDialog
+					bind:open={wipeOpen}
+					title="Erase everything on this phone?"
+					description="Every workout, template and body weight held here is deleted, including any that never reached a server. There is no undo."
+					confirmLabel="Erase"
+					onconfirm={() => void handOver('wipe')}
+				/>
 			</section>
 		{/if}
 

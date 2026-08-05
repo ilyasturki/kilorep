@@ -62,7 +62,21 @@ export default defineConfig({
 	 * build time and the branch not taken is not shipped.
 	 */
 	define: {
-		'import.meta.env.APP_BUILD': JSON.stringify(isAppBuild)
+		'import.meta.env.APP_BUILD': JSON.stringify(isAppBuild),
+
+		/**
+		 * The instance the app offers to sign in to — the one address in the
+		 * product nobody typed.
+		 *
+		 * Substituted rather than written into `client.ts` so a fork can ship its
+		 * own APK without patching the transport, and read from the environment
+		 * rather than from a `.env` file for the reason above it: the build script
+		 * decides, and one source of it. `vitest.config.ts` restates this literal,
+		 * because it deliberately runs without this plugin.
+		 */
+		'import.meta.env.DEFAULT_SERVER': JSON.stringify(
+			process.env.DEFAULT_SERVER ?? 'https://kilorep.com'
+		)
 	},
 
 	/**

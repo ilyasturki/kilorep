@@ -17,6 +17,13 @@ declare global {
 		 * there for why it is not a `VITE_`-prefixed variable.
 		 */
 		readonly APP_BUILD: boolean;
+
+		/**
+		 * Where the app build offers to sign in, scheme and host, no trailing
+		 * slash. A default for the form on the Server screen and never for
+		 * `apiBase` — see the constant in `$lib/api/client`.
+		 */
+		readonly DEFAULT_SERVER: string;
 	}
 
 	namespace App {

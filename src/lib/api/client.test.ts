@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
 	ApiError,
+	DEFAULT_SERVER,
 	NO_SERVER,
 	apiBase,
 	deviceToken,
+	lastServer,
 	request,
 	setApiBase,
-	setDeviceToken
+	setDeviceToken,
+	setLastServer
 } from './client.ts';
 
 /**
@@ -41,6 +44,7 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	setApiBase(null);
 	setDeviceToken(null);
+	setLastServer(null);
 });
 
 function sentHeaders(): Headers {
@@ -108,5 +112,54 @@ describe('where the requests go', () => {
 
 		expect(error.status).toBe(NO_SERVER);
 		expect(error.status).not.toBe(0);
+	});
+});
+
+describe('the default instance', () => {
+	it('is an address a URL can be built on, scheme and all', () => {
+		expect(() => new URL('/api/health', DEFAULT_SERVER)).not.toThrow();
+		expect(new URL(DEFAULT_SERVER).protocol).toBe('https:');
+	});
+
+	it('carries no trailing slash, which `request` would double', () => {
+		expect(DEFAULT_SERVER.endsWith('/')).toBe(false);
+	});
+
+	/**
+	 * The whole point of the constant being separate from `apiBase`. Settings
+	 * offers it, a sign-in installs it, and nothing else may: a phone that has
+	 * never signed in stays local-only, so a fresh install neither reaches the
+	 * network nor has an address to reach it at. `location` is stubbed to the web
+	 * half here — `APP_BUILD` is false under vitest — so the assertion is that
+	 * even the fallback is the origin and never this.
+	 */
+	it('is never what `apiBase` falls back to on its own', () => {
+		vi.stubGlobal('location', { origin: 'https://web.example.com' });
+		setApiBase(null);
+
+		expect(apiBase()).not.toBe(DEFAULT_SERVER);
+	});
+});
+
+describe('the address somebody typed', () => {
+	/**
+	 * Sign-out clears the active server, because on the phone signing in is what
+	 * connected it. This is the half that must outlive that — otherwise a
+	 * self-hoster retypes a LAN name on a phone keyboard every time.
+	 */
+	it('outlives the connection it was used for', () => {
+		vi.stubGlobal('location', { origin: 'https://web.example.com' });
+
+		setApiBase('https://gym.example.com');
+		setLastServer('https://gym.example.com');
+
+		setApiBase(null);
+
+		expect(apiBase()).not.toBe('https://gym.example.com');
+		expect(lastServer()).toBe('https://gym.example.com');
+	});
+
+	it('is nothing until a server is typed, so the field starts empty', () => {
+		expect(lastServer()).toBeNull();
 	});
 });

@@ -36,6 +36,30 @@ const SERVER_KEY = 'kilorep.server';
  */
 const TOKEN_KEY = 'kilorep.token';
 
+/**
+ * The last address somebody typed, which is a different fact from the one above
+ * and outlives it.
+ *
+ * Signing out clears the active server — on the phone, signing in is what
+ * connected it, so signing out is what disconnects it — and a self-hoster whose
+ * address went with it would retype a LAN name on a phone keyboard every time.
+ * Written only by the typed path: there is nothing to remember about a default.
+ */
+const LAST_SERVER_KEY = 'kilorep.lastServer';
+
+let previous: string | null = null;
+
+/**
+ * The instance the app offers to sign in to.
+ *
+ * A default for the form on the Server screen and never a fallback for
+ * `apiBase`, which must keep answering `null` in the app until somebody signs
+ * in: PRODUCT.md makes the phone complete standalone, and an address that
+ * connected itself would put a fresh install on the network on behalf of a user
+ * who asked for nothing. Substituted at build time — see vite.config.ts.
+ */
+export const DEFAULT_SERVER = import.meta.env.DEFAULT_SERVER;
+
 let restored = false;
 
 /**
@@ -49,6 +73,7 @@ function restore(): void {
 		restored = true;
 		configured = localStorage.getItem(SERVER_KEY);
 		credential = localStorage.getItem(TOKEN_KEY);
+		previous = localStorage.getItem(LAST_SERVER_KEY);
 	}
 }
 
@@ -79,6 +104,17 @@ export function apiBase(): string | null {
 export function setApiBase(base: string | null): void {
 	configured = base;
 	persist(SERVER_KEY, base);
+}
+
+export function lastServer(): string | null {
+	restore();
+
+	return previous;
+}
+
+export function setLastServer(base: string | null): void {
+	previous = base;
+	persist(LAST_SERVER_KEY, base);
 }
 
 export function deviceToken(): string | null {
