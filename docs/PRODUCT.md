@@ -16,7 +16,7 @@ Math:
 
 ## The loop
 
-**Start.** The app opens into the Dashboard, whose banner is the way in: continue the session running or start one, both landing on the Workout tab. The tab is two addresses and exactly one of them is true at a time: `/workout/live` while a session runs, `/workout` — an empty-workout action over a glance of templates, the rest one tab over — while none does, each redirecting to the other when the holder disagrees with it. Nothing starts a workout except an explicit start: the editor's button or a tap on the idle screen, never navigation. On the Templates tab a row opens its editor, and Start lives inside it, under the thumb — immediate-start-on-tap was weighed and retired there: one row cannot honestly carry both "open this plan" and "begin lifting now", and a mis-tap that starts a workout costs more than the tap it saves. The idle Workout screen is the one exemption: its rows can mean nothing but "begin", the screen itself is the proof no session exists to clobber, and a mis-tap starts an untouched session FINISH discards for free. "Repeat this workout" lives on any past workout in History. Exactly one workout is active at a time — starting a template over an unfinished session asks before it discards anything.
+**Start.** The app opens into Train, which is the way in: the session running, or the place one begins. The tab is two addresses and exactly one of them is true at a time: `/workout/live` while a session runs, `/workout` — an empty-workout action over a glance of templates, the rest one tab over — while none does, each redirecting to the other when the holder disagrees with it. Nothing starts a workout except an explicit start: the editor's button or a tap on the idle screen, never navigation. On Plan's Templates half a row opens its editor, and Start lives inside it, under the thumb — immediate-start-on-tap was weighed and retired there: one row cannot honestly carry both "open this plan" and "begin lifting now", and a mis-tap that starts a workout costs more than the tap it saves. The idle Train screen is the one exemption: its rows can mean nothing but "begin", the screen itself is the proof no session exists to clobber, and a mis-tap starts an untouched session FINISH discards for free. "Repeat this workout" lives on any past workout in History. Exactly one workout is active at a time — starting a template over an unfinished session asks before it discards anything.
 
 **During a set.** The screen shows what the next set needs: target or hint, weight, reps, check. Every set displays last time's actual weight × reps. The session list — exercise names, where you are — is a rail on a desktop and one tap away on a phone, for orientation, jumping, reordering and inserting.
 
@@ -32,15 +32,17 @@ Math:
 
 Every screen must justify its existence.
 
-- **Workout** — the loop above while a session runs; idle, the place one starts. One tab, two screens, one address each.
-- **Templates** — the list; a template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
-- **History** — workout list + detail; repeat-this-workout; drift-vs-template on the detail.
-- **Exercises** — catalog + customs; detail carries history, raw best set, est-1RM trend.
-- **Weight** — log + trend.
-- **Dashboard** — four standing questions, one card each, no configuration: **Progressing?** (recent raw PRs, est-1RM direction on main lifts) · **Consistent?** (sessions this week vs your own habit — facts, never streaks) · **Balanced?** (working volume by muscle, recent weeks) · **Weight on track?** (trend). Home, and where the gear to Settings hangs. Anything that can't be phrased as a standing question stays off it — with one stated exception, the banner above the four: home owes the user a way into a workout, and that is an exit rather than a fifth answer. Two columns from `lg` and one below, and the long cards are capped rather than uncapped: a desk window holds all four at once, and a phone gets two of them and the banner before it scrolls rather than a single card of personal bests.
-- **Settings** — behind the gear, not a tab: on home below `lg`, beside the mark in the top bar above it.
+- **Train** — the loop above while a session runs; idle, the place one starts. One tab, two screens, one address each. Leads the bar, and `routes/+page.ts` and `AFTER_LOGIN` follow whichever tab does.
+- **Templates** — Plan's first half; the list; a template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
+- **History** — a child of Progress, reached through its Consistent? card; workout list + detail; repeat-this-workout; drift-vs-template on the detail.
+- **Exercises** — Plan's second half; catalog + customs; detail carries history, raw best set, est-1RM trend.
+- **Weight** — a child of Progress, reached through its Weight on track? card; log + trend.
+- **Dashboard** — four standing questions, one card each, no configuration: **Progressing?** (recent raw PRs, est-1RM direction on main lifts) · **Consistent?** (sessions this week vs your own habit — facts, never streaks) · **Balanced?** (working volume by muscle, recent weeks) · **Weight on track?** (trend). Anything that can't be phrased as a standing question stays off it, with no exceptions: the banner that used to sit above the four was entitled by home owing the user a way into a workout, and home is Train now, which is that way in. Two of the cards are doors, and are how History and Weight are reached at all. Two columns from `lg` and one below, and the long cards are capped rather than uncapped: a desk window holds all four at once, and a phone gets two of them before it scrolls rather than a single card of personal bests.
+- **Settings** — a tab like any other, last in the bar and behind no separator, which is what lets it keep the bar once you are on it. Reachable from every screen including a live session.
 
-The app opens into the Dashboard, always.
+The app opens into Train, always.
+
+The bar is **Train · Plan · Progress · Settings**, read left to right as the tense of what each tab holds. One bar serves both viewports: the tabs sit along the bottom on a phone and inside the top bar on a desk, and that top bar carries the title, back and the screen's one action. No screen draws chrome of its own.
 
 ## Offline
 
@@ -58,5 +60,5 @@ The app opens into the Dashboard, always.
 
 ## Unresolved — settle on the phone
 
-- The tab bar's final order gets judged on the phone; History lands last until then. The Dashboard / Weight allocation shipped as: Dashboard holds the slot, Weight leaves the bar and is reached through the Dashboard's weight card — on the phone to be judged like the rest.
+- The bar is settled at four; what is not is the phone's top chrome. The four list screens traded a 28px heading for the bar's 18px title, and Progress went from 89px of chrome to 115px — judged at arm's length, not from a specimen sheet. Plan's segment scrolls with its list rather than sticking, because Exercises' search field owns `top-0` in that scroll box and must never be a scroll away; if the segment turns out to want stickiness more than the search does, that is the trade to reopen.
 - Set extras: type, note, and the per-set load-mode override. The row stays `weight | reps | check` and the long-press sheet that holds Remove is where they go; what they look like in it is open. RPE left this list — it is built, and the collapsed pill on the logging card is where it landed rather than in the sheet.
