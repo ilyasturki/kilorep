@@ -25,20 +25,20 @@
 
 set -uo pipefail
 
-# The nearest package root at or above DIR. Empty if there is none.
+# The checkout DIR belongs to. Empty if it is under none, or under one with no
+# package.json — a scratchpad or a /tmp working directory is not this project
+# and must not be installed into.
 #
-# Always resolved by walking up from a real directory, never from
-# $CLAUDE_PROJECT_DIR — in a worktree that variable points at the main
-# checkout, which is the tree that is never the one missing anything.
+# Always resolved from a real directory, never from $CLAUDE_PROJECT_DIR — in a
+# worktree that variable points at the main checkout, which is the tree that is
+# never the one missing anything. `--show-toplevel` gives the worktree its own
+# root instead.
 pkg_root() {
+	local root
 	[[ -n ${1-} && -d $1 ]] || return 0
-	(cd "$1" && while [[ $PWD != / ]]; do
-		[[ -f package.json ]] && {
-			echo "$PWD"
-			break
-		}
-		cd ..
-	done)
+	root=$(git -C "$1" rev-parse --show-toplevel 2>/dev/null) || return 0
+	[[ -f "$root/package.json" ]] && echo "$root"
+	return 0
 }
 
 # Install into ROOT unless its executables are already there. Quiet on

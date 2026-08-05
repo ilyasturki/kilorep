@@ -29,14 +29,8 @@ blocks="$state/claude-kilorep-blocks-$session"
 
 [[ -f $dirty ]] || exit 0
 
-root=$(cd "$cwd" && while [[ $PWD != / ]]; do
-	[[ -f package.json ]] && {
-		echo "$PWD"
-		break
-	}
-	cd ..
-done)
-[[ -n $root ]] || exit 0
+root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
+[[ -n $root && -f "$root/package.json" ]] || exit 0
 
 # A turn that only wrote through shell commands never reached format.sh, so a
 # fresh worktree can still be bare by the time the gate runs. Install, and skip

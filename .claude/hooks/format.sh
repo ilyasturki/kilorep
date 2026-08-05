@@ -23,17 +23,18 @@ case $file in
 	*) exit 0 ;;
 esac
 
-# Resolve the package root by walking up from the file, not from
-# $CLAUDE_PROJECT_DIR — in a git worktree that variable points at the main
-# checkout and would run the wrong tree's config against the wrong sources.
-root=$(cd "$(dirname "$file")" && while [[ $PWD != / ]]; do
-	[[ -f package.json ]] && {
-		echo "$PWD"
-		break
-	}
-	cd ..
-done)
-[[ -n $root ]] || exit 0
+# Resolve the root from git, not from $CLAUDE_PROJECT_DIR — in a git worktree
+# that variable points at the main checkout and would run the wrong tree's
+# config against the wrong sources. `--show-toplevel` gives the worktree its
+# own root.
+#
+# Walking up to the nearest package.json is the version this replaces, and it
+# reached outside the project: a scratchpad `driver/package.json` (playwright
+# and nothing else) is a package root by that rule, so the hook installed it,
+# found no prettier in it, and blamed bun. A file under no checkout at all is
+# not ours to format.
+root=$(git -C "$(dirname "$file")" rev-parse --show-toplevel 2>/dev/null)
+[[ -n $root && -f "$root/package.json" ]] || exit 0
 
 prettier="$root/node_modules/.bin/prettier"
 if [[ ! -x $prettier ]]; then
