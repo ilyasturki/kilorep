@@ -17,9 +17,11 @@
 	 * one level down, and a segment on them would offer to swap the screen you
 	 * are standing on for a sibling of its parent.
 	 *
-	 * Not sticky: the one screen below with a sticky element of its own —
-	 * Exercises' search field, which its comment says must never be a scroll away
-	 * — already owns `top-0` in this scroll box.
+	 * Not sticky, and now by choice rather than by conflict: `top-0` in this
+	 * scroll box used to belong to Exercises' search field, which has since moved
+	 * into the bar. What is left is a switch between two destinations, read on
+	 * arrival and not reached for mid-scroll — and pinning it would put a second
+	 * strip of chrome directly under the real one for no act at all.
 	 */
 	let { children }: LayoutProps = $props();
 

@@ -52,7 +52,14 @@
 			<BackLink href={parent} label="Back" class="lg:col-start-1 lg:justify-self-start" />
 		{/if}
 
-		<h1 class="min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight lg:hidden">
+		<!-- `sr-only` and not gone: an absolute 1px box takes no room from the
+		     field beside it, and the screen keeps the heading it is owed. -->
+		<h1
+			class={[
+				'min-w-0 truncate text-lg font-extrabold tracking-tight lg:hidden',
+				slot.wideAction ? 'sr-only' : 'flex-1'
+			]}
+		>
 			{title}
 		</h1>
 
@@ -81,8 +88,16 @@
 			{/each}
 		</nav>
 
+		<!-- Wide, the action takes the row a title is no longer standing in; at
+		     `lg` it is a grid item in the last track either way, where `flex-1`
+		     means nothing and the width is the screen's own to set. -->
 		{#if slot.action !== null}
-			<div class="ml-auto shrink-0 lg:col-start-3 lg:ml-0 lg:justify-self-end">
+			<div
+				class={[
+					'lg:col-start-3 lg:ml-0 lg:justify-self-end',
+					slot.wideAction ? 'min-w-0 flex-1' : 'ml-auto shrink-0'
+				]}
+			>
 				{@render slot.action()}
 			</div>
 		{/if}

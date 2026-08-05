@@ -106,11 +106,19 @@ export function parentOf(pathname: string): string | null {
  *
  * `leading` is the phone bar's left, for the screens that want something there
  * other than the back button the bar would otherwise draw.
+ *
+ * `wideAction` says the action is the phone bar's whole row rather than a
+ * control at the end of it, and the title stands down to make the room. One
+ * screen asks for it — Exercises, whose search field is the act the screen
+ * exists for and cannot be squeezed into what a title leaves of 375px. The
+ * title is not deleted, only taken off screen: the segment under it already
+ * names the place for a reader, and a heading is still owed to everyone else.
  */
 export class AppBarSlot {
 	public title: string | null = $state(null);
 	public leading: Snippet | null = $state(null);
 	public action: Snippet | null = $state(null);
+	public wideAction: boolean = $state(false);
 }
 
 const key = Symbol('app-bar');
@@ -126,7 +134,7 @@ export function appBarSlot(): AppBarSlot {
 	return getContext<AppBarSlot>(key);
 }
 
-const EMPTY = { title: null, leading: null, action: null };
+const EMPTY = { title: null, leading: null, action: null, wideAction: false };
 
 /**
  * Hand the bar what this screen carries, and take all of it back on the way out
