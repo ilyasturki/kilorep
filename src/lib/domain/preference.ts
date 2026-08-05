@@ -58,6 +58,30 @@ export function restOverrideExercise(id: string): string | null {
 	return id.startsWith(REST_PREFIX) ? id.slice(REST_PREFIX.length) : null;
 }
 
+/**
+ * One exercise's standing note — the seat number, the pin, which handles. The
+ * only prose the user writes anywhere in the app.
+ *
+ * Two states and not three, unlike the rest override beside it: a note is
+ * written or it is not, and "not" is the absence of the record. Empty text is
+ * never stored — clearing tombstones instead, so a note taken back does not
+ * ride sync forever as an empty string that every device has to keep.
+ */
+export type NotePreference = { text: string };
+
+/**
+ * Its own record per exercise, for the reason `REST_PREFIX` gives: sync is
+ * last-write-wins per record, and one map of every note would have the phone
+ * that reworded Bench Press erase the laptop's Cable Fly. Keyed by catalog
+ * slug, which is append-only and never reused, so a note cannot come to
+ * describe a different lift.
+ */
+export const NOTE_PREFIX = 'note:';
+
+export function noteId(exerciseId: string): string {
+	return `${NOTE_PREFIX}${exerciseId}`;
+}
+
 export function isExertionScalePreference(value: unknown): value is ExertionScalePreference {
 	return (
 		typeof value === 'object' &&
@@ -92,4 +116,8 @@ export function isRestOverridePreference(value: unknown): value is RestOverrideP
 		(value.seconds === null ||
 			(typeof value.seconds === 'number' && Number.isFinite(value.seconds)))
 	);
+}
+
+export function isNotePreference(value: unknown): value is NotePreference {
+	return isPayload(value) && typeof value.text === 'string';
 }

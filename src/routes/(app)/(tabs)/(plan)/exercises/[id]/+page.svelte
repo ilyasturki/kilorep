@@ -17,11 +17,14 @@
 	import { getStore } from '$lib/store/store';
 	import { syncSoon } from '$lib/sync/client';
 	import { templateTitle } from '$lib/templates/plan';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Switch from '$lib/ui/Switch.svelte';
+	import Textarea from '$lib/ui/Textarea.svelte';
 	import { press } from '$lib/ui/press';
+	import Pencil from '$lib/ui/icons/Pencil.svelte';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
 
@@ -32,10 +35,16 @@
 	 * best, the sessions behind it.
 	 *
 	 * Catalog entries are immutable and customs are a later slice, so nothing
-	 * here edits the exercise — the rest override is a preference record of its
-	 * own, keyed by the slug, which is why a screen over a read-only catalog can
-	 * carry a control at all. Everything else is still a navigation: the family
-	 * links, and each history entry through to the workout it came from.
+	 * here edits the exercise — the rest override and the note are preference
+	 * records of their own, keyed by the slug, which is why a screen over a
+	 * read-only catalog can carry controls at all. Everything else is still a
+	 * navigation: the family links, and each history entry through to the
+	 * workout it came from.
+	 *
+	 * This screen is the note's only surface, by decision: the logging loop
+	 * stays exactly as it was, and nothing about a note reaches the workout
+	 * screen, History or a plan card. Reading one mid-session is a tap on the
+	 * exercise name and a tap back.
 	 *
 	 * The est-1RM trend is settled but still absent: charting is decided now
 	 * — Progress' sparklines, drawn from the same `estTrend` — and the
@@ -167,6 +176,118 @@
 		}
 
 		planned = template;
+	}
+
+	/**
+	 * The note, and the two states its section has.
+	 *
+	 * Read from the load once and owned here from mount on, like the template
+	 * editor's tree: navigating exercise-to-exercise remounts this page, so the
+	 * prop never changes under a live one.
+	 */
+	// svelte-ignore state_referenced_locally
+	const initial = data.note;
+
+	let draft = $state(initial);
+
+	/**
+	 * A field only once it is asked for. The catalog is 79 entries and most will
+	 * never carry a note, so the resting shape of this section is one dashed row
+	 * rather than an empty box on every exercise in the app.
+	 */
+	let writing = $state(initial !== '');
+
+	/**
+	 * What the store was last told. A plain variable and not state — nothing
+	 * renders it; it exists so a save can tell a real edit from an effect
+	 * re-running, and so the two paths that commit cannot write twice.
+	 */
+	let saved = initial;
+
+	/** Long enough that a typed word is one record, short enough to beat a back gesture. */
+	const SETTLE_MS = 600;
+
+	/**
+	 * Trimmed, because trailing space off a soft keyboard is not an edit — and
+	 * empty tombstones rather than storing `''`: the absence of the record is
+	 * what "no note" means everywhere else, and an empty string would ride sync
+	 * forever as a note that is not there.
+	 *
+	 * `saved` moves before the first `await`, which is what makes this safe to
+	 * call from two places at once — the settle timer and the unmount flush race
+	 * on every navigation, and the loser sees its own write already claimed.
+	 */
+	async function commit(text: string) {
+		const settled = text.trim();
+
+		if (settled === saved) {
+			return;
+		}
+
+		saved = settled;
+
+		const store = await getStore();
+
+		await (settled === ''
+			? store.clearExerciseNote(exercise.id, Date.now())
+			: store.setExerciseNote(exercise.id, settled, Date.now()));
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+	}
+
+	/**
+	 * Typing settles into a write, the way every other surface here saves — no
+	 * button, nothing to forget. The teardown cancels the pending one before the
+	 * next keystroke schedules its own, so a sentence costs one record and not
+	 * twenty, each of them dirty and each of them synced.
+	 */
+	$effect(() => {
+		const text = draft;
+
+		if (text.trim() === saved) {
+			return;
+		}
+
+		const timer = setTimeout(() => void commit(text), SETTLE_MS);
+
+		return () => clearTimeout(timer);
+	});
+
+	/**
+	 * The teardown-only shape, like the template editor's: nothing is read in
+	 * the body, so it runs once and the cleanup is the whole point. Leaving
+	 * inside the settle window — the Android back gesture, which unmounts —
+	 * would otherwise drop the last thing typed on the floor.
+	 */
+	$effect(() => () => {
+		void commit(draft);
+	});
+
+	/**
+	 * Set by the tap that reveals the field and spent by the field's first
+	 * attach. A plain variable so the attachment tracks nothing: read `draft`
+	 * there instead and every keystroke would re-run it, stealing the caret back
+	 * to the end of the text on each one.
+	 */
+	let claiming = false;
+
+	function open() {
+		claiming = true;
+		writing = true;
+	}
+
+	/**
+	 * The field was asked for, so it takes the caret and the keyboard with it —
+	 * a second tap to start typing is the tap this section just charged for.
+	 * Arriving at an exercise that already has a note claims neither.
+	 */
+	function caret(node: HTMLTextAreaElement) {
+		if (claiming) {
+			claiming = false;
+			node.focus();
+		}
 	}
 </script>
 
@@ -300,6 +421,33 @@
 			</div>
 		</section>
 	{/if}
+
+	<!-- Below Rest and above the family, which is the order this screen is read
+	     in: what the lift is, how it is timed, what you wrote about it, what else
+	     it could have been, what you have done.
+
+	     No `label-caps` heading of its own in either state, unlike the sections
+	     around it. Written, the field's own label is that heading — same class,
+	     same gutter, same place — and a `Note` over a box labelled `Note` was the
+	     word twice. Empty, the dashed row says what it does, exactly like the
+	     `Add set` and `+ New template` rows elsewhere, which carry no heading
+	     either. -->
+	<section class="flex flex-col px-3">
+		{#if writing}
+			<!-- `onblur` and the settle timer both commit; whichever lands first
+			     claims the write. Dismissing the keyboard is the moment a note feels
+			     finished, and waiting out 600ms after it would be a lie. -->
+			<Textarea
+				label="Note"
+				placeholder="Seat 4 · pin 3 · narrow handles"
+				bind:value={draft}
+				onblur={() => void commit(draft)}
+				{@attach caret}
+			/>
+		{:else}
+			<AddRow label="Add note" icon={Pencil} onclick={open} />
+		{/if}
+	</section>
 
 	{#if family.length > 0}
 		<section class="flex flex-col gap-2">

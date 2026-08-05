@@ -3,6 +3,7 @@ import { bodyweightId } from '$lib/domain/bodyweight';
 import type { ExertionScale } from '$lib/domain/exertion';
 import type {
 	ExertionScalePreference,
+	NotePreference,
 	RestDefaultPreference,
 	RestOverridePreference,
 	WeightRangePreference
@@ -13,9 +14,11 @@ import {
 	REST_DEFAULT_ID,
 	WEIGHT_RANGE_ID,
 	isExertionScalePreference,
+	isNotePreference,
 	isRestDefaultPreference,
 	isRestOverridePreference,
 	isWeightRangePreference,
+	noteId,
 	restOverrideExercise,
 	restOverrideId
 } from '$lib/domain/preference';
@@ -439,6 +442,30 @@ export class Store {
 
 	public async clearRestOverride(exerciseId: string, deletedAt: number): Promise<void> {
 		await this.tombstone(restOverrideId(exerciseId), 'preference', deletedAt);
+	}
+
+	/**
+	 * One exercise's note, or `''` where there is none — the empty string is the
+	 * absence, because nothing downstream distinguishes "never written" from
+	 * "written and cleared" and a `null` would only make every caller say so.
+	 *
+	 * Read by id rather than by the scan `restSettings` does: one screen wants
+	 * this, on a navigation, and no boot path needs every note in memory.
+	 */
+	public async exerciseNote(exerciseId: string): Promise<string> {
+		const payload = await this.liveOne<unknown>(noteId(exerciseId), 'preference');
+
+		return isNotePreference(payload) ? payload.text : '';
+	}
+
+	public async setExerciseNote(exerciseId: string, text: string, updatedAt: number): Promise<void> {
+		const payload: NotePreference = { text };
+
+		await this.write(noteId(exerciseId), 'preference', updatedAt, payload);
+	}
+
+	public async clearExerciseNote(exerciseId: string, deletedAt: number): Promise<void> {
+		await this.tombstone(noteId(exerciseId), 'preference', deletedAt);
 	}
 
 	public async saveSnapshot(snapshot: Snapshot): Promise<void> {

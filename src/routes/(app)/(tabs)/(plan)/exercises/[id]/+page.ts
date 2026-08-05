@@ -28,9 +28,10 @@ export const load: PageLoad = async ({ params }) => {
 	// carry the same last-session line — which is the whole point of linking
 	// them: hints never cross entries, and the numbers are how you tell the
 	// close-grip you actually train from the wide-grip you do not.
-	const [past, lastPerformed] = await Promise.all([
+	const [past, lastPerformed, note] = await Promise.all([
 		store.pastSessions(exercise.id),
-		store.lastPerformed()
+		store.lastPerformed(),
+		store.exerciseNote(exercise.id)
 	]);
 
 	// Only the never-trained screen offers to plan this exercise, so only it
@@ -42,5 +43,5 @@ export const load: PageLoad = async ({ params }) => {
 	const templates = past.length === 0 ? await store.listTemplates() : [];
 	const plans = templates.filter((plan) => !isArchived(plan));
 
-	return { exercise, past, lastPerformed, plans };
+	return { exercise, past, lastPerformed, note, plans };
 };

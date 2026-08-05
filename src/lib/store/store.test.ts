@@ -443,6 +443,77 @@ describe('exertion scale', () => {
 	});
 });
 
+describe('exercise notes', () => {
+	it('is empty for an exercise nobody has written about, without writing a record', async () => {
+		expect(await store.exerciseNote('bench-press')).toBe('');
+		expect(await store.dirtyRecords()).toEqual([]);
+	});
+
+	it('round-trips a note as a record born dirty and syncable', async () => {
+		await store.setExerciseNote('bench-press', 'Seat 4', 100);
+
+		expect(await store.exerciseNote('bench-press')).toBe('Seat 4');
+
+		expect(await store.dirtyRecords()).toEqual([
+			wire('note:bench-press', 100, { text: 'Seat 4' }, 'preference')
+		]);
+	});
+
+	it('rewriting overwrites in place: there is only ever one per exercise', async () => {
+		await store.setExerciseNote('bench-press', 'Seat 4', 100);
+		await store.setExerciseNote('bench-press', 'Seat 5', 200);
+
+		expect(await store.exerciseNote('bench-press')).toBe('Seat 5');
+		expect(await store.dirtyRecords()).toHaveLength(1);
+	});
+
+	// The whole reason a note is its own record and not one map of them all:
+	// last-write-wins is per record, so two exercises edited on two devices do
+	// not clobber each other.
+	it('keeps one exercise clear of another', async () => {
+		await store.setExerciseNote('bench-press', 'Seat 4', 100);
+		await store.setExerciseNote('cable-fly', 'Pin 3', 200);
+
+		expect(await store.exerciseNote('bench-press')).toBe('Seat 4');
+		expect(await store.exerciseNote('cable-fly')).toBe('Pin 3');
+	});
+
+	// Notes and rest overrides share the `preference` kind and its index, so
+	// each scan has to walk past the other's records untouched.
+	it('does not read as a rest override, nor a rest override as a note', async () => {
+		await store.setExerciseNote('bench-press', 'Seat 4', 100);
+		await store.setRestOverride('bench-press', 150, 200);
+
+		const settings = await store.restSettings();
+
+		expect(settings.overrides).toEqual({ 'bench-press': 150 });
+		expect(await store.exerciseNote('bench-press')).toBe('Seat 4');
+	});
+
+	it('clearing tombstones rather than storing an empty note', async () => {
+		await store.setExerciseNote('bench-press', 'Seat 4', 100);
+		await store.clearExerciseNote('bench-press', 300);
+
+		expect(await store.exerciseNote('bench-press')).toBe('');
+
+		const dirty = await store.dirtyRecords();
+		expect(dirty).toHaveLength(1);
+		expect(dirty[0]).toMatchObject({ id: 'note:bench-press', deletedAt: 300, updatedAt: 300 });
+	});
+
+	it('reads a tombstoned note as no note', async () => {
+		await store.applyRemote([wire('note:bench-press', 50, { text: 'Seat 4' }, 'preference', 60)]);
+
+		expect(await store.exerciseNote('bench-press')).toBe('');
+	});
+
+	it('falls back rather than rendering a payload it cannot read as text', async () => {
+		await store.applyRemote([wire('note:bench-press', 50, { text: 4 }, 'preference')]);
+
+		expect(await store.exerciseNote('bench-press')).toBe('');
+	});
+});
+
 describe('history derivation', () => {
 	it('counts completed working sets only', async () => {
 		await store.finishWorkout(
