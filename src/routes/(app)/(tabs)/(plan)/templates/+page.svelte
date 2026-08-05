@@ -57,13 +57,7 @@
 	<title>Templates | Kilorep</title>
 </svelte:head>
 
-<main class="column-content flex min-h-full flex-col gap-4 px-3 pt-safe-t pb-4 lg:pt-3">
-	<!-- Gone from `lg` up, like Exercises': the bar above already says Templates,
-	     in the tab that is currently lit. -->
-	<header class="px-1 pt-6 lg:hidden">
-		<h1 class="text-2xl font-extrabold tracking-tight">Templates</h1>
-	</header>
-
+<main class="column-content flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
 	{#if data.templates.length === 0}
 		<!-- Centred in the pane, action inside — an empty tab is one decision,
 		     and the dashed grow-by-one row waits until there is a list to grow. -->
