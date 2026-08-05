@@ -1,12 +1,11 @@
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
 import { bodyweightId } from '$lib/domain/bodyweight';
 import type { ExertionScale } from '$lib/domain/exertion';
-import type { ExertionScalePreference, MainVariant, MainVariants } from '$lib/domain/preference';
+import type { ExertionScalePreference } from '$lib/domain/preference';
 import {
 	EXERTION_SCALE_ID,
-	isExertionScalePreference,
-	isMainVariant,
-	mainVariantId
+	MAIN_VARIANT_PREFIX,
+	isExertionScalePreference
 } from '$lib/domain/preference';
 import type { PastSession } from '$lib/domain/stats';
 import type { Template } from '$lib/domain/template';
@@ -173,17 +172,12 @@ export class Store {
 		return lastPerformedFrom(await this.listWorkouts());
 	}
 
-	public async pickerData(): Promise<{
-		lastPerformed: LastPerformed;
-		frequent: string[];
-		mains: MainVariants;
-	}> {
+	public async pickerData(): Promise<{ lastPerformed: LastPerformed; frequent: string[] }> {
 		const workouts = await this.listWorkouts();
 
 		return {
 			lastPerformed: lastPerformedFrom(workouts),
-			frequent: frequentFrom(workouts),
-			mains: await this.mainVariants()
+			frequent: frequentFrom(workouts)
 		};
 	}
 
@@ -245,27 +239,36 @@ export class Store {
 		await this.tombstone(bodyweightId(date), 'bodyweight', deletedAt);
 	}
 
-	public async setMainVariant(preference: MainVariant, updatedAt: number): Promise<void> {
-		const payload: MainVariant = {
-			family: preference.family,
-			main: preference.main
-		};
+	/**
+	 * Clears out the retired main-variant preference, everywhere: a tombstone
+	 * rather than a delete, so the row leaves the server too instead of being
+	 * pulled back down on the next sync. The client stamps `deletedAt` and marks
+	 * the record dirty; the `seq` that orders it is the server's to claim, in the
+	 * same transaction as the upsert that consumes it.
+	 *
+	 * Run on every open and idempotent by construction — a record already
+	 * tombstoned no longer matches. That is what answers the device still on the
+	 * old build: it can push a main variant back with a fresher clock, and the
+	 * next open here buries it again.
+	 */
+	public async dropMainVariants(deletedAt: number): Promise<void> {
+		const tx = this.db.transaction('records', 'readwrite');
 
-		await this.write(mainVariantId(preference.family), 'preference', updatedAt, payload);
-	}
+		let cursor = await tx.store.index('kind').openCursor('preference');
+		while (cursor !== null) {
+			const record = cursor.value;
 
-	public async mainVariants(): Promise<MainVariants> {
-		const records = await this.db.getAllFromIndex('records', 'kind', 'preference');
-
-		const mains: MainVariants = {};
-
-		for (const record of records) {
-			if (record.deletedAt === null && isMainVariant(record.payload)) {
-				mains[record.payload.family] = record.payload.main;
+			if (record.id.startsWith(MAIN_VARIANT_PREFIX) && record.deletedAt === null) {
+				record.deletedAt = deletedAt;
+				record.updatedAt = deletedAt;
+				record.dirty = true;
+				await cursor.update(record);
 			}
+
+			cursor = await cursor.continue();
 		}
 
-		return mains;
+		await tx.done;
 	}
 
 	public async setExertionScale(scale: ExertionScale, updatedAt: number): Promise<void> {
@@ -406,7 +409,11 @@ export class Store {
 }
 
 async function openStore(): Promise<Store> {
-	return new Store(await openDatabase());
+	const store = new Store(await openDatabase());
+
+	await store.dropMainVariants(Date.now());
+
+	return store;
 }
 
 let opening: Promise<Store> | undefined;

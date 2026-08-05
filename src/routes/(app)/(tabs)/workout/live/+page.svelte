@@ -656,7 +656,6 @@
 		multiple
 		frequent={data.frequent}
 		lastPerformed={data.lastPerformed}
-		mains={data.mains}
 		onpick={insertPicks}
 	/>
 
@@ -674,7 +673,6 @@
 		title="Swap exercise"
 		replacing={actingLeg === null ? null : actingLeg.meta}
 		lastPerformed={data.lastPerformed}
-		mains={data.mains}
 		onpick={([id]) => swapPick(id)}
 	/>
 
@@ -694,7 +692,6 @@
 		verb="Superset"
 		pinned={supersetShelf}
 		lastPerformed={data.lastPerformed}
-		mains={data.mains}
 		onpick={supersetPicks}
 	/>
 

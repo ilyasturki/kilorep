@@ -284,46 +284,64 @@ describe('body weight', () => {
 	});
 });
 
-describe('main variants', () => {
-	it('round-trips a choice as a record born dirty and syncable', async () => {
-		await store.setMainVariant({ family: 'bench-press', main: 'incline-bench-press' }, 100);
+describe('dropping the retired main variants', () => {
+	it('buries every one as a tombstone the next sync carries', async () => {
+		await store.applyRemote([
+			wire('main-variant:squat', 50, { family: 'squat', main: 'front-squat' }, 'preference'),
+			wire('main-variant:deadlift', 60, { family: 'deadlift', main: 'sumo-deadlift' }, 'preference')
+		]);
 
-		expect(await store.mainVariants()).toEqual({ 'bench-press': 'incline-bench-press' });
+		await store.dropMainVariants(900);
 
 		expect(await store.dirtyRecords()).toEqual([
 			{
-				id: 'main-variant:bench-press',
+				id: 'main-variant:deadlift',
 				kind: 'preference',
-				updatedAt: 100,
-				deletedAt: null,
-				payload: { family: 'bench-press', main: 'incline-bench-press' }
+				updatedAt: 900,
+				deletedAt: 900,
+				payload: { family: 'deadlift', main: 'sumo-deadlift' }
+			},
+			{
+				id: 'main-variant:squat',
+				kind: 'preference',
+				updatedAt: 900,
+				deletedAt: 900,
+				payload: { family: 'squat', main: 'front-squat' }
 			}
 		]);
 	});
 
-	it('re-choosing overwrites in place: one record per family', async () => {
-		await store.setMainVariant({ family: 'bench-press', main: 'incline-bench-press' }, 100);
-		await store.setMainVariant({ family: 'bench-press', main: 'close-grip-bench-press' }, 200);
+	it('leaves every other preference alone', async () => {
+		await store.setExertionScale('rir', 100);
+		await store.dropMainVariants(900);
 
-		expect(await store.mainVariants()).toEqual({ 'bench-press': 'close-grip-bench-press' });
-		expect(await store.dirtyRecords()).toHaveLength(1);
+		expect(await store.exertionScale()).toBe('rir');
+		expect(await store.dirtyRecords()).toMatchObject([{ id: 'exertion-scale', deletedAt: null }]);
 	});
 
-	it('drops payloads it does not recognise rather than poisoning the map', async () => {
+	it('is idempotent: a second pass re-stamps nothing', async () => {
 		await store.applyRemote([
-			wire('rest-timer', 50, { seconds: 90 }, 'preference'),
-			wire('main-variant:deadlift', 60, { family: 'deadlift', main: 'sumo-deadlift' }, 'preference')
+			wire('main-variant:squat', 50, { family: 'squat', main: 'front-squat' }, 'preference')
 		]);
 
-		expect(await store.mainVariants()).toEqual({ deadlift: 'sumo-deadlift' });
+		await store.dropMainVariants(900);
+		await store.dropMainVariants(1000);
+
+		expect(await store.dirtyRecords()).toMatchObject([{ updatedAt: 900, deletedAt: 900 }]);
 	});
 
-	it('leaves tombstoned preferences out of the map', async () => {
+	it('buries again a choice an old device pushed back with a fresher clock', async () => {
 		await store.applyRemote([
-			wire('main-variant:squat', 50, { family: 'squat', main: 'front-squat' }, 'preference', 60)
+			wire('main-variant:squat', 50, { family: 'squat', main: 'front-squat' }, 'preference')
 		]);
+		await store.dropMainVariants(900);
 
-		expect(await store.mainVariants()).toEqual({});
+		await store.applyRemote([
+			wire('main-variant:squat', 1500, { family: 'squat', main: 'front-squat' }, 'preference')
+		]);
+		await store.dropMainVariants(2000);
+
+		expect(await store.dirtyRecords()).toMatchObject([{ updatedAt: 2000, deletedAt: 2000 }]);
 	});
 });
 
@@ -361,12 +379,6 @@ describe('exertion scale', () => {
 		await store.applyRemote([wire('exertion-scale', 50, { scale: 'rir' }, 'preference', 60)]);
 
 		expect(await store.exertionScale()).toBe('rpe');
-	});
-
-	it('does not leak into the main-variant map', async () => {
-		await store.setExertionScale('rir', 100);
-
-		expect(await store.mainVariants()).toEqual({});
 	});
 });
 

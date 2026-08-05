@@ -14,7 +14,5 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async () => {
 	const store = await getStore();
 
-	const [lastPerformed, mains] = await Promise.all([store.lastPerformed(), store.mainVariants()]);
-
-	return { lastPerformed, mains };
+	return { lastPerformed: await store.lastPerformed() };
 };

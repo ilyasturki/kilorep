@@ -51,5 +51,5 @@
 		<SearchField label="Search exercises" bind:value={query} />
 	</div>
 
-	<ExerciseList {query} lastPerformed={data.lastPerformed} mains={data.mains} />
+	<ExerciseList {query} lastPerformed={data.lastPerformed} />
 </main>

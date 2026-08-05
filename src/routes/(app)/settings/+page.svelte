@@ -53,8 +53,8 @@
 	 * the group is a choice between two, and re-tapping the chosen one is a
 	 * no-op by intent.
 	 *
-	 * `syncSoon` for the reason the main-variant choice fires it: a preference is
-	 * a record, and taste that only reached one device is worse than none.
+	 * `syncSoon` because a preference is a record like any other, and taste that
+	 * only reached one device is worse than none.
 	 */
 	async function chooseScale(next: string) {
 		if (next !== 'rpe' && next !== 'rir') {
@@ -810,7 +810,12 @@
 				<ul class="list-group">
 					{#each data.tokens as token (token.id)}
 						<li>
+							<!-- `stacked`, because this meta is the row: which client, which
+							     prefix, when it was last used. A token's label alone identifies
+							     nothing — two of them read `Web` — so the line that tells them
+							     apart cannot be the line that yields when the label is long. -->
 							<ListRow
+								stacked
 								title={token.label}
 								meta={`${token.kind} · ${token.prefix}… · ${
 									token.lastUsedAt === null

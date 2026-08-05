@@ -10,6 +10,7 @@
 		onclick?: () => void;
 		chevron?: boolean;
 		dense?: boolean;
+		stacked?: boolean;
 		pressed?: boolean;
 		leading?: Snippet;
 		trailing?: Snippet;
@@ -22,8 +23,9 @@
 		meta,
 		href,
 		onclick,
-		chevron = true,
+		chevron,
 		dense = false,
+		stacked = false,
 		pressed,
 		leading,
 		trailing,
@@ -31,6 +33,12 @@
 	}: Props = $props();
 
 	const interactive = $derived(Boolean(href || onclick));
+
+	// A chevron says "this goes somewhere", so unasked it follows whether the
+	// row does. Said outright it is believed either way: a row can be inert and
+	// still be the thing you press, when what carries the press is a backdrop
+	// beneath it rather than the row itself.
+	const marker = $derived(chevron ?? interactive);
 
 	// Three explicit elements rather than one `<svelte:element>`: the dynamic
 	// form compiles to a tag the a11y checker cannot see, so it has to assume
@@ -51,8 +59,30 @@
 		<span class="flex shrink-0 items-center text-ink-muted">{@render leading()}</span>
 	{/if}
 
-	<span class="min-w-0 flex-1">
-		<span class="block truncate text-base font-extrabold tracking-tight text-ink">
+	<!-- Title and meta share one line, and the title never yields for it: the
+	     meta is allowed to wrap, and a single line's worth of height clips the
+	     line it wraps to, so a name that leaves no room beside it simply takes
+	     the row alone. That is the whole mechanism — flexbox breaks the line
+	     before an item that will not fit, and `overflow` decides whether the
+	     break is visible. No measuring, no breakpoint, and the answer follows
+	     the actual name rather than a guess at how long a name gets.
+
+	     A clipped meta is painted nowhere but still read aloud, which is the
+	     trade, and it is only a fair one where the meta is a glance's
+	     convenience — a last set, a date. `stacked` is for the rows where the
+	     meta is the substance instead and dropping it would lose the only copy:
+	     it keeps the line of its own that a fact deserves. Reach for it on that
+	     test alone, never to buy a long title more room. -->
+	<span
+		class={[
+			'flex min-w-0 flex-1 gap-x-2 text-base',
+			stacked
+				? 'flex-col'
+				: 'max-h-[calc(var(--text-base)*var(--text-base--line-height))] flex-wrap' +
+					' items-baseline overflow-hidden'
+		]}
+	>
+		<span class="min-w-0 truncate font-extrabold tracking-tight text-ink">
 			<!-- One line on purpose: whitespace between the slices would render. -->
 			{#if match !== null}
 				{title.slice(0, match.start)}<mark
@@ -64,7 +94,9 @@
 			{/if}
 		</span>
 		{#if meta}
-			<span class="block truncate text-sm font-bold text-ink-faint">{meta}</span>
+			<span class={['text-sm font-bold text-ink-faint', stacked ? 'truncate' : 'shrink-0']}>
+				{meta}
+			</span>
 		{/if}
 	</span>
 
@@ -74,7 +106,7 @@
 		</span>
 	{/if}
 
-	{#if interactive && chevron}
+	{#if marker}
 		<span aria-hidden="true" class="shrink-0 text-xl leading-none text-ink-faint">›</span>
 	{/if}
 {/snippet}

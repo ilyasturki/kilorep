@@ -2,7 +2,6 @@
 	import { catalog, catalogById } from '$lib/catalog';
 	import { MUSCLES } from '$lib/domain/exercise';
 	import type { Exercise, Muscle } from '$lib/domain/exercise';
-	import type { MainVariants } from '$lib/domain/preference';
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
 	import { similarTo } from '$lib/exercises/browse';
 	import type { LastPerformed } from '$lib/store/derive';
@@ -21,7 +20,6 @@
 		multiple?: boolean;
 		verb?: string;
 		lastPerformed: LastPerformed;
-		mains: MainVariants;
 		onpick: (exerciseIds: string[]) => void;
 	};
 
@@ -34,7 +32,6 @@
 		multiple = false,
 		verb = 'Add',
 		lastPerformed,
-		mains,
 		onpick
 	}: Props = $props();
 
@@ -120,7 +117,6 @@
 			muscle={narrowed}
 			{shelf}
 			{lastPerformed}
-			{mains}
 			selected={multiple ? picked : undefined}
 			onpick={choose}
 		/>

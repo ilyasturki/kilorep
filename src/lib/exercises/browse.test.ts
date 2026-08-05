@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { applyMains, familyOf, sections, similarTo } from '$lib/exercises/browse';
+import { kin, sections, similarTo } from '$lib/exercises/browse';
 import type { Equipment, Exercise, Muscle } from '$lib/domain/exercise';
 
 function ex(
@@ -40,16 +40,6 @@ const squat = ex('squat', 'Squat', 'Barbell', 'Quads');
 const pool = [bench, closeGrip, incline, floor, dbBench, dbIncline, overhead, fly, pecDeck, squat];
 
 const idsOf = (result: Exercise[]): string[] => result.map((e) => e.id);
-
-function entryOf(reseated: Exercise[], id: string): Exercise {
-	const found = reseated.find((entry) => entry.id === id);
-
-	if (found === undefined) {
-		throw new Error(`the reseated pool lost ${id}`);
-	}
-
-	return found;
-}
 
 describe('sections', () => {
 	test('a family shelves under its parent, empty muscles are absent', () => {
@@ -122,71 +112,29 @@ describe('similarTo', () => {
 	});
 });
 
-describe('familyOf', () => {
-	test('resolves both directions', () => {
-		expect(familyOf(pool, incline).parent).toBe(bench);
-		expect(idsOf(familyOf(pool, bench).variants)).toEqual(['close-grip-bench', 'incline-bench']);
+describe('kin', () => {
+	test('a parent lists its children', () => {
+		expect(idsOf(kin(pool, bench))).toEqual(['close-grip-bench', 'incline-bench']);
 	});
 
-	test('a parent the pool lacks resolves to none', () => {
-		expect(familyOf(pool, ex('orphan', 'Orphan', 'Barbell', 'Chest', 'typo')).parent).toBeNull();
-	});
-});
-
-describe('applyMains', () => {
-	test('no honourable choice is the identity, by reference', () => {
-		expect(applyMains(pool, {})).toBe(pool);
-
-		expect(
-			applyMains(pool, {
-				'bench-press': 'bench-press',
-				'db-bench': 'incline-bench',
-				squat: 'smith-squat'
-			})
-		).toBe(pool);
+	test('a variant lists the parent and its siblings, never itself', () => {
+		expect(idsOf(kin(pool, incline))).toEqual(['bench-press', 'close-grip-bench']);
 	});
 
-	test('seats the chosen main and points the family at it, parent included', () => {
-		const reseated = applyMains(pool, { 'bench-press': 'incline-bench' });
+	test('the same family whichever member is asked', () => {
+		const family = (exercise: Exercise): string[] =>
+			[...idsOf(kin(pool, exercise)), exercise.id].toSorted();
 
-		expect(entryOf(reseated, 'incline-bench').variantOf).toBeUndefined();
-		expect(entryOf(reseated, 'bench-press').variantOf).toBe('incline-bench');
-		expect(entryOf(reseated, 'close-grip-bench').variantOf).toBe('incline-bench');
-
-		expect(entryOf(reseated, 'db-incline')).toBe(dbIncline);
+		expect(family(incline)).toEqual(family(closeGrip));
+		expect(family(incline)).toEqual(family(bench));
 	});
 
-	test('the fold then shelves the family under the chosen main', () => {
-		const shelved = sections(applyMains(pool, { 'bench-press': 'close-grip-bench' }));
-
-		const triceps = shelved.find((section) => section.muscle === 'Triceps');
-		const family =
-			triceps === undefined
-				? undefined
-				: triceps.families.find((entry) => entry.parent.id === 'close-grip-bench');
-
-		if (family === undefined) {
-			throw new Error('the reseated family is not shelved under Triceps');
-		}
-
-		expect(idsOf(family.variants)).toEqual(['bench-press', 'incline-bench']);
-
-		const chest = shelved.find((section) => section.muscle === 'Chest');
-
-		if (chest === undefined) {
-			throw new Error('the Chest section is gone');
-		}
-
-		expect(chest.families.some((entry) => entry.parent.id === 'bench-press')).toBe(false);
+	test('a lone exercise has none, and neither family bleeds into the other', () => {
+		expect(kin(pool, pecDeck)).toEqual([]);
+		expect(idsOf(kin(pool, dbIncline))).toEqual(['db-bench']);
 	});
 
-	test('familyOf answers both directions from the new head', () => {
-		const reseated = applyMains(pool, { 'bench-press': 'incline-bench' });
-		const head = entryOf(reseated, 'incline-bench');
-		const demoted = entryOf(reseated, 'bench-press');
-
-		expect(familyOf(reseated, head).parent).toBeNull();
-		expect(idsOf(familyOf(reseated, head).variants)).toEqual(['bench-press', 'close-grip-bench']);
-		expect(familyOf(reseated, demoted).parent).toBe(head);
+	test('a parent the pool lacks leaves the entry its own root', () => {
+		expect(kin(pool, ex('orphan', 'Orphan', 'Barbell', 'Chest', 'typo'))).toEqual([]);
 	});
 });

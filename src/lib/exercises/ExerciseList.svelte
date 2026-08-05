@@ -1,21 +1,27 @@
 <script lang="ts" module>
 	import { catalog } from '$lib/catalog';
-	import { applyMains, sections } from '$lib/exercises/browse';
+	import { sections } from '$lib/exercises/browse';
 
 	const chip =
 		'relative inline-flex min-h-chip items-center rounded-xl bg-sunken px-3 text-sm font-bold ' +
 		'text-ink-muted select-none focus-ring hover:bg-hover active:bg-surface-2 ' +
 		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
 
-	const backdrop =
-		'absolute inset-0 hover:bg-hover active:bg-surface-2 ' +
+	// What the merged row is actually pressed on: a link the size of the whole
+	// cell, lying under the title line and behind the chips. The title line is
+	// inert and lets clicks through to it, the chips sit above it and keep
+	// their own; the hover that reads as "one row" belongs to the cell they
+	// share, not to either.
+	const backdrop = 'absolute inset-0 focus-ring';
+
+	const cell =
+		'relative flex flex-col hover:bg-hover active:bg-surface-2 ' +
 		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
 </script>
 
 <script lang="ts">
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Exercise, Muscle } from '$lib/domain/exercise';
-	import type { MainVariants } from '$lib/domain/preference';
 	import type { Family } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, variantLabel } from '$lib/exercises/label';
@@ -29,21 +35,12 @@
 		query: string;
 		muscle?: Muscle | null;
 		lastPerformed: LastPerformed;
-		mains: MainVariants;
 		onpick?: (exercise: Exercise) => void;
 		shelf?: { title: string; exercises: Exercise[] } | null;
 		selected?: ReadonlySet<string>;
 	};
 
-	let {
-		query,
-		muscle = null,
-		lastPerformed,
-		mains,
-		onpick,
-		shelf = null,
-		selected
-	}: Props = $props();
+	let { query, muscle = null, lastPerformed, onpick, shelf = null, selected }: Props = $props();
 
 	/**
 	 * Read once per mount, not per render: nothing on screen is worth a ticking
@@ -52,13 +49,12 @@
 	 */
 	const now = Date.now();
 
-	const pool = $derived(applyMains(catalog, mains));
-	const browse = $derived(sections(pool));
+	const browse = sections(catalog);
 
 	const searching = $derived(query.trim() !== '');
 
 	const results = $derived(
-		searchExercises(pool, query).filter(
+		searchExercises(catalog, query).filter(
 			(exercise) => muscle === null || exercise.muscles.primary === muscle
 		)
 	);
@@ -68,7 +64,7 @@
 	);
 </script>
 
-{#snippet row(exercise: Exercise)}
+{#snippet row(exercise: Exercise, merged = false)}
 	{@const last = lastPerformed[exercise.id]}
 	{@const since = lastSinceLabel(last, now)}
 	{@const picked = selected !== undefined && selected.has(exercise.id)}
@@ -95,6 +91,10 @@
 		</span>
 	{/snippet}
 
+	<!-- Merged, the row is a passenger: the press belongs to the backdrop
+	     spanning the whole cell, so this line renders inert and lets the click
+	     through rather than competing for it. The chevron is asked for outright,
+	     since inert is exactly the case where it would otherwise go missing. -->
 	<ListRow
 		title={exercise.name}
 		match={searching ? matchRange(exercise.name, query) : null}
@@ -102,43 +102,56 @@
 		leading={thumb}
 		trailing={since === undefined && selected === undefined ? undefined : recency}
 		chevron={onpick === undefined}
-		pressed={selected === undefined ? undefined : picked}
-		href={onpick === undefined ? `/exercises/${exercise.id}` : undefined}
-		onclick={onpick === undefined ? undefined : () => onpick(exercise)}
+		pressed={selected === undefined || merged ? undefined : picked}
+		href={merged || onpick !== undefined ? undefined : `/exercises/${exercise.id}`}
+		onclick={merged || onpick === undefined ? undefined : () => onpick(exercise)}
+		class={merged ? 'pointer-events-none' : undefined}
 	/>
 {/snippet}
 
-{#snippet variantChips(family: Family)}
-	<div class="relative flex flex-wrap gap-1.5 pt-0.5 pr-3 pb-2.5 pl-17">
+<!-- One row, two lines: the family's head and the members standing behind it,
+     inside a single cell with a single hover and a single tap. They were two
+     rows and read as two exercises — which the fold exists to deny. -->
+{#snippet familyRow(family: Family)}
+	{@const parent = family.parent}
+
+	<div class={cell}>
 		{#if onpick === undefined}
-			<a href="/exercises/{family.parent.id}" aria-hidden="true" tabindex="-1" class={backdrop}></a>
+			<a href="/exercises/{parent.id}" aria-label={parent.name} data-list-row class={backdrop}></a>
 		{:else}
 			<button
 				type="button"
-				aria-hidden="true"
-				tabindex="-1"
-				onclick={() => onpick?.(family.parent)}
+				aria-label={parent.name}
+				aria-pressed={selected === undefined ? undefined : selected.has(parent.id)}
+				onclick={() => onpick?.(parent)}
+				data-list-row
 				class={backdrop}
 			></button>
 		{/if}
 
-		{#each family.variants as variant (variant.id)}
-			{@const label = variantLabel(variant.name, family.parent.name)}
+		{@render row(parent, true)}
 
-			{#if onpick === undefined}
-				<a href="/exercises/{variant.id}" aria-label={variant.name} class={chip}>{label}</a>
-			{:else}
-				<button
-					type="button"
-					onclick={() => onpick?.(variant)}
-					aria-label={variant.name}
-					aria-pressed={selected === undefined ? undefined : selected.has(variant.id)}
-					class={[chip, 'aria-pressed:bg-accent aria-pressed:text-on-accent']}
-				>
-					{label}
-				</button>
-			{/if}
-		{/each}
+		{#if family.variants.length > 0}
+			<div class="relative -mt-1 flex flex-wrap gap-1.5 pr-3 pb-2.5 pl-17">
+				{#each family.variants as variant (variant.id)}
+					{@const label = variantLabel(variant.name, parent.name)}
+
+					{#if onpick === undefined}
+						<a href="/exercises/{variant.id}" aria-label={variant.name} class={chip}>{label}</a>
+					{:else}
+						<button
+							type="button"
+							onclick={() => onpick?.(variant)}
+							aria-label={variant.name}
+							aria-pressed={selected === undefined ? undefined : selected.has(variant.id)}
+							class={[chip, 'aria-pressed:bg-accent aria-pressed:text-on-accent']}
+						>
+							{label}
+						</button>
+					{/if}
+				{/each}
+			</div>
+		{/if}
 	</div>
 {/snippet}
 
@@ -181,13 +194,11 @@
 
 				<div class="list-group">
 					{#each section.families as family (family.parent.id)}
-						<div>
+						{#if family.variants.length > 0}
+							{@render familyRow(family)}
+						{:else}
 							{@render row(family.parent)}
-
-							{#if family.variants.length > 0}
-								{@render variantChips(family)}
-							{/if}
-						</div>
+						{/if}
 					{/each}
 				</div>
 			</section>

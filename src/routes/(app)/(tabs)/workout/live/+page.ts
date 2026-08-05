@@ -52,7 +52,7 @@ export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 	}
 
 	const store = await getStore();
-	const { lastPerformed, frequent, mains } = await store.pickerData();
+	const { lastPerformed, frequent } = await store.pickerData();
 
-	return { store, lastPerformed, frequent, mains, history: hintsOf(lastPerformed) };
+	return { store, lastPerformed, frequent, history: hintsOf(lastPerformed) };
 };
