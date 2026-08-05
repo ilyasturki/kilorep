@@ -7,7 +7,7 @@
 	import { byRank, drawableMark, isArchived, reorder } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
 	import { syncSoon } from '$lib/sync/client';
-	import { planLine } from '$lib/templates/plan';
+	import { planLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
@@ -98,10 +98,6 @@
 	const blank = `/templates/${crypto.randomUUID()}`;
 
 	let showArchived = $state(false);
-
-	function title(template: Template): string {
-		return template.name.trim() === '' ? 'Untitled' : template.name;
-	}
 </script>
 
 <svelte:head>
@@ -164,7 +160,7 @@
 	{/snippet}
 
 	<ListRow
-		title={title(template)}
+		title={templateTitle(template)}
 		meta={planLine(template, catalogById)}
 		stacked
 		leading={mark === null ? undefined : tile}

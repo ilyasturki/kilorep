@@ -1,6 +1,13 @@
 import { describe, expect, test } from 'vitest';
 
-import { entrySummary, planLine, planShape, planSummary, repsLabel } from '$lib/templates/plan';
+import {
+	entrySummary,
+	planLine,
+	planShape,
+	planSummary,
+	repsLabel,
+	templateTitle
+} from '$lib/templates/plan';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template, TemplateExercise } from '$lib/domain/template';
 
@@ -127,6 +134,23 @@ describe('what a template says about itself in a list', () => {
 
 	test('an empty plan says so rather than printing nothing', () => {
 		expect(planLine(shaped([]), catalog)).toBe('No exercises yet');
+	});
+
+	test('a plan keeps the name it was given', () => {
+		expect(templateTitle(shaped([['bench-press']]))).toBe('Push day');
+	});
+
+	// Named-nothing but planned-something escapes the blank rule, so this record
+	// really exists and four screens print it. Whitespace counts as nameless:
+	// a row titled with a space is a row with no title and a stray gap.
+	test('a nameless plan reads Untitled, whitespace included', () => {
+		const plan = shaped([['bench-press']]);
+
+		plan.name = '';
+		expect(templateTitle(plan)).toBe('Untitled');
+
+		plan.name = '   ';
+		expect(templateTitle(plan)).toBe('Untitled');
 	});
 
 	// A record whose exercise has left the catalog — the same case `entryTitle`

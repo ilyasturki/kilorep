@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick, untrack } from 'svelte';
+	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { goto, invalidate } from '$app/navigation';
@@ -17,6 +17,7 @@
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import OverviewDrawer from '$lib/workout/OverviewDrawer.svelte';
+	import { persistSession } from '$lib/workout/persist.svelte';
 	import OverviewPeek from '$lib/workout/OverviewPeek.svelte';
 	import SessionList from '$lib/workout/SessionList.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
@@ -201,44 +202,17 @@
 	});
 
 	/**
-	 * Persistence, as a side effect of existing: `$state.snapshot` reads every
-	 * leaf of the tree synchronously, so this effect tracks all of them and
-	 * re-runs on any mutation — a committed set, a reorder, a removal. The
-	 * write is fire-and-forget; the screen never waits on IndexedDB, per the
-	 * loop rule.
-	 *
-	 * A session that holds nothing is not saved — cleared, even: "in progress"
-	 * is a claim the bars and the boot resume repeat, and an empty tree left by
-	 * a tap on Start-empty and a change of mind should not survive a reload to
-	 * make it. The clear also retires any such snapshot written before this
-	 * rule existed.
-	 *
-	 * The rest fields ride along untracked, and that is not an optimisation: the
-	 * timer writes its own changes through `store.saveRest`, because the bar
-	 * answers a thumb from every tab and this effect only runs while this screen
-	 * is mounted. Tracking them here would make every ±30s write the whole tree
-	 * a second time. Read rather than omitted because `saveSnapshot` writes the
-	 * record whole — leaving them out would erase a running rest on the next
-	 * logged set.
+	 * Persistence, as a side effect of existing. The writer is `persistSession`,
+	 * shared with the one other screen that can mutate a live session — it reads
+	 * the whole tree inside this frame, so this effect still tracks every leaf
+	 * and re-runs on any mutation.
 	 */
 	$effect(() => {
 		if (session === null) {
 			return;
 		}
 
-		const workout = $state.snapshot(session.workout);
-
-		if (workout.entries.length === 0) {
-			void data.store.clearSnapshot();
-
-			return;
-		}
-
-		void data.store.saveSnapshot({
-			workout,
-			activeSetId: session.activeSetId,
-			...untrack(() => ({ rest: restTimer.snapshot, muted: restTimer.muted }))
-		});
+		persistSession(data.store, session);
 	});
 
 	/**

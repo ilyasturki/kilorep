@@ -1,9 +1,14 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
 	import { catalog } from '$lib/catalog';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { restLabel } from '$lib/domain/rest';
 	import { rawPr } from '$lib/domain/stats';
+	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
+	import type { Template } from '$lib/domain/template';
+	import AddToPlanSheet from '$lib/exercises/AddToPlanSheet.svelte';
 	import { kin } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, loadModeNote, ordinal } from '$lib/exercises/label';
@@ -11,13 +16,14 @@
 	import RestDurationField from '$lib/settings/RestDurationField.svelte';
 	import { getStore } from '$lib/store/store';
 	import { syncSoon } from '$lib/sync/client';
+	import { templateTitle } from '$lib/templates/plan';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Switch from '$lib/ui/Switch.svelte';
 	import { press } from '$lib/ui/press';
-	import Calendar from '$lib/ui/icons/Calendar.svelte';
+	import { activeWorkout } from '$lib/workout/active.svelte';
+	import { persistSession } from '$lib/workout/persist.svelte';
 
 	import type { PageProps } from './$types';
 
@@ -60,6 +66,15 @@
 
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
 
+	/**
+	 * The three blanks that stand in for set pills on a never-trained exercise.
+	 *
+	 * Three because that is what a plan starts an exercise with, and uneven
+	 * because a row of identical blocks reads as a page still loading — which is
+	 * the one thing this card must not be mistaken for.
+	 */
+	const GHOST_SETS = ['w-18', 'w-16', 'w-16'];
+
 	// Captured once per mount, like `ExerciseList`'s: `12d` is wrong for at most
 	// a day, and a navigation remounts this screen.
 	const now = Date.now();
@@ -90,6 +105,68 @@
 		if (data.user) {
 			syncSoon(data.user.id);
 		}
+	}
+
+	/**
+	 * The one act a never-trained exercise is missing, in the two forms it takes.
+	 *
+	 * Mid-session it joins the workout on screen; standing still it joins a plan.
+	 * The screen used to end at "no history yet", which is a fact and not an
+	 * answer: reading it, the way to train the thing you are looking at was to
+	 * leave, find the picker, and search for it again by name.
+	 *
+	 * Nothing is offered when there is no session and no plan to add to — a
+	 * picker over an empty list is a dead end with a sheet in front of it.
+	 */
+	const live = $derived(activeWorkout.session);
+
+	let planOpen = $state(false);
+	let planned = $state<Template | null>(null);
+
+	async function addToWorkout() {
+		const session = activeWorkout.session;
+
+		if (session === null) {
+			return;
+		}
+
+		const store = await getStore();
+
+		// The session outlives this page, but the effect that saves it belongs to
+		// the workout screen and that screen is not mounted — so the write is
+		// this page's to make. `addExercises` puts the cursor on the new set,
+		// which is what the pane will land on.
+		session.addExercises([exercise.id]);
+		persistSession(store, session);
+
+		await goto('/workout/live');
+	}
+
+	/**
+	 * A new entry at the foot of the plan, three sets, no rep targets — the
+	 * editor's own blank, minted the same way, so an exercise added from here is
+	 * indistinguishable from one added there.
+	 *
+	 * Written straight through rather than autosaved: the editor persists on
+	 * every keystroke because it is an editor, and this is a single act with a
+	 * single write behind it.
+	 */
+	async function addToPlan(template: Template) {
+		const store = await getStore();
+
+		addExercise(template, exercise.id, {
+			entry: crypto.randomUUID(),
+			exercise: crypto.randomUUID(),
+			sets: Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID())
+		});
+
+		await store.saveTemplate(template, Date.now());
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+
+		planned = template;
 	}
 </script>
 
@@ -134,6 +211,15 @@
 		     full width. -->
 		<div class="flex items-center justify-between gap-4 px-1">
 			<div class="flex min-w-0 flex-col gap-2">
+				<!-- The name, at the width where the bar stops carrying it: the bar's
+				     `<h1>` is the phone's, and above `lg` the tabs take that row — which
+				     left this screen showing an illustration and two badges for a lift
+				     it never named. Hidden below `lg` rather than moved, because there
+				     the bar is already saying it. -->
+				<h1 class="hidden text-xl font-extrabold tracking-tight text-ink lg:block">
+					{exercise.name}
+				</h1>
+
 				<!-- No equipment: the name already carries it wherever it is not the
 				     default. What survives is the load mode, and only when there is one
 				     — it is the line that says the numbers below count double. -->
@@ -230,14 +316,59 @@
 		<h2 class="px-3 label-caps">History</h2>
 
 		{#if sessions.length === 0}
-			<EmptyState
-				title="No history yet"
-				description="Hints stay silent until this exercise is logged."
+			<!-- The card that is not there yet, drawn as itself: the same rounded
+			     block the sessions below wear, dashed and drained of its numbers —
+			     a date line and three set pills with nothing in them. A centred
+			     glyph in a circle was the house empty state and said only that
+			     something was absent; this says what, and where it will appear.
+
+			     No invented numbers in the pills. A ghost `100 × 5` on the one
+			     screen whose whole job is telling you what you have lifted is a
+			     sentence the page must never be caught saying, however faint. -->
+			<div
+				class="flex flex-col gap-4 rounded-2xl border-[1.5px] border-dashed border-line
+					bg-surface px-3 py-4"
 			>
-				{#snippet icon()}
-					<Calendar size={24} />
-				{/snippet}
-			</EmptyState>
+				<div aria-hidden="true" class="flex flex-col gap-2">
+					<span class="block h-3 w-28 rounded-full bg-sunken"></span>
+
+					<div class="flex flex-wrap gap-1.5">
+						{#each GHOST_SETS as width, index (index)}
+							<span class="h-9 rounded-lg bg-sunken {width}"></span>
+						{/each}
+					</div>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<p class="title-panel">No history yet</p>
+					<p class="text-md font-bold text-ink-faint">
+						The first set you log lands here, and the hints stay silent until it does.
+					</p>
+				</div>
+
+				<!-- One button, whichever of the two acts is available, and none at
+				     all when neither is. Settled, it becomes the way into the plan it
+				     just joined rather than an offer to join it twice. -->
+				{#if live !== null}
+					<Button variant="secondary" class="w-full" onclick={() => void addToWorkout()}>
+						Add to this workout
+					</Button>
+				{:else if planned !== null}
+					<Button variant="secondary" class="w-full" href="/templates/{planned.id}">
+						Added to {templateTitle(planned)}
+					</Button>
+				{:else if data.plans.length > 0}
+					<Button variant="secondary" class="w-full" onclick={() => (planOpen = true)}>
+						Add to a plan
+					</Button>
+				{/if}
+			</div>
+
+			<AddToPlanSheet
+				bind:open={planOpen}
+				templates={data.plans}
+				onpick={(template) => void addToPlan(template)}
+			/>
 		{:else}
 			<!-- The same card the family lists above wear. Each entry is one link
 			     into the workout it came from — the ordinal says where in that

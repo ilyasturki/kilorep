@@ -3,12 +3,13 @@ import { countedDays } from '$lib/format/when';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template } from '$lib/domain/template';
 import type { Workout } from '$lib/domain/workout';
+import { templateTitle } from '$lib/templates/plan';
 
 export function workoutTitle(workout: Workout, templates: Template[]): string {
 	const template = templates.find((candidate) => candidate.id === workout.templateId);
 
 	if (template !== undefined) {
-		return template.name.trim() === '' ? 'Untitled' : template.name;
+		return templateTitle(template);
 	}
 
 	const names = workout.entries

@@ -8,7 +8,7 @@
 	import { launchRepeat } from '$lib/history/repeat';
 	import WorkoutRowMenu from '$lib/history/WorkoutRowMenu.svelte';
 	import { syncSoon } from '$lib/sync/client';
-	import { planLine } from '$lib/templates/plan';
+	import { planLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -201,7 +201,7 @@
 						     that one — a row here *starts* the session, and what is in the
 						     plan is the whole of what the choice turns on. -->
 						<ListRow
-							title={template.name.trim() === '' ? 'Untitled' : template.name}
+							title={templateTitle(template)}
 							meta={planLine(template, catalogById)}
 							stacked
 							chevron={false}

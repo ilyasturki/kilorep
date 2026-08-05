@@ -82,6 +82,20 @@ export function planLine(template: Template, catalog: Record<string, Exercise>):
 	return rest > 0 ? `${named} +${rest} more` : named;
 }
 
+/**
+ * What a plan is called in a list, nameless ones included.
+ *
+ * A persisted template can be nameless — named-nothing but planned-something
+ * escapes the blank rule — and four screens print that plan: the Templates
+ * tab, the idle Train screen, the History row that names the session it came
+ * from, and the sheet that adds an exercise to it. This was the same ternary
+ * written out in each, which is one edit away from a list where a nameless
+ * plan reads `Untitled` on one screen and as an empty row on the next.
+ */
+export function templateTitle(template: Template): string {
+	return template.name.trim() === '' ? 'Untitled' : template.name;
+}
+
 export type PlanShape = {
 	sets: number;
 	kind: 'open' | 'fixed' | 'range' | 'mixed';
