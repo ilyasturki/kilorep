@@ -12,11 +12,18 @@
 		open?: boolean;
 		title: string;
 		description?: string;
+		/**
+		 * One control on the title line, for an act the sheet is *about* rather
+		 * than an act it commits — the weigh-in editor's Delete. It sits beside
+		 * CLOSE and never replaces it: a sheet with no way out is a trap, and a
+		 * destructive icon standing where the exit was is worse than a trap.
+		 */
+		action?: Snippet;
 		children: Snippet;
 		footer?: Snippet;
 	};
 
-	let { open = $bindable(false), title, description, children, footer }: Props = $props();
+	let { open = $bindable(false), title, description, action, children, footer }: Props = $props();
 
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
@@ -81,13 +88,19 @@
 				</Dialog.Description>
 			{/if}
 		</div>
-		{#if closable}
-			<Dialog.Close>
-				{#snippet child({ props })}
-					<Button {...props} variant="chrome" caps>CLOSE</Button>
-				{/snippet}
-			</Dialog.Close>
-		{/if}
+		<div class="flex shrink-0 items-center gap-1">
+			{#if action}
+				{@render action()}
+			{/if}
+
+			{#if closable}
+				<Dialog.Close>
+					{#snippet child({ props })}
+						<Button {...props} variant="chrome" caps>CLOSE</Button>
+					{/snippet}
+				</Dialog.Close>
+			{/if}
+		</div>
 	</div>
 {/snippet}
 

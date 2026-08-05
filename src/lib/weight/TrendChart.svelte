@@ -1,15 +1,18 @@
 <script lang="ts">
 	import type { BodyweightEntry } from '$lib/domain/bodyweight';
-	import { addDays } from '$lib/domain/bodyweight';
 
 	type Props = {
 		dots: BodyweightEntry[];
 		line: BodyweightEntry[];
 		today: string;
-		days?: number;
+		/** The window's left edge, inclusive. The caller owns it because the
+		 *  range control does, and `all` has no day count to derive it from. */
+		from: string;
+		/** Spoken to a screen reader, which cannot see the range control. */
+		range: string;
 	};
 
-	let { dots, line, today, days = 84 }: Props = $props();
+	let { dots, line, today, from, range }: Props = $props();
 
 	let width = $state(0);
 
@@ -26,11 +29,15 @@
 	// the DST steps a local-time parse would fold into the spacing.
 	const at = (date: string): number => Date.parse(date);
 
-	const from = $derived(addDays(today, -(days - 1)));
 	const t0 = $derived(at(from));
 	const t1 = $derived(at(today));
 
-	const x = $derived((date: string) => LEFT + ((at(date) - t0) / (t1 - t0)) * innerWidth);
+	// A window one day wide would divide by zero and put every dot at `NaN`.
+	// `all` on a log with one entry is exactly that, and it is the first thing
+	// anybody sees after their first weigh-in.
+	const axisSpan = $derived(Math.max(1, t1 - t0));
+
+	const x = $derived((date: string) => LEFT + ((at(date) - t0) / axisSpan) * innerWidth);
 
 	const domain = $derived.by(() => {
 		const values = [...dots, ...line].map((entry) => entry.kg);
@@ -58,8 +65,18 @@
 		return out;
 	});
 
+	/**
+	 * Every month boundary inside the window, then thinned until at most seven
+	 * survive. Twelve `Jan Feb Mar…` under a year of data is a grey smear rather
+	 * than a scale, and the thinning steps through 1 · 2 · 3 · 6 · 12 months
+	 * because those are the divisions of a year a reader already holds — a step
+	 * of five would put labels on May and October and mean nothing.
+	 *
+	 * Anchored to the last boundary rather than the first, so the label nearest
+	 * today always survives: that is the end of the axis the eye starts from.
+	 */
 	const months = $derived.by(() => {
-		const out: string[] = [];
+		const all: string[] = [];
 		const start = new Date(t0);
 
 		let year = start.getUTCFullYear();
@@ -74,23 +91,69 @@
 			const date = `${year}-${String(month).padStart(2, '0')}-01`;
 
 			if (date > today) {
-				return out;
+				break;
 			}
 
 			if (date >= from) {
-				out.push(date);
+				all.push(date);
 			}
 
 			month += 1;
 		}
+
+		const step = [1, 2, 3, 6, 12].find((candidate) => all.length / candidate <= 7) ?? 12;
+
+		return all.filter((_, index) => (all.length - 1 - index) % step === 0);
 	});
 
-	const monthLabel = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' });
-	const dayLabel = new Intl.DateTimeFormat('en-GB', {
-		day: 'numeric',
-		month: 'short',
-		timeZone: 'UTC'
+	/**
+	 * The year rides along the moment the window crosses one, because `Feb`
+	 * drawn twice on a two-year axis names two different Februaries and the
+	 * reader has no way to tell which is which. Two digits, not four: `Feb 25`
+	 * is unambiguous at 11px and `February 2025` is a paragraph on a tick.
+	 *
+	 * Below that it stays off. On the default twelve weeks the year is the same
+	 * one every label already implies, and printing it is noise on the axis a
+	 * reader looks at most.
+	 */
+	const yearly = $derived(from.slice(0, 4) !== today.slice(0, 4));
+
+	// Dense windows draw a hairline dot with no halo: at a year the raw entries
+	// outnumber the pixels between them, and a 3px circle ringed in `surface`
+	// merges into a band that hides the average line it is supposed to sit under.
+	const dotSize = $derived.by(() => {
+		if (dots.length > 160) {
+			return 1.4;
+		}
+
+		return dots.length > 90 ? 2 : 3;
 	});
+
+	/**
+	 * Which end of the label sits on its tick. Centred everywhere in the middle
+	 * of the axis, and turned inward at the two edges — the newest boundary can
+	 * land within a few days of `today`, which puts a centred `Aug 26` half
+	 * outside the SVG and clipped. Re-anchoring keeps the label attached to the
+	 * tick it names, where nudging its `x` would quietly move it to a date it
+	 * does not mean.
+	 */
+	function anchorAt(px: number): 'start' | 'middle' | 'end' {
+		if (px > width - RIGHT - 22) {
+			return 'end';
+		}
+
+		return px < LEFT + 22 ? 'start' : 'middle';
+	}
+
+	const enGB = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat =>
+		new Intl.DateTimeFormat('en-GB', options);
+
+	const monthLabel = enGB({ month: 'short', timeZone: 'UTC' });
+	const monthYearLabel = enGB({ month: 'short', year: '2-digit', timeZone: 'UTC' });
+	const dayLabel = enGB({ day: 'numeric', month: 'short', timeZone: 'UTC' });
+	// The readout carries the year exactly when the axis has stopped naming
+	// months: `3 Aug` on a five-year chart names five different days.
+	const dayYearLabel = enGB({ day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 	const path = $derived(
 		line
@@ -130,7 +193,7 @@
 
 		return {
 			dot,
-			label: `${dayLabel.format(at(dot.date))} · ${dot.kg} kg`,
+			label: `${(yearly ? dayYearLabel : dayLabel).format(at(dot.date))} · ${dot.kg} kg`,
 			average: averaged === undefined ? null : `7d ${Math.round(averaged.kg * 10) / 10}`
 		};
 	});
@@ -154,7 +217,7 @@
 			{width}
 			height={HEIGHT}
 			role="img"
-			aria-label="Body weight, last 12 weeks: raw entries and 7-day average"
+			aria-label="Body weight, {range}: raw entries and 7-day average"
 			class="block touch-pan-y select-none"
 			onpointermove={locate}
 			onpointerdown={locate}
@@ -183,10 +246,10 @@
 				<text
 					x={x(month)}
 					y={HEIGHT - 8}
-					text-anchor="middle"
+					text-anchor={anchorAt(x(month))}
 					class="fill-ink-faint text-xs font-bold"
 				>
-					{monthLabel.format(at(month))}
+					{(yearly ? monthYearLabel : monthLabel).format(at(month))}
 				</text>
 			{/each}
 
@@ -205,9 +268,9 @@
 				<circle
 					cx={x(dot.date)}
 					cy={y(dot.kg)}
-					r="3"
+					r={dotSize}
 					class="fill-ink-faint stroke-surface"
-					stroke-width="2"
+					stroke-width={dotSize < 2.5 ? 0 : 2}
 				/>
 			{/each}
 

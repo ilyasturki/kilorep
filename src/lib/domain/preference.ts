@@ -1,3 +1,5 @@
+import type { ChartRange } from './bodyweight.ts';
+import { isChartRange } from './bodyweight.ts';
 import type { ExertionScale } from './exertion.ts';
 
 /**
@@ -12,6 +14,18 @@ export const MAIN_VARIANT_PREFIX = 'main-variant:';
 export type ExertionScalePreference = { scale: ExertionScale };
 
 export const EXERTION_SCALE_ID = 'exertion-scale';
+
+/**
+ * How far back the Weight screen's trend is drawn, remembered.
+ *
+ * A record and not a `localStorage` key, which makes it sync — deliberately.
+ * Somebody who reads their weight on a one-year window reads it that way on
+ * every device they own, and the alternative is a phone and a laptop that
+ * disagree about the same question for no reason a user could name.
+ */
+export type WeightRangePreference = { range: ChartRange };
+
+export const WEIGHT_RANGE_ID = 'weight-range';
 
 export type RestDefaultPreference = { enabled: boolean; seconds: number };
 
@@ -56,6 +70,10 @@ export function isExertionScalePreference(value: unknown): value is ExertionScal
 
 function isPayload(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function isWeightRangePreference(value: unknown): value is WeightRangePreference {
+	return isPayload(value) && isChartRange(value.range);
 }
 
 export function isRestDefaultPreference(value: unknown): value is RestDefaultPreference {

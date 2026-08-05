@@ -3,7 +3,12 @@ import { describe, expect, test } from 'vitest';
 import {
 	addDays,
 	bodyweightId,
+	daysBetween,
+	inRange,
+	isChartRange,
 	localDateOf,
+	monthGroups,
+	rangeStart,
 	rollingAverage,
 	weeklyRate,
 	windowed
@@ -112,5 +117,132 @@ describe('weeklyRate', () => {
 				{ date: '2026-07-29', kg: 78.8 }
 			])
 		).toBeCloseTo(-0.3, 5);
+	});
+});
+
+describe('daysBetween', () => {
+	test('counts calendar days in the direction it is asked', () => {
+		expect(daysBetween('2026-08-02', '2026-08-05')).toBe(3);
+		expect(daysBetween('2026-08-05', '2026-08-02')).toBe(-3);
+		expect(daysBetween('2026-08-05', '2026-08-05')).toBe(0);
+	});
+
+	test('a DST boundary is still one day, not 0.96 of one', () => {
+		// Europe's spring forward, where two local midnights are 23 hours apart.
+		expect(daysBetween('2026-03-28', '2026-03-29')).toBe(1);
+		expect(daysBetween('2026-03-01', '2026-04-01')).toBe(31);
+	});
+});
+
+describe('isChartRange', () => {
+	test('guards a preference that arrived over the wire', () => {
+		expect(isChartRange('6mo')).toBe(true);
+		expect(isChartRange('3w')).toBe(false);
+		expect(isChartRange(null)).toBe(false);
+		expect(isChartRange(84)).toBe(false);
+	});
+});
+
+describe('rangeStart', () => {
+	const log = [
+		{ date: '2024-01-10', kg: 90 },
+		{ date: '2026-08-05', kg: 82 }
+	];
+
+	test('a fixed range counts back from today, inclusive of both ends', () => {
+		expect(rangeStart(log, '2026-08-05', '12w')).toBe('2026-05-14');
+	});
+
+	test('all opens on the first weigh-in ever', () => {
+		expect(rangeStart(log, '2026-08-05', 'all')).toBe('2024-01-10');
+	});
+
+	test('all on an empty log is today, not a chart with no domain', () => {
+		expect(rangeStart([], '2026-08-05', 'all')).toBe('2026-08-05');
+	});
+});
+
+describe('inRange', () => {
+	const log = [
+		{ date: '2024-01-10', kg: 90 },
+		{ date: '2026-05-13', kg: 84 },
+		{ date: '2026-05-14', kg: 83 },
+		{ date: '2026-08-05', kg: 82 }
+	];
+
+	test('a fixed range cuts at its own edge', () => {
+		expect(inRange(log, '2026-08-05', '12w').map((entry) => entry.date)).toEqual([
+			'2026-05-14',
+			'2026-08-05'
+		]);
+	});
+
+	test('all keeps everything, including the day before the oldest cut', () => {
+		expect(inRange(log, '2026-08-05', 'all')).toHaveLength(4);
+	});
+
+	test('a future entry is never drawn — two devices can disagree about the clock', () => {
+		expect(inRange(log, '2026-05-14', 'all').map((entry) => entry.date)).toEqual([
+			'2024-01-10',
+			'2026-05-13',
+			'2026-05-14'
+		]);
+	});
+});
+
+describe('monthGroups', () => {
+	const log = [
+		{ date: '2026-06-10', kg: 84 },
+		{ date: '2026-06-20', kg: 84 },
+		{ date: '2026-07-01', kg: 83 },
+		{ date: '2026-07-31', kg: 83 },
+		{ date: '2026-08-05', kg: 82.4 }
+	];
+
+	test('no entries is no groups', () => {
+		expect(monthGroups([])).toEqual([]);
+	});
+
+	test('newest month first, and newest day first inside it', () => {
+		const groups = monthGroups(log);
+
+		expect(groups.map((group) => group.month)).toEqual(['2026-08', '2026-07', '2026-06']);
+		expect(groups[1].entries.map((entry) => entry.date)).toEqual(['2026-07-31', '2026-07-01']);
+	});
+
+	test('the average is the month, not its last morning', () => {
+		const groups = monthGroups([
+			{ date: '2026-08-01', kg: 80 },
+			{ date: '2026-08-02', kg: 84 }
+		]);
+
+		expect(groups[0].average).toBe(82);
+	});
+
+	test('change is average against average, and null on the oldest month', () => {
+		const groups = monthGroups(log);
+
+		expect(groups[0].change).toBeCloseTo(-0.6, 5);
+		expect(groups[1].change).toBe(-1);
+		expect(groups[2].change).toBeNull();
+	});
+
+	test('a skipped month compares against the previous group, not a gap', () => {
+		const groups = monthGroups([
+			{ date: '2026-06-10', kg: 90 },
+			{ date: '2026-08-10', kg: 88 }
+		]);
+
+		expect(groups.map((group) => group.month)).toEqual(['2026-08', '2026-06']);
+		expect(groups[0].change).toBe(-2);
+	});
+
+	test('a year boundary is two groups, not one August', () => {
+		const groups = monthGroups([
+			{ date: '2025-08-10', kg: 90 },
+			{ date: '2026-08-10', kg: 88 }
+		]);
+
+		expect(groups.map((group) => group.month)).toEqual(['2026-08', '2025-08']);
 	});
 });

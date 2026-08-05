@@ -760,6 +760,21 @@
 	color: var(--ink);
 }
 
+/* The one rung above the pair. An overlay opened *from* an overlay — today only
+   the Weight log's Delete, asked from the edit sheet that names the day — sits
+   at 40/50 like everything else, which puts its scrim under the panel that
+   raised it: the page behind dims and the sheet in front of it does not, so two
+   panels compete at full brightness for the same eye.
+
+   Both the scrim and the panel take it, and they land on the same number
+   deliberately. Painting order inside one portal is DOM order, and bits UI
+   renders the overlay before the content, so the panel is above its own scrim
+   without a second rung — while a third overlay, if there is ever one, would
+   need this same treatment rather than inheriting a gap nobody documented. */
+@utility overlay-stacked {
+	z-index: 70;
+}
+
 @utility overlay-sheet {
 	inset-inline: 0;
 	bottom: 0;

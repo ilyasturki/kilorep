@@ -1,18 +1,21 @@
-import type { BodyweightEntry } from '$lib/domain/bodyweight';
+import type { BodyweightEntry, ChartRange } from '$lib/domain/bodyweight';
 import { bodyweightId } from '$lib/domain/bodyweight';
 import type { ExertionScale } from '$lib/domain/exertion';
 import type {
 	ExertionScalePreference,
 	RestDefaultPreference,
-	RestOverridePreference
+	RestOverridePreference,
+	WeightRangePreference
 } from '$lib/domain/preference';
 import {
 	EXERTION_SCALE_ID,
 	MAIN_VARIANT_PREFIX,
 	REST_DEFAULT_ID,
+	WEIGHT_RANGE_ID,
 	isExertionScalePreference,
 	isRestDefaultPreference,
 	isRestOverridePreference,
+	isWeightRangePreference,
 	restOverrideExercise,
 	restOverrideId
 } from '$lib/domain/preference';
@@ -359,6 +362,22 @@ export class Store {
 		}
 
 		return isExertionScalePreference(record.payload) ? record.payload.scale : 'rpe';
+	}
+
+	public async setWeightRange(range: ChartRange, updatedAt: number): Promise<void> {
+		const payload: WeightRangePreference = { range };
+
+		await this.write(WEIGHT_RANGE_ID, 'preference', updatedAt, payload);
+	}
+
+	public async weightRange(): Promise<ChartRange> {
+		const record = await this.db.get('records', WEIGHT_RANGE_ID);
+
+		if (record === undefined || record.deletedAt !== null) {
+			return '12w';
+		}
+
+		return isWeightRangePreference(record.payload) ? record.payload.range : '12w';
 	}
 
 	public async setRestDefault(preference: RestDefaultPreference, updatedAt: number): Promise<void> {

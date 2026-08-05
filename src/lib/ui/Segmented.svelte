@@ -63,9 +63,26 @@
 		value?: string;
 		/** Names the group; a toolbar with no label is an unnamed one. */
 		label?: string;
+		/**
+		 * Fired on the tap that moves the value, for a group whose choice is
+		 * *kept* — the Weight screen's trend range, which is written back to the
+		 * store. `bind:value` plus an effect would do the same job and would also
+		 * fire on the way in, writing the remembered value back over itself on
+		 * every mount. Links never fire it: navigation is the change there.
+		 */
+		onchange?: (value: string) => void;
 	};
 
-	let { items, value = $bindable(''), label }: Props = $props();
+	let { items, value = $bindable(''), label, onchange }: Props = $props();
+
+	function pick(next: string) {
+		if (next === value) {
+			return;
+		}
+
+		value = next;
+		onchange?.(next);
+	}
 </script>
 
 {#snippet body(item: Segment)}
@@ -87,7 +104,7 @@
 		<!-- No `press-sink`: a segment that shrinks inside a fixed well reads as a
 		     glitch, the same call the tab bar makes. The tint is the whole feedback. -->
 		{#if item.href === undefined}
-			<Toolbar.Button onclick={() => (value = item.value)}>
+			<Toolbar.Button onclick={() => pick(item.value)}>
 				{#snippet child({ props })}
 					<button {...props} type="button" data-state={state} class={segment} {@attach press()}>
 						{@render body(item)}

@@ -1,4 +1,5 @@
 import { catalogById } from '$lib/catalog';
+import { countedDays } from '$lib/format/when';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template } from '$lib/domain/template';
 import type { Workout } from '$lib/domain/workout';
@@ -126,16 +127,15 @@ function startOfDay(ms: number): number {
  * rounding is what makes that survive a DST boundary, where the gap between
  * two midnights is 23 or 25 hours.
  *
- * The handover is a week: `6 days ago` is still countable, `9 days ago` is a
- * number you convert to a date anyway, so the row shows the date instead. The
- * year rides along only when it is not this one — on recent rows it is noise,
- * and on a row from December 2025 it is the whole point.
+ * The counted words and the week they hand over at are `countedDays`'. What
+ * stays here is what a History row does *after* the handover — print the date,
+ * with the year along only when it is not this one, which on recent rows is
+ * noise and on a row from December 2025 is the whole point.
  *
  * The counted days shorten to `3d` on a phone, borrowing `formatSince`'s
  * spelling rather than minting a second one — the app already says `9d` beside
  * an exercise, and a column that said `3 days ago` there would be two
- * vocabularies for one idea. `Today` and `Yesterday` do not shorten: they are
- * already two syllables, and `1d` is a worse word than the one everybody uses.
+ * vocabularies for one idea.
  *
  * A future timestamp reads as `Today` rather than counting backwards, the same
  * clock-skew guard `formatSince` carries and for the same reason: these records
@@ -143,17 +143,13 @@ function startOfDay(ms: number): number {
  */
 export function formatWhen(then: number, now: number): When {
 	const days = Math.round((startOfDay(now) - startOfDay(then)) / DAY);
+	const counted = countedDays(days);
 
-	if (days < 1) {
-		return { short: 'Today', long: 'Today' };
-	}
-
-	if (days === 1) {
-		return { short: 'Yesterday', long: 'Yesterday' };
-	}
-
-	if (days < 7) {
-		return { short: `${days}d`, long: `${days} days ago` };
+	if (counted !== null) {
+		// The counted days lengthen on a desk and the two named ones do not:
+		// `Today` is already two syllables, and `1 day ago` is a worse word than
+		// the one everybody uses.
+		return { short: counted, long: days < 2 ? counted : `${days} days ago` };
 	}
 
 	const sameYear = new Date(then).getFullYear() === new Date(now).getFullYear();

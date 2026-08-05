@@ -8,10 +8,23 @@
 		title: string;
 		description?: string;
 		confirmLabel: string;
+		/**
+		 * Set when this dialog is asked from another overlay — the Weight log's
+		 * Delete, raised from the edit sheet. Without it the scrim lands under the
+		 * panel that raised it and the sheet stays lit behind the question.
+		 */
+		stacked?: boolean;
 		onconfirm: () => void;
 	};
 
-	let { open = $bindable(false), title, description, confirmLabel, onconfirm }: Props = $props();
+	let {
+		open = $bindable(false),
+		title,
+		description,
+		confirmLabel,
+		stacked = false,
+		onconfirm
+	}: Props = $props();
 
 	let cancel = $state<HTMLElement | null>(null);
 
@@ -38,11 +51,11 @@
 
 <AlertDialog.Root bind:open>
 	<AlertDialog.Portal>
-		<AlertDialog.Overlay class="overlay-scrim" />
+		<AlertDialog.Overlay class={['overlay-scrim', stacked && 'overlay-stacked']} />
 
 		<AlertDialog.Content
 			onOpenAutoFocus={focusCancel}
-			class="overlay-panel overlay-centred gap-5 p-5"
+			class={['overlay-panel overlay-centred gap-5 p-5', stacked && 'overlay-stacked']}
 		>
 			<div class="flex flex-col gap-1.5">
 				<AlertDialog.Title class="title-panel">{title}</AlertDialog.Title>
