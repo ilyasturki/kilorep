@@ -1,3 +1,5 @@
+import { easeQuick, quickMs } from '$lib/ui/motion';
+
 export function scrollParent(node: HTMLElement): HTMLElement {
 	let current: HTMLElement | null = node;
 
@@ -25,7 +27,6 @@ function viewport(scroller: HTMLElement): { top: number; bottom: number } {
 /**
  * The element's own `scroll-margin`, in pixels.
  *
- * `scrollIntoView` honours it for free; a scroll computed by hand has to ask.
  * Reading it back off the computed style is what keeps the air a card claims
  * declared in one place — its class list — rather than restated as a constant
  * here that nobody would think to change with it. A computed `scroll-margin` is
@@ -49,18 +50,107 @@ export function fullyVisible(node: HTMLElement): boolean {
 }
 
 /**
- * Every reveal in this file lands instantly, and none of them animate.
- *
- * A scroll that travels is a scroll the eye has to follow, and the app's motion
- * is meant to be felt rather than watched. The distances here are also the
- * wrong ones to animate: arriving on the workout screen the pane has to cross
- * the whole session to reach the live set, and 400ms of that is the first thing
- * a returning user sees for no information at all — the set was always going to
- * be there. `instant` and not `auto`, so a `scroll-behavior: smooth` set in CSS
- * later cannot quietly put the animation back.
+ * One glide at a time, per app. Two reveals in flight would each be writing
+ * `scrollTop` on the same frame from two different starting points, and the
+ * pane would land wherever the later `requestAnimationFrame` happened to fire.
  */
-function land(node: HTMLElement, block: ScrollLogicalPosition): void {
-	node.scrollIntoView({ block, behavior: 'instant' });
+let gliding: number | undefined;
+
+/**
+ * Move the scroller by `delta`, over the screen's one duration and curve.
+ *
+ * Hand-driven rather than `scrollIntoView({ behavior: 'smooth' })`, which is the
+ * browser's duration and the browser's curve with no way to ask for either — and
+ * the whole point here is that the pane travels on exactly the curve the cards
+ * are changing height on. `scrollTop` is not an animatable property, so there is
+ * no CSS route to it and no Web Animations route either; a frame loop is the
+ * only way to spend a named easing on a scroll.
+ *
+ * `delta` is measured against the layout the caller can see *after* the update
+ * that prompted the reveal, so the destination is already the final one even
+ * while the heights along the way are still moving. What that costs is the last
+ * frame: a scroller whose content is still growing clamps a `scrollTop` past its
+ * current maximum, so the target is written once more on the frame after the
+ * travel ends, when everything has settled and the clamp is gone.
+ */
+function glide(scroller: HTMLElement, delta: number): void {
+	if (gliding !== undefined) {
+		cancelAnimationFrame(gliding);
+		gliding = undefined;
+	}
+
+	if (delta === 0) {
+		return;
+	}
+
+	const ms = quickMs();
+	const from = scroller.scrollTop;
+	const to = from + delta;
+
+	if (ms === 0) {
+		scroller.scrollTop = to;
+
+		return;
+	}
+
+	const start = performance.now();
+
+	function frame(now: number): void {
+		const t = Math.min(1, (now - start) / ms);
+
+		scroller.scrollTop = from + delta * easeQuick(t);
+
+		if (t < 1) {
+			gliding = requestAnimationFrame(frame);
+
+			return;
+		}
+
+		gliding = requestAnimationFrame(() => {
+			gliding = undefined;
+			scroller.scrollTop = to;
+		});
+	}
+
+	gliding = requestAnimationFrame(frame);
+}
+
+/**
+ * How far the pane is from having `node` where `block` asks for it — the same
+ * arithmetic `scrollIntoView` performs internally, done by hand because a
+ * scroll that animates on our own curve has to know the number rather than hand
+ * the job over. `scroll-margin` is honoured the way the native call honours it,
+ * which is what keeps `scroll-mt-3` on an exercise header meaning something.
+ */
+function shortfall(node: HTMLElement, block: 'start' | 'end' | 'nearest'): number {
+	const bounds = viewport(scrollParent(node));
+	const rect = node.getBoundingClientRect();
+	const margin = margins(node);
+
+	const top = rect.top - margin.top;
+	const bottom = rect.bottom + margin.bottom;
+
+	if (block === 'start') {
+		return top - bounds.top;
+	}
+
+	if (block === 'end') {
+		return bottom - bounds.bottom;
+	}
+
+	if (top < bounds.top) {
+		return top - bounds.top;
+	}
+
+	if (bottom > bounds.bottom) {
+		return bottom - bounds.bottom;
+	}
+
+	return 0;
+}
+
+function land(node: HTMLElement, block: 'start' | 'end' | 'nearest'): void {
+	glide(scrollParent(node), shortfall(node, block));
 }
 
 /**
@@ -72,8 +162,7 @@ function land(node: HTMLElement, block: ScrollLogicalPosition): void {
  * needed to costs the eye the same re-orientation whether it travelled 40px or
  * 400. `nearest` scrolls by the shortfall and no more, so a set that has half
  * left the bottom rises half a card and everything the thumb had its bearings
- * on is still where it was. It also honours `scroll-margin`, which is how the
- * active card's `scroll-mb-3` buys its own strip of air at the floor.
+ * on is still where it was.
  */
 export function revealNearest(node: HTMLElement): void {
 	if (fullyVisible(node)) {
@@ -146,8 +235,5 @@ export function revealSpan(from: HTMLElement, to: HTMLElement): void {
 		return;
 	}
 
-	scroller.scrollBy({
-		top: top < bounds.top ? top - bounds.top : bottom - bounds.bottom,
-		behavior: 'instant'
-	});
+	glide(scroller, top < bounds.top ? top - bounds.top : bottom - bounds.bottom);
 }

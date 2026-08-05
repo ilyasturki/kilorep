@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { prefersReducedMotion } from 'svelte/motion';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { goto, invalidate } from '$app/navigation';
 
@@ -15,14 +14,18 @@
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import OverviewDrawer from '$lib/workout/OverviewDrawer.svelte';
+	import OverviewPeek from '$lib/workout/OverviewPeek.svelte';
 	import SessionList from '$lib/workout/SessionList.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import { playMorphs } from '$lib/ui/morph';
+	import { quickMs } from '$lib/ui/motion';
+	import { coarsePointer } from '$lib/ui/pointer';
 	import { fullyVisible, revealNearest, revealSpan, revealStart } from '$lib/ui/scroll';
 	import Stack from '$lib/ui/icons/Stack.svelte';
-	import { press } from '$lib/ui/press';
+	import { press, SLOP } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
 
@@ -96,31 +99,16 @@
 	 * fitting together. Mid-session that is the difference between a page that
 	 * nudges and a page that relocates.
 	 *
-	 * Neither animates; see `scroll.ts`.
+	 * Both travel on the screen's one duration and curve; see `motion.ts`.
 	 */
 	let intent: 'jump' | 'advance' = 'advance';
 	let scheduled = false;
 
 	/**
-	 * One reveal per change, whoever asked for it.
-	 *
-	 * The effect below catches every move of the cursor, and the jump paths call
-	 * in by hand as well — because a jump to the set that is already active
-	 * changes nothing for an effect to see. Both land here, the first one through
-	 * books the pass and the second is swallowed, and `intent` is read after the
-	 * wait rather than at the door, so it does not matter which of them arrived
-	 * first. `tick` is what makes the measurement one of the layout the change
-	 * just produced instead of the one it replaced.
+	 * Where the pane has to be, measured and started. Called once per change by
+	 * `settle`, which is the only thing that knows the layout has settled.
 	 */
-	async function settle() {
-		if (scheduled) {
-			return;
-		}
-
-		scheduled = true;
-		await tick();
-		scheduled = false;
-
+	function reveal() {
 		const mode = intent;
 		intent = 'advance';
 
@@ -149,6 +137,40 @@
 		}
 
 		revealStart(head);
+	}
+
+	/**
+	 * One reveal per change, whoever asked for it.
+	 *
+	 * The effect below catches every move of the cursor, and the jump paths call
+	 * in by hand as well — because a jump to the set that is already active
+	 * changes nothing for an effect to see. Both land here, the first one through
+	 * books the pass and the second is swallowed, and `intent` is read after the
+	 * wait rather than at the door, so it does not matter which of them arrived
+	 * first. `tick` is what makes the measurement one of the layout the change
+	 * just produced instead of the one it replaced.
+	 *
+	 * The two calls are in this order for one reason, and it is the whole reason
+	 * this screen owns them rather than each block playing its own: `reveal`
+	 * measures, and what it has to measure is the layout the swap settled on —
+	 * the editor at editor height, the row it replaced already one line tall.
+	 * `playMorphs` then takes those same boxes back to the heights they had and
+	 * lets them travel forward, so the pane is aiming at where everything ends up
+	 * while the cards are still on their way there. Both happen inside this
+	 * microtask, before the browser has painted either, so nothing is ever seen
+	 * at the height it is about to animate from.
+	 */
+	async function settle() {
+		if (scheduled) {
+			return;
+		}
+
+		scheduled = true;
+		await tick();
+		scheduled = false;
+
+		reveal();
+		playMorphs();
 	}
 
 	/** Mark the reveal this change earns a jump, and make sure one happens. */
@@ -259,72 +281,194 @@
 	 * whole fix; it costs one wrapper element, since `animate:` goes on an
 	 * element of a keyed block and `ExerciseBlock` is a component.
 	 *
-	 * The rail's own duration, because it is the same gesture seen twice and two
+	 * The screen's own duration, because it is the same gesture seen twice and two
 	 * speeds would read as two events. Off entirely under reduced motion: unlike
 	 * the row following the finger, nothing here is being touched.
 	 */
-	const slide = $derived(prefersReducedMotion.current ? 0 : 200);
+	const slide = $derived(quickMs());
 
 	let overview = $state(false);
+	let instant = $state(false);
 
 	/**
-	 * A swipe rightward across the pane opens the overview drawer — the drawer
-	 * arrives from the left, so the gesture pulls it in from the side it lives
-	 * on. Anywhere on the pane, not the screen's left edge: Android's gesture
+	 * A swipe rightward across the pane pulls the overview panel in — the drawer
+	 * lives on the left, so the gesture drags it out from the side it lives on.
+	 * Anywhere on the pane, not the screen's left edge: Android's gesture
 	 * navigation owns edge swipes as back, and an edge-only gesture would be
 	 * mostly dead on the phones this exists for.
 	 *
-	 * Observation only — no capture, no preventDefault — so nothing the pane
-	 * already answers is taxed: a vertical wander past a horizontal one is a
-	 * scroll and abandons the read, and the whole travel must land inside
-	 * 400ms, safely under the 500ms after which a still-ish press on a set row
-	 * is a long-press opening options. The horizontal-dominance test (twice the
-	 * drift) is what keeps a sloppy scroll from opening a panel nobody asked
-	 * for. Nothing here is `$state`: read and written in handlers, rendered by
-	 * none.
+	 * The panel follows the finger. It used to snap open once the swipe passed
+	 * 48px inside 400ms, which meant the gesture had a verdict but no picture of
+	 * itself — nothing on screen moved until everything had. Now the travel *is*
+	 * the panel's position, so a swipe that changes its mind halfway can be taken
+	 * back, and the deadline is gone with it: a drag that follows the finger has
+	 * nothing to time out.
+	 *
+	 * Two stages, and the first is deliberately unclaimed. Before the pane knows
+	 * this is horizontal it only watches — no capture, no `preventDefault` — so
+	 * nothing the pane already answers is taxed and a vertical wander is still a
+	 * scroll. Committing takes the pointer, and that is what tells everything
+	 * underneath the gesture stopped being theirs: `press` cancels on
+	 * `lostpointercapture`, so the set row the finger started on gives up its
+	 * press rather than lighting up behind a moving panel.
 	 */
 	// `lg` written out, the same way `viewport.ts` writes `sm` out and for the
 	// same reason: from `lg` the rail is permanently open and the gesture would
 	// be pulling at a drawer that does not exist.
 	const railed = new MediaQuery('min-width: 64rem', false);
 
-	let swipe: { x: number; y: number; at: number } | null = null;
+	/**
+	 * The live drag: pointer, where it started, and where it was last seen with
+	 * when, which is what makes a flick measurable. Not `$state` — it is read and
+	 * written in handlers and rendered by nothing; what the panel renders from is
+	 * `peek`.
+	 */
+	let drag: { id: number; x0: number; y0: number; x: number; at: number; v: number } | null = null;
+
+	/**
+	 * How far the panel is out, in pixels, or null for no panel at all. `settling`
+	 * is the release: the same offset animated to one end or the other.
+	 */
+	let peek = $state<number | null>(null);
+	let peekWidth = $state(0);
+	let settling = $state(false);
+
+	/**
+	 * A drag that ends over a set row still ends in a click, and that click would
+	 * select the set the finger happened to be resting on. Swallowed at the pane,
+	 * in the capture phase, which beats both the row's own delegated handler and
+	 * `press`'s — see `press.ts` for why a listener on the element wins against
+	 * Svelte's root delegation.
+	 */
+	let swallow = false;
+
+	/** Past this much of the panel, the release opens it; short of it, it goes back. */
+	const SETTLE_AT = 0.4;
+
+	/** px per ms of rightward flick that opens the panel from anywhere. */
+	const FLING = 0.5;
 
 	function swipeStart(event: PointerEvent) {
-		if (railed.current || !event.isPrimary) {
-			swipe = null;
+		swallow = false;
+
+		if (railed.current || !coarsePointer || !event.isPrimary || overview || peek !== null) {
+			drag = null;
 			return;
 		}
 
-		swipe = { x: event.clientX, y: event.clientY, at: performance.now() };
+		drag = {
+			id: event.pointerId,
+			x0: event.clientX,
+			y0: event.clientY,
+			x: event.clientX,
+			at: event.timeStamp,
+			v: 0
+		};
 	}
 
-	function swipeMove(event: PointerEvent) {
-		if (swipe === null) {
+	// The pane itself, typed in, because committing the gesture takes the pointer
+	// and `PointerEvent` alone knows nothing about what it was dispatched on.
+	function swipeMove(event: PointerEvent & { currentTarget: HTMLElement }) {
+		if (drag === null || event.pointerId !== drag.id) {
 			return;
 		}
 
-		if (performance.now() - swipe.at > 400) {
-			swipe = null;
+		const span = event.timeStamp - drag.at;
+
+		if (span > 0) {
+			drag.v = (event.clientX - drag.x) / span;
+			drag.x = event.clientX;
+			drag.at = event.timeStamp;
+		}
+
+		const dx = event.clientX - drag.x0;
+		const dy = Math.abs(event.clientY - drag.y0);
+
+		if (peek !== null) {
+			peek = Math.max(0, Math.min(dx, peekWidth));
 			return;
 		}
 
-		const dx = event.clientX - swipe.x;
-		const dy = Math.abs(event.clientY - swipe.y);
-
-		if (dy > 24 && dy > dx) {
-			swipe = null;
+		// The same 12px `press` treats as the end of a press, so the two agree on
+		// the moment a touch stopped being a tap. Dominance — twice the drift —
+		// is what keeps a sloppy scroll from dragging a panel nobody asked for.
+		if (dy > SLOP && dy > dx) {
+			drag = null;
 			return;
 		}
 
-		if (dx > 48 && dx > 2 * dy) {
-			swipe = null;
-			overview = true;
+		if (dx > SLOP && dx > 2 * dy) {
+			event.currentTarget.setPointerCapture(drag.id);
+			peek = dx;
 		}
+	}
+
+	/**
+	 * The handover, or the retreat.
+	 *
+	 * Opening hands the real drawer a panel already at rest — `instant` is what
+	 * keeps vaul from sliding it in again — and the stand-in is dropped a frame
+	 * later rather than in the same breath, so the two are painted over each
+	 * other once instead of leaving a single frame of bare pane between them.
+	 */
+	function settled() {
+		settling = false;
+
+		if (peek === 0) {
+			peek = null;
+			return;
+		}
+
+		instant = true;
+		overview = true;
+
+		requestAnimationFrame(() => {
+			peek = null;
+		});
 	}
 
 	function swipeEnd() {
-		swipe = null;
+		if (drag === null || peek === null) {
+			drag = null;
+			return;
+		}
+
+		const opened = peek >= peekWidth * SETTLE_AT || drag.v > FLING;
+		const target = opened ? peekWidth : 0;
+
+		drag = null;
+		swallow = true;
+
+		// Nothing to animate — released at rest, or an OS that has asked for no
+		// motion — so the handover is now. `transitionend` is the only thing that
+		// reports a settle finishing, and it does not fire for a transition that
+		// had nothing to do.
+		if (target === peek || quickMs() === 0) {
+			peek = target;
+			settled();
+			return;
+		}
+
+		settling = true;
+		peek = target;
+	}
+
+	// Whatever closed it, the next opening is the ordinary one and arrives on
+	// vaul's own curve.
+	$effect(() => {
+		if (!overview) {
+			instant = false;
+		}
+	});
+
+	function swipeClick(event: MouseEvent) {
+		if (!swallow) {
+			return;
+		}
+
+		swallow = false;
+		event.preventDefault();
+		event.stopImmediatePropagation();
 	}
 
 	/**
@@ -548,9 +692,10 @@
 	<div class="flex min-h-0 flex-1 flex-col">
 		<!-- The swipe listeners ride the pane's wrapper — every set row, every gap —
 		     because the gesture belongs to the screen, not to a strip of it. See
-		     `swipeStart` for why they observe rather than claim the pointer. The
-		     a11y ignore is honest: this is not an interaction, it is a shortcut to
-		     the header's own Session-overview button, which keyboards and screen
+		     `swipeStart` for why they watch before they claim the pointer, and
+		     `swipeClick` for why the pane also has to eat one click. The a11y
+		     ignore is honest: this is not an interaction, it is a shortcut to the
+		     header's own Session-overview button, which keyboards and screen
 		     readers already have. -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -559,6 +704,7 @@
 			onpointermove={swipeMove}
 			onpointerup={swipeEnd}
 			onpointercancel={swipeEnd}
+			onclickcapture={swipeClick}
 		>
 			<!-- The session list, floating in the margin the window has left over.
 		     Taken out of the flow on purpose: the pane below is the full width of
@@ -721,6 +867,7 @@
 
 	<OverviewDrawer
 		bind:open={overview}
+		{instant}
 		{entries}
 		activeSetId={session.activeSetId}
 		onjump={jumpTo}
@@ -728,6 +875,20 @@
 		onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 		ondrop={jumped}
 	/>
+
+	<!-- The same panel while the swipe is still deciding, and only then: it exists
+	     between the moment the gesture commits and the moment the drawer above
+	     takes over from it. -->
+	{#if peek !== null}
+		<OverviewPeek
+			offset={peek}
+			bind:width={peekWidth}
+			{settling}
+			{entries}
+			activeSetId={session.activeSetId}
+			onsettled={settled}
+		/>
+	{/if}
 
 	<!-- `multiple`, because this sheet is how an empty session becomes a session:
 	     checking off a day's movements and committing once beats reopening the

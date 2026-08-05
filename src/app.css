@@ -883,6 +883,23 @@
 	animation: none !important;
 }
 
+/* A drawer that is already on screen when it opens.
+
+   vaul's own `data-vaul-animate` is not this: it is false for exactly the first
+   frame of a drawer mounted open and true from the next one on, which is a
+   hydration concern and not reachable from a call site. The workout pane needs
+   the same suppression on demand — a swipe drags a stand-in panel all the way
+   in and then hands over to the real drawer, and the 0.5s slide from the edge
+   would be that panel leaving and coming back.
+
+   Keyed on the open state alone, so a drawer that arrived silently still leaves
+   on vaul's curve — and so the class can be taken off the moment it closes
+   without handing `animation-name` back to an element still in `[data-state=
+   'open']`, which would replay the entrance it was there to prevent. */
+.drawer-instant[data-state='open'] {
+	animation: none !important;
+}
+
 /* The tail below the drawer, wearing the drawer's own surface: an overdrag
    upward would otherwise open a gap between the panel and the screen edge. */
 [data-vaul-drawer][data-vaul-drawer-direction='bottom']::after {

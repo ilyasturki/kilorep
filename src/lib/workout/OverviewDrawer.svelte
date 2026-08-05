@@ -2,11 +2,24 @@
 	import { Drawer } from 'vaul-svelte';
 
 	import type { Entry } from '$lib/workout/groups';
-	import SessionList from '$lib/workout/SessionList.svelte';
+	import SessionPanel from '$lib/workout/SessionPanel.svelte';
 	import { registerOverlay } from '$lib/ui/overlays';
 
 	type Props = {
 		open?: boolean;
+		/**
+		 * Arrive already open, with no entrance of vaul's own.
+		 *
+		 * Set by the pane when a swipe dragged the stand-in panel all the way in
+		 * and this drawer is taking over from it: the panel is at rest on screen
+		 * already, and a 0.5s slide-in from the edge would be it leaving and
+		 * coming back. It stays set for as long as this opening lasts, because
+		 * lifting it mid-open would hand `animation-name` back to an element in
+		 * `[data-state='open']` and replay the slide from nothing. Closing is
+		 * untouched either way — the rule in `app.css` answers only for the open
+		 * state, so a drawer that arrived silently still leaves on vaul's curve.
+		 */
+		instant?: boolean;
 		entries: Entry[];
 		activeSetId: string | null;
 		onjump: (setId: string) => void;
@@ -17,6 +30,7 @@
 
 	let {
 		open = $bindable(false),
+		instant = false,
 		entries,
 		activeSetId,
 		onjump,
@@ -41,28 +55,35 @@
 		open = false;
 		oninsert();
 	}
+
+	// Built as strings rather than as a class array: these go through vaul's own
+	// prop merge on the way to the element, which joins classes as text.
+	const scrim = $derived(instant ? 'overlay-scrim-drawer drawer-instant' : 'overlay-scrim-drawer');
+	const panel = $derived(
+		instant
+			? 'overlay-panel overlay-drawer-left drawer-instant'
+			: 'overlay-panel overlay-drawer-left'
+	);
 </script>
 
 <Drawer.Root bind:open direction="left">
 	<Drawer.Portal>
-		<Drawer.Overlay class="overlay-scrim-drawer" />
+		<Drawer.Overlay class={scrim} />
 
-		<Drawer.Content class="overlay-panel overlay-drawer-left">
-			<div class="px-4 pt-4 pb-0.5">
-				<Drawer.Title class="title-panel">Session</Drawer.Title>
-			</div>
-
-			<div class="min-h-0 flex-1 overflow-y-auto px-4 pt-1.5 pb-4">
-				<SessionList
-					{entries}
-					{activeSetId}
-					{onreorder}
-					{ondrop}
-					onjump={jump}
-					onfocus={onjump}
-					oninsert={insert}
-				/>
-			</div>
+		<Drawer.Content class={panel}>
+			<SessionPanel
+				{entries}
+				{activeSetId}
+				{onreorder}
+				{ondrop}
+				onjump={jump}
+				onfocus={onjump}
+				oninsert={insert}
+			>
+				{#snippet heading()}
+					<Drawer.Title class="title-panel">Session</Drawer.Title>
+				{/snippet}
+			</SessionPanel>
 		</Drawer.Content>
 	</Drawer.Portal>
 </Drawer.Root>

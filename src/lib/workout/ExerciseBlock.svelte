@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { prefersReducedMotion } from 'svelte/motion';
 	import { slide } from 'svelte/transition';
 
 	import { exertionLabel } from '$lib/domain/exertion';
@@ -10,10 +9,14 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
+	import { captureMorph } from '$lib/ui/morph';
+	import { quickMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import { statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
+	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
+	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import ActiveSet from '$lib/workout/ActiveSet.svelte';
 
 	type Props = {
@@ -59,17 +62,18 @@
 	}
 
 	/**
-	 * A set that arrives or leaves slides; a set that takes focus does not.
-	 *
-	 * They used to be the same animation, because the row and the editor were
-	 * two branches of an `{#if}` and each carried its own `slide`. Focusing a set
-	 * therefore played two of them against each other — the old card collapsing
-	 * while the new one grew, both in the document at once — and the block's
-	 * height swelled and settled back on every tap. The wrapper below is one
-	 * element per set for the life of that set, so the swap inside it is a single
-	 * reflow with no transition at all, and `slide` is left doing the only job it
-	 * was ever right for: an `Add set` that grows a row into place, a removal
+	 * A set that arrives or leaves slides — `slide` doing the only job it was
+	 * ever right for here: an `Add set` that grows a row into place, a removal
 	 * that closes the gap behind it.
+	 *
+	 * It is not what moves a set taking focus, and it never could be. The row and
+	 * the editor were two branches of an `{#if}` and each carried its own
+	 * `slide`, so focusing a set played two of them against each other — the old
+	 * card collapsing while the new one grew, both in the document at once — and
+	 * the block's height swelled and settled back on every tap. The wrapper below
+	 * is one element per set for the life of that set, which is what makes the
+	 * swap inside it a single reflow; `morph.ts` animates that one element's
+	 * height across it, from what it measured to what it lands on.
 	 *
 	 * Zero until the block has mounted, which is what keeps a session from
 	 * accordioning open on arrival. Svelte plays intro transitions for elements
@@ -85,7 +89,59 @@
 		mounted = true;
 	});
 
-	const grow = $derived(!mounted || prefersReducedMotion.current ? 0 : 200);
+	const grow = $derived(mounted ? quickMs() : 0);
+
+	/**
+	 * Every set's wrapper, by set id, so the two the cursor is moving between can
+	 * be measured. A plain `Map` and not `$state`: it is written by attachments
+	 * during the update and read by the effect below, and a reactive one would
+	 * make each row's mount a dependency of that effect.
+	 */
+	const wrappers = new Map<string, HTMLElement>();
+
+	function tracked(setId: string) {
+		return (node: HTMLElement) => {
+			wrappers.set(setId, node);
+
+			return () => {
+				wrappers.delete(setId);
+			};
+		};
+	}
+
+	function wrapperOf(setId: string | null): HTMLElement | undefined {
+		return setId === null ? undefined : wrappers.get(setId);
+	}
+
+	/**
+	 * The cursor is about to move, and the two boxes whose contents are about to
+	 * change have to be measured while they still hold the old ones.
+	 *
+	 * `$effect.pre` is the only hook that runs there — before Svelte updates the
+	 * DOM, with the leaving editor still at editor height and the arriving row
+	 * still one line tall. Both are captured, and the screen plays them once it
+	 * has decided where the pane is scrolling to; see `morph.ts`.
+	 *
+	 * `focused` mirrors the prop as an ordinary variable so the guard can tell a
+	 * real move from any other reason this effect re-ran. Every block runs this
+	 * and only the one holding each id captures anything, which is exactly right
+	 * for a move that crosses from one exercise into the next.
+	 */
+	// svelte-ignore state_referenced_locally
+	let focused = activeSetId;
+
+	$effect.pre(() => {
+		const next = activeSetId;
+
+		if (next === focused) {
+			return;
+		}
+
+		captureMorph(wrapperOf(focused));
+		captureMorph(wrapperOf(next));
+
+		focused = next;
+	});
 </script>
 
 <section data-exercise class="flex flex-col gap-2">
@@ -122,7 +178,7 @@
 	</div>
 
 	{#each cursors as cursor (cursor.set.id)}
-		<div transition:slide={{ duration: grow }}>
+		<div transition:slide={{ duration: grow }} {@attach tracked(cursor.set.id)}>
 			{#if cursor.set.id === activeSetId}
 				<!-- The screen's reveals aim at this holder, so the strip of air the
 				     live card keeps at the pane's floor has to be declared on it too:
@@ -158,10 +214,16 @@
 		</div>
 	{/each}
 
+	<!-- Two acts, two marks: a row appended under the rows above it, and an
+	     exercise joining the stack the session is. A plus on both halves was one
+	     mark drawn twice, and left `set` and `Exercise` to say the whole
+	     difference between them. -->
 	<AddRow
 		label="Add set"
+		icon={RowsPlusBottom}
 		onclick={onadd}
 		secondaryLabel={oninsert === undefined ? undefined : 'Exercise'}
+		secondaryIcon={StackPlus}
 		onsecondary={oninsert}
 	/>
 </section>

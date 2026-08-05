@@ -39,6 +39,7 @@
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
@@ -557,7 +558,10 @@
 
 		{#if editing}
 			<!-- The same dashed silhouette the sections grow by, one level up. -->
-			<AddRow label="Add exercise" onclick={() => (insertOpen = true)} />
+			<!-- `StackPlus` and not the default plus, because the workout screen adds
+			     an exercise with that mark and this record is that screen after the
+			     fact — one act, one glyph, whichever end of the day it happens at. -->
+			<AddRow label="Add exercise" icon={StackPlus} onclick={() => (insertOpen = true)} />
 		{:else if entries.length === 0}
 			<!-- Editing down to nothing is allowed — the record is still a record of a
 			     day, and Delete is right there for a session that should not have
