@@ -95,12 +95,13 @@
 	 *
 	 * Zero when the route owns its own pane and this box is not rendered, which
 	 * is Workout and the template editor. Workout deliberately has no snapshot
-	 * of its own: `ExerciseBlock` already pulls the live set to centre when it
-	 * mounts, so coming back mid-session lands on the set being logged rather
-	 * than on an offset — measured on a phone, back from a tab returned the
-	 * active set to the middle of the pane from a page the user had scrolled to
-	 * the top. That is rule 7's answer and it beats a remembered offset; a
-	 * snapshot here would only race the smooth scroll that produces it.
+	 * of its own: it pulls the live set into the pane as it mounts, so coming
+	 * back mid-session lands on the set being logged rather than on an offset —
+	 * measured on a phone, back from a tab returned the active set to the pane
+	 * from a page the user had scrolled to the top. That is rule 7's answer and
+	 * it beats a remembered offset, which would put a returning thumb wherever
+	 * the last glance happened to leave it. The scroll it lands with is instant
+	 * and not animated, so there is nothing here for a snapshot to race.
 	 */
 	export const snapshot: Snapshot<number> = {
 		capture: () => pane?.scrollTop ?? 0,

@@ -10,7 +10,6 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
-	import { revealNearest } from '$lib/ui/scroll';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import { statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
@@ -58,21 +57,43 @@
 		return rowHint(cursor) ?? exertionLabel(cursor.set.rpe, exertionScale.current) ?? '';
 	}
 
-	let holder = $state<HTMLElement | null>(null);
+	/**
+	 * A set that arrives or leaves slides; a set that takes focus does not.
+	 *
+	 * They used to be the same animation, because the row and the editor were
+	 * two branches of an `{#if}` and each carried its own `slide`. Focusing a set
+	 * therefore played two of them against each other — the old card collapsing
+	 * while the new one grew, both in the document at once — and the block's
+	 * height swelled and settled back on every tap. The wrapper below is one
+	 * element per set for the life of that set, so the swap inside it is a single
+	 * reflow with no transition at all, and `slide` is left doing the only job it
+	 * was ever right for: an `Add set` that grows a row into place, a removal
+	 * that closes the gap behind it.
+	 *
+	 * Zero until the block has mounted, which is what keeps a session from
+	 * accordioning open on arrival. Svelte plays intro transitions for elements
+	 * created by an update, and a navigation into this screen is an update — so
+	 * every row in a twelve-set session used to slide in behind the pane's jump
+	 * to the live set. The flag is read when each transition starts, so the
+	 * mounting pass gets a duration of 0 and every set added afterwards gets the
+	 * full one.
+	 */
+	let mounted = $state(false);
 
 	$effect(() => {
-		if (holder === null || activeSetId === null) {
-			return;
-		}
-
-		revealNearest(holder);
+		mounted = true;
 	});
 
-	const grow = $derived(prefersReducedMotion.current ? 0 : 200);
+	const grow = $derived(!mounted || prefersReducedMotion.current ? 0 : 200);
 </script>
 
-<section class="flex flex-col gap-2">
-	<div class="flex items-center gap-1">
+<section data-exercise class="flex flex-col gap-2">
+	<!-- `scroll-mt-3` is this header's own strip of air, spent when the session
+	     list jumps to this exercise and the pane puts the title at its top edge —
+	     `scrollIntoView` aligns to the scrollport, which is inside the pane's own
+	     `py-3`, so without it the name would sit flush against the chrome. The
+	     active card's `scroll-mb-3` is the same 12px at the other end. -->
+	<div data-exercise-head class="flex scroll-mt-3 items-center gap-1">
 		<a
 			href="/exercises/{meta.id}"
 			oncontextmenu={(e) => {
@@ -102,14 +123,14 @@
 	</div>
 
 	{#each cursors as cursor (cursor.set.id)}
-		{#if cursor.set.id === activeSetId}
-			<div
-				bind:this={holder}
-				data-active-set
-				transition:slide={{ duration: grow }}
-				onintroend={() => holder !== null && revealNearest(holder)}
-			>
-				{#key cursor.set.id}
+		<div transition:slide={{ duration: grow }}>
+			{#if cursor.set.id === activeSetId}
+				<!-- The screen's reveals aim at this holder, so the strip of air the
+				     live card keeps at the pane's floor has to be declared on it too:
+				     `scroll-margin` is read off the element the scroll was asked for,
+				     and the card's own `scroll-mb-3` answers only for the reveal that
+				     names the card — the one a focused input triggers. -->
+				<div data-active-set class="scroll-mb-3">
 					<ActiveSet
 						{cursor}
 						{history}
@@ -120,10 +141,8 @@
 						onrate={(rpe) => onrate(cursor.set.id, rpe)}
 						onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
 					/>
-				{/key}
-			</div>
-		{:else}
-			<div transition:slide={{ duration: grow }}>
+				</div>
+			{:else}
 				<SetRow
 					status={statusOf(cursor)}
 					index={cursor.workingIndex + 1}
@@ -136,8 +155,8 @@
 						{rowRight(cursor)}
 					{/snippet}
 				</SetRow>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	{/each}
 
 	<AddRow

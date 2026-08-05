@@ -20,7 +20,7 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import { revealNearest } from '$lib/ui/scroll';
+	import { fullyVisible, revealNearest, revealSpan, revealStart } from '$lib/ui/scroll';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 
 	import type { PageProps } from './$types';
@@ -32,9 +32,9 @@
 	 * PRODUCT.md left focused-one-exercise-at-a-time and full-session-list open,
 	 * and both shipped here behind `?mode=` so a run through the fixture could
 	 * decide it. The list won; the fork, the focused branch and its transition
-	 * are gone. What the list costs is one thing, and it stays: `ExerciseBlock`
-	 * pulls the active set back inside the pane after a commit, because in a
-	 * stacked session it otherwise marches off the bottom of the page.
+	 * are gone. What the list costs is one thing, and it stays: this screen pulls
+	 * the active set back inside the pane after a commit, because in a stacked
+	 * session it otherwise marches off the bottom of the page. See `settle`.
 	 *
 	 * From `lg` up the session list the sheet holds on a phone is a card floating
 	 * in the left gutter, beside the pane being logged into rather than in front
@@ -74,27 +74,105 @@
 	const session = $derived(activeWorkout.session);
 
 	/**
-	 * Bring the live editor back inside the pane, if it is not already fully on
-	 * screen. For the state-changing paths the block's own effect does this;
-	 * this one exists for the changes no effect sees — a jump to the set that
-	 * is already active, and a drag that moved the active exercise after the
-	 * lift-time scroll had already answered. `tick` first, so the measurement
-	 * is of the layout the change just produced.
+	 * Where the pane goes when the cursor moves, and the one place that decides
+	 * it. `ExerciseBlock` used to own this and could only ever see its own set —
+	 * which is why the exercise's name never came with it.
+	 *
+	 * Two arrivals, because the screen is answering two different acts:
+	 *
+	 * A **jump** is a destination named out loud: a tap in the session list or
+	 * the overview, an exercise lifted on the rail, a set added by the insert
+	 * sheet. The title goes to the top of the pane and the set comes with it if
+	 * it fits, because what was asked for is the exercise, not the row — and a
+	 * named destination should land in the same place every time it is named.
+	 * The one thing that stops it is the pane already showing both: tapping an
+	 * exercise you are looking at should not move the page under you.
+	 *
+	 * An **advance** is the loop moving by itself — a set logged, a set added at
+	 * the foot of a block, the screen mounting on the way back from another tab.
+	 * Here the title is a courtesy and the set is the point, so the pane travels
+	 * the shortfall and no further, and drops the header the moment the two stop
+	 * fitting together. Mid-session that is the difference between a page that
+	 * nudges and a page that relocates.
+	 *
+	 * Neither animates; see `scroll.ts`.
 	 */
-	async function revealActive() {
+	let intent: 'jump' | 'advance' = 'advance';
+	let scheduled = false;
+
+	/**
+	 * One reveal per change, whoever asked for it.
+	 *
+	 * The effect below catches every move of the cursor, and the jump paths call
+	 * in by hand as well — because a jump to the set that is already active
+	 * changes nothing for an effect to see. Both land here, the first one through
+	 * books the pass and the second is swallowed, and `intent` is read after the
+	 * wait rather than at the door, so it does not matter which of them arrived
+	 * first. `tick` is what makes the measurement one of the layout the change
+	 * just produced instead of the one it replaced.
+	 */
+	async function settle() {
+		if (scheduled) {
+			return;
+		}
+
+		scheduled = true;
 		await tick();
+		scheduled = false;
+
+		const mode = intent;
+		intent = 'advance';
 
 		const holder = document.querySelector('[data-active-set]');
 
-		if (holder instanceof HTMLElement) {
-			revealNearest(holder);
+		if (!(holder instanceof HTMLElement)) {
+			return;
 		}
+
+		const head = holder.closest('[data-exercise]')?.querySelector('[data-exercise-head]');
+
+		if (!(head instanceof HTMLElement)) {
+			revealNearest(holder);
+
+			return;
+		}
+
+		if (mode === 'advance') {
+			revealSpan(head, holder);
+
+			return;
+		}
+
+		if (fullyVisible(head) && fullyVisible(holder)) {
+			return;
+		}
+
+		revealStart(head);
+	}
+
+	/** Mark the reveal this change earns a jump, and make sure one happens. */
+	function jumped() {
+		intent = 'jump';
+		void settle();
 	}
 
 	function jumpTo(setId: string) {
 		activeWorkout.session?.select(setId);
-		void revealActive();
+		jumped();
 	}
+
+	/**
+	 * The cursor moved, so the pane follows. Reading `activeSetId` in the guard
+	 * is what subscribes to it; a session with none is a finished one, and there
+	 * is nothing left on screen to reveal.
+	 */
+	$effect(() => {
+		if (session === null || session.activeSetId === null) {
+			return;
+		}
+
+		void settle();
+	});
 
 	/**
 	 * Persistence, as a side effect of existing: `$state.snapshot` reads every
@@ -276,6 +354,11 @@
 	function insertPicks(exerciseIds: string[]) {
 		session?.addExercises(exerciseIds, insertAfter ?? undefined);
 		insertAfter = null;
+
+		// A jump: the picks are a destination the user just named, and the first
+		// of them is what the cursor has moved to — so the pane arrives on its
+		// title the same way a tap in the session list does.
+		jumped();
 	}
 
 	/**
@@ -521,10 +604,10 @@
 						{entries}
 						activeSetId={session.activeSetId}
 						onjump={jumpTo}
-						onfocus={(id) => session.select(id)}
+						onfocus={jumpTo}
 						oninsert={() => insertFrom(null)}
 						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
-						ondrop={() => void revealActive()}
+						ondrop={jumped}
 					/>
 				</div>
 			</aside>
@@ -641,7 +724,7 @@
 		onjump={jumpTo}
 		oninsert={() => insertFrom(null)}
 		onreorder={(entryId, index) => session.moveEntry(entryId, index)}
-		ondrop={() => void revealActive()}
+		ondrop={jumped}
 	/>
 
 	<!-- `multiple`, because this sheet is how an empty session becomes a session:
