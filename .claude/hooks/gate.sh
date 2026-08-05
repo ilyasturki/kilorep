@@ -16,6 +16,8 @@ set -uo pipefail
 
 MAX_BLOCKS=3
 
+deps=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deps.sh
+
 input=$(cat)
 cwd=$(jq -r '.cwd // empty' <<<"$input")
 session=$(jq -r '.session_id // "nosession"' <<<"$input")
@@ -35,6 +37,12 @@ root=$(cd "$cwd" && while [[ $PWD != / ]]; do
 	cd ..
 done)
 [[ -n $root ]] || exit 0
+
+# A turn that only wrote through shell commands never reached format.sh, so a
+# fresh worktree can still be bare by the time the gate runs. Install, and skip
+# the check rather than block the turn if that fails — the message for a broken
+# install belongs to the hook that tried it, not here.
+[[ -x $deps ]] && "$deps" --ensure "$root" >/dev/null 2>&1
 [[ -x "$root/node_modules/.bin/prettier" ]] || exit 0
 
 cd "$root" || exit 0

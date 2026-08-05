@@ -13,6 +13,18 @@
 				]
 			}
 		],
+		"CwdChanged": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": ".claude/hooks/deps.sh",
+						"statusMessage": "Checking dependencies",
+						"timeout": 180
+					}
+				]
+			}
+		],
 		"PostToolUse": [
 			{
 				"matcher": "Edit|Write",
