@@ -207,10 +207,27 @@ export function prefillFor(cursor: SetCursor, history: History): Prefill {
 	};
 }
 
-export function parseEntry(raw: string): number | null {
-	const parsed = Number(raw.trim().replace(',', '.'));
+/* Digits, an optional leading sign and at most one separator — and never
+   `Number()`'s wider dialect, which reads `1e3` as 1000 and `0x10` as 16. Both
+   are numbers to the language and neither is a weight anyone typed on purpose,
+   so a field that has just refused every letter would be accepting the two
+   strings a letter can still hide inside. */
+const ENTRY = /^-?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/u;
 
-	return raw.trim() === '' || !Number.isFinite(parsed) ? null : parsed;
+/* What may sit in the field on the way to one. Every prefix of an entry counts,
+   which is what makes a strict grammar typeable at all: `-`, `.` and `8.` are
+   nothing yet, but refusing them would mean refusing the keystroke that starts
+   `-5`, `.5` and `8.5`. */
+const DRAFT = /^-?\d*(?:[.,]\d*)?$/u;
+
+export function isEntryDraft(raw: string): boolean {
+	return DRAFT.test(raw);
+}
+
+export function parseEntry(raw: string): number | null {
+	const trimmed = raw.trim();
+
+	return ENTRY.test(trimmed) ? Number(trimmed.replace(',', '.')) : null;
 }
 
 export function settle(value: number, min = 0, max = Infinity): number {

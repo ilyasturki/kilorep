@@ -88,7 +88,7 @@
 				value={reps}
 				recalled={opened.reps}
 				step={1}
-				onchange={(v) => ondraft(weight, v === null ? null : Math.round(v))}
+				onchange={(v) => ondraft(weight, v)}
 			/>
 		</div>
 

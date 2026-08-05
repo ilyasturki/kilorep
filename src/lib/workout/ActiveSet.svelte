@@ -40,13 +40,7 @@
 	let previewReps = $state<number | null | undefined>();
 
 	const liveWeight = $derived(previewWeight === undefined ? weight : previewWeight);
-	const liveReps = $derived.by(() => {
-		if (previewReps === undefined) {
-			return reps;
-		}
-
-		return previewReps === null ? null : Math.round(previewReps);
-	});
+	const liveReps = $derived(previewReps === undefined ? reps : previewReps);
 
 	const live = $derived(canCommit(liveWeight, liveReps));
 
@@ -155,7 +149,7 @@
 				recalled={opened.reps}
 				step={1}
 				ruler
-				onchange={(v) => ondraft(weight, v === null ? null : Math.round(v))}
+				onchange={(v) => ondraft(weight, v)}
 				onpreview={(v) => (previewReps = v)}
 			/>
 		</div>

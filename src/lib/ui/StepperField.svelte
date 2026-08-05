@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
-	import { parseEntry, settle } from '$lib/domain/workout';
+	import { isEntryDraft, parseEntry, settle } from '$lib/domain/workout';
 	import { tapLift } from '$lib/ui/haptics';
 	import { coarsePointer } from '$lib/ui/pointer';
 	import { press } from '$lib/ui/press';
@@ -184,6 +184,48 @@
 		}
 	}
 
+	/* Where the caret sat before the keystroke now landing, so that refusing one
+	   can put the field back exactly as it stood. `input` is too late to read it:
+	   the character is already in the box and the caret has already stepped over
+	   it. A range and not a point, because focus selects the whole number — a
+	   letter typed first has to leave that selection standing rather than
+	   quietly collapsing it. */
+	let caret: [number, number] = [0, 0];
+
+	function aim(event: Event & { currentTarget: HTMLInputElement }) {
+		const { selectionStart, selectionEnd } = event.currentTarget;
+
+		caret = [selectionStart ?? 0, selectionEnd ?? 0];
+	}
+
+	/**
+	 * Anything that is not a number on its way to being typed is refused outright
+	 * — the character never appears, and a paste of `82,5 kg` lands nothing at
+	 * all rather than half of itself.
+	 *
+	 * Refusing after the fact rather than cancelling the `beforeinput`: the
+	 * result of an edit is only reliably knowable once it has happened. Every
+	 * other route would mean reassembling the string per `inputType`, and a
+	 * deletion, a drop, an undo and a composition each splice differently.
+	 *
+	 * The DOM is rewritten by hand because `draft` has not changed, so there is
+	 * nothing for the `value={...}` above to react to and the junk would sit
+	 * there unopposed.
+	 */
+	function oninput(event: Event & { currentTarget: HTMLInputElement }) {
+		const field = event.currentTarget;
+
+		if (!isEntryDraft(field.value)) {
+			field.value = draft;
+			field.setSelectionRange(caret[0], caret[1]);
+			return;
+		}
+
+		draft = field.value;
+		typed = draft;
+		onpreview?.(landing());
+	}
+
 	function onkeydown(event: KeyboardEvent & { currentTarget: HTMLInputElement }) {
 		if (event.key === 'Enter') {
 			event.currentTarget.blur();
@@ -234,11 +276,8 @@
 		<input
 			bind:this={box}
 			value={editing ? draft : display}
-			oninput={(event) => {
-				draft = event.currentTarget.value;
-				typed = draft;
-				onpreview?.(landing());
-			}}
+			onbeforeinput={aim}
+			{oninput}
 			onfocus={start}
 			onblur={commit}
 			onmouseup={(event) => {

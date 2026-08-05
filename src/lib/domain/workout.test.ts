@@ -15,6 +15,7 @@ import {
 	hintFor,
 	hintLabel,
 	insertedSetCount,
+	isEntryDraft,
 	joinEntry,
 	markSet,
 	moveEntry,
@@ -1066,11 +1067,52 @@ describe('parseEntry', () => {
 		expect(parseEntry('')).toBeNull();
 		expect(parseEntry('   ')).toBeNull();
 		expect(parseEntry('.')).toBeNull();
+		expect(parseEntry('-')).toBeNull();
 		expect(parseEntry('heavy')).toBeNull();
 	});
 
 	test('zero is a claim', () => {
 		expect(parseEntry('0')).toBe(0);
+	});
+
+	test('a separator may lead or trail the digits', () => {
+		expect(parseEntry('.5')).toBe(0.5);
+		expect(parseEntry(',5')).toBe(0.5);
+		expect(parseEntry('82.')).toBe(82);
+	});
+
+	test('a sign is read, and left for settle to clamp', () => {
+		expect(parseEntry('-5')).toBe(-5);
+		expect(parseEntry('--5')).toBeNull();
+		expect(parseEntry('5-')).toBeNull();
+	});
+
+	test("the language's wider number dialect is not a number here", () => {
+		expect(parseEntry('1e3')).toBeNull();
+		expect(parseEntry('0x10')).toBeNull();
+		expect(parseEntry('Infinity')).toBeNull();
+		expect(parseEntry('1.2.3')).toBeNull();
+		expect(parseEntry('82,5 kg')).toBeNull();
+	});
+});
+
+describe('isEntryDraft', () => {
+	test('every prefix of an entry is one', () => {
+		expect(isEntryDraft('')).toBe(true);
+		expect(isEntryDraft('-')).toBe(true);
+		expect(isEntryDraft('.')).toBe(true);
+		expect(isEntryDraft('82.')).toBe(true);
+		expect(isEntryDraft('-.5')).toBe(true);
+		expect(isEntryDraft('82,5')).toBe(true);
+	});
+
+	test('what no keystroke can rescue is not', () => {
+		expect(isEntryDraft('h')).toBe(false);
+		expect(isEntryDraft('82.5.')).toBe(false);
+		expect(isEntryDraft('1e')).toBe(false);
+		expect(isEntryDraft('0x')).toBe(false);
+		expect(isEntryDraft('5-')).toBe(false);
+		expect(isEntryDraft(' 5')).toBe(false);
 	});
 });
 
