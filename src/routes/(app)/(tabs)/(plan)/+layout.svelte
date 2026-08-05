@@ -2,8 +2,8 @@
 	import { page } from '$app/state';
 
 	import Segmented from '$lib/ui/Segmented.svelte';
-	import ListBullets from '$lib/ui/icons/ListBullets.svelte';
-	import Stack from '$lib/ui/icons/Stack.svelte';
+	import Books from '$lib/ui/icons/Books.svelte';
+	import Cards from '$lib/ui/icons/Cards.svelte';
 
 	import type { LayoutProps } from './$types';
 
@@ -27,14 +27,22 @@
 	 * `value` is the address, so the route is what lights a half and there is no
 	 * second copy of "which one is open" to fall out of step with it.
 	 *
-	 * `Stack` is the Plan tab's own glyph, standing here for the half the tab
-	 * opens on. Exercises takes `ListBullets` and not `Barbell`, which is the one
-	 * that would read as the lift: `Barbell` is Train's, and a segment wearing
-	 * another tab's mark points at the wrong place from across the room.
+	 * The glyphs name what each half *is*, and they have to differ in silhouette
+	 * before they differ in detail — at 18px a reader gets the outline and
+	 * nothing else. A deck of cards for the plans you keep; a shelf of books for
+	 * the movements you look one up in. This pair replaced `Stack` and
+	 * `ListBullets`, which said "list" twice: `Stack.svelte` is redrawn here as
+	 * three bars rather than Phosphor's layered plates, so beside a bulleted list
+	 * it was the same mark at a glance.
+	 *
+	 * `Barbell` is the mark that carries "exercise" best and is deliberately not
+	 * here. It is Train's, and on a desk the Train tab sits in the bar directly
+	 * above this segment — unlit, so the *same* outline barbell would stand twice
+	 * on one screen for two different things.
 	 */
 	const halves = [
-		{ value: '/templates', href: '/templates', label: 'Templates', icon: Stack },
-		{ value: '/exercises', href: '/exercises', label: 'Exercises', icon: ListBullets }
+		{ value: '/templates', href: '/templates', label: 'Templates', icon: Cards },
+		{ value: '/exercises', href: '/exercises', label: 'Exercises', icon: Books }
 	];
 </script>
 

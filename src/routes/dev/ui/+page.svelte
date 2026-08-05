@@ -32,7 +32,9 @@
 	import Backspace from '$lib/ui/icons/Backspace.svelte';
 	import Barbell from '$lib/ui/icons/Barbell.svelte';
 	import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
+	import Books from '$lib/ui/icons/Books.svelte';
 	import Calendar from '$lib/ui/icons/Calendar.svelte';
+	import Cards from '$lib/ui/icons/Cards.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
@@ -216,8 +218,8 @@
 	// Everything else about the two is the same control.
 	let half = $state('templates');
 	const halves = [
-		{ value: 'templates', label: 'Templates', icon: Stack },
-		{ value: 'exercises', label: 'Exercises', icon: ListBullets }
+		{ value: 'templates', label: 'Templates', icon: Cards },
+		{ value: 'exercises', label: 'Exercises', icon: Books }
 	];
 	let date = $state(today(getLocalTimeZone()));
 	let keepAwake = $state(true);
@@ -732,6 +734,14 @@
 					<div class="flex flex-col items-center gap-1.5">
 						<div class={tile}><Info size={22} /></div>
 						<span class={caption}>Info</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Cards size={22} /></div>
+						<span class={caption}>Cards</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Books size={22} /></div>
+						<span class={caption}>Books</span>
 					</div>
 				</div>
 				<!-- The nav's glyphs, each above its selected-state partner. Bold on
