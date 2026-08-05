@@ -1,8 +1,6 @@
 export type Direction = 'push' | 'pop';
 
-export type Move = { direction: Direction };
-
-export type MoveContext = {
+type MoveContext = {
 	from: string;
 	to: string;
 	delta?: number;
@@ -18,19 +16,19 @@ export type MoveContext = {
  * slide there was motion that said nothing.
  *
  * Peer means both ends are tab roots exactly, not merely under one. A tab's
- * detail screen is deeper than every root including its own, so `/progress` →
+ * detail screen is deeper than every root including its own, so `/dashboard` →
  * `/exercises/{id}` is a push the same as `/history` → `/history/{id}` is: the
  * tab the user came from does not change what arriving at a detail screen
  * means.
  */
-export function classifyMove({ from, to, delta, tabRoots }: MoveContext): Move | undefined {
+export function classifyMove({ from, to, delta, tabRoots }: MoveContext): Direction | undefined {
 	if (tabRoots.includes(from) && tabRoots.includes(to)) {
 		return undefined;
 	}
 
 	if (delta !== undefined && delta < 0) {
-		return { direction: 'pop' };
+		return 'pop';
 	}
 
-	return { direction: from.startsWith(`${to}/`) ? 'pop' : 'push' };
+	return from.startsWith(`${to}/`) ? 'pop' : 'push';
 }

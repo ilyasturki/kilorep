@@ -84,20 +84,17 @@ const PARENTS: Record<string, string> = {
 	'/weight': '/dashboard'
 };
 
+/**
+ * The keys join the roots in the prefix search, because a named parent is a
+ * parent to its own children too: `/history/{id}` walks up to the list, and the
+ * list walks up to Progress. They stopped being tab roots when History left the
+ * bar, and a screen no address claims is one the bar draws no back button on
+ * and the hardware button answers by quitting the app.
+ */
 export function parentOf(pathname: string): string | null {
-	const named = PARENTS[pathname];
+	const above = [...tabRoots(), ...Object.keys(PARENTS)];
 
-	if (named !== undefined) {
-		return named;
-	}
-
-	// Longest first, so `/exercises/{id}` cannot be claimed by a shorter root
-	// that happens to prefix it.
-	return (
-		tabRoots()
-			.toSorted((a, b) => b.length - a.length)
-			.find((root) => pathname.startsWith(`${root}/`)) ?? null
-	);
+	return PARENTS[pathname] ?? above.find((root) => pathname.startsWith(`${root}/`)) ?? null;
 }
 
 /**
@@ -108,8 +105,7 @@ export function parentOf(pathname: string): string | null {
  * a screen deeper than a root always has a name of its own to give.
  *
  * `leading` is the phone bar's left, for the screens that want something there
- * other than the back button the bar would otherwise draw — the loop's session
- * overview being the only one.
+ * other than the back button the bar would otherwise draw.
  */
 export class AppBarSlot {
 	public title: string | null = $state(null);
@@ -128,4 +124,25 @@ export function createAppBarSlot(): AppBarSlot {
 
 export function appBarSlot(): AppBarSlot {
 	return getContext<AppBarSlot>(key);
+}
+
+const EMPTY = { title: null, leading: null, action: null };
+
+/**
+ * Hand the bar what this screen carries, and take all of it back on the way out
+ * — a title or an action left behind would be drawn over the next screen.
+ *
+ * `carried` is read inside the effect, so a name that is typed or a snippet that
+ * swaps with a posture follows without the screen arranging for it.
+ */
+export function fillAppBar(carried: () => Partial<AppBarSlot>): void {
+	const slot = appBarSlot();
+
+	$effect(() => {
+		Object.assign(slot, EMPTY, carried());
+
+		return () => {
+			Object.assign(slot, EMPTY);
+		};
+	});
 }

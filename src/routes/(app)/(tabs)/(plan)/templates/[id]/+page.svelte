@@ -20,7 +20,7 @@
 		supersetWith
 	} from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
-	import { appBarSlot } from '$lib/nav/bar.svelte';
+	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { plannedEntries } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
@@ -338,8 +338,6 @@
 	}
 
 	/**
-	 * What this screen hands the bar.
-	 *
 	 * The title is the one place in the app where a screen's name is also a
 	 * field: the plan is renamed by typing into the pane, so the bar mirrors it
 	 * rather than owning it, and a plan that says nothing yet is called what the
@@ -349,22 +347,10 @@
 	 * than by being withheld here — the pane already pins Start under the thumb
 	 * and keeps the trash at the plan's foot, and a phone bar repeating both
 	 * would put two Starts on one screen.
-	 *
-	 * `title` is assigned inside the effect so it re-runs as the name is typed;
-	 * the snippet re-renders itself, and `persisted` inside it is read where it
-	 * is rendered.
 	 */
-	const bar = appBarSlot();
+	const title = $derived(template.name.trim() === '' ? 'New template' : template.name);
 
-	$effect(() => {
-		bar.title = template.name.trim() === '' ? 'New template' : template.name;
-		bar.action = deskActions;
-
-		return () => {
-			bar.title = null;
-			bar.action = null;
-		};
-	});
+	fillAppBar(() => ({ title, action: deskActions }));
 </script>
 
 {#snippet trash(size: number)}
@@ -399,7 +385,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>{template.name.trim() === '' ? 'New template' : template.name} | Kilorep</title>
+	<title>{title} | Kilorep</title>
 </svelte:head>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />

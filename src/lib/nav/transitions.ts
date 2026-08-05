@@ -7,7 +7,7 @@ import { tabRoots } from '$lib/nav/bar.svelte';
 import { classifyMove } from '$lib/nav/move';
 import { coarsePointer } from '$lib/ui/pointer';
 
-import type { Direction, Move } from '$lib/nav/move';
+import type { Direction } from '$lib/nav/move';
 
 /**
  * A screen stacked on another travels with parallax: the one being covered
@@ -30,10 +30,6 @@ import type { Direction, Move } from '$lib/nav/move';
  * navigation are the same rectangle, and a group whose geometry does not
  * change cannot morph mid-slide. A browser without `startViewTransition`
  * navigates instantly, which is the fallback and the whole fallback.
- *
- * One stamp, `data-nav`, and the panes' animations are all that read it. The
- * tab bar needs none: it is on both sides of every navigation now that Settings
- * is a tab, so it never leaves with a screen.
  */
 
 function outsideShell(pathname: string): boolean {
@@ -96,13 +92,11 @@ async function absorb(settling: Promise<void>): Promise<void> {
 }
 
 /**
- * Stamp the move where the CSS can read it, then run the transition.
- *
  * Stamped *before* `startViewTransition`: the browser captures during the
  * rendering update that follows this call, so a `dataset` write on the line
  * above is already in the style it captures.
  */
-function slide({ direction }: Move, update: () => Promise<void>): void {
+function slide(direction: Direction, update: () => Promise<void>): void {
 	const { dataset } = document.documentElement;
 
 	dataset.nav = direction;
@@ -116,7 +110,7 @@ function slide({ direction }: Move, update: () => Promise<void>): void {
 	void unstamp(transition);
 }
 
-function navigationMove(navigation: OnNavigate): Move | undefined {
+function navigationMove(navigation: OnNavigate): Direction | undefined {
 	const { from, to } = navigation;
 
 	if (from === null || to === null) {
@@ -167,7 +161,7 @@ export function pageSlide(direction: Direction, mutate: () => void): void {
 		return;
 	}
 
-	slide({ direction }, async () => {
+	slide(direction, async () => {
 		mutate();
 		await tick();
 	});

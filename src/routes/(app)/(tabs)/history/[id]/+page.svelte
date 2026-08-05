@@ -22,7 +22,7 @@
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
-	import { appBarSlot } from '$lib/nav/bar.svelte';
+	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
 	import { syncSoon } from '$lib/sync/client';
 	import { entriesWithMeta, legOf } from '$lib/workout/groups';
@@ -426,24 +426,14 @@
 	}
 
 	/**
-	 * The bar carries this screen's name and its actions. Back it draws itself:
-	 * `/history/{id}` is no tab root, and `parentOf` walks it up to the list.
+	 * No `leading`: this address is no tab root, so `parentOf` walks it up to the
+	 * list and the bar draws back itself.
 	 *
-	 * Assigned inside the effect so both follow `editing` — the posture swaps
-	 * REPEAT and the menu for the one way out, and DONE landing where the thumb
-	 * just left is what makes edit mode read as a mode rather than a place.
+	 * Read inside the effect so both follow `editing` — the posture swaps REPEAT
+	 * and the menu for the one way out, and DONE landing where the thumb just
+	 * left is what makes edit mode read as a mode rather than a place.
 	 */
-	const bar = appBarSlot();
-
-	$effect(() => {
-		bar.title = title;
-		bar.action = actions;
-
-		return () => {
-			bar.title = null;
-			bar.action = null;
-		};
-	});
+	fillAppBar(() => ({ title, action: actions }));
 </script>
 
 {#snippet actions()}
@@ -506,8 +496,7 @@
 <main class={['column-content flex min-h-full flex-col gap-5 px-3 pt-3', editing && 'pb-4']}>
 	<!-- The date and nothing about the clock: a session is a day here, and how
 	     many minutes it ran was a number the record happened to be able to
-	     compute rather than one anybody came to read. The name and the actions
-	     that used to sit above it are the bar's now. -->
+	     compute rather than one anybody came to read. -->
 	<p class="px-1 text-md font-bold text-ink-faint">
 		{when.format(workout.startedAt)}
 		{#if drift !== null && !hasDrift(drift)}· as planned{/if}

@@ -23,11 +23,9 @@
 		{ href: '/templates', label: 'Templates' },
 		{ href: '/exercises', label: 'Exercises' }
 	];
-
-	const onList = $derived(halves.some((half) => half.href === page.url.pathname));
 </script>
 
-{#if onList}
+{#if halves.some((half) => half.href === page.url.pathname)}
 	<div class="column-content flex flex-col px-3 pt-3">
 		<!-- A raised pill on a well, not the accent: `Chip` paints its selected
 		     state with the accent fill, and the accent means "this logs a set".

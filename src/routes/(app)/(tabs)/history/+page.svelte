@@ -5,7 +5,7 @@
 	import type { Workout } from '$lib/domain/workout';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import WorkoutRowMenu from '$lib/history/WorkoutRowMenu.svelte';
-	import { appBarSlot } from '$lib/nav/bar.svelte';
+	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -125,19 +125,9 @@
 		await invalidateAll();
 	}
 
-	/**
-	 * This screen is a child of Progress rather than a tab, so the bar has no lit
-	 * tab to take a word from — it says its own name or it says nothing.
-	 */
-	const bar = appBarSlot();
-
-	$effect(() => {
-		bar.title = 'History';
-
-		return () => {
-			bar.title = null;
-		};
-	});
+	// A child of Progress rather than a tab, so the bar has no lit tab to take a
+	// word from.
+	fillAppBar(() => ({ title: 'History' }));
 </script>
 
 <svelte:head>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { catalog } from '$lib/catalog';
-	import { appBarSlot } from '$lib/nav/bar.svelte';
+	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { rawPr } from '$lib/domain/stats';
 	import { kin } from '$lib/exercises/browse';
@@ -31,20 +31,7 @@
 
 	const exercise = $derived(data.exercise);
 
-	/**
-	 * The bar names the exercise, which is what the pane's `h1` used to do. The
-	 * variant chips below walk exercise to exercise without leaving this route,
-	 * so the title is assigned inside the effect rather than once at mount.
-	 */
-	const bar = appBarSlot();
-
-	$effect(() => {
-		bar.title = exercise.name;
-
-		return () => {
-			bar.title = null;
-		};
-	});
+	fillAppBar(() => ({ title: exercise.name }));
 
 	// One list and no direction: whoever is on screen, the rest of the family is
 	// what they might have meant instead, and the parent has no claim to be read

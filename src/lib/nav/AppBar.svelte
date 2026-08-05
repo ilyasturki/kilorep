@@ -1,23 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	import { appBarSlot, isActive, navTabs, parentOf, tabRoots } from '$lib/nav/bar.svelte';
+	import { appBarSlot, isActive, navTabs, parentOf } from '$lib/nav/bar.svelte';
 	import { backDepth } from '$lib/nav/depth';
 
 	/**
 	 * One bar, both viewports, one row.
-	 *
-	 * On a desk it reads as two parts — where you can go, then what this screen
-	 * offers. No mark: it linked to the tab beside it in an app with one user,
-	 * and being there is what made the gear read as brand furniture rather than
-	 * as a destination. Deleting it is what let Settings become an ordinary nav
-	 * member instead of a symbol hanging off an identity cluster.
-	 *
-	 * On a phone the tabs are along the bottom, so the same row carries what each
-	 * screen used to draw for itself: back, the title, the one action. Eight
-	 * screens hand-rolled that header — and two of them, the loop and the
-	 * template editor, wrote this element's exact class string with the
-	 * visibility flipped. It was always one bar, written eight times.
 	 *
 	 * One row and not two blocks swapped at `lg`, because the action belongs to
 	 * both and a snippet rendered in each would put two of every FINISH in the
@@ -29,11 +17,9 @@
 	const pathname = $derived(page.url.pathname);
 	const current = $derived(navTabs().find((tab) => isActive(pathname, tab)));
 
-	// A root introduces itself with the lit tab's word; anything deeper has a
-	// name of its own and hands it over.
 	const title = $derived(slot.title ?? current?.label ?? '');
 
-	const parent = $derived(tabRoots().includes(pathname) ? null : parentOf(pathname));
+	const parent = $derived(parentOf(pathname));
 
 	/**
 	 * Back walks real history wherever there is any of this app's behind us, and
@@ -41,11 +27,9 @@
 	 * detail screen, or a notification tap, which has nothing to walk.
 	 */
 	function walkBack(event: MouseEvent): void {
-		if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-			return;
-		}
+		const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
 
-		if (backDepth() === 0) {
+		if (event.button !== 0 || modified || backDepth() === 0) {
 			return;
 		}
 

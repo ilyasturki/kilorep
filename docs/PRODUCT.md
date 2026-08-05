@@ -32,17 +32,15 @@ Math:
 
 Every screen must justify its existence.
 
-- **Train** — the loop above while a session runs; idle, the place one starts. One tab, two screens, one address each. Leads the bar, and `routes/+page.ts` and `AFTER_LOGIN` follow whichever tab does.
+- **Train** — the loop above while a session runs; idle, the place one starts. One tab, two screens, one address each. Leads the bar.
 - **Templates** — Plan's first half; the list; a template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
 - **History** — a child of Progress, reached through its Consistent? card; workout list + detail; repeat-this-workout; drift-vs-template on the detail.
 - **Exercises** — Plan's second half; catalog + customs; detail carries history, raw best set, est-1RM trend.
 - **Weight** — a child of Progress, reached through its Weight on track? card; log + trend.
-- **Dashboard** — four standing questions, one card each, no configuration: **Progressing?** (recent raw PRs, est-1RM direction on main lifts) · **Consistent?** (sessions this week vs your own habit — facts, never streaks) · **Balanced?** (working volume by muscle, recent weeks) · **Weight on track?** (trend). Anything that can't be phrased as a standing question stays off it, with no exceptions: the banner that used to sit above the four was entitled by home owing the user a way into a workout, and home is Train now, which is that way in. Two of the cards are doors, and are how History and Weight are reached at all. Two columns from `lg` and one below, and the long cards are capped rather than uncapped: a desk window holds all four at once, and a phone gets two of them before it scrolls rather than a single card of personal bests.
-- **Settings** — a tab like any other, last in the bar and behind no separator, which is what lets it keep the bar once you are on it. Reachable from every screen including a live session.
+- **Dashboard** — four standing questions, one card each, no configuration: **Progressing?** (recent raw PRs, est-1RM direction on main lifts) · **Consistent?** (sessions this week vs your own habit — facts, never streaks) · **Balanced?** (working volume by muscle, recent weeks) · **Weight on track?** (trend). Anything that can't be phrased as a standing question stays off it, with no exceptions. Two columns from `lg` and one below, and the long cards are capped rather than uncapped: a desk window holds all four at once, and a phone gets two of them before it scrolls rather than a single card of personal bests.
+- **Settings** — a tab like any other. Reachable from every screen including a live session.
 
-The app opens into Train, always.
-
-The bar is **Train · Plan · Progress · Settings**, read left to right as the tense of what each tab holds. One bar serves both viewports: the tabs sit along the bottom on a phone and inside the top bar on a desk, and that top bar carries the title, back and the screen's one action. No screen draws chrome of its own.
+The bar is **Train · Plan · Progress · Settings**, read left to right as the tense of what each tab holds. One bar serves both viewports: the tabs sit along the bottom on a phone and inside the top bar on a desk. No screen draws chrome of its own.
 
 ## Offline
 
@@ -60,5 +58,5 @@ The bar is **Train · Plan · Progress · Settings**, read left to right as the 
 
 ## Unresolved — settle on the phone
 
-- The bar is settled at four; what is not is the phone's top chrome. The four list screens traded a 28px heading for the bar's 18px title, and Progress went from 89px of chrome to 115px — judged at arm's length, not from a specimen sheet. Plan's segment scrolls with its list rather than sticking, because Exercises' search field owns `top-0` in that scroll box and must never be a scroll away; if the segment turns out to want stickiness more than the search does, that is the trade to reopen.
+- The bar is settled at four; what is not is the phone's top chrome — judged at arm's length, not from a specimen sheet. If Plan's segment turns out to want stickiness more than Exercises' search field does, that is the trade to reopen.
 - Set extras: type, note, and the per-set load-mode override. The row stays `weight | reps | check` and the long-press sheet that holds Remove is where they go; what they look like in it is open. RPE left this list — it is built, and the collapsed pill on the logging card is where it landed rather than in the sheet.

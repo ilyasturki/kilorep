@@ -1,10 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { BackDecision } from './back';
 
 import { decideBack } from './back';
+import { parentOf, tabRoots as navRoots } from './bar.svelte';
 
-const tabRoots = ['/workout', '/templates', '/exercises', '/history', '/workout/live'];
+/**
+ * The real bar, not a copy of it. A hand-written root list is what let History
+ * leave the bar without anything noticing that `/history/{id}` no longer had a
+ * way up — the press quit the app instead. Only the icons and the live-session
+ * flag are stubbed, because vitest has no Svelte compiler for the components
+ * `bar.svelte` imports, and neither one is part of the nav graph.
+ */
+vi.mock('$lib/ui/icons/Barbell.svelte', () => ({ default: {} }));
+vi.mock('$lib/ui/icons/BarbellFill.svelte', () => ({ default: {} }));
+vi.mock('$lib/ui/icons/ChartBar.svelte', () => ({ default: {} }));
+vi.mock('$lib/ui/icons/ChartBarFill.svelte', () => ({ default: {} }));
+vi.mock('$lib/ui/icons/Gear.svelte', () => ({ default: {} }));
+vi.mock('$lib/ui/icons/Stack.svelte', () => ({ default: {} }));
+vi.mock('$lib/workout/active.svelte', () => ({ activeWorkout: { session: null } }));
+
+// Exactly what `hardware-back.ts` passes: the bar's roots plus `/workout/live`,
+// the one address the tab list cannot supply.
+const tabRoots = [...navRoots(), '/workout/live'];
 
 function decide(
 	pathname: string,
@@ -14,6 +32,7 @@ function decide(
 		pathname,
 		overlayOpen: overrides.overlayOpen ?? false,
 		tabRoots,
+		parentOf,
 		depth: overrides.depth ?? 3
 	});
 }
@@ -44,7 +63,6 @@ describe('decideBack', () => {
 	});
 
 	it('falls back to the tab root when nothing of ours is behind — a deep link, a cold boot', () => {
-		expect(decide('/history/abc', { depth: 0 })).toEqual({ kind: 'goto', path: '/history' });
 		expect(decide('/templates/t1', { depth: 0 })).toEqual({ kind: 'goto', path: '/templates' });
 		expect(decide('/exercises/bench-press', { depth: 0 })).toEqual({
 			kind: 'goto',
@@ -52,19 +70,24 @@ describe('decideBack', () => {
 		});
 	});
 
+	// History and Weight are Progress' children by the nav's design rather than
+	// by their addresses, and they stopped being tab roots when History left the
+	// bar. A cold boot onto a workout's detail used to quit the app.
+	it('walks a child of Progress up to its list, and the list up to Progress', () => {
+		expect(decide('/history/abc', { depth: 0 })).toEqual({ kind: 'goto', path: '/history' });
+		expect(decide('/history', { depth: 0 })).toEqual({ kind: 'goto', path: '/dashboard' });
+		expect(decide('/weight', { depth: 0 })).toEqual({ kind: 'goto', path: '/dashboard' });
+	});
+
 	it('minimizes from the live session rather than popping it to the idle screen', () => {
 		expect(decide('/workout/live')).toEqual({ kind: 'minimize' });
 	});
 
-	it('matches tab roots on segments, not prefixes', () => {
+	it('matches roots on segments, not prefixes, and minimizes where nothing claims the address', () => {
 		expect(decide('/historyx', { depth: 0 })).toEqual({ kind: 'minimize' });
 	});
 
 	it('walks real history off the tab grid, when there is history to walk', () => {
-		expect(decide('/settings')).toEqual({ kind: 'history-back' });
-	});
-
-	it('minimizes off the tab grid when the stack has nothing behind it', () => {
-		expect(decide('/settings', { depth: 0 })).toEqual({ kind: 'minimize' });
+		expect(decide('/history')).toEqual({ kind: 'history-back' });
 	});
 });

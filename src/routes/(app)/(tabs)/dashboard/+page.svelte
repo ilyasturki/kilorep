@@ -14,12 +14,9 @@
 
 	/**
 	 * Progress: PRODUCT.md's four standing questions, one card each, no
-	 * configuration — and nothing else. The banner that used to sit above them
-	 * was the one stated exception to that rule, entitled by home owing the user
-	 * a way into a workout; home is Train now, which *is* that way in, so the
-	 * exception went with it. Every answer is derived in `$lib/domain/dashboard`
-	 * from what the load already read; nothing here writes, so there is no store
-	 * and no sync to hold.
+	 * configuration — and nothing else. Every answer is derived in
+	 * `$lib/domain/dashboard` from what the load already read; nothing here
+	 * writes, so there is no store and no sync to hold.
 	 *
 	 * The windows are the derivation's defaults, stated in each card's own
 	 * small print: four weeks back for bests, balance and the weight rate,

@@ -2,7 +2,7 @@
 	import type { DateValue } from '@internationalized/date';
 	import { parseDate } from '@internationalized/date';
 
-	import { appBarSlot } from '$lib/nav/bar.svelte';
+	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import type { BodyweightEntry } from '$lib/domain/bodyweight';
 	import { localDateOf, rollingAverage, windowed } from '$lib/domain/bodyweight';
 	import { syncSoon } from '$lib/sync/client';
@@ -230,19 +230,7 @@
 		menuOpen = true;
 	}
 
-	/**
-	 * This screen is a child of Progress rather than a tab, so the bar has no lit
-	 * tab to take a word from — it says its own name or it says nothing.
-	 */
-	const bar = appBarSlot();
-
-	$effect(() => {
-		bar.title = 'Weight';
-
-		return () => {
-			bar.title = null;
-		};
-	});
+	fillAppBar(() => ({ title: 'Weight' }));
 </script>
 
 <svelte:head>

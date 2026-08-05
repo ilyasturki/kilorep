@@ -42,17 +42,6 @@
 	 * survives the split unchanged: the `+page.ts` beside this file picks up a
 	 * *handoff* — a snapshot another screen wrote on purpose — and never invents
 	 * one.
-	 *
-	 * No gear here any more, and no bar slot filled: "gear to Settings" always
-	 * meant *home*, and home moved to the Dashboard when the bar was reordered —
-	 * see `navTabs`. The gear stayed behind for a commit, which left the app's
-	 * only door to Settings on a screen it no longer opens at, and one standing
-	 * behind a redirect at that: `+page.ts` hands off to the loop the moment a
-	 * session exists, so a live workout had no door at all. It followed home
-	 * rather than growing a second copy, and the Dashboard's header carries the
-	 * reasoning. This screen wants nothing in the bar's right-hand slot now, so
-	 * it takes nothing — FINISH is the loop's, and neither address has to know
-	 * about the other's, which is one more thing the split took out of a branch.
 	 */
 	let { data }: PageProps = $props();
 

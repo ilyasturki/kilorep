@@ -6,7 +6,7 @@
 	import { goto, invalidate } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
-	import { appBarSlot } from '$lib/nav/bar.svelte';
+	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { entriesWithMeta, entryOf, legOf, shelfOf } from '$lib/workout/groups';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
@@ -512,19 +512,7 @@
 	 * viewports — the thumb that never scrolls still finds it without leaving
 	 * the top of the screen, which is rule 7's whole claim on this bar.
 	 */
-	const bar = appBarSlot();
-
-	$effect(() => {
-		bar.title = 'Workout';
-		bar.leading = overviewButton;
-		bar.action = finish;
-
-		return () => {
-			bar.title = null;
-			bar.leading = null;
-			bar.action = null;
-		};
-	});
+	fillAppBar(() => ({ title: 'Workout', leading: overviewButton, action: finish }));
 </script>
 
 {#snippet overviewButton()}
@@ -540,9 +528,7 @@
 	</button>
 {/snippet}
 
-<!-- Handed to the bar, which is the only place it is drawn now — one header for
-     both viewports rather than this screen's own below `lg` and the bar's above.
-     Finish has no ceremony: no summary, no confetti, one question and out. What
+<!-- Finish has no ceremony: no summary, no confetti, one question and out. What
      follows the question is `finishSession` — the session recorded or discarded,
      and the idle screen, where a second run is one tap away. -->
 {#snippet finish()}
