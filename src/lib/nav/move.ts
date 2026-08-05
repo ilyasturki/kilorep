@@ -1,10 +1,8 @@
 export type Direction = 'push' | 'pop';
 
-export type Axis = 'lateral' | 'depth';
-
 export type Bar = 'hold' | 'travel';
 
-export type Move = { direction: Direction; axis: Axis; bar: Bar };
+export type Move = { direction: Direction; bar: Bar };
 
 export type MoveContext = {
 	from: string;
@@ -18,27 +16,40 @@ function covers(pathname: string, root: string): boolean {
 	return pathname === root || pathname.startsWith(`${root}/`);
 }
 
-function tabIndex(pathname: string, tabRoots: readonly string[]): number {
-	return tabRoots.findIndex((root) => covers(pathname, root));
-}
-
 function hasBar(pathname: string, barless: readonly string[]): boolean {
 	return !barless.some((root) => covers(pathname, root));
 }
 
-export function classifyMove({ from, to, delta, tabRoots, barless }: MoveContext): Move {
+/**
+ * How a navigation travels, or `undefined` where it should not travel at all.
+ *
+ * Every move that animates is the same one: a screen going behind another, or
+ * coming back out from behind it. Peers do not animate. Two tab roots are the
+ * only peers this app has — nothing is *behind* anything else between them,
+ * and a slide there was motion that said nothing.
+ *
+ * Peer means both ends are tab roots exactly, not merely under one. A tab's
+ * detail screen is deeper than every root including its own, so `/dashboard` →
+ * `/exercises/{id}` is a push the same as `/history` → `/history/{id}` is: the
+ * bar the user came from does not change what arriving at a detail screen
+ * means.
+ */
+export function classifyMove({
+	from,
+	to,
+	delta,
+	tabRoots,
+	barless
+}: MoveContext): Move | undefined {
+	if (tabRoots.includes(from) && tabRoots.includes(to)) {
+		return undefined;
+	}
+
 	const bar = hasBar(from, barless) === hasBar(to, barless) ? 'hold' : 'travel';
 
-	const a = tabIndex(from, tabRoots);
-	const b = tabIndex(to, tabRoots);
-
-	if (a !== -1 && b !== -1 && a !== b) {
-		return { direction: b > a ? 'push' : 'pop', axis: 'lateral', bar };
-	}
-
 	if (delta !== undefined && delta < 0) {
-		return { direction: 'pop', axis: 'depth', bar };
+		return { direction: 'pop', bar };
 	}
 
-	return { direction: from.startsWith(`${to}/`) ? 'pop' : 'push', axis: 'depth', bar };
+	return { direction: from.startsWith(`${to}/`) ? 'pop' : 'push', bar };
 }

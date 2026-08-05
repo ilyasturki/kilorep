@@ -929,11 +929,13 @@
 	}
 }
 
-/* Route changes slide; `nav/transitions.ts` decides how and stamps three
-   attributes on <html> — `data-nav` for direction, `data-axis` for whether the
-   screens are peers or stacked, `data-bar` for whether the tab bar is the same
-   bar on both sides. The box that travels is `vt-page`, which the `(app)`
-   layout owns so that both halves of every navigation are the same rectangle.
+/* Route changes slide; `nav/transitions.ts` decides how and stamps two
+   attributes on <html> — `data-nav` for direction, `data-bar` for whether the
+   tab bar is the same bar on both sides. The box that travels is `vt-page`,
+   which the `(app)` layout owns so that both halves of every navigation are
+   the same rectangle. Only stacked screens travel, and only on a touchscreen;
+   `nav/move.ts` and `slidingWanted` own those two rules respectively, so
+   nothing here needs to ask.
 
    NOTE THE MISSING SPACE, in every rule below that names an attribute. These
    pseudo-elements originate from the *document element itself*, not from
@@ -948,11 +950,10 @@
    the duration below, `root` — matched all along, which is why the layer
    looked half-alive rather than absent.
 
-   Lateral is lockstep: both panes cross the full width, same distance, same
-   curve, no gap, so no fade is needed to cover a seam. Depth is parallax: the
-   pane being covered gives up 30% while the arriving one crosses everything,
-   and that difference is what says one went behind the other. `root` stays
-   pinned because its snapshots are the desk's top bar, identical on both sides.
+   The travel is parallax: the pane being covered gives up 30% while the
+   arriving one crosses everything, and that difference is what says one went
+   behind the other. `root` stays pinned because its snapshots are the desk's
+   top bar, identical on both sides.
 
    No reduced-motion rule here because none is needed: the JS never opens a
    transition when the preference is set, per the app's existing idiom. */
@@ -971,29 +972,17 @@
 	animation-timing-function: var(--ease-sheet);
 }
 
-/* The arriving pane crosses the whole width in both axes; only the departing
-   one knows the difference between a peer and a screen it is going behind. */
+/* The arriving pane crosses the whole width; the departing one gives up 30%,
+   which is the parallax. */
 html[data-nav='push']::view-transition-new(page) {
 	animation-name: vt-enter-right;
 }
 
-html[data-nav='pop']::view-transition-old(page) {
-	animation-name: vt-exit-right;
-}
-
-html[data-nav='push'][data-axis='lateral']::view-transition-old(page) {
-	animation-name: vt-exit-left;
-}
-
-html[data-nav='pop'][data-axis='lateral']::view-transition-new(page) {
-	animation-name: vt-enter-left;
-}
-
-html[data-nav='push'][data-axis='depth']::view-transition-old(page) {
+html[data-nav='push']::view-transition-old(page) {
 	animation-name: vt-recede-left;
 }
 
-html[data-nav='pop'][data-axis='depth']::view-transition-new(page) {
+html[data-nav='pop']::view-transition-new(page) {
 	animation-name: vt-return-left;
 }
 
@@ -1002,7 +991,8 @@ html[data-nav='pop'][data-axis='depth']::view-transition-new(page) {
    the width, and painted on top it would hide the very thing sliding away.
    Only this one case needs saying: everywhere else the arriving pane belongs
    in front, which is the paint order the UA already gives. */
-html[data-nav='pop'][data-axis='depth']::view-transition-old(page) {
+html[data-nav='pop']::view-transition-old(page) {
+	animation-name: vt-exit-right;
 	z-index: 1;
 }
 
@@ -1039,18 +1029,6 @@ html[data-bar='travel'] .vt-tabbar {
 @keyframes vt-exit-right {
 	to {
 		transform: translateX(100%);
-	}
-}
-
-@keyframes vt-exit-left {
-	to {
-		transform: translateX(-100%);
-	}
-}
-
-@keyframes vt-enter-left {
-	from {
-		transform: translateX(-100%);
 	}
 }
 
