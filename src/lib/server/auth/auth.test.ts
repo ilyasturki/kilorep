@@ -9,16 +9,21 @@ import type { Database } from '../db/client.ts';
 import { createDatabase } from '../db/client.ts';
 import { runMigrations } from '../db/migrate.ts';
 import { authTokens } from '../db/schema.ts';
+import { publicUser } from '../http/shapes.ts';
 import {
 	createUser,
 	credentialProblem,
+	currentPasswordRequired,
 	deleteUser,
 	emailProblem,
+	findUserByEmail,
 	findUserByGoogleSub,
 	issueToken,
 	listTokens,
 	resolveGoogleIdentity,
+	revokeOtherTokens,
 	revokeToken,
+	setPassword,
 	verifyLogin
 } from './accounts.ts';
 import { verifyClaims } from './google.ts';
@@ -196,6 +201,108 @@ describe('a Google-only account has no password', () => {
 
 		await expect(verifyLogin(db, 'g@example.com', PASSWORD)).resolves.toBeNull();
 		await expect(verifyLogin(db, 'g@example.com', '')).resolves.toBeNull();
+	});
+});
+
+const NEXT_PASSWORD = 'staple battery horse';
+
+describe('setPassword', () => {
+	test('replaces the hash, so the old password stops working and the new one starts', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+
+		await setPassword(db, user.id, NEXT_PASSWORD);
+
+		await expect(verifyLogin(db, 'lifter@example.com', PASSWORD)).resolves.toBeNull();
+		await expect(verifyLogin(db, 'lifter@example.com', NEXT_PASSWORD)).resolves.not.toBeNull();
+	});
+
+	test('refuses one under the floor, so no caller can write a weak hash', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+
+		await expect(setPassword(db, user.id, 'short')).rejects.toThrow(/at least 8/u);
+		await expect(verifyLogin(db, 'lifter@example.com', PASSWORD)).resolves.not.toBeNull();
+	});
+
+	test('gives a Google-only account its first password without taking Google away', async () => {
+		const created = resolveGoogleIdentity(db, { subject: 'sub-1', email: 'g@example.com' }, true);
+		expect(created.ok).toBe(true);
+		const user = created.ok ? created.user : undefined;
+
+		await setPassword(db, user!.id, NEXT_PASSWORD);
+
+		const after = findUserByEmail(db, 'g@example.com')!;
+		await expect(verifyLogin(db, 'g@example.com', NEXT_PASSWORD)).resolves.not.toBeNull();
+		expect(after.googleSub).toBe('sub-1');
+	});
+});
+
+describe('currentPasswordRequired', () => {
+	test('asks a password-only account for the one it has', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+
+		expect(currentPasswordRequired(user)).toBe(true);
+		expect(publicUser(user)).toMatchObject({ hasPassword: true, currentPasswordRequired: true });
+	});
+
+	test('asks a Google-only account for nothing, because it holds nothing to ask for', () => {
+		const created = resolveGoogleIdentity(db, { subject: 'sub-1', email: 'g@example.com' }, true);
+		const user = created.ok ? created.user : undefined;
+
+		expect(currentPasswordRequired(user!)).toBe(false);
+		expect(publicUser(user!)).toMatchObject({ hasPassword: false, currentPasswordRequired: false });
+	});
+
+	/**
+	 * The forgotten-password path, and the whole reason the rule reads `googleSub`
+	 * rather than just the hash: a linked account can always come back through
+	 * Google, so demanding the password it came here to replace would lock out
+	 * nobody but its owner.
+	 */
+	test('stops asking once Google is linked to an account that had a password', async () => {
+		await createUser(db, 'lifter@example.com', PASSWORD);
+		const linked = resolveGoogleIdentity(
+			db,
+			{ subject: 'sub-1', email: 'lifter@example.com' },
+			false
+		);
+
+		const user = linked.ok ? linked.user : undefined;
+		expect(user!.passwordHash).not.toBeNull();
+		expect(currentPasswordRequired(user!)).toBe(false);
+		expect(publicUser(user!)).toMatchObject({ hasPassword: true, currentPasswordRequired: false });
+	});
+});
+
+describe('revokeOtherTokens', () => {
+	test('spares the credential asking and takes every other one', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+		const { token: web, record } = issueToken(db, user.id, 'Web', 'web');
+		const { token: phone } = issueToken(db, user.id, 'Pixel 8', 'device');
+		const { token: mcp } = issueToken(db, user.id, 'MCP on the desk', 'api');
+
+		expect(revokeOtherTokens(db, user.id, record.id)).toBe(2);
+
+		expect(resolveCredential(db, web)).not.toBeNull();
+		expect(resolveCredential(db, phone)).toBeNull();
+		expect(resolveCredential(db, mcp)).toBeNull();
+	});
+
+	test('spares nothing when nothing is named, which is what the CLI needs', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+		const { token } = issueToken(db, user.id, 'Pixel 8', 'device');
+
+		expect(revokeOtherTokens(db, user.id, null)).toBe(1);
+		expect(resolveCredential(db, token)).toBeNull();
+	});
+
+	test('never reaches past the account it was called for', async () => {
+		const mine = await createUser(db, 'mine@example.com', PASSWORD);
+		const yours = await createUser(db, 'yours@example.com', PASSWORD);
+		issueToken(db, mine.id, 'my phone', 'device');
+		const { token: theirs } = issueToken(db, yours.id, 'your phone', 'device');
+
+		expect(revokeOtherTokens(db, mine.id, null)).toBe(1);
+		expect(resolveCredential(db, theirs)).not.toBeNull();
 	});
 });
 

@@ -7,7 +7,9 @@ import {
 	deleteUser,
 	emailProblem,
 	findUserByEmail,
-	listUsers
+	listUsers,
+	revokeOtherTokens,
+	setPassword
 } from '../src/lib/server/auth/accounts.ts';
 import { passwordProblem } from '../src/lib/server/auth/password.ts';
 import { getDatabase } from '../src/lib/server/db/client.ts';
@@ -29,9 +31,15 @@ import { runMigrations } from '../src/lib/server/db/migrate.ts';
  *
  *   bun run account:create lifter@example.com
  *   bun run account:list
+ *   bun run account:password lifter@example.com
  *   bun run account:delete lifter@example.com
  *
  * Piping works too, for automation: `printf '%s' "$PW" | bun run account:create …`
+ *
+ * `password` is also the recovery path, and the only one: nothing here sends
+ * email, so a forgotten password is answered at the machine rather than in an
+ * inbox. A Google-linked account has a second way — sign in with Google and set
+ * a new password from Settings, which asks for no old one.
  */
 
 function fail(message: string): never {
@@ -43,12 +51,15 @@ function usage(): never {
 	fail(
 		[
 			'usage:',
-			'  account create <email>          create an account, prompting for a password',
-			'  account list                    list accounts',
-			'  account delete <email> [--yes]  delete an account and every credential it owns',
+			'  account create <email>            create an account, prompting for a password',
+			'  account list                      list accounts',
+			'  account password <email>          set a new password, revoking every credential',
+			'  account delete <email> [--yes]    delete an account and every credential it owns',
 			'',
-			'  --yes  confirm a delete with no terminal to ask at, for a script or a',
-			'         `docker exec` without -t'
+			'  --yes           confirm a delete with no terminal to ask at, for a script or a',
+			'                  `docker exec` without -t',
+			'  --keep-tokens   leave the credentials alone on a password change, for a plain',
+			'                  rotation rather than a compromise'
 		].join('\n')
 	);
 }
@@ -105,7 +116,8 @@ runMigrations(db);
 
 const argv = process.argv.slice(2);
 const assumeYes = argv.includes('--yes');
-const [command, argument] = argv.filter((value) => value !== '--yes');
+const keepTokens = argv.includes('--keep-tokens');
+const [command, argument] = argv.filter((value) => !value.startsWith('--'));
 
 if (command === 'create') {
 	if (argument === undefined) {
@@ -138,6 +150,36 @@ if (command === 'create') {
 		for (const user of users) {
 			console.log(`${user.email}  ${user.id}  created ${user.createdAt.toISOString()}`);
 		}
+	}
+} else if (command === 'password') {
+	if (argument === undefined) {
+		usage();
+	}
+
+	const user = findUserByEmail(db, argument);
+	if (user === undefined) {
+		fail(`no account for ${argument}`);
+	}
+
+	const password = await readPassword();
+	const passwordIssue = passwordProblem(password);
+	if (passwordIssue !== undefined) {
+		fail(passwordIssue);
+	}
+
+	await setPassword(db, user.id, password);
+
+	// Every credential, with none spared: this command holds none of them, and
+	// reaching for it usually means the old password was lost or was somebody
+	// else's to use. A rotation that meant nothing of the kind says so with
+	// `--keep-tokens`, which is cheaper to type than the phone is to sign back
+	// in — but silence has to mean the safe thing.
+	if (keepTokens) {
+		console.log(`set a new password for ${user.email}; its credentials are untouched`);
+	} else {
+		const revoked = revokeOtherTokens(db, user.id, null);
+		console.log(`set a new password for ${user.email} and revoked ${revoked} credential(s)`);
+		console.log('every browser, phone and API token has to sign in again.');
 	}
 } else if (command === 'delete') {
 	if (argument === undefined) {

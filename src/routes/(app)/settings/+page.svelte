@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 
-	import { createToken, logout, revokeToken, signInDevice } from '$lib/api/auth';
+	import { createToken, logout, revokeToken, setPassword, signInDevice } from '$lib/api/auth';
 	import { ApiError, apiBase, checkServer, deviceToken, setApiBase } from '$lib/api/client';
 	import { signInWithGoogle } from '$lib/api/google-device';
 	import BackLink from '$lib/nav/BackLink.svelte';
@@ -16,6 +16,7 @@
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
+	import Switch from '$lib/ui/Switch.svelte';
 	import GoogleLogo from '$lib/ui/icons/GoogleLogo.svelte';
 	import Plugs from '$lib/ui/icons/Plugs.svelte';
 	import { activeWorkout } from '$lib/workout/active.svelte';
@@ -118,6 +119,113 @@
 		}
 
 		await goto('/login', { invalidateAll: true, replaceState: true });
+	}
+
+	/**
+	 * The one window in which the cleartext exists — dismissed, it is gone.
+	 *
+	 * Declared up here rather than beside the panel that draws it, down in API
+	 * tokens: changing a password can revoke the credential this is showing, and
+	 * the sweep has to be able to take the secret off the screen with it.
+	 */
+	let minted = $state<{ token: string; label: string } | null>(null);
+	let copied = $state(false);
+
+	// ——— Password ———
+
+	/**
+	 * Setting one, replacing one, and the one case that looks like neither: a
+	 * Google account being given its first, which is also how somebody who
+	 * forgot theirs gets back in. The server decides which of the three this is
+	 * — `currentPasswordRequired` on the account — and this screen only draws
+	 * the field that answer asks for.
+	 *
+	 * The confirm box exists here for the reason it exists in `account:create`:
+	 * a password is typed blind and there is no wrong-password screen to catch a
+	 * typo, only a lockout weeks later.
+	 */
+	let passwordOpen = $state(false);
+	let currentPassword = $state('');
+	let newPassword = $state('');
+	let confirmPassword = $state('');
+	let currentError = $state('');
+	let newError = $state('');
+	let confirmError = $state('');
+	let passwordFormError = $state('');
+	let passwordPending = $state(false);
+	let signOutOthers = $state(true);
+	let passwordDone = $state('');
+
+	let needsCurrent = $derived(data.user?.currentPasswordRequired ?? false);
+
+	let passwordTitle = $derived(data.user?.hasPassword ? 'Change password' : 'Set a password');
+
+	let passwordBlurb = $derived.by(() => {
+		if (data.user?.hasPassword === true) {
+			return needsCurrent
+				? 'Type the one you use now, then the new one twice.'
+				: 'Your Google account is proof enough, so the old password is not asked for — which is what makes this the way back from one you have forgotten.';
+		}
+
+		return 'This account signs in with Google. A password adds the second way in — the login form on the web, and this screen on another phone.';
+	});
+
+	function openPassword() {
+		currentPassword = '';
+		newPassword = '';
+		confirmPassword = '';
+		currentError = '';
+		newError = '';
+		confirmError = '';
+		passwordFormError = '';
+		passwordDone = '';
+		signOutOthers = true;
+		passwordOpen = true;
+	}
+
+	async function changePassword() {
+		currentError = needsCurrent && currentPassword === '' ? 'enter your current password' : '';
+		newError = newPassword === '' ? 'enter a new password' : '';
+		confirmError = confirmPassword === newPassword ? '' : 'the two do not match';
+
+		if (currentError !== '' || newError !== '' || confirmError !== '') {
+			return;
+		}
+
+		passwordFormError = '';
+		passwordPending = true;
+
+		try {
+			await setPassword(newPassword, needsCurrent ? currentPassword : null, signOutOthers);
+		} catch (error) {
+			passwordFormError =
+				error instanceof ApiError ? error.message : 'could not change the password';
+			passwordPending = false;
+			return;
+		}
+
+		const revoked = signOutOthers;
+
+		// A token minted a moment ago is on screen in cleartext, and the sweep
+		// above has just killed it. Leaving it there offers a secret to copy that
+		// authenticates nothing.
+		if (revoked) {
+			minted = null;
+		}
+
+		currentPassword = '';
+		newPassword = '';
+		confirmPassword = '';
+		passwordPending = false;
+		passwordOpen = false;
+		passwordDone = revoked
+			? 'Password changed, and every other device signed out.'
+			: 'Password changed.';
+
+		// The account's own shape moved — a first password makes the button read
+		// differently — and so did the token list, which is where the revocations
+		// have to stop being drawn.
+		await invalidateAll();
 	}
 
 	// ——— Server (app build only) ———
@@ -349,10 +457,6 @@
 	let labelError = $state('');
 	let createPending = $state(false);
 
-	/** The one window in which the cleartext exists — dismissed, it is gone. */
-	let minted = $state<{ token: string; label: string } | null>(null);
-	let copied = $state(false);
-
 	async function create() {
 		labelError = '';
 
@@ -466,16 +570,70 @@
 				<div class="flex max-w-sm flex-col gap-3 px-1">
 					<p class="text-md break-all text-ink-muted">{data.user.email}</p>
 
+					<Button variant="secondary" onclick={openPassword}>{passwordTitle}</Button>
+
 					<Button variant="secondary" disabled={signOutPending} onclick={signOut}>
 						{signOutPending ? 'Signing out…' : 'Sign out'}
 					</Button>
 
 					<div aria-live="polite">
+						{#if passwordDone !== ''}
+							<p class="text-sm font-bold text-ink-muted">{passwordDone}</p>
+						{/if}
 						{#if signOutError !== ''}
 							<p class="text-sm font-bold text-danger">{signOutError}</p>
 						{/if}
 					</div>
 				</div>
+
+				<Sheet bind:open={passwordOpen} title={passwordTitle} description={passwordBlurb}>
+					<div class="flex flex-col gap-5 pt-2">
+						{#if needsCurrent}
+							<Input
+								label="Current password"
+								name="current-password"
+								type="password"
+								autocomplete="current-password"
+								bind:value={currentPassword}
+								error={currentError}
+							/>
+						{/if}
+
+						<Input
+							label="New password"
+							name="new-password"
+							type="password"
+							autocomplete="new-password"
+							bind:value={newPassword}
+							error={newError}
+						/>
+
+						<Input
+							label="New password again"
+							name="confirm-password"
+							type="password"
+							autocomplete="new-password"
+							bind:value={confirmPassword}
+							error={confirmError}
+						/>
+
+						<Switch
+							bind:checked={signOutOthers}
+							label="Sign out my other devices"
+							description="Every other browser, phone and API token loses access. This one stays."
+						/>
+
+						<Button variant="secondary" disabled={passwordPending} onclick={changePassword}>
+							{passwordPending ? 'Saving…' : passwordTitle}
+						</Button>
+
+						<div aria-live="polite">
+							{#if passwordFormError !== ''}
+								<p class="text-sm font-bold text-danger">{passwordFormError}</p>
+							{/if}
+						</div>
+					</div>
+				</Sheet>
 			</section>
 		{/if}
 

@@ -5,6 +5,10 @@ export type Account = {
 	id: string;
 	email: string;
 	createdAt: number;
+	/** Whether this is a first password or a replacement — the button's wording. */
+	hasPassword: boolean;
+	/** The server's verdict, never re-derived here. See `publicUser`. */
+	currentPasswordRequired: boolean;
 };
 
 export type PublicToken = {
@@ -76,6 +80,25 @@ export async function signInDevice(
 	});
 
 	return adoptToken(token, fetch);
+}
+
+/**
+ * `current` is null exactly when the account was told it would not be asked —
+ * `Account.currentPasswordRequired`. The field is left off the body entirely
+ * rather than sent empty, so an account that does owe one cannot satisfy the
+ * check with a blank string.
+ */
+export async function setPassword(
+	password: string,
+	current: string | null,
+	revokeOthers: boolean,
+	fetch?: Fetch
+): Promise<void> {
+	await request<undefined>('/api/auth/password', {
+		method: 'POST',
+		body: current === null ? { password, revokeOthers } : { password, current, revokeOthers },
+		fetch
+	});
 }
 
 export async function listTokens(fetch?: Fetch): Promise<PublicToken[]> {

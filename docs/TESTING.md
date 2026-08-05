@@ -19,6 +19,20 @@ touches the network.
 **Never guess at these.** Read them here and type them once. Guessing is what
 the next section is about.
 
+If this password has drifted — a Settings change while testing, a half-finished
+run — put it back rather than hunting for it:
+
+```sh
+printf '%s' devdevdev | bun run account:password dev@kilorep.local
+```
+
+That revokes every credential the account owns, which is the command's default
+and the reason it is the recovery path: nothing here sends email, so a password
+nobody remembers is answered at the machine. `--keep-tokens` opts out when the
+change is a plain rotation. A Google-linked account has a second way, and it is
+deliberately unadvertised in the UI: sign in with Google, then set a new
+password from Settings, which asks for no old one.
+
 ## Why this used to fail
 
 `/.data` is gitignored, so every worktree gets its own SQLite file — and a

@@ -28,6 +28,7 @@
 		"db:seed": "node scripts/seed.ts",
 		"account:create": "node scripts/account.ts create",
 		"account:list": "node scripts/account.ts list",
+		"account:password": "node scripts/account.ts password",
 		"account:delete": "node scripts/account.ts delete"
 	},
 	"devDependencies": {
