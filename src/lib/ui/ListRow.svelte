@@ -11,6 +11,8 @@
 		onclick?: () => void;
 		onhold?: (anchor: HTMLElement) => void;
 		chevron?: boolean;
+		/** `danger` colours the title alone: a destructive row is still a row. */
+		tone?: 'default' | 'danger';
 		dense?: boolean;
 		stacked?: boolean;
 		pressed?: boolean;
@@ -27,6 +29,7 @@
 		onclick,
 		onhold,
 		chevron,
+		tone = 'default',
 		dense = false,
 		stacked = false,
 		pressed,
@@ -85,7 +88,12 @@
 					' items-baseline overflow-hidden'
 		]}
 	>
-		<span class="min-w-0 truncate font-extrabold tracking-tight text-ink">
+		<span
+			class={[
+				'min-w-0 truncate font-extrabold tracking-tight',
+				tone === 'danger' ? 'text-danger' : 'text-ink'
+			]}
+		>
 			<!-- One line on purpose: whitespace between the slices would render. -->
 			{#if match !== null}
 				{title.slice(0, match.start)}<mark

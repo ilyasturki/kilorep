@@ -101,6 +101,20 @@ export async function setPassword(
 	});
 }
 
+/**
+ * The account and everything the server holds for it, gone.
+ *
+ * The credential is dropped on success only, and never in a `finally`: a
+ * mistyped address comes back 403 with the account still standing, and taking
+ * the token away there would sign the phone out of a server it is still a user
+ * of, mid-correction.
+ */
+export async function deleteAccount(email: string, fetch?: Fetch): Promise<void> {
+	await request<undefined>('/api/auth/account', { method: 'DELETE', body: { email }, fetch });
+
+	setDeviceToken(null);
+}
+
 export async function listTokens(fetch?: Fetch): Promise<PublicToken[]> {
 	const tokens = await request<PublicToken[]>('/api/auth/tokens', { fetch });
 	return tokens;

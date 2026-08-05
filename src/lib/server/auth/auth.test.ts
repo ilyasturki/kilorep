@@ -8,7 +8,8 @@ import { eq } from 'drizzle-orm';
 import type { Database } from '../db/client.ts';
 import { createDatabase } from '../db/client.ts';
 import { runMigrations } from '../db/migrate.ts';
-import { authTokens } from '../db/schema.ts';
+import { authTokens, records, syncCounters } from '../db/schema.ts';
+import { syncExchange } from '../db/sync.ts';
 import { publicUser } from '../http/shapes.ts';
 import {
 	createUser,
@@ -509,6 +510,38 @@ describe('token ownership', () => {
 
 		expect(deleteUser(db, 'LIFTER@example.com')).toBe(true);
 		expect(resolveCredential(db, token)).toBeNull();
+		expect(deleteUser(db, 'lifter@example.com')).toBe(false);
+	});
+
+	// The cascade is declared in the schema, not written here: a `pragma
+	// foreign_keys` that stopped being set would leave rows behind and no other
+	// test would notice.
+	test('deleting empties every table that names the account', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+		const other = await createUser(db, 'other@example.com', PASSWORD);
+
+		issueToken(db, user.id, 'Pixel 8', 'device');
+		syncExchange(db, user.id, {
+			watermark: 0,
+			push: [{ id: 'w1', kind: 'workout', updatedAt: 100, deletedAt: null, payload: { id: 'w1' } }]
+		});
+		syncExchange(db, other.id, {
+			watermark: 0,
+			push: [{ id: 'w2', kind: 'workout', updatedAt: 100, deletedAt: null, payload: { id: 'w2' } }]
+		});
+
+		expect(deleteUser(db, 'lifter@example.com')).toBe(true);
+
+		expect(db.select().from(records).where(eq(records.userId, user.id)).all()).toEqual([]);
+		expect(db.select().from(authTokens).where(eq(authTokens.userId, user.id)).all()).toEqual([]);
+		expect(db.select().from(syncCounters).where(eq(syncCounters.userId, user.id)).all()).toEqual(
+			[]
+		);
+
+		// The neighbour is untouched: the cascade follows the key, and a delete
+		// that took the whole table with it would pass every assertion above.
+		expect(db.select().from(records).where(eq(records.userId, other.id)).all()).toHaveLength(1);
+
 		expect(deleteUser(db, 'lifter@example.com')).toBe(false);
 	});
 });

@@ -379,7 +379,17 @@ export class Store {
 		return typeof value === 'string' ? value : null;
 	}
 
-	public async adopt(userId: string): Promise<void> {
+	/**
+	 * Every record marked as never having been pushed. What both handovers
+	 * below start from: a record's `dirty` flag says whether *this* store's
+	 * server has seen it, and the moment the account behind that server changes
+	 * — or stops existing — the answer for every clean record is no.
+	 *
+	 * The watermark goes back to zero with it, on the same grounds: it counts
+	 * one account's `seq`, and it would step a new one's first pull straight
+	 * over everything already there.
+	 */
+	private async freshenAll(): Promise<void> {
 		const tx = this.db.transaction('records', 'readwrite');
 
 		let cursor = await tx.store.openCursor();
@@ -397,13 +407,46 @@ export class Store {
 		await tx.done;
 
 		await this.setWatermark(0);
+	}
+
+	public async adopt(userId: string): Promise<void> {
+		await this.freshenAll();
+
 		await this.db.put('meta', userId, OWNER_KEY);
 	}
 
-	public async wipe(userId: string): Promise<void> {
+	/**
+	 * The account is gone and these records are not — someone deleted theirs and
+	 * asked to keep what is on the device.
+	 *
+	 * The owner key is removed rather than rewritten, which leaves the store in
+	 * the state a fresh install has: unowned, and so claimable outright by the
+	 * next account to sign in here. That is the trade this makes plain — on a
+	 * shared browser the next person to sign in inherits the history, with no
+	 * question asked, because there is no longer an account for `claimOwner` to
+	 * ask about.
+	 */
+	public async disown(): Promise<void> {
+		await this.freshenAll();
+
+		await this.db.delete('meta', OWNER_KEY);
+	}
+
+	/**
+	 * Nothing local survives. `userId` is who the empty store then belongs to —
+	 * null when there is nobody, which is the account-deletion path: the records
+	 * are gone and so is the account that would have claimed what replaces them.
+	 */
+	public async wipe(userId: string | null): Promise<void> {
 		await this.db.clear('records');
 		await this.clearSnapshot();
 		await this.setWatermark(0);
+
+		if (userId === null) {
+			await this.db.delete('meta', OWNER_KEY);
+			return;
+		}
+
 		await this.db.put('meta', userId, OWNER_KEY);
 	}
 }

@@ -744,4 +744,26 @@ describe('changing hands', () => {
 		expect(await store.watermark()).toBe(0);
 		expect(await store.owner()).toBe('user-b');
 	});
+
+	it('disown keeps the records and leaves the store claimable by anyone', async () => {
+		await store.disown();
+
+		const dirty = await store.dirtyRecords();
+		expect(dirty).toHaveLength(1);
+		expect(dirty[0].id).toBe('w1');
+
+		expect(await store.listWorkouts()).toHaveLength(1);
+		expect(await store.owner()).toBeNull();
+		expect(await store.watermark()).toBe(0);
+
+		expect(await store.claimOwner('user-b')).toBe(true);
+	});
+
+	it('wipe with no owner leaves an empty store nobody has claimed', async () => {
+		await store.wipe(null);
+
+		expect(await store.listWorkouts()).toEqual([]);
+		expect(await store.owner()).toBeNull();
+		expect(await store.claimOwner('user-b')).toBe(true);
+	});
 });
