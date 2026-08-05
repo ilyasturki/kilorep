@@ -3,10 +3,12 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { slide } from 'svelte/transition';
 
+	import { restLabel } from '$lib/domain/rest';
 	import { PLANNED_REPS } from '$lib/domain/template';
 	import type { TemplateExercise, TemplateSet } from '$lib/domain/template';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { loadModeNote } from '$lib/exercises/label';
+	import { restSettings } from '$lib/settings/rest.svelte';
 	import { planShape, repsLabel, setsLabel } from '$lib/templates/plan';
 	import MiniStepper from '$lib/ui/MiniStepper.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
@@ -28,6 +30,21 @@
 		$props();
 
 	const shape = $derived(planShape(exercise));
+
+	/**
+	 * `Rest 3:00`, `No rest`, or nothing at all — see the markup below for why
+	 * the third case is most cards. Silent while rest is switched off in
+	 * Settings, where the whole subject is moot.
+	 */
+	const restNote = $derived.by(() => {
+		if (!restSettings.current.enabled || exercise.restSeconds === undefined) {
+			return null;
+		}
+
+		return exercise.restSeconds === null
+			? 'No rest'
+			: `Rest ${restLabel(exercise.restSeconds * 1000)}`;
+	});
 
 	const grow = $derived(prefersReducedMotion.current ? 0 : 200);
 
@@ -153,6 +170,15 @@
 			<CaretDown size={16} class={expanded ? 'rotate-180' : ''} />
 		</button>
 	</div>
+
+	<!-- Only where the plan disagrees with what this exercise would rest anyway.
+	     A line under every card would print the default back at the user on all
+	     of them — this one is here to say *this card is different*, which is the
+	     only thing about a rest a plan can say that is worth a glance. It is not
+	     a control: the sheet behind ⋯ owns the value. -->
+	{#if restNote !== null}
+		<p class="px-1 text-sm font-bold text-ink-faint">{restNote}</p>
+	{/if}
 
 	{#if expanded}
 		<div

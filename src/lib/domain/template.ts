@@ -1,10 +1,11 @@
+import { settleRestSeconds } from './rest.ts';
 import {
 	addExerciseTo as addToTree,
 	exerciseIn,
 	supersetWith as supersetWithTree
 } from './tree.ts';
 import type { ExerciseIds, NewExerciseIds } from './tree.ts';
-import type { Workout, WorkoutEntry } from './workout.ts';
+import type { Workout, WorkoutEntry, WorkoutExercise } from './workout.ts';
 
 export {
 	joinEntry,
@@ -25,6 +26,17 @@ export type TemplateExercise = {
 	id: string;
 	exerciseId: string;
 	sets: TemplateSet[];
+	/**
+	 * What this plan rests after this exercise, in the same three states the
+	 * exercise's own preference has: absent means "whatever the exercise and the
+	 * default say", a number means "this instead", and `null` means *never rest
+	 * on this here* — the circuit written as a plan rather than as a change of
+	 * mind about the movement.
+	 *
+	 * Optional because every template written before this existed reads as the
+	 * absent state, which is what those plans meant.
+	 */
+	restSeconds?: number | null;
 };
 
 export type TemplateEntry = {
@@ -343,22 +355,63 @@ export function setExerciseReps(
 	return true;
 }
 
+/**
+ * The plan's own rest for one exercise, in all three states.
+ *
+ * `undefined` is a value here and not a missing argument: it is how a card says
+ * *inherit again*, and it deletes the key rather than writing an undefined one
+ * — `restSecondsOf` reads an absence, and a key that is present and undefined
+ * is a distinction no payload should have to carry.
+ */
+export function setExerciseRest(
+	template: Template,
+	exerciseId: string,
+	seconds: number | null | undefined
+): boolean {
+	const exercise = exerciseIn(template, exerciseId);
+
+	if (exercise === null) {
+		return false;
+	}
+
+	if (seconds === undefined) {
+		delete exercise.restSeconds;
+	} else {
+		exercise.restSeconds = seconds === null ? null : settleRestSeconds(seconds);
+	}
+
+	return true;
+}
+
 export function startFrom(template: Template, startedAt: number, mint: () => string): Workout {
 	const entries: WorkoutEntry[] = template.entries.map((entry) => ({
 		id: mint(),
-		exercises: entry.exercises.map((exercise) => ({
-			id: mint(),
-			exerciseId: exercise.exerciseId,
-			sets: exercise.sets.map((set) => ({
+		exercises: entry.exercises.map((exercise) => {
+			const copy: WorkoutExercise = {
 				id: mint(),
-				type: 'normal' as const,
-				plannedReps: set.plannedReps,
-				rpe: null,
-				weight: null,
-				reps: null,
-				completed: false
-			}))
-		}))
+				exerciseId: exercise.exerciseId,
+				sets: exercise.sets.map((set) => ({
+					id: mint(),
+					type: 'normal' as const,
+					plannedReps: set.plannedReps,
+					rpe: null,
+					weight: null,
+					reps: null,
+					completed: false
+				}))
+			};
+
+			// Copied, not looked up later: the session has to survive this template
+			// being edited or deleted from under it, and a workout repeated out of
+			// History has no template to ask at all. Set only when the plan has an
+			// opinion, so an inherited rest stays an absence rather than becoming a
+			// key holding undefined.
+			if (exercise.restSeconds !== undefined) {
+				copy.restSeconds = exercise.restSeconds;
+			}
+
+			return copy;
+		})
 	}));
 
 	return { id: mint(), templateId: template.id, startedAt, entries };

@@ -37,6 +37,13 @@ export type WorkoutExercise = {
 	id: string;
 	exerciseId: string;
 	sets: WorkoutSet[];
+	/**
+	 * The rest the plan asked for, copied in at start — see `TemplateExercise`
+	 * for the three states, and `restSecondsOf` for what an absence falls to.
+	 * The gym floor never writes it: ±30s and mute move this rest and this
+	 * session, and neither is an edit to the plan.
+	 */
+	restSeconds?: number | null;
 };
 
 export type WorkoutEntry = {
@@ -438,7 +445,7 @@ export function repeatFrom(past: Workout, startedAt: number, mint: () => string)
 				continue;
 			}
 
-			exercises.push({
+			const repeated: WorkoutExercise = {
 				id: mint(),
 				exerciseId: exercise.exerciseId,
 				sets: working.map((set) => ({
@@ -450,7 +457,16 @@ export function repeatFrom(past: Workout, startedAt: number, mint: () => string)
 					rpe: null,
 					completed: false
 				}))
-			});
+			};
+
+			// Repeating a session repeats how it was rested. The plan it came from
+			// may since have changed or gone; this copy is the record of what that
+			// day actually asked for. Untouched where the day inherited its rests.
+			if (exercise.restSeconds !== undefined) {
+				repeated.restSeconds = exercise.restSeconds;
+			}
+
+			exercises.push(repeated);
 		}
 
 		if (exercises.length === 0) {

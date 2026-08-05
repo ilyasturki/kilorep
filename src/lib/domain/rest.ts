@@ -47,6 +47,29 @@ export function restSecondsFor(exerciseId: string, settings: RestSettings): numb
 }
 
 /**
+ * One exercise as a plan left it: the catalog entry it names, and whatever the
+ * plan said about resting after it. Structural on purpose — a planned exercise
+ * and a performed one answer this question identically, and neither type needs
+ * to be imported here to say so.
+ */
+export type PlannedRest = { exerciseId: string; restSeconds?: number | null };
+
+/**
+ * The whole precedence, in one line: the plan, then the exercise, then the
+ * default, an absence falling through at each step.
+ *
+ * The plan wins over the exercise's own duration because it is the more
+ * specific sentence — "three minutes on squats *in this session*" is said by
+ * somebody who knows what the exercise usually gets and wants today to differ.
+ * A `null` at either level is an answer and stops the fall: never rest here.
+ */
+export function restSecondsOf(exercise: PlannedRest, settings: RestSettings): number | null {
+	return exercise.restSeconds === undefined
+		? restSecondsFor(exercise.exerciseId, settings)
+		: exercise.restSeconds;
+}
+
+/**
  * Whether this set is the last one of its round inside its entry.
  *
  * `entryCursors` lays an entry out as warmups first, then round by round across
@@ -101,8 +124,9 @@ export function restAfter(
 	}
 
 	// The round-closer's own duration, not the entry's first leg: the exercise
-	// that just finished the round is the one the body is recovering from.
-	const seconds = restSecondsFor(cursor.exercise.exerciseId, settings);
+	// that just finished the round is the one the body is recovering from — and
+	// its own duration now includes what the plan said about it.
+	const seconds = restSecondsOf(cursor.exercise, settings);
 
 	return seconds === null ? null : { exerciseId: cursor.exercise.exerciseId, seconds };
 }

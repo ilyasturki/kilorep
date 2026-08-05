@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { restSettings } from '$lib/settings/rest.svelte';
 	import type { Planned } from '$lib/templates/plan';
 	import Menu from '$lib/ui/Menu.svelte';
 	import MenuItem from '$lib/ui/MenuItem.svelte';
@@ -6,6 +7,7 @@
 	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import ArrowsSplit from '$lib/ui/icons/ArrowsSplit.svelte';
 	import Eye from '$lib/ui/icons/Eye.svelte';
+	import Timer from '$lib/ui/icons/Timer.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	type Props = {
@@ -15,6 +17,7 @@
 		anchor?: HTMLElement | null;
 		onswap: () => void;
 		onsuperset: () => void;
+		onrest: () => void;
 		onbreak: () => void;
 		onremove: () => void;
 	};
@@ -26,6 +29,7 @@
 		anchor = null,
 		onswap,
 		onsuperset,
+		onrest,
 		onbreak,
 		onremove
 	}: Props = $props();
@@ -66,6 +70,20 @@
 			Superset with…
 		{/if}
 	</MenuItem>
+	<!-- Withheld while rest is switched off in Settings, exactly as the exercise
+	     screen withholds its whole Rest section: a duration for a timer that
+	     never runs is a question with no consequence. -->
+	{#if restSettings.current.enabled}
+		<MenuItem
+			onselect={() => {
+				open = false;
+				onrest();
+			}}
+		>
+			<Timer size={18} />
+			Rest duration
+		</MenuItem>
+	{/if}
 	<MenuItem
 		destructive
 		onselect={() => {

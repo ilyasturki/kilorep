@@ -12,6 +12,7 @@ import {
 	restLabel,
 	restProgress,
 	restSecondsFor,
+	restSecondsOf,
 	settleRestSeconds
 } from '$lib/domain/rest';
 import type { RestSettings } from '$lib/domain/rest';
@@ -26,6 +27,19 @@ function logged(setId: string): Workout {
 	const workout = freshWorkout(0);
 
 	commitSet(workout, setId, 80, 8);
+
+	return workout;
+}
+
+/** What a template's rest looks like once it has been copied into a session. */
+function planned(workout: Workout, node: string, seconds: number | null): Workout {
+	const exercise = workout.entries
+		.flatMap((entry) => entry.exercises)
+		.find((candidate) => candidate.id === node);
+
+	if (exercise !== undefined) {
+		exercise.restSeconds = seconds;
+	}
 
 	return workout;
 }
@@ -67,6 +81,32 @@ describe('restSecondsFor', () => {
 	});
 });
 
+describe('restSecondsOf', () => {
+	test('no planned duration falls through to the exercise, then to the default', () => {
+		expect(restSecondsOf({ exerciseId: 'bench-press' }, settings())).toBe(DEFAULT_REST_SECONDS);
+
+		expect(
+			restSecondsOf({ exerciseId: 'bench-press' }, settings({ overrides: { 'bench-press': 240 } }))
+		).toBe(240);
+	});
+
+	test("the plan outranks the exercise's own duration", () => {
+		const over = settings({ overrides: { 'bench-press': 240 } });
+
+		expect(restSecondsOf({ exerciseId: 'bench-press', restSeconds: 90 }, over)).toBe(90);
+	});
+
+	test('a planned null is never-rest even where the exercise rests', () => {
+		expect(restSecondsOf({ exerciseId: 'bench-press', restSeconds: null }, settings())).toBeNull();
+	});
+
+	test('a planned number rests an exercise the settings never rest', () => {
+		const never = settings({ overrides: { 'bench-press': null } });
+
+		expect(restSecondsOf({ exerciseId: 'bench-press', restSeconds: 90 }, never)).toBe(90);
+	});
+});
+
 describe('restAfter', () => {
 	test('a committed working set earns a rest', () => {
 		expect(restAfter(logged('bench-1'), 'bench-1', settings())).toEqual({
@@ -104,6 +144,27 @@ describe('restAfter', () => {
 	test('the last owed set of a session still earns one', () => {
 		expect(restAfter(logged('pecdeck-3'), 'pecdeck-3', settings())).not.toBeNull();
 	});
+
+	test("a plan's own duration is what the set earns", () => {
+		const workout = planned(logged('bench-1'), 'we-bench', 195);
+
+		expect(restAfter(workout, 'bench-1', settings({ overrides: { 'bench-press': 240 } }))).toEqual({
+			exerciseId: 'bench-press',
+			seconds: 195
+		});
+	});
+
+	test('an exercise the plan never rests earns nothing', () => {
+		const workout = planned(logged('bench-1'), 'we-bench', null);
+
+		expect(restAfter(workout, 'bench-1', settings())).toBeNull();
+	});
+
+	test('rest switched off in Settings outranks the plan', () => {
+		const workout = planned(logged('bench-1'), 'we-bench', 195);
+
+		expect(restAfter(workout, 'bench-1', settings({ enabled: false }))).toBeNull();
+	});
 });
 
 describe('supersets rest by the round', () => {
@@ -138,6 +199,17 @@ describe('supersets rest by the round', () => {
 		expect(restAfter(workout, 'bench-4', settings())).toEqual({
 			exerciseId: 'bench-press',
 			seconds: DEFAULT_REST_SECONDS
+		});
+	});
+
+	test("a planned pair rests by the closing leg's planned duration", () => {
+		const workout = planned(planned(paired(), 'we-bench', 300), 'we-super', 45);
+
+		commitSet(workout, 'super-1', 20, 12);
+
+		expect(restAfter(workout, 'super-1', settings())).toEqual({
+			exerciseId: 'lateral-raise',
+			seconds: 45
 		});
 	});
 

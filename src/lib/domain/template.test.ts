@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
+import { MAX_REST_SECONDS, MIN_REST_SECONDS } from '$lib/domain/rest';
 import {
 	addExercise,
 	addExerciseTo,
@@ -17,6 +18,7 @@ import {
 	reorder,
 	replaceExercise,
 	setExerciseReps,
+	setExerciseRest,
 	setPlannedReps,
 	splitEntry,
 	templateRank,
@@ -429,6 +431,63 @@ describe('planning supersets', () => {
 	});
 });
 
+function restOf(template: Template): number | null | undefined {
+	return template.entries[0].exercises[0].restSeconds;
+}
+
+describe('planned rest', () => {
+	function withBench(): Template {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 3);
+
+		return template;
+	}
+
+	test('a fresh exercise plans no rest of its own', () => {
+		expect(restOf(withBench())).toBeUndefined();
+	});
+
+	test('a duration is settled the way every other rest field is', () => {
+		const template = withBench();
+
+		setExerciseRest(template, 'bench-press-node', 5);
+		expect(restOf(template)).toBe(MIN_REST_SECONDS);
+
+		setExerciseRest(template, 'bench-press-node', 5000);
+		expect(restOf(template)).toBe(MAX_REST_SECONDS);
+	});
+
+	test('null is never-rest and survives as itself', () => {
+		const template = withBench();
+
+		setExerciseRest(template, 'bench-press-node', null);
+
+		expect(restOf(template)).toBeNull();
+	});
+
+	test('undefined takes the key away rather than writing an empty one', () => {
+		const template = withBench();
+
+		setExerciseRest(template, 'bench-press-node', 180);
+		setExerciseRest(template, 'bench-press-node', undefined);
+
+		expect('restSeconds' in template.entries[0].exercises[0]).toBe(false);
+	});
+
+	test('an exercise that is not in the plan refuses', () => {
+		expect(setExerciseRest(withBench(), 'no-such-node', 180)).toBe(false);
+	});
+
+	test('a swap keeps the rest, as it keeps the sets and the targets', () => {
+		const template = withBench();
+
+		setExerciseRest(template, 'bench-press-node', 180);
+		replaceExercise(template, 'bench-press-node', 'incline-bench-press');
+
+		expect(restOf(template)).toBe(180);
+	});
+});
+
 describe('copy-on-start', () => {
 	function pushDay(): Template {
 		const template = blankTemplate('t1', 100);
@@ -477,6 +536,23 @@ describe('copy-on-start', () => {
 
 		expect(first.id).not.toBe(second.id);
 		expect(first.entries[0].id).not.toBe(second.entries[0].id);
+	});
+
+	test("the plan's rest durations ride into the session", () => {
+		const template = pushDay();
+		setExerciseRest(template, 'bench-press-node', 195);
+		setExerciseRest(template, 'cable-fly-node', null);
+
+		const workout = startFrom(template, 5000, mint('w'));
+		const exercises = workout.entries.flatMap((e) => e.exercises);
+
+		expect(exercises.map((e) => e.restSeconds)).toEqual([195, null]);
+	});
+
+	test('an exercise with no planned rest carries no key at all into the session', () => {
+		const workout = startFrom(pushDay(), 5000, mint('w'));
+
+		expect('restSeconds' in workout.entries[0].exercises[0]).toBe(false);
 	});
 
 	test('an empty template starts an empty workout', () => {

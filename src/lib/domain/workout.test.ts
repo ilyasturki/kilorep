@@ -1206,6 +1206,18 @@ describe('copy-on-repeat', () => {
 		expect(orderOf(next)).toEqual(['bench-press', 'incline-dumbbell-press', 'cable-fly']);
 	});
 
+	test('how the session was rested repeats with it', () => {
+		const past = freshWorkout(5000);
+		past.entries[0].exercises[0].restSeconds = 195;
+		past.entries[1].exercises[0].restSeconds = null;
+
+		const next = repeatFrom(past, 9000, mint('r'));
+		const exercises = next.entries.flatMap((entry) => entry.exercises);
+
+		expect(exercises.map((e) => e.restSeconds)).toEqual([195, null, undefined, undefined]);
+		expect('restSeconds' in exercises[2]).toBe(false);
+	});
+
 	test('an empty start repeats as an empty start', () => {
 		expect(repeatFrom(freshWorkout(5000), 9000, mint('r')).templateId).toBeNull();
 	});

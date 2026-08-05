@@ -17,6 +17,7 @@
 		removeSet,
 		replaceExercise,
 		setExerciseReps,
+		setExerciseRest,
 		setPlannedReps,
 		splitEntry,
 		startFrom,
@@ -30,6 +31,7 @@
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanList from '$lib/templates/PlanList.svelte';
 	import PlanOptionsMenu from '$lib/templates/PlanOptionsMenu.svelte';
+	import PlanRestSheet from '$lib/templates/PlanRestSheet.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
@@ -234,6 +236,7 @@
 	let optionsAnchor = $state<HTMLElement | null>(null);
 	let swapOpen = $state(false);
 	let supersetOpen = $state(false);
+	let restOpen = $state(false);
 	let acting = $state<string | null>(null);
 
 	const actingGroup = $derived(legOf(entries, acting));
@@ -248,6 +251,18 @@
 	function swapPick(exerciseId: string) {
 		if (acting !== null) {
 			replaceExercise(template, acting, exerciseId);
+		}
+	}
+
+	/**
+	 * The plan's own rest for the exercise the sheet is open on. Written into the
+	 * tree like every other edit here, so the autosave above carries it — there
+	 * is no preference record behind this one, which is the point: it belongs to
+	 * this plan and travels with it, never to the exercise.
+	 */
+	function restPick(seconds: number | null | undefined) {
+		if (acting !== null) {
+			setExerciseRest(template, acting, seconds);
 		}
 	}
 
@@ -707,9 +722,15 @@
 	anchor={optionsAnchor}
 	onswap={() => (swapOpen = true)}
 	onsuperset={() => (supersetOpen = true)}
+	onrest={() => (restOpen = true)}
 	onbreak={breakSuperset}
 	onremove={removePlanned}
 />
+
+<!-- The fourth question the ⋯ asks: how long this plan rests after this
+     exercise. Reads the live tree through `actingGroup` like the sheets above,
+     so the switch and the stepper are showing the value they are editing. -->
+<PlanRestSheet bind:open={restOpen} group={actingGroup} onchange={restPick} />
 
 <AlertDialog
 	bind:open={deleteOpen}
