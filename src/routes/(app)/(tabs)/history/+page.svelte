@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 
-	import { completedSetCount, exerciseCount, formatWhen, workoutTitle } from '$lib/history/label';
+	import { formatWhen, workoutMeta, workoutTitle } from '$lib/history/label';
 	import type { Workout } from '$lib/domain/workout';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import WorkoutRowMenu from '$lib/history/WorkoutRowMenu.svelte';
@@ -52,27 +52,6 @@
 	// navigate, which is a smaller surprise than labels rewriting themselves
 	// under a thumb.
 	const now = Date.now();
-
-	/**
-	 * How big the session was, in the two numbers a lifter scans for: how much
-	 * was trained, and how much work it took. How long it took is deliberately
-	 * absent — a session is a day in this app, not a stopwatch reading, and the
-	 * clock a record carries is plumbing (the sort key, the finished marker)
-	 * rather than something to answer for.
-	 *
-	 * Takes a plain `Workout`, so the live row is described by the same
-	 * sentence as the finished ones. A session with nothing checked yet reads
-	 * `0 sets` honestly — warmups and unchecked sets never count, live or not.
-	 */
-	function meta(workout: Workout): string {
-		const exercises = exerciseCount(workout);
-		const sets = completedSetCount(workout);
-
-		return [
-			exercises === 1 ? '1 exercise' : `${exercises} exercises`,
-			sets === 1 ? '1 set' : `${sets} sets`
-		].join(' · ');
-	}
 
 	/**
 	 * The ⋯ stays off this list — a row here is one line of text and a date, and
@@ -142,7 +121,7 @@
 		<section class="list-group">
 			<ListRow
 				title={workoutTitle(live.workout, data.templates)}
-				meta={meta(live.workout)}
+				meta={workoutMeta(live.workout)}
 				href="/workout/live"
 			>
 				{#snippet leading()}
@@ -173,7 +152,7 @@
 
 				<ListRow
 					title={workoutTitle(workout, data.templates)}
-					meta={meta(workout)}
+					meta={workoutMeta(workout)}
 					href="/history/{workout.id}"
 					onhold={(anchor) => hold(anchor, workout)}
 				>

@@ -36,6 +36,31 @@ export function exerciseCount(workout: Workout): number {
 	return workout.entries.reduce((count, entry) => count + entry.exercises.length, 0);
 }
 
+/**
+ * How big the session was, in the two numbers a lifter scans for: how much was
+ * trained, and how much work it took. How long it took is deliberately absent —
+ * a session is a day in this app, not a stopwatch reading, and the clock a
+ * record carries is plumbing (the sort key, the finished marker) rather than
+ * something to answer for.
+ *
+ * Takes a plain `Workout`, so a live session is described by the same sentence
+ * as a finished one. Nothing checked yet reads `0 sets` honestly — warmups and
+ * uncompleted sets never count, live or not.
+ *
+ * Here rather than on either screen that says it: History's list and the idle
+ * Train screen both name the same past session, and a second copy of this is a
+ * chance for the two to start disagreeing about what a set is.
+ */
+export function workoutMeta(workout: Workout): string {
+	const exercises = exerciseCount(workout);
+	const sets = completedSetCount(workout);
+
+	return [
+		exercises === 1 ? '1 exercise' : `${exercises} exercises`,
+		sets === 1 ? '1 set' : `${sets} sets`
+	].join(' · ');
+}
+
 const DAY = 86_400_000;
 
 /**

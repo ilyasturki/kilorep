@@ -10,10 +10,13 @@ import type { PageLoad } from './$types';
  * The idle screen's read, and the gate in front of it.
  *
  * Templates for the list of ways to begin — same order and cap-free read as the
- * Templates tab; the screen decides how many to show. The hint map because
- * starting is what this screen does, and a session is constructed with one. The
- * store because both start paths hand it to `WorkoutSession` and the next
- * screen writes through it.
+ * Templates tab; the screen decides how many to show. Workouts for the other
+ * list of ways to begin, and read cap-free for the same reason: the store holds
+ * the whole history in memory already, so the cap is a rendering decision rather
+ * than a query. The hint map because starting is what this screen does, and a
+ * session is constructed with one. The store because both start paths hand it to
+ * `WorkoutSession` and the next screen writes through it — and because a held
+ * row deletes through it.
  *
  * Nothing here starts a workout by being looked at. What it does do is pick up
  * a start someone else has already made: the template editor and History's
@@ -41,10 +44,11 @@ export const load: PageLoad = async ({ depends }) => {
 
 	const store = await getStore();
 
-	const [lastPerformed, resume, templates] = await Promise.all([
+	const [lastPerformed, resume, templates, workouts] = await Promise.all([
 		store.lastPerformed(),
 		store.loadSnapshot(),
-		store.listTemplates()
+		store.listTemplates(),
+		store.listWorkouts()
 	]);
 
 	const history = hintsOf(lastPerformed);
@@ -57,5 +61,5 @@ export const load: PageLoad = async ({ depends }) => {
 		redirect(307, '/workout/live');
 	}
 
-	return { store, history, templates };
+	return { store, history, templates, workouts };
 };

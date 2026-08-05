@@ -1,15 +1,21 @@
 <script lang="ts">
-	import { goto, invalidate } from '$app/navigation';
+	import { goto, invalidate, invalidateAll } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
 	import { startFrom } from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
+	import { formatWhen, workoutMeta, workoutTitle } from '$lib/history/label';
+	import { launchRepeat } from '$lib/history/repeat';
+	import WorkoutRowMenu from '$lib/history/WorkoutRowMenu.svelte';
+	import { syncSoon } from '$lib/sync/client';
 	import { planLine } from '$lib/templates/plan';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
+	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 
 	import type { Template } from '$lib/domain/template';
+	import type { Workout } from '$lib/domain/workout';
 	import type { PageProps } from './$types';
 
 	/**
@@ -25,9 +31,14 @@
 	 * other's rule — see this route's `+page.ts` and the loop's.
 	 *
 	 * What the split buys is that neither screen has to be written as the absence
-	 * of the other. This one is a start button and a glance of templates; the
-	 * loop is the loop. Nothing in either is behind a branch on which one you
-	 * meant.
+	 * of the other. This one is a start button over two glances — the plans you
+	 * wrote and the sessions you already did; the loop is the loop. Nothing in
+	 * either is behind a branch on which one you meant.
+	 *
+	 * Both glances answer the same question in the two ways a lifter asks it: by
+	 * the plan, and by "the one I did last time". The second is why History is
+	 * reachable from here at all — it used to be Progress' child alone, one card
+	 * deep on another tab, which is a long way to walk to repeat Monday.
 	 *
 	 * And it is written as a screen rather than as an empty state, which it was.
 	 * `EmptyState` is what a screen shows *before it has anything to show*, and
@@ -83,8 +94,60 @@
 		await goto('/workout/live');
 	}
 
-	/** The idle list stays a glance, not a page: the tab holds the rest. */
+	/**
+	 * Repeat-as-resume, the same call History's list and a workout's own ⋯ make.
+	 * The gate they wrap it in — a live session or a snapshot that starting over
+	 * would destroy — cannot fire here: this address redirects to `/workout/live`
+	 * whenever the holder is full, and its load claims any snapshot waiting on
+	 * the way in. A screen that exists is the proof there is nothing to discard.
+	 */
+	async function repeat(workout: Workout) {
+		await launchRepeat(data.store, workout);
+	}
+
+	/** Both glances stay glances, not pages: the tabs hold the rest. */
 	const idleTemplates = $derived(data.templates.slice(0, 4));
+
+	// Newest first, which is the order the question is asked in — "what did I do
+	// last time" long before "what did I do in March".
+	const recent = $derived(data.workouts.toReversed().slice(0, 4));
+
+	// Captured once per mount, the idiom every dated list here uses: a screen
+	// left open across midnight keeps yesterday's wording until you navigate.
+	const now = Date.now();
+
+	/**
+	 * A held row, and the two things it can do that a tap cannot. Open, because
+	 * here a tap begins rather than reads. Delete, because the row is the same
+	 * record History's list holds and the gesture had better mean the same thing
+	 * on both — including its confirmation: a tombstone travels to every device.
+	 */
+	let menuOpen = $state(false);
+	let menuAnchor = $state<HTMLElement | null>(null);
+	let held = $state<Workout | null>(null);
+	let deleteOpen = $state(false);
+
+	function hold(anchor: HTMLElement, workout: Workout) {
+		held = workout;
+		menuAnchor = anchor;
+		menuOpen = true;
+	}
+
+	async function remove() {
+		if (held === null) {
+			return;
+		}
+
+		await data.store.deleteWorkout(held.id, Date.now());
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+
+		// The list is the load's own data, so it has to be told — the row has to
+		// leave the screen under the finger that deleted it.
+		await invalidateAll();
+	}
 </script>
 
 <svelte:head>
@@ -93,13 +156,18 @@
 
 <main class="min-h-0 flex-1 overflow-y-auto">
 	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
-		{#if data.templates.length === 0}
+		{#if data.templates.length === 0 && recent.length === 0}
 			<!-- The whole of what this screen has to say before there is a plan to
-			     name: one line, no icon, no second button. The act is at the foot
-			     where it always is, and a graphic over an empty pane would be
-			     decoration on the one screen that opens every session. -->
+			     name or a session to repeat: one line, no icon, no second button.
+			     The act is at the foot where it always is, and a graphic over an
+			     empty pane would be decoration on the one screen that opens every
+			     session. It goes the moment either glance below has something —
+			     including for the lifter who never writes a template, whose whole
+			     history is the list further down. -->
 			<p class="px-3 text-md font-bold text-ink-faint">Start empty and build as you go.</p>
-		{:else}
+		{/if}
+
+		{#if data.templates.length > 0}
 			<section class="flex flex-col gap-2">
 				<!-- The heading is what makes a tap on a row unambiguous. On the
 				     Templates tab the same row opens a plan, and PRODUCT.md is
@@ -135,6 +203,47 @@
 			</section>
 		{/if}
 
+		{#if recent.length > 0}
+			<!-- Under the plans, because a plan is what you wrote down on purpose and
+			     this is what happened; a lifter who has both reads them in that
+			     order. Same cap, so neither glance can push Start below the fold. -->
+			<section class="flex flex-col gap-2">
+				<!-- Says which of the two meanings a row carries, exactly as the
+				     heading above it does. In History the identical row opens the
+				     record — here it begins a new session from it, and the word
+				     "repeat" is the whole of the difference. -->
+				<h2 class="px-3 label-caps">Repeat a workout</h2>
+
+				<div class="list-group">
+					{#each recent as workout (workout.id)}
+						{@const when = formatWhen(workout.startedAt, now)}
+
+						<ListRow
+							title={workoutTitle(workout, data.templates)}
+							meta={workoutMeta(workout)}
+							chevron={false}
+							onclick={() => void repeat(workout)}
+							onhold={(anchor) => hold(anchor, workout)}
+						>
+							<!-- Both spellings rendered, one hidden, the way History's list
+							     does it: the swap is `lg` and CSS picks, so no width has to
+							     be measured. -->
+							{#snippet trailing()}
+								<span class="lg:hidden">{when.short}</span>
+								<span class="hidden lg:inline">{when.long}</span>
+							{/snippet}
+						</ListRow>
+					{/each}
+				</div>
+
+				<!-- Always, not only past four, which is where it parts company with
+				     the templates row above. That one is an overflow; this one is also
+				     History's second front door — hidden until a fifth session, and a
+				     lifter with four workouts would never find the screen at all. -->
+				<ListRow title="See all workouts" href="/history" />
+			</section>
+		{/if}
+
 		<!-- Pinned inside the scroll pane, the template editor's Start verbatim:
 		     the act stays under the thumb however long the glance above it grows,
 		     and the two screens that begin a workout begin it in the same corner.
@@ -150,3 +259,21 @@
 		</div>
 	</div>
 </main>
+
+<!-- No `onrepeat`: the tap on the row already spends that verb, and a menu that
+     listed it again would be offering the thing you just declined to do. -->
+<WorkoutRowMenu
+	bind:open={menuOpen}
+	title={held === null ? '' : workoutTitle(held, data.templates)}
+	anchor={menuAnchor}
+	href={held === null ? undefined : `/history/${held.id}`}
+	ondelete={() => (deleteOpen = true)}
+/>
+
+<AlertDialog
+	bind:open={deleteOpen}
+	title="Delete this workout?"
+	description="Its sets leave history, hints and records for good, on every device."
+	confirmLabel="Delete"
+	onconfirm={() => void remove()}
+/>

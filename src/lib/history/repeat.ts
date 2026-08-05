@@ -33,5 +33,18 @@ export async function launchRepeat(store: Store, workout: Workout): Promise<void
 	// including any the hover-preloader took while a session was still live.
 	// `active.svelte.ts` has the whole story.
 	await invalidate(SESSION_DEP);
-	await goto('/workout');
+
+	// `/workout` is where a handoff is claimed, and the invalidate above has
+	// already claimed it when that is the screen we are standing on: its load
+	// depends on `SESSION_DEP`, so the re-run finds the snapshot and redirects
+	// into the loop from inside the invalidation. Going there again would push
+	// an entry that same redirect immediately replaces, leaving two identical
+	// `/workout/live` entries and a back press that appears to do nothing.
+	//
+	// `location` rather than `page.url`, because this is not a component and the
+	// app never renders on a server — `ssr = false` is a hard rule, not a
+	// setting.
+	if (location.pathname !== '/workout') {
+		await goto('/workout');
+	}
 }
