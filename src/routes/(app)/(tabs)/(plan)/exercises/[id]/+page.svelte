@@ -32,7 +32,7 @@
 	 * links, and each history entry through to the workout it came from.
 	 *
 	 * The est-1RM trend is settled but still absent: charting is decided now
-	 * — the Dashboard's sparklines, drawn from the same `estTrend` — and the
+	 * — Progress' sparklines, drawn from the same `estTrend` — and the
 	 * trend lands here as its own change, not smuggled into another one.
 	 *
 	 * History is the store's, derived from finished workouts on the way in.

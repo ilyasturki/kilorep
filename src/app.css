@@ -84,7 +84,15 @@
 	   `accent-text` is the accent-coloured *string* — SKIP, NOW, the sub-15s
 	   countdown, the SUPERSET badge. It has to be a per-theme pair, and no
 	   choice of swatch avoids that: 4.5:1 against white needs luminance ≤0.183,
-	   against neutral-950 it needs ≥0.20. No single colour is both. */
+	   against neutral-950 it needs ≥0.20. No single colour is both.
+
+	   It is the wider of the two meanings, and deliberately so: the fill says
+	   "this logs a set", the string says "this is the thing the screen is for".
+	   On a screen that logs nothing those are different sentences — Progress
+	   spends it on one headline figure per card and the PR pill, and on nothing
+	   else, which is what keeps a page of numbers from reading as a page of
+	   accents. A chart never takes it: bars and sparklines are ink, or the
+	   accent would be claiming it means "a number". */
 	--accent: var(--color-lime-500);
 	--on-accent: var(--color-neutral-950);
 	--accent-text: var(--color-lime-700);
@@ -273,10 +281,10 @@
 
    `row-dense` is the one that does not shrink, because it is already the small
    one: 44px on every pointer. It belongs to a row you *read* rather than tap
-   through — the Dashboard's, where eight rows at thumb size were the reason the
+   through — Progress', where eight rows at thumb size were the reason the
    screen scrolled past its own first card on a phone. The gym-floor 62 is for
-   the surfaces a sweaty hand works, and a screen of standing answers is not
-   one; 44 still clears both platform minimums, which is what makes the trade
+   the surfaces a sweaty hand works, and a screen you only read is not one;
+   44 still clears both platform minimums, which is what makes the trade
    payable at all. Nothing on the workout loop may reach for it — rule 7. */
 :root {
 	--target-chrome: 2.5rem; /* 40 */
@@ -523,11 +531,11 @@
    not grow with the window, because a lone button 768px wide is worse than a
    narrow column, not better.
 
-   `column-board` is a screen of cards read side by side, which today is the
-   Dashboard alone. It exists because that screen cannot take the step *down*
-   the next paragraph describes: four standing answers stacked in a 576px column
-   made a desk window scroll to reach a figure a phone could already see, and
-   the cap that pays for the Workout rail buys nothing on a screen that has no
+   `column-board` is a screen of cards read side by side, which today is
+   Progress alone. It exists because that screen cannot take the step *down*
+   the next paragraph describes: its cards stacked in a 576px column made a
+   desk window scroll to reach a figure a phone could already see, and the
+   cap that pays for the Workout rail buys nothing on a screen that has no
    rail. Wider, but still capped and still one step of the same scale — a row of
    name-then-number has the set row's problem in miniature, and 56rem in two
    columns puts each pair back within one glance. It grows at `lg` and not

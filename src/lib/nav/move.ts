@@ -16,7 +16,7 @@ type MoveContext = {
  * slide there was motion that said nothing.
  *
  * Peer means both ends are tab roots exactly, not merely under one. A tab's
- * detail screen is deeper than every root including its own, so `/dashboard` →
+ * detail screen is deeper than every root including its own, so `/progress` →
  * `/exercises/{id}` is a push the same as `/history` → `/history/{id}` is: the
  * tab the user came from does not change what arriving at a detail screen
  * means.

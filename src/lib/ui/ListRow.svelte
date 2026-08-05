@@ -17,6 +17,13 @@
 		stacked?: boolean;
 		pressed?: boolean;
 		leading?: Snippet;
+		/**
+		 * A marker that belongs to the name rather than to the row — a PR pill, a
+		 * state. It rides with the title, inside the line the meta wraps out of,
+		 * which is what parts it from `trailing`: that group holds the row's
+		 * values and is read right to left.
+		 */
+		badge?: Snippet;
 		trailing?: Snippet;
 		class?: ClassValue;
 	};
@@ -34,6 +41,7 @@
 		stacked = false,
 		pressed,
 		leading,
+		badge,
 		trailing,
 		class: klass
 	}: Props = $props();
@@ -104,6 +112,9 @@
 				{title}
 			{/if}
 		</span>
+		{#if badge}
+			<span class="flex shrink-0 items-center">{@render badge()}</span>
+		{/if}
 		{#if meta}
 			<span class={['text-sm font-bold text-ink-faint', stacked ? 'truncate' : 'shrink-0']}>
 				{meta}

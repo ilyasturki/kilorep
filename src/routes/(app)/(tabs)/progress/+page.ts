@@ -4,11 +4,10 @@ import { getStore } from '$lib/store/store';
 import type { PageLoad } from './$types';
 
 /**
- * Everything the four standing questions read, in one pass: the workouts
- * (Consistent? and Balanced? walk them whole), the same workouts folded into
- * per-exercise sessions (Progressing?), and the body-weight log (Weight on
- * track?). All local, like every read in the app — the Dashboard asks the
- * store, never a server.
+ * Everything the five cards read, in one pass: the workouts (Weekly work,
+ * Training frequency and Sets per muscle walk them whole), the same workouts
+ * folded into per-exercise sessions (Strength), and the body-weight log. All
+ * local, like every read in the app — Progress asks the store, never a server.
  */
 export const load: PageLoad = async () => {
 	const store = await getStore();

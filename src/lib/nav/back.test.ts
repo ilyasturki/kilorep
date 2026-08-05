@@ -75,8 +75,8 @@ describe('decideBack', () => {
 	// bar. A cold boot onto a workout's detail used to quit the app.
 	it('walks a child of Progress up to its list, and the list up to Progress', () => {
 		expect(decide('/history/abc', { depth: 0 })).toEqual({ kind: 'goto', path: '/history' });
-		expect(decide('/history', { depth: 0 })).toEqual({ kind: 'goto', path: '/dashboard' });
-		expect(decide('/weight', { depth: 0 })).toEqual({ kind: 'goto', path: '/dashboard' });
+		expect(decide('/history', { depth: 0 })).toEqual({ kind: 'goto', path: '/progress' });
+		expect(decide('/weight', { depth: 0 })).toEqual({ kind: 'goto', path: '/progress' });
 	});
 
 	it('minimizes from the live session rather than popping it to the idle screen', () => {

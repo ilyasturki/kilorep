@@ -80,7 +80,7 @@
 	 * restoration is switched off underneath it and there is nothing to fall
 	 * back on. A snapshot is the sanctioned way to say what the framework
 	 * cannot see, and one on the layout covers every screen that shares this
-	 * box — Dashboard, Exercises, History, Templates, and Weight, off the bar
+	 * box — Progress, Exercises, History, Templates, and Weight, off the bar
 	 * now but still a screen — because the box is one element that outlives
 	 * the navigations between them.
 	 *

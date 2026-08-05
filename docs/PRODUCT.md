@@ -12,7 +12,7 @@ Math:
 
 - **Volume** = Σ weight × reps × loadFactor (×2 for per-hand and unilateral), over completed working sets only.
 - **Raw PR** = heaviest weight ever lifted on the exercise, tie-broken by reps at that load. No formula.
-- **Estimated 1RM** (Epley) is a dashboard trend signal only, never the headline PR.
+- **Estimated 1RM** (Epley) is a Progress trend signal only, never the headline PR.
 
 ## The loop
 
@@ -34,10 +34,10 @@ Every screen must justify its existence.
 
 - **Train** — the loop above while a session runs; idle, the place one starts, by plan or by repetition. One tab, two screens, one address each. Leads the bar.
 - **Templates** — Plan's first half; the list; a template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
-- **History** — a child of Progress, reached through its Consistent? card and from the idle Train screen, which glances at the last four and links to the rest; workout list + detail; repeat-this-workout; drift-vs-template on the detail.
+- **History** — a child of Progress, reached through its Training frequency card and from the idle Train screen, which glances at the last four and links to the rest; workout list + detail; repeat-this-workout; drift-vs-template on the detail.
 - **Exercises** — Plan's second half; catalog + customs; detail carries history, raw best set, est-1RM trend.
-- **Weight** — a child of Progress, reached through its Weight on track? card; log + trend.
-- **Dashboard** — four standing questions, one card each, no configuration: **Progressing?** (recent raw PRs, est-1RM direction on main lifts) · **Consistent?** (sessions this week vs your own habit — facts, never streaks) · **Balanced?** (working volume by muscle, recent weeks) · **Weight on track?** (trend). Anything that can't be phrased as a standing question stays off it, with no exceptions. Two columns from `lg` and one below, and the long cards are capped rather than uncapped: a desk window holds all four at once, and a phone gets two of them before it scrolls rather than a single card of personal bests.
+- **Weight** — a child of Progress, reached through its Body weight card; log + trend.
+- **Progress** — five cards, one subject each, no configuration: **Weekly work** (tonnage and working sets, twelve weeks) · **Strength** (recent raw PRs, est-1RM direction on main lifts) · **Training frequency** (sessions in the last seven days vs your own median — facts, never streaks) · **Sets per muscle** (working sets by muscle, split direct/indirect) · **Body weight** (trend). A card earns its place by stating one thing about your own training you could not work out in your head, and by pointing at where that thing is logged; anything else stays off, with no exceptions. Headings state rather than ask — the card is the answer, so the heading naming it as a question made the card say everything twice. Every window rolls back from now and none is anchored to a weekday: "this week" meaning "since Monday" drew a Tuesday morning as a collapse. Weekly work takes the full width, being the one card that is mostly chart; the rest are two columns from `lg` and one below, capped rather than uncapped, so a desk window holds the screen at once and a phone gets two subjects before it scrolls rather than a single card of personal bests.
 - **Settings** — a tab like any other. Reachable from every screen including a live session.
 
 The bar is **Train · Plan · Progress · Settings**, read left to right as the tense of what each tab holds. One bar serves both viewports: the tabs sit along the bottom on a phone and inside the top bar on a desk. No screen draws chrome of its own.

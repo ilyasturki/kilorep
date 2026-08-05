@@ -47,7 +47,7 @@ export function navTabs(): NavTab[] {
 			live: activeWorkout.session !== null
 		},
 		{ href: '/templates', label: 'Plan', icon: Stack, owns: ['/exercises'] },
-		{ href: '/dashboard', label: 'Progress', icon: ChartBar, iconActive: ChartBarFill },
+		{ href: '/progress', label: 'Progress', icon: ChartBar, iconActive: ChartBarFill },
 		{ href: '/settings', label: 'Settings', icon: Gear }
 	];
 }
@@ -80,8 +80,8 @@ export function tabRoots(): string[] {
  * flat so nothing had to be renamed.
  */
 const PARENTS: Record<string, string> = {
-	'/history': '/dashboard',
-	'/weight': '/dashboard'
+	'/history': '/progress',
+	'/weight': '/progress'
 };
 
 /**
