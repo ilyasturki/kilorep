@@ -3,7 +3,7 @@
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 
-	import { isActive, navTabs } from '$lib/nav/bar.svelte';
+	import { covers, isActive, navTabs } from '$lib/nav/bar.svelte';
 	import { press } from '$lib/ui/press';
 
 	import type { LayoutProps, Snapshot } from './$types';
@@ -56,12 +56,12 @@
 	 */
 	let { children }: LayoutProps = $props();
 
-	// `isActive` for Workout, because the tab is two addresses now — the idle
+	// `covers` for Workout, because the tab is two addresses now — the idle
 	// screen and the loop under it — and both own a pane. `/templates/` with the
 	// slash and no helper, because there the tab's own list is an ordinary
 	// scrolling page and only the editor under it owns one.
 	const ownsPane = $derived(
-		isActive(page.url.pathname, '/workout') || page.url.pathname.startsWith('/templates/')
+		covers(page.url.pathname, '/workout') || page.url.pathname.startsWith('/templates/')
 	);
 
 	let pane = $state<HTMLElement | null>(null);
@@ -158,7 +158,7 @@
 	>
 		<div class="mx-auto flex max-w-sm">
 			{#each navTabs() as tab (tab.href)}
-				{@const active = isActive(page.url.pathname, tab.href)}
+				{@const active = isActive(page.url.pathname, tab)}
 				{@const Icon = (active && tab.iconActive) || tab.icon}
 
 				<a

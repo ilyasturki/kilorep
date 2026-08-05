@@ -2,7 +2,7 @@ import { App } from '@capacitor/app';
 import { goto } from '$app/navigation';
 
 import { decideBack } from '$lib/nav/back';
-import { navTabs } from '$lib/nav/bar.svelte';
+import { tabRoots } from '$lib/nav/bar.svelte';
 import { backDepth } from '$lib/nav/depth';
 import { closeTopOverlay, hasOpenOverlay } from '$lib/ui/overlays';
 
@@ -64,7 +64,7 @@ export function wireHardwareBack(): () => void {
 		const decision = decideBack({
 			pathname: location.pathname,
 			overlayOpen: hasOpenOverlay(),
-			tabRoots: [...navTabs().map((tab) => tab.href), '/workout/live'],
+			tabRoots: [...tabRoots(), '/workout/live'],
 			depth: backDepth()
 		});
 

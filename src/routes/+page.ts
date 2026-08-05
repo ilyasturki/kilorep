@@ -19,10 +19,10 @@ export const prerender = !import.meta.env.APP_BUILD;
 
 /**
  * `/` is the marketing page on the web and nothing at all in the APK, which
- * opens on the Dashboard — the leftmost tab, and home since the bar was
- * reordered around it. See `navTabs`, which is the one place that decides
- * which tab leads; this address and `AFTER_LOGIN` follow it rather than
- * deciding anything of their own.
+ * opens on Train — the leftmost tab, and the screen a gym app owes you first.
+ * See `navTabs`, which is the one place that decides which tab leads; this
+ * address and `AFTER_LOGIN` follow it rather than deciding anything of their
+ * own.
  *
  * A redirect here rather than a start path in the Capacitor config, because
  * Capacitor has none to give — it loads `index.html` and the router decides the
@@ -32,6 +32,6 @@ export const prerender = !import.meta.env.APP_BUILD;
  */
 export const load: PageLoad = () => {
 	if (import.meta.env.APP_BUILD) {
-		redirect(307, '/dashboard');
+		redirect(307, '/workout');
 	}
 };

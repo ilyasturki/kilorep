@@ -3,7 +3,7 @@ import { tick } from 'svelte';
 import { prefersReducedMotion } from 'svelte/motion';
 import { onNavigate } from '$app/navigation';
 
-import { navTabs } from '$lib/nav/bar.svelte';
+import { tabRoots } from '$lib/nav/bar.svelte';
 import { classifyMove } from '$lib/nav/move';
 import { coarsePointer } from '$lib/ui/pointer';
 
@@ -134,7 +134,7 @@ function navigationMove(navigation: OnNavigate): Move | undefined {
 		from: a,
 		to: b,
 		delta: navigation.delta ?? undefined,
-		tabRoots: navTabs().map((tab) => tab.href)
+		tabRoots: tabRoots()
 	});
 }
 

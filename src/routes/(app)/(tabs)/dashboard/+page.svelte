@@ -9,7 +9,6 @@
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import ChartBar from '$lib/ui/icons/ChartBar.svelte';
-	import Gear from '$lib/ui/icons/Gear.svelte';
 	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
@@ -207,7 +206,7 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard | Kilorep</title>
+	<title>Progress | Kilorep</title>
 </svelte:head>
 
 <main class="column-board flex min-h-full flex-col gap-4 px-3 pt-safe-t pb-4 lg:pt-3">
@@ -217,32 +216,17 @@
 
 	     One compact row rather than the other tabs' 28px title under 24px of
 	     padding. Those screens open on a list and can spend 80px introducing
-	     themselves; this one opens on the answer to "what now" and three more
-	     below it, and the lit tab has already said the word "Dashboard" once. The
-	     heading stays — a screen owes a reader an h1 — it just stops being the
-	     largest thing on a phone screen it has no business leading.
+	     themselves; this one opens on four answers, and the lit tab has already
+	     said the word once. The heading stays — a screen owes a reader an h1 —
+	     it just stops being the largest thing on a phone screen it has no
+	     business leading.
 
-	     The gear is here because this is home. It hung off the idle Workout
-	     screen while that tab led the bar, and stayed there when home moved,
-	     which left the app's one door to Settings on a screen the app no longer
-	     opens at — and behind a redirect, since `/workout` hands off to the loop
-	     the moment a session exists. Two taps from any tab now, and none at all
-	     from a live session on a phone: the account, the server and the tokens
-	     are the definition of not-mid-workout, so that is a price and not a hole.
-	     The desk bar keeps its own gear through a session, a 1080px window not
-	     being the floor rule 7 protects. -->
+	     No gear. Settings is a tab of its own now, reachable from every screen
+	     including a live session, so a door hanging off this one screen would be
+	     a second way to the same place and the only one that depended on where
+	     you happened to be standing. -->
 	<header class="flex items-center justify-between gap-3 px-1 pt-2 lg:hidden">
-		<h1 class="text-lg font-extrabold tracking-tight">Dashboard</h1>
-
-		<a
-			href="/settings"
-			aria-label="Settings"
-			class="grid min-h-chrome w-11 place-items-center rounded-full border border-line
-				text-ink-muted focus-ring hover:bg-surface-2 press:bg-surface-2"
-			{@attach press()}
-		>
-			<Gear size={20} />
-		</a>
+		<h1 class="text-lg font-extrabold tracking-tight">Progress</h1>
 	</header>
 
 	<!-- Above the questions and outside the `bare` branch both: a first install

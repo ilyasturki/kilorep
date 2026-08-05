@@ -4,7 +4,9 @@ import type { Move } from './move';
 
 import { classifyMove } from './move';
 
-const tabRoots = ['/dashboard', '/workout', '/history', '/templates', '/exercises'];
+// Both halves of Plan are roots — the segment swaps between them without
+// leaving the tab. Settings is one too, now that it is an ordinary tab.
+const tabRoots = ['/workout', '/templates', '/exercises', '/dashboard', '/settings'];
 
 function move(from: string, to: string, delta?: number): Move | undefined {
 	return classifyMove({ from, to, delta, tabRoots });
@@ -12,9 +14,19 @@ function move(from: string, to: string, delta?: number): Move | undefined {
 
 describe('classifyMove — whether it travels', () => {
 	it('does not travel between two tabs, in either direction or by back', () => {
-		expect(move('/dashboard', '/history')).toBeUndefined();
-		expect(move('/history', '/dashboard')).toBeUndefined();
-		expect(move('/exercises', '/dashboard', -1)).toBeUndefined();
+		expect(move('/workout', '/dashboard')).toBeUndefined();
+		expect(move('/dashboard', '/workout')).toBeUndefined();
+		expect(move('/dashboard', '/workout', -1)).toBeUndefined();
+	});
+
+	it('does not travel between the two halves of Plan, which are one tab', () => {
+		expect(move('/templates', '/exercises')).toBeUndefined();
+		expect(move('/exercises', '/templates')).toBeUndefined();
+	});
+
+	it('does not travel in or out of Settings, which is a tab like any other', () => {
+		expect(move('/workout', '/settings')).toBeUndefined();
+		expect(move('/settings', '/workout', -1)).toBeUndefined();
 	});
 
 	it('travels to a detail screen under another tab, which is deeper and not a peer', () => {
@@ -24,18 +36,19 @@ describe('classifyMove — whether it travels', () => {
 	});
 
 	it('travels within one tab, in both directions', () => {
-		expect(move('/history', '/history/abc')).toMatchObject({ direction: 'push' });
-		expect(move('/history/abc', '/history')).toMatchObject({ direction: 'pop' });
+		expect(move('/templates', '/templates/abc')).toMatchObject({ direction: 'push' });
+		expect(move('/templates/abc', '/templates')).toMatchObject({ direction: 'pop' });
 		expect(move('/workout', '/workout/live')).toMatchObject({ direction: 'push' });
 	});
 
-	it('travels to a screen that is no tab root — Settings, and Weight', () => {
-		expect(move('/workout', '/settings')).toMatchObject({ direction: 'push' });
+	it("travels to Progress' children, which are screens rather than tabs", () => {
+		expect(move('/dashboard', '/history')).toMatchObject({ direction: 'push' });
 		expect(move('/dashboard', '/weight')).toMatchObject({ direction: 'push' });
+		expect(move('/history', '/history/abc')).toMatchObject({ direction: 'push' });
 	});
 
 	it('reads a backwards traversal as a pop even where no path prefix says so', () => {
-		expect(move('/settings', '/dashboard', -1)).toMatchObject({ direction: 'pop' });
+		expect(move('/history', '/dashboard', -1)).toMatchObject({ direction: 'pop' });
 		expect(move('/weight', '/dashboard', -1)).toMatchObject({ direction: 'pop' });
 	});
 
