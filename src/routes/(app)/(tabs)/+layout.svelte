@@ -169,10 +169,11 @@
 					]}
 					{@attach press()}
 				>
-					<!-- `h-9` under a thumb: the glyph steps 22→28 there (see the
-					     `data-glyph` table in app.css) and 28 in a 32px capsule left a
-					     2px halo pretending to be a fit. The bar grows the 4px and
-					     nothing else moves. -->
+					<!-- `h-9` under a thumb: the glyph steps 22→24 there (see the
+					     `data-glyph` table in app.css), and the extra 4px keeps the
+					     halo around it even rather than letting the capsule close in
+					     on a glyph that just got smaller. The target is the anchor,
+					     not this shape, so the height is a drawing decision. -->
 					<!-- The press tint goes on the capsule, not on the tab, so a thumb
 					     lights the same shape the selected state uses. Written as an
 					     explicit `group-[.is-pressed]` rather than the `press:` variant

@@ -223,6 +223,12 @@
    keep writing the desk size (`size={18}`), and the thumb's step lives here
    in one table rather than as a second number in fifty call sites.
 
+   The step is 2px at every size, and that uniformity is the point. It used to
+   widen with the glyph — +4 at 18, +6 at 22 — which read as a thumb bonus
+   compounding into a different drawing: a 28px tab glyph over a 12px label
+   is an icon shouting its own name. One step means the whole set keeps the
+   proportions it was drawn at, and only crosses the room by 2px.
+
    `[width='…']` works because the icon contract renders `size` as the SVG's
    width/height *attributes* — presentational hints, which any stylesheet
    outranks — and every vendored icon carries `data-glyph` so nothing else
@@ -239,28 +245,28 @@
 		height: 18px;
 	}
 	svg[data-glyph][width='17'] {
+		width: 19px;
+		height: 19px;
+	}
+	svg[data-glyph][width='18'] {
 		width: 20px;
 		height: 20px;
 	}
-	svg[data-glyph][width='18'] {
+	svg[data-glyph][width='20'] {
 		width: 22px;
 		height: 22px;
 	}
-	svg[data-glyph][width='20'] {
+	svg[data-glyph][width='22'] {
 		width: 24px;
 		height: 24px;
 	}
-	svg[data-glyph][width='22'] {
-		width: 28px;
-		height: 28px;
-	}
 	svg[data-glyph][width='24'] {
-		width: 28px;
-		height: 28px;
+		width: 26px;
+		height: 26px;
 	}
 	svg[data-glyph][width='30'] {
-		width: 34px;
-		height: 34px;
+		width: 32px;
+		height: 32px;
 	}
 }
 
