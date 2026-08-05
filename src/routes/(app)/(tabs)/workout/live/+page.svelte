@@ -1,12 +1,15 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { goto, invalidate } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
+	import { restAfter } from '$lib/domain/rest';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
+	import { restTimer } from '$lib/workout/rest.svelte';
 	import { entriesWithMeta, entryOf, legOf, shelfOf } from '$lib/workout/groups';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
@@ -209,6 +212,14 @@
 	 * a tap on Start-empty and a change of mind should not survive a reload to
 	 * make it. The clear also retires any such snapshot written before this
 	 * rule existed.
+	 *
+	 * The rest fields ride along untracked, and that is not an optimisation: the
+	 * timer writes its own changes through `store.saveRest`, because the bar
+	 * answers a thumb from every tab and this effect only runs while this screen
+	 * is mounted. Tracking them here would make every ±30s write the whole tree
+	 * a second time. Read rather than omitted because `saveSnapshot` writes the
+	 * record whole — leaving them out would erase a running rest on the next
+	 * logged set.
 	 */
 	$effect(() => {
 		if (session === null) {
@@ -223,8 +234,38 @@
 			return;
 		}
 
-		void data.store.saveSnapshot({ workout, activeSetId: session.activeSetId });
+		void data.store.saveSnapshot({
+			workout,
+			activeSetId: session.activeSetId,
+			...untrack(() => ({ rest: restTimer.snapshot, muted: restTimer.muted }))
+		});
 	});
+
+	/**
+	 * Asked of the domain rather than decided here. A commit that earns nothing —
+	 * a warmup, a superset leg with its pair still to come, an exercise set to
+	 * never rest — still ends whatever was running, because a set has just been
+	 * lifted and the rest before it is over by definition.
+	 */
+	function commitSet(weight: number, reps: number) {
+		if (session === null) {
+			return;
+		}
+
+		const committed = session.commit(weight, reps);
+
+		if (committed === null) {
+			return;
+		}
+
+		const earned = restAfter(session.workout, committed, restSettings.current);
+
+		if (earned === null) {
+			restTimer.clear();
+		} else {
+			restTimer.start(earned);
+		}
+	}
 
 	/**
 	 * No ceremony, one decision: a session with logged sets becomes a record,
@@ -794,7 +835,7 @@
 										cursors={leg.cursors}
 										history={data.history}
 										activeSetId={session.activeSetId}
-										oncommit={(w, r) => session.commit(w, r)}
+										oncommit={commitSet}
 										ondraft={(id, w, r) => session.draft(id, w, r)}
 										onrate={(id, rpe) => session.rate(id, rpe)}
 										onselect={(id) => session.select(id)}

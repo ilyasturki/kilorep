@@ -609,7 +609,9 @@ describe('the active session snapshot', () => {
 	it('round-trips and clears', async () => {
 		const snapshot = {
 			workout: workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8, completed: false }]),
-			activeSetId: 'w1-set-0'
+			activeSetId: 'w1-set-0',
+			rest: null,
+			muted: false
 		};
 
 		expect(await store.loadSnapshot()).toBeNull();
@@ -733,7 +735,9 @@ describe('changing hands', () => {
 	it('wipe empties the device, snapshot included', async () => {
 		await store.saveSnapshot({
 			workout: workout('live', 900, 'squat', [{ weight: 100, reps: 5 }]),
-			activeSetId: null
+			activeSetId: null,
+			rest: null,
+			muted: false
 		});
 
 		await store.wipe('user-b');

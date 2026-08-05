@@ -24,9 +24,12 @@ export async function launchRepeat(store: Store, workout: Workout): Promise<void
 	const next = repeatFrom(workout, Date.now(), () => crypto.randomUUID());
 	const first = firstUncompleted(next);
 
+	// The mute is a property of the session that just ended, not of this one.
 	await store.saveSnapshot({
 		workout: next,
-		activeSetId: first === null ? null : first.set.id
+		activeSetId: first === null ? null : first.set.id,
+		rest: null,
+		muted: false
 	});
 
 	// The holder just changed, so the workout loads' cached answers are stale —

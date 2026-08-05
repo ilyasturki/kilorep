@@ -1,12 +1,23 @@
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
 import { bodyweightId } from '$lib/domain/bodyweight';
 import type { ExertionScale } from '$lib/domain/exertion';
-import type { ExertionScalePreference } from '$lib/domain/preference';
+import type {
+	ExertionScalePreference,
+	RestDefaultPreference,
+	RestOverridePreference
+} from '$lib/domain/preference';
 import {
 	EXERTION_SCALE_ID,
 	MAIN_VARIANT_PREFIX,
-	isExertionScalePreference
+	REST_DEFAULT_ID,
+	isExertionScalePreference,
+	isRestDefaultPreference,
+	isRestOverridePreference,
+	restOverrideExercise,
+	restOverrideId
 } from '$lib/domain/preference';
+import { defaultRestSettings, settleRestSeconds } from '$lib/domain/rest';
+import type { RestSettings } from '$lib/domain/rest';
 import type { PastSession } from '$lib/domain/stats';
 import type { Template } from '$lib/domain/template';
 import type { History, Workout } from '$lib/domain/workout';
@@ -17,16 +28,36 @@ import { openDatabase } from './db.ts';
 import type { FinishedWorkout, LastPerformed } from './derive.ts';
 import { frequentFrom, hintsOf, lastPerformedFrom, pastSessionsFrom } from './derive.ts';
 
+/**
+ * A rest caught mid-flight, so a reload does not forget one.
+ *
+ * An absolute `endsAt` and never a countdown: the WebView is suspended the
+ * moment the screen goes dark, and a remembered "ninety seconds left" would
+ * come back claiming ninety seconds no matter how long the phone spent in a
+ * pocket. `seconds` rides along because the bar's track needs to know how long
+ * the whole rest was to draw how much of it is gone.
+ */
+export type RestSnapshot = {
+	endsAt: number;
+	seconds: number;
+	exerciseId: string;
+};
+
 export type Snapshot = {
 	workout: Workout;
 	activeSetId: string | null;
+	rest: RestSnapshot | null;
+	/** Rest silenced for the remainder of this session. Dies with it. */
+	muted: boolean;
 };
 
 const WATERMARK_KEY = 'watermark';
 const SNAPSHOT_KEY = 'active-session';
 const OWNER_KEY = 'owner';
 
-function isSnapshot(value: unknown): value is Snapshot {
+type LegacySnapshot = Omit<Snapshot, 'rest' | 'muted'> & Partial<Pick<Snapshot, 'rest' | 'muted'>>;
+
+function isSnapshot(value: unknown): value is LegacySnapshot {
 	return (
 		typeof value === 'object' &&
 		value !== null &&
@@ -34,6 +65,35 @@ function isSnapshot(value: unknown): value is Snapshot {
 		'workout' in value &&
 		'activeSetId' in value
 	);
+}
+
+function isRestSnapshot(value: unknown): value is RestSnapshot {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		!Array.isArray(value) &&
+		'endsAt' in value &&
+		typeof value.endsAt === 'number' &&
+		'seconds' in value &&
+		typeof value.seconds === 'number' &&
+		'exerciseId' in value &&
+		typeof value.exerciseId === 'string'
+	);
+}
+
+/**
+ * The two rest fields arrived after snapshots existed, and a device mid-session
+ * when the app updates holds one without them. Filling them in is the whole
+ * reason this is a normaliser rather than a guard: rejecting the shape would
+ * discard a half-logged workout to gain a feature that had not started yet.
+ */
+function settleSnapshot(value: LegacySnapshot): Snapshot {
+	return {
+		workout: value.workout,
+		activeSetId: value.activeSetId,
+		rest: isRestSnapshot(value.rest) ? value.rest : null,
+		muted: value.muted === true
+	};
 }
 
 export class Store {
@@ -287,14 +347,99 @@ export class Store {
 		return isExertionScalePreference(record.payload) ? record.payload.scale : 'rpe';
 	}
 
+	public async setRestDefault(preference: RestDefaultPreference, updatedAt: number): Promise<void> {
+		const payload: RestDefaultPreference = {
+			enabled: preference.enabled,
+			seconds: settleRestSeconds(preference.seconds)
+		};
+
+		await this.write(REST_DEFAULT_ID, 'preference', updatedAt, payload);
+	}
+
+	/**
+	 * One pass over the `preference` index rather than a read per exercise. A
+	 * session touches a dozen exercises and the tab bar wants this before the
+	 * first set, so a dozen indexed gets on the boot path is a dozen too many.
+	 */
+	public async restSettings(): Promise<RestSettings> {
+		const records = await this.db.getAllFromIndex('records', 'kind', 'preference');
+
+		const settings = defaultRestSettings();
+
+		for (const record of records.filter((live) => live.deletedAt === null)) {
+			if (record.id === REST_DEFAULT_ID && isRestDefaultPreference(record.payload)) {
+				settings.enabled = record.payload.enabled;
+				settings.seconds = settleRestSeconds(record.payload.seconds);
+
+				continue;
+			}
+
+			const exerciseId = restOverrideExercise(record.id);
+
+			if (exerciseId === null || !isRestOverridePreference(record.payload)) {
+				continue;
+			}
+
+			settings.overrides[exerciseId] =
+				record.payload.seconds === null ? null : settleRestSeconds(record.payload.seconds);
+		}
+
+		return settings;
+	}
+
+	/**
+	 * One exercise's own duration, or `null` for never-rest. Clearing an override
+	 * is `clearRestOverride` and not a write of null — the two are different
+	 * answers, and only one of them is "no opinion".
+	 */
+	public async setRestOverride(
+		exerciseId: string,
+		seconds: number | null,
+		updatedAt: number
+	): Promise<void> {
+		const payload: RestOverridePreference = {
+			seconds: seconds === null ? null : settleRestSeconds(seconds)
+		};
+
+		await this.write(restOverrideId(exerciseId), 'preference', updatedAt, payload);
+	}
+
+	public async clearRestOverride(exerciseId: string, deletedAt: number): Promise<void> {
+		await this.tombstone(restOverrideId(exerciseId), 'preference', deletedAt);
+	}
+
 	public async saveSnapshot(snapshot: Snapshot): Promise<void> {
 		await this.db.put('meta', snapshot, SNAPSHOT_KEY);
+	}
+
+	/**
+	 * The rest half of the snapshot, without the workout half.
+	 *
+	 * The bar is docked in the tab layout and answers a thumb from any screen in
+	 * the app, so a skip can happen with the workout page unmounted and its
+	 * save effect not running. Read-modify-write rather than a `put`, for the
+	 * reason `updateWorkout` uses one: writing the whole snapshot from here would
+	 * need a tree this caller does not have, and inventing one would overwrite
+	 * the session.
+	 *
+	 * Silently no-op when no session is stored — a rest cannot outlive the
+	 * workout that started it, and there is nothing to attach this to.
+	 */
+	public async saveRest(rest: RestSnapshot | null, muted: boolean): Promise<void> {
+		const tx = this.db.transaction('meta', 'readwrite');
+		const value = await tx.store.get(SNAPSHOT_KEY);
+
+		if (isSnapshot(value)) {
+			await tx.store.put(Object.assign(settleSnapshot(value), { rest, muted }), SNAPSHOT_KEY);
+		}
+
+		await tx.done;
 	}
 
 	public async loadSnapshot(): Promise<Snapshot | null> {
 		const value = await this.db.get('meta', SNAPSHOT_KEY);
 
-		return isSnapshot(value) ? value : null;
+		return isSnapshot(value) ? settleSnapshot(value) : null;
 	}
 
 	public async clearSnapshot(): Promise<void> {

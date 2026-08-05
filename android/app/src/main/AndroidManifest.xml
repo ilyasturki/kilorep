@@ -72,4 +72,14 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        The rest timer's alarm. `POST_NOTIFICATIONS`, `WAKE_LOCK` and
+        `RECEIVE_BOOT_COMPLETED` are declared by the local-notifications plugin
+        itself and merge in from there; this one does not, and without it
+        Android 12+ silently downgrades an exact alarm to an inexact one —
+        delivered whenever Doze next wakes, which for a two-minute rest can be
+        many minutes late.
+    -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 </manifest>

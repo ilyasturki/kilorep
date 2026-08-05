@@ -97,14 +97,24 @@ export class WorkoutSession {
 		rateSet(this.workout, setId, rpe);
 	}
 
-	public commit(weight: number, reps: number): void {
+	/**
+	 * The id is the answer because the cursor has already left by the time this
+	 * returns, and what a commit earns in rest is a question about the set that
+	 * was just finished, not the one now in front of the user. Asked by the
+	 * screen rather than answered here: this class knows the tree and the
+	 * history, and nothing about the user's rest settings or the timer they
+	 * drive.
+	 */
+	public commit(weight: number, reps: number): string | null {
 		const id = this.activeSetId;
 
 		if (id === null || !commitSet(this.workout, id, weight, reps)) {
-			return;
+			return null;
 		}
 
 		this.#focus(advanceFrom(this.workout, id)?.set.id ?? null);
+
+		return id;
 	}
 
 	public unlogSet(setId: string): void {

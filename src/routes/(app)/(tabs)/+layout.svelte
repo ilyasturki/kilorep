@@ -5,6 +5,8 @@
 
 	import { covers, isActive, navTabs } from '$lib/nav/bar.svelte';
 	import { press } from '$lib/ui/press';
+	import { activeWorkout } from '$lib/workout/active.svelte';
+	import RestBar from '$lib/workout/RestBar.svelte';
 
 	import type { LayoutProps, Snapshot } from './$types';
 
@@ -143,6 +145,13 @@
 		<div bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
 			{@render children()}
 		</div>
+	{/if}
+
+	<!-- The session guard is belt to the timer's braces: `activeWorkout.finish`
+	     already resets it, and a bar outliving the workout that started it would
+	     be the worst thing this feature could do. -->
+	{#if activeWorkout.session !== null}
+		<RestBar />
 	{/if}
 
 	<!-- `vt-tabbar` is what keeps this bar out of the sliding pane. The box that

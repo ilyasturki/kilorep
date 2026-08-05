@@ -1,11 +1,15 @@
 <script lang="ts">
+	import type { RestDefaultPreference } from '$lib/domain/preference';
 	import Section from '$lib/settings/Section.svelte';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
+	import { restSettings } from '$lib/settings/rest.svelte';
+	import RestDurationField from '$lib/settings/RestDurationField.svelte';
 	import { getStore } from '$lib/store/store';
 	import { syncSoon } from '$lib/sync/client';
 	import Chip from '$lib/ui/Chip.svelte';
 	import ChipGroup from '$lib/ui/ChipGroup.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
+	import Switch from '$lib/ui/Switch.svelte';
 
 	/**
 	 * First on the page, and above the account: the only section here that
@@ -37,6 +41,23 @@
 			syncSoon(userId);
 		}
 	}
+
+	/**
+	 * Rest's permanent answer. PRODUCT.md let the feature back in on the
+	 * condition that it can be switched off, and this is the switch — off means
+	 * no bar, no scheduling and no notification, not a timer running quietly.
+	 *
+	 * The duration below it stays visible while it is off. A switch that hides
+	 * the thing it governs makes the user turn a feature on to find out what they
+	 * are turning on, and the field is one row.
+	 */
+	async function chooseRest(patch: Partial<RestDefaultPreference>) {
+		await restSettings.setDefault(await getStore(), patch);
+
+		if (userId !== null) {
+			syncSoon(userId);
+		}
+	}
 </script>
 
 <Section title="Sets">
@@ -55,10 +76,40 @@
 		</ListRow>
 	</li>
 
+	<!-- Both controls carry their own label and description and lay themselves
+	     out as a full-width row, so they sit in the `<li>` directly rather than
+	     inside a `ListRow` that would print the name a second time. The padding
+	     is `ListRow`'s own, so they part from the row above on the same line. -->
+	<li class="min-h-row px-3 py-2">
+		<Switch
+			label="Rest timer"
+			description="Starts when you log a working set"
+			bind:checked={
+				() => restSettings.current.enabled, (next) => void chooseRest({ enabled: next })
+			}
+		/>
+	</li>
+
+	<li class="min-h-row px-3 py-2">
+		<RestDurationField
+			label="Default rest"
+			description="Unless the exercise says otherwise"
+			seconds={restSettings.current.seconds}
+			disabled={!restSettings.current.enabled}
+			onchange={(next) => void chooseRest({ seconds: next })}
+		/>
+	</li>
+
 	{#snippet footer()}
 		<p class="text-sm text-pretty text-ink-muted">
 			The same set reads <span class="font-bold text-ink">RPE 8</span>
 			or <span class="font-bold text-ink">RIR 2</span>.
+		</p>
+
+		<p class="text-sm text-pretty text-ink-muted">
+			Rest counts down when you log a working set — never after a warmup, and once per round in a
+			superset. It runs at the foot of the app rather than on a screen of its own, and the phone is
+			notified when it ends. An exercise can carry its own duration; that lives on the exercise.
 		</p>
 	{/snippet}
 </Section>

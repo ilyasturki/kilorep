@@ -2,24 +2,34 @@
 	import { catalog } from '$lib/catalog';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
+	import { restLabel } from '$lib/domain/rest';
 	import { rawPr } from '$lib/domain/stats';
 	import { kin } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, loadModeNote, ordinal } from '$lib/exercises/label';
+	import { restSettings } from '$lib/settings/rest.svelte';
+	import RestDurationField from '$lib/settings/RestDurationField.svelte';
+	import { getStore } from '$lib/store/store';
+	import { syncSoon } from '$lib/sync/client';
 	import Badge from '$lib/ui/Badge.svelte';
+	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
+	import Switch from '$lib/ui/Switch.svelte';
 	import { press } from '$lib/ui/press';
 	import Calendar from '$lib/ui/icons/Calendar.svelte';
 
 	import type { PageProps } from './$types';
 
 	/**
-	 * One exercise: what it is, the family around it, the raw best, the
-	 * sessions behind it. Catalog entries are immutable and customs are a later
-	 * slice, so every action here is a navigation — the family links, and each
-	 * history entry through to the workout it came from. This screen writes
-	 * nothing.
+	 * One exercise: what it is, how long it rests, the family around it, the raw
+	 * best, the sessions behind it.
+	 *
+	 * Catalog entries are immutable and customs are a later slice, so nothing
+	 * here edits the exercise — the rest override is a preference record of its
+	 * own, keyed by the slug, which is why a screen over a read-only catalog can
+	 * carry a control at all. Everything else is still a navigation: the family
+	 * links, and each history entry through to the workout it came from.
 	 *
 	 * The est-1RM trend is settled but still absent: charting is decided now
 	 * — the Dashboard's sparklines, drawn from the same `estTrend` — and the
@@ -53,6 +63,34 @@
 	// Captured once per mount, like `ExerciseList`'s: `12d` is wrong for at most
 	// a day, and a navigation remounts this screen.
 	const now = Date.now();
+
+	/**
+	 * This exercise's own rest, in the three states it actually has.
+	 *
+	 * `undefined` is no opinion — the Settings default applies and nothing is
+	 * stored. `null` is *never rest on this*, the exercise you circuit. A number
+	 * is a duration of its own. The first two are different answers and the UI
+	 * has to keep them apart: turning the switch off writes never-rest, while
+	 * "Use the default" tombstones the record and goes back to having no opinion.
+	 */
+	const override = $derived(restSettings.overrideFor(exercise.id));
+
+	const rests = $derived(override !== null);
+	const effective = $derived(override ?? restSettings.current.seconds);
+
+	const defaultLabel = $derived(restLabel(restSettings.current.seconds * 1000));
+
+	async function write(seconds: number | null | undefined) {
+		const store = await getStore();
+
+		await (seconds === undefined
+			? restSettings.clearOverride(store, exercise.id)
+			: restSettings.setOverride(store, exercise.id, seconds));
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -141,6 +179,41 @@
 			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-36 shrink-0" />
 		</div>
 	</header>
+
+	<!-- Hidden entirely while rest is switched off in Settings — a duration for a
+	     timer that never runs is a question with no consequence. -->
+	{#if restSettings.current.enabled}
+		<section class="flex flex-col gap-3">
+			<h2 class="px-3 label-caps">Rest</h2>
+
+			<div class="flex flex-col gap-3 px-3">
+				<Switch
+					label="Rest on this exercise"
+					description={rests
+						? 'A countdown starts when a working set is logged'
+						: 'No countdown — this one is never timed'}
+					bind:checked={() => rests, (next) => void write(next ? effective : null)}
+				/>
+
+				{#if rests}
+					<RestDurationField
+						label="Duration"
+						description={override === undefined
+							? `The ${defaultLabel} default`
+							: 'This exercise only'}
+						seconds={effective}
+						onchange={(next) => void write(next)}
+					/>
+
+					{#if override !== undefined}
+						<Button variant="secondary" onclick={() => void write(undefined)}>
+							Use the default ({defaultLabel})
+						</Button>
+					{/if}
+				{/if}
+			</div>
+		</section>
+	{/if}
 
 	{#if family.length > 0}
 		<section class="flex flex-col gap-2">

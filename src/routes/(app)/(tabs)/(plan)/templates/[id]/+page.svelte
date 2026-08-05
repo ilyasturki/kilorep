@@ -309,7 +309,9 @@
 
 		await data.store.saveSnapshot({
 			workout,
-			activeSetId: first === null ? null : first.set.id
+			activeSetId: first === null ? null : first.set.id,
+			rest: null,
+			muted: false
 		});
 
 		// The holder just changed, so the workout loads' cached answers are stale

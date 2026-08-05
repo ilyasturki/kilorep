@@ -3,9 +3,11 @@ import { redirect } from '@sveltejs/kit';
 import { session } from '$lib/api/auth';
 import { ApiError, NO_SERVER, deviceToken } from '$lib/api/client';
 import { exertionScale } from '$lib/settings/exertion.svelte';
+import { restSettings } from '$lib/settings/rest.svelte';
 import { getStore } from '$lib/store/store';
 import { syncNow } from '$lib/sync/client';
 import { activeWorkout } from '$lib/workout/active.svelte';
+import { restTimer } from '$lib/workout/rest.svelte';
 
 import type { LayoutLoad } from './$types';
 
@@ -58,6 +60,8 @@ async function restoreSession(): Promise<void> {
 
 	if (snapshot !== null) {
 		activeWorkout.begin(await store.history(), snapshot);
+
+		restTimer.resume(snapshot.rest, snapshot.muted);
 	}
 }
 
@@ -66,7 +70,13 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
 	// and none of them owns the fact. Awaited so no screen paints a rating in the
 	// wrong language and then swaps it out from under the eye — it is one
 	// indexed read of one record, on a connection the resume above just opened.
-	await Promise.all([restoreSession(), exertionScale.load(await getStore())]);
+	// Rest joins them for the same reason and one more: the first commit of a
+	// session decides how long to rest, and a screen that painted before this
+	// landed would time a set against the factory default rather than against
+	// what the user set.
+	const store = await getStore();
+
+	await Promise.all([restoreSession(), exertionScale.load(store), restSettings.load(store)]);
 
 	// The phone answers "signed in" from what it holds, before it asks the
 	// network anything. A connected server with no token is the local-only state

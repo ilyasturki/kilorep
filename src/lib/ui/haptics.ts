@@ -15,3 +15,12 @@ export function tapCommit(): void {
 export function tapLift(): void {
 	void buzz(ImpactStyle.Light);
 }
+
+/**
+ * Rest is up. The heaviest of the three, because it is the only one the app
+ * initiates rather than answers — every other buzz here confirms something a
+ * thumb just did, and this one arrives at a phone lying on a bench.
+ */
+export function tapAlarm(): void {
+	void buzz(ImpactStyle.Heavy);
+}
