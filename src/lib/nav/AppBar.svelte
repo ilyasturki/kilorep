@@ -11,6 +11,14 @@
 	 * both and a snippet rendered in each would put two of every FINISH in the
 	 * document. What changes across the breakpoint is which members are drawn,
 	 * never how many times the slot is.
+	 *
+	 * A flex row under a thumb and a three-column grid above `lg`, where the tabs
+	 * take the middle track and the action the last. Every screen in this app
+	 * reads in a column centred in the window, and tabs pinned to the left edge
+	 * pointed at nothing — but centring them with an auto margin would only have
+	 * split the space *left over* beside the action, which is off-centre by half
+	 * an action. Two `1fr` gutters put them on the window's axis whatever sits in
+	 * the right one, including nothing.
 	 */
 	const slot = appBarSlot();
 
@@ -39,7 +47,10 @@
 </script>
 
 <header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t">
-	<div class="flex min-h-chrome items-center gap-2 px-3 py-2 lg:gap-3">
+	<div
+		class="flex min-h-chrome items-center gap-2 px-3 py-2 lg:grid
+			lg:grid-cols-[1fr_auto_1fr] lg:gap-3"
+	>
 		{#if slot.leading !== null}
 			<div class="lg:hidden">{@render slot.leading()}</div>
 		{:else if parent !== null}
@@ -59,7 +70,7 @@
 			{title}
 		</h1>
 
-		<nav aria-label="Main" class="hidden items-center gap-1 lg:flex">
+		<nav aria-label="Main" class="hidden items-center gap-1 lg:col-start-2 lg:flex">
 			{#each navTabs() as tab (tab.href)}
 				{@const active = isActive(pathname, tab)}
 				{@const Icon = (active && tab.iconActive) || tab.icon}
@@ -85,7 +96,7 @@
 		</nav>
 
 		{#if slot.action !== null}
-			<div class="ml-auto shrink-0">
+			<div class="ml-auto shrink-0 lg:col-start-3 lg:ml-0 lg:justify-self-end">
 				{@render slot.action()}
 			</div>
 		{/if}

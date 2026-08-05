@@ -19,6 +19,7 @@
 	import MenuItem from '$lib/ui/MenuItem.svelte';
 	import { HOLD_MS, press, SLOP } from '$lib/ui/press';
 	import SearchField from '$lib/ui/SearchField.svelte';
+	import Segmented from '$lib/ui/Segmented.svelte';
 	import Select from '$lib/ui/Select.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import SetRow from '$lib/ui/SetRow.svelte';
@@ -210,6 +211,14 @@
 	let equipment = $state('dumbbell');
 	let muscles = $state(['chest', 'triceps']);
 	let chipMuscles = $state(['chest']);
+	// Buttons here, not links: the Plan layout passes an `href` per segment and
+	// lets the route own the value, which on this page would navigate off it.
+	// Everything else about the two is the same control.
+	let half = $state('templates');
+	const halves = [
+		{ value: 'templates', label: 'Templates', icon: Stack },
+		{ value: 'exercises', label: 'Exercises', icon: ListBullets }
+	];
 	let date = $state(today(getLocalTimeZone()));
 	let keepAwake = $state(true);
 	let syncEnabled = $state(false);
@@ -330,6 +339,12 @@
 						<Chip value={muscle.value}>{muscle.label}</Chip>
 					{/each}
 				</ChipGroup>
+			</article>
+
+			<article class={card}>
+				<h2 class="label-caps">Segmented</h2>
+				<Segmented bind:value={half} items={halves} label="Plan" />
+				<span class={caption}>full width · `icon` per segment · arrow keys between them</span>
 			</article>
 
 			<article class={card}>

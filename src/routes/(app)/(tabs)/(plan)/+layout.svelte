@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
+	import Segmented from '$lib/ui/Segmented.svelte';
+	import ListBullets from '$lib/ui/icons/ListBullets.svelte';
+	import Stack from '$lib/ui/icons/Stack.svelte';
+
 	import type { LayoutProps } from './$types';
 
 	/**
@@ -19,40 +23,24 @@
 	 */
 	let { children }: LayoutProps = $props();
 
+	/**
+	 * `value` is the address, so the route is what lights a half and there is no
+	 * second copy of "which one is open" to fall out of step with it.
+	 *
+	 * `Stack` is the Plan tab's own glyph, standing here for the half the tab
+	 * opens on. Exercises takes `ListBullets` and not `Barbell`, which is the one
+	 * that would read as the lift: `Barbell` is Train's, and a segment wearing
+	 * another tab's mark points at the wrong place from across the room.
+	 */
 	const halves = [
-		{ href: '/templates', label: 'Templates' },
-		{ href: '/exercises', label: 'Exercises' }
+		{ value: '/templates', href: '/templates', label: 'Templates', icon: Stack },
+		{ value: '/exercises', href: '/exercises', label: 'Exercises', icon: ListBullets }
 	];
 </script>
 
 {#if halves.some((half) => half.href === page.url.pathname)}
 	<div class="column-content flex flex-col px-3 pt-3">
-		<!-- A raised pill on a well, not the accent: `Chip` paints its selected
-		     state with the accent fill, and the accent means "this logs a set".
-		     `surface` over `sunken` is the depth ramp saying the same thing
-		     neutrally, and it reads in both themes without a per-theme pair. -->
-		<nav aria-label="Plan" class="flex max-w-sm gap-1 rounded-2xl bg-sunken p-1">
-			{#each halves as half (half.href)}
-				{@const active = page.url.pathname === half.href}
-
-				<!-- `replacestate` because a half is a filter, not a place: both are
-				     tab roots, and `back.ts` minimizes from a tab root, so pushing an
-				     entry here would make browser back undo a segment tap on the web
-				     while Android back quit the app. -->
-				<a
-					href={half.href}
-					data-sveltekit-replacestate
-					aria-current={active ? 'page' : undefined}
-					class={[
-						'flex min-h-chrome flex-1 items-center justify-center rounded-xl',
-						'text-md font-bold focus-ring transition-colors',
-						active ? 'bg-surface text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
-					]}
-				>
-					{half.label}
-				</a>
-			{/each}
-		</nav>
+		<Segmented items={halves} value={page.url.pathname} label="Plan" />
 	</div>
 {/if}
 
