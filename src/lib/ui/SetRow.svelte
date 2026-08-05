@@ -35,6 +35,7 @@
 	import type { Snippet } from 'svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		status: SetStatus;
@@ -51,44 +52,23 @@
 	const style = $derived(styles[status]);
 
 	const interactive = $derived(Boolean(onselect));
-
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	let fired = false;
-
-	function pressStart(anchor: HTMLElement) {
-		if (!onoptions) {
-			return;
-		}
-		fired = false;
-		timer = setTimeout(() => {
-			fired = true;
-			onoptions?.(anchor);
-		}, 500);
-	}
-
-	function pressEnd() {
-		clearTimeout(timer);
-	}
-
-	function select() {
-		if (fired) {
-			fired = false;
-			return;
-		}
-		onselect?.();
-	}
 </script>
 
+<!--
+	The press lives on the shell rather than the button inside it. The ⋯ is a
+	sibling holding the right edge, so a tint on the button alone would light two
+	thirds of a row — and the class the recognizer toggles, unlike `:active`,
+	does not travel up to ancestors on its own. Pointer and click events do bubble
+	up to here from the button, which is what lets one attachment cover both.
+-->
 <div
 	class={[
 		'@container relative grid grid-cols-[1fr_auto] items-center overflow-hidden',
 		style.shell,
-		// On the shell and not on the button inside it: the ⋯ is a sibling holding
-		// the right edge, so a tint on the button alone would light two thirds of
-		// a row. `:active` still fires here when the press lands on that button.
-		interactive && 'hover:bg-hover active:bg-surface-2',
+		interactive && 'press-sink hover:bg-hover press:bg-surface-2',
 		interactive && 'pointer-fine:transition-[background-color] pointer-fine:duration-100'
 	]}
+	{@attach press(() => onoptions)}
 >
 	{#if status === 'active'}
 		<div class="absolute inset-y-0 left-0 w-1.5 bg-accent-text" aria-hidden="true"></div>
@@ -96,16 +76,7 @@
 
 	<button
 		type="button"
-		onclick={select}
-		onpointerdown={(e) => pressStart(e.currentTarget)}
-		onpointerup={pressEnd}
-		onpointerleave={pressEnd}
-		onpointercancel={pressEnd}
-		oncontextmenu={(e) => {
-			if (!onoptions) return;
-			e.preventDefault();
-			onoptions(e.currentTarget);
-		}}
+		onclick={onselect}
 		class="grid h-full w-full grid-cols-[2rem_1fr_auto] items-center gap-3 py-2 pr-3
 			pl-4 text-left focus-ring-inset"
 	>

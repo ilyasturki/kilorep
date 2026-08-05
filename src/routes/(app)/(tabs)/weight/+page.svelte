@@ -5,6 +5,7 @@
 	import type { BodyweightEntry } from '$lib/domain/bodyweight';
 	import { localDateOf, rollingAverage, windowed } from '$lib/domain/bodyweight';
 	import { syncSoon } from '$lib/sync/client';
+	import EntryRowMenu from '$lib/weight/EntryRowMenu.svelte';
 	import TrendChart from '$lib/weight/TrendChart.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -189,12 +190,12 @@
 		sheetOpen = false;
 	}
 
-	async function deleteEntry() {
-		if (sheetDate === undefined) {
-			return;
-		}
-
-		const date = sheetDate.toString();
+	/**
+	 * Takes the date rather than reading the sheet's, because a held row deletes
+	 * without opening one. The sheet's own Delete is now just this with the
+	 * sheet's date and a close afterwards.
+	 */
+	async function removeEntry(date: string) {
 		const at = entries.findIndex((entry) => entry.date === date);
 
 		if (at !== -1) {
@@ -206,8 +207,26 @@
 		if (data.user) {
 			syncSoon(data.user.id);
 		}
+	}
+
+	async function deleteEntry() {
+		if (sheetDate === undefined) {
+			return;
+		}
+
+		await removeEntry(sheetDate.toString());
 
 		sheetOpen = false;
+	}
+
+	let menuOpen = $state(false);
+	let menuAnchor = $state<HTMLElement | null>(null);
+	let held = $state<BodyweightEntry | null>(null);
+
+	function hold(anchor: HTMLElement, entry: BodyweightEntry) {
+		held = entry;
+		menuAnchor = anchor;
+		menuOpen = true;
 	}
 </script>
 
@@ -272,7 +291,12 @@
 
 			<div class="list-group">
 				{#each listed as entry (entry.date)}
-					<ListRow title={rowTitle(entry.date)} chevron={false} onclick={() => openEdit(entry)}>
+					<ListRow
+						title={rowTitle(entry.date)}
+						chevron={false}
+						onclick={() => openEdit(entry)}
+						onhold={(anchor) => hold(anchor, entry)}
+					>
 						{#snippet trailing()}
 							{entry.kg} kg
 						{/snippet}
@@ -324,3 +348,13 @@
 		{/if}
 	</div>
 </Sheet>
+
+<EntryRowMenu
+	bind:open={menuOpen}
+	title={held === null ? '' : rowTitle(held.date)}
+	anchor={menuAnchor}
+	onedit={() => held !== null && openEdit(held)}
+	ondelete={() => {
+		if (held !== null) void removeEntry(held.date);
+	}}
+/>

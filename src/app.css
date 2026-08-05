@@ -264,6 +264,52 @@
 	}
 }
 
+/* What a press looks like. Who decides one is happening is `ui/press.ts`:
+   `:active` on a mouse, the `is-pressed` class on a finger.
+
+   Components write `press:bg-surface-2` where they used to write `active:`,
+   and stop caring which of the two is answering. The split is `(pointer:
+   coarse)` / `(pointer: fine)` — the same predicate as the target tokens and
+   Tailwind's own `pointer-fine:`, so an element cannot get a mouse's press
+   state at thumb size. */
+@custom-variant press {
+	@media (pointer: coarse) {
+		&.is-pressed {
+			@slot;
+		}
+	}
+	@media (pointer: fine) {
+		&:active {
+			@slot;
+		}
+	}
+}
+
+/* The press that travels. A surface takes ~2% under the thumb and springs back
+   past its own size on release — the overshoot is the whole point, and it is
+   `dragOrder`'s SETTLE curve, because a lifted row and a pressed one are the
+   same hand doing the same thing.
+
+   `scale` and not `transform`: drag offsets already own `transform` on some of
+   these elements, and an independent property cannot fight one.
+
+   Down is quick and flat, up is slow and springy. Symmetry would be wrong —
+   the press has to feel like it met the finger, and the release like the
+   surface pushed back.
+
+   For surfaces, not for chrome. A ⋯ or a stepper arm shrinking by 2% is
+   invisible at that size, and the tab bar has its own travel. */
+@utility press-sink {
+	@media (pointer: coarse) {
+		transition: scale 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+		&.is-pressed {
+			scale: 0.98;
+			transition: scale 90ms ease-out;
+		}
+	}
+}
+
 @theme inline {
 	--color-canvas: var(--canvas);
 	--color-surface: var(--surface);
@@ -1142,18 +1188,27 @@ html[data-bar='travel'] .vt-tabbar {
 		font-variant-numeric: tabular-nums;
 	}
 
-	button {
+	/* Anchors as well as buttons: half the tappable surfaces in the app are
+	   links — plan cards, exercise rows, history rows, every tab — and left out
+	   of this they flash Android's blue highlight over a press state that has
+	   already answered the finger. Two systems replying to one tap. */
+	button,
+	a,
+	[role='button'] {
 		-webkit-tap-highlight-color: transparent;
 		touch-action: manipulation;
-	}
 
-	/* Selection is disabled for fingers only. On touch it stops Android raising
-	   selection handles part-way through a long-press on a set row; on a mouse
-	   it would just prevent a user copying a weight, so it is not applied. */
-	@media (pointer: coarse) {
-		button {
+		/* Selection is disabled for fingers only. On touch it stops Android raising
+		   selection handles part-way through a long-press on a set row; on a mouse
+		   it would just prevent a user copying a weight, so it is not applied.
+
+		   The callout goes with it: the handles are only half of what a long press
+		   summons on Android, and the menu offering to copy or share the text under
+		   the finger arrives on top of the surface the gesture was actually for. */
+		@media (pointer: coarse) {
 			user-select: none;
 			-webkit-user-select: none;
+			-webkit-touch-callout: none;
 		}
 	}
 }

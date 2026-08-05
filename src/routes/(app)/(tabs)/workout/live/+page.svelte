@@ -22,6 +22,7 @@
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import { fullyVisible, revealNearest, revealSpan, revealStart } from '$lib/ui/scroll';
 	import Stack from '$lib/ui/icons/Stack.svelte';
+	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
 
@@ -541,7 +542,8 @@
 					aria-label="Session overview"
 					onclick={() => (overview = true)}
 					class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-ink-muted focus-ring hover:bg-hover active:bg-surface-2"
+					border-line text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+					{@attach press()}
 				>
 					<Stack size={20} />
 				</button>

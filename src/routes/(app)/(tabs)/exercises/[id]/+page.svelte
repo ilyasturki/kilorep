@@ -9,6 +9,7 @@
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
+	import { press } from '$lib/ui/press';
 	import Calendar from '$lib/ui/icons/Calendar.svelte';
 
 	import type { PageProps } from './$types';
@@ -184,9 +185,10 @@
 					<a
 						href="/history/{session.workoutId}"
 						data-list-row
-						class="flex flex-col gap-2 px-3 py-2.5 focus-ring hover:bg-hover
-							active:bg-surface-2 pointer-fine:transition-[background-color]
-							pointer-fine:duration-100"
+						class="flex press-sink flex-col gap-2 px-3 py-2.5 focus-ring
+							hover:bg-hover pointer-fine:transition-[background-color]
+							pointer-fine:duration-100 press:bg-surface-2"
+						{@attach press()}
 					>
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-bold text-ink-faint">

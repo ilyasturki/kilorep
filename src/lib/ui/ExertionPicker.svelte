@@ -15,6 +15,7 @@
 	import ChipGroup from '$lib/ui/ChipGroup.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		value: number | null;
@@ -91,9 +92,10 @@
 		onclick={() => (mode = 'chips')}
 		class={[
 			'flex min-h-11 w-20 shrink-0 flex-col items-center justify-center gap-0.5',
-			'rounded-2xl bg-sunken focus-ring hover:bg-hover active:bg-surface-2',
+			'rounded-2xl bg-sunken focus-ring hover:bg-hover press:bg-surface-2',
 			'pointer-fine:transition-[background-color] pointer-fine:duration-100'
 		]}
+		{@attach press()}
 	>
 		<span
 			class={[
@@ -129,7 +131,8 @@
 			aria-label="Back to the {name} chips"
 			onclick={() => (mode = 'chips')}
 			class="grid w-11 shrink-0 place-items-center rounded-2xl bg-sunken text-2xl leading-none
-				font-bold text-ink-muted focus-ring hover:bg-hover active:bg-surface-2 active:text-ink"
+				font-bold text-ink-muted focus-ring hover:bg-hover press:bg-surface-2 press:text-ink"
+			{@attach press()}
 		>
 			‹
 		</button>

@@ -7,6 +7,7 @@
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		cursor: SetCursor;
@@ -67,7 +68,8 @@
 				aria-label="Set options"
 				onclick={(e) => onoptions(e.currentTarget)}
 				class="-mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-lg
-					text-ink-faint focus-ring hover:bg-hover active:bg-surface-2"
+					text-ink-faint focus-ring hover:bg-hover press:bg-surface-2"
+				{@attach press()}
 			>
 				<More size={20} />
 			</button>

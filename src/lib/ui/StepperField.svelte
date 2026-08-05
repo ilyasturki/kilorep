@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import { parseEntry, settle } from '$lib/domain/workout';
+	import { tapLift } from '$lib/ui/haptics';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		value: number | null;
@@ -79,7 +81,13 @@
 
 		let delay = REPEAT_FROM;
 		const tick = () => {
-			repeating = true;
+			// Only as the run starts. The buzz says the field has taken the hold as a
+			// hold and is now driving itself — one per gesture, not one per step,
+			// which at a 50ms floor would be a rattle rather than a signal.
+			if (!repeating) {
+				tapLift();
+				repeating = true;
+			}
 
 			if (!nudge(direction)) {
 				return;
@@ -156,9 +164,10 @@
 			// the gesture outright would make a fat target in the logging loop a
 			// dead zone for the one thing every screen does.
 			'touch-manipulation select-none',
-			'text-ink-muted hover:bg-hover active:bg-surface-2 active:text-ink',
+			'text-ink-muted hover:bg-hover press:bg-surface-2 press:text-ink',
 			corner
 		]}
+		{@attach press()}
 	>
 		{direction < 0 ? '−' : '+'}
 	</button>

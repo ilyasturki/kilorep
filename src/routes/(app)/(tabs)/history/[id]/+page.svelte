@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import { goto, invalidate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
 	import { driftFrom, hasDrift, hasSetDrift } from '$lib/domain/drift';
@@ -11,23 +11,21 @@
 		addSet,
 		cursorFor,
 		draftSet,
-		firstUncompleted,
 		markSet,
 		moveEntry,
 		rateSet,
 		removeExercise,
 		removeSet,
-		repeatFrom,
 		replaceExercise
 	} from '$lib/domain/workout';
 	import { workoutTitle } from '$lib/history/label';
+	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
 	import { syncSoon } from '$lib/sync/client';
 	import { entriesWithMeta, legOf } from '$lib/workout/groups';
-	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
@@ -41,6 +39,7 @@
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
 
@@ -406,40 +405,18 @@
 		await goto('/history');
 	}
 
-	/**
-	 * Repeat-as-resume, the template editor's handoff verbatim: `repeatFrom`
-	 * mints the session, the snapshot is written, and the workout screen begins
-	 * from it on arrival — no second start-path to keep honest.
-	 */
 	async function launch() {
-		activeWorkout.finish();
-
-		const next = repeatFrom(workout, Date.now(), () => crypto.randomUUID());
-		const first = firstUncompleted(next);
-
-		await data.store.saveSnapshot({
-			workout: next,
-			activeSetId: first === null ? null : first.set.id
-		});
-
-		// The holder just changed, so the workout loads' cached answers are stale
-		// — including any the hover-preloader took while a session was still
-		// live. `active.svelte.ts` has the whole story.
-		await invalidate(SESSION_DEP);
-		await goto('/workout');
+		await launchRepeat(data.store, workout);
 	}
 
 	let discardOpen = $state(false);
 
 	/**
-	 * The same gate the editor's Start stands behind, for the same reason:
-	 * exactly one workout is active at a time, and a live session — or a
-	 * snapshot waiting out a reload — may hold logged sets that overwriting
-	 * would destroy. This is a reading surface, not the gym floor; the dialog
-	 * costs nothing the loop rule protects.
+	 * The same gate the editor's Start stands behind. This is a reading surface,
+	 * not the gym floor; the dialog costs nothing the loop rule protects.
 	 */
 	async function repeat() {
-		if (activeWorkout.session !== null || (await data.store.loadSnapshot()) !== null) {
+		if (await repeatBlocked(data.store)) {
 			discardOpen = true;
 
 			return;
@@ -520,7 +497,8 @@
 						menuOpen = true;
 					}}
 					class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full
-						text-ink-muted focus-ring hover:bg-hover active:bg-surface-2"
+						text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+					{@attach press()}
 				>
 					<More size={20} />
 				</button>

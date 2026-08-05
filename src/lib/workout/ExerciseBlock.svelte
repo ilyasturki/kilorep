@@ -10,6 +10,7 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
+	import { press } from '$lib/ui/press';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import { statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
@@ -96,12 +97,9 @@
 	<div data-exercise-head class="flex scroll-mt-3 items-center gap-1">
 		<a
 			href="/exercises/{meta.id}"
-			oncontextmenu={(e) => {
-				e.preventDefault();
-				onexercise(e.currentTarget);
-			}}
-			class="min-w-0 flex-1 rounded-xl px-1 py-1 text-left focus-ring hover:bg-hover
-				active:bg-surface-2"
+			class="min-w-0 flex-1 press-sink rounded-xl px-1 py-1 text-left focus-ring
+				hover:bg-hover press:bg-surface-2"
+			{@attach press(() => onexercise)}
 		>
 			<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
 			<!-- Equipment alone. The load mode used to ride here as `· per hand`,
@@ -115,8 +113,9 @@
 			aria-label="Exercise options"
 			onclick={(e) => onexercise(e.currentTarget)}
 			class="grid size-9 shrink-0 place-items-center rounded-lg text-ink-faint focus-ring
-				hover:bg-sunken hover:text-ink-muted pointer-fine:transition-[background-color,color]
-				pointer-fine:duration-100"
+				hover:bg-sunken hover:text-ink-muted pointer-fine:transition-[background-color,color] pointer-fine:duration-100
+				press:bg-sunken press:text-ink-muted"
+			{@attach press()}
 		>
 			<More size={20} />
 		</button>

@@ -39,6 +39,7 @@
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
+	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
 
@@ -367,7 +368,8 @@
 		aria-label="Delete template"
 		onclick={() => (deleteOpen = true)}
 		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line
-			text-danger focus-ring hover:bg-hover active:bg-surface-2"
+			text-danger focus-ring hover:bg-hover press:bg-surface-2"
+		{@attach press()}
 	>
 		<Trash {size} />
 	</button>

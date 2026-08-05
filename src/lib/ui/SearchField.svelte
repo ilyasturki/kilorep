@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ClassValue, HTMLInputAttributes } from 'svelte/elements';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
+	import { press } from '$lib/ui/press';
 
 	type Props = Omit<HTMLInputAttributes, 'value' | 'class' | 'type'> & {
 		label: string;
@@ -53,7 +54,8 @@
 			onclick={clear}
 			class="absolute top-1/2 right-2 grid size-9 -translate-y-1/2 place-items-center rounded-full
 				text-xl leading-none font-bold text-ink-muted focus-ring
-				hover:bg-hover active:bg-surface-2"
+				hover:bg-hover press:bg-surface-2"
+			{@attach press()}
 		>
 			×
 		</button>

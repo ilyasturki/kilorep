@@ -17,6 +17,7 @@
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import MenuItem from '$lib/ui/MenuItem.svelte';
+	import { HOLD_MS, press, SLOP } from '$lib/ui/press';
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import Select from '$lib/ui/Select.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
@@ -261,6 +262,40 @@
 				</div>
 			</article>
 
+			<!-- The one card that cannot be read, only pressed. Everything here is
+			     invisible on a mouse: `press:` falls back to `:active`, the sink is
+			     coarse-only, and the hold is a touch gesture with `contextmenu` as
+			     its desk stand-in. Open it on a phone, or with device emulation on. -->
+			<article class={card}>
+				<h2 class="label-caps">press</h2>
+
+				<div class={specimen}>
+					<button
+						type="button"
+						class="min-h-row w-full press-sink rounded-xl border border-line px-4 text-md
+							font-bold text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+						{@attach press()}
+					>
+						Hold me — nothing happens
+					</button>
+					<span class={caption}>tint + sink, no `onhold`</span>
+				</div>
+
+				<div class={specimen}>
+					<button
+						type="button"
+						class="min-h-row w-full press-sink rounded-xl border border-line px-4 text-md
+							font-bold text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+						{@attach press(() => openMenu)}
+					>
+						Hold me — a menu opens
+					</button>
+					<span class={caption}>
+						`onhold` — buzzes at {HOLD_MS}ms, cancels past {SLOP}px, eats the click
+					</span>
+				</div>
+			</article>
+
 			<article class="{card} row-span-2">
 				<h2 class="label-caps">ChipGroup</h2>
 				{@render pickers(true)}
@@ -374,7 +409,8 @@
 						aria-label="Exercise options"
 						onclick={(e) => openMenu(e.currentTarget)}
 						class="grid min-h-chrome w-11 place-items-center rounded-full text-ink-muted
-							focus-ring hover:bg-hover active:bg-surface-2"
+							focus-ring hover:bg-hover press:bg-surface-2"
+						{@attach press()}
 					>
 						<More size={20} />
 					</button>
@@ -535,8 +571,9 @@
 								style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
 								class={[
 									'flex min-h-row items-center gap-1 rounded-xl pr-1 pl-3',
-									lifted ? 'bg-surface shadow-lg' : 'hover:bg-hover active:bg-surface-2'
+									lifted ? 'bg-surface shadow-lg' : 'hover:bg-hover press:bg-surface-2'
 								]}
+								{@attach press()}
 							>
 								<button
 									type="button"

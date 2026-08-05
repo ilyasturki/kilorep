@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { backDepth } from '$lib/nav/depth';
+	import { press } from '$lib/ui/press';
 
 	let {
 		href,
@@ -28,9 +29,10 @@
 	class={[
 		'grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border',
 		'border-line text-xl leading-none text-ink-muted focus-ring hover:bg-hover',
-		'active:bg-surface-2',
+		'press:bg-surface-2',
 		extra
 	]}
+	{@attach press()}
 >
 	‹
 </a>

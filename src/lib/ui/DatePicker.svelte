@@ -3,7 +3,7 @@
 
 	const nav =
 		'focus-ring grid size-10 place-items-center rounded-xl text-2xl leading-none ' +
-		'font-bold text-ink-muted hover:bg-hover active:bg-surface-2 ' +
+		'font-bold text-ink-muted hover:bg-hover press:bg-surface-2 ' +
 		'data-disabled:pointer-events-none data-disabled:opacity-30';
 
 	const day =
@@ -34,6 +34,7 @@
 	import SheetHeader from '$lib/ui/SheetHeader.svelte';
 	import CalendarIcon from '$lib/ui/icons/Calendar.svelte';
 	import { registerOverlay } from '$lib/ui/overlays';
+	import { press } from '$lib/ui/press';
 	import { wideViewport } from '$lib/ui/viewport';
 
 	type Props = {
@@ -82,9 +83,20 @@
 	>
 		{#snippet children({ months, weekdays })}
 			<Calendar.Header class="flex items-center justify-between pb-1">
-				<Calendar.PrevButton class={nav} aria-label="Previous month">‹</Calendar.PrevButton>
+				<!-- `child`, so the press attachment has a real element to hold onto:
+				     bits-ui renders its own button otherwise, and an attachment cannot
+				     reach through a component. Same shape `MenuItem` uses. -->
+				<Calendar.PrevButton aria-label="Previous month">
+					{#snippet child({ props })}
+						<button {...props} class={nav} {@attach press()}>‹</button>
+					{/snippet}
+				</Calendar.PrevButton>
 				<Calendar.Heading class="text-base font-extrabold tracking-tight" />
-				<Calendar.NextButton class={nav} aria-label="Next month">›</Calendar.NextButton>
+				<Calendar.NextButton aria-label="Next month">
+					{#snippet child({ props })}
+						<button {...props} class={nav} {@attach press()}>›</button>
+					{/snippet}
+				</Calendar.NextButton>
 			</Calendar.Header>
 
 			{#each months as calendarMonth (calendarMonth.value.toString())}

@@ -6,6 +6,7 @@
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		items: T[];
@@ -40,6 +41,8 @@
 			animate:flip={{ duration: slide }}
 			class={lifted ? 'relative z-10 rounded-xl bg-sunken' : ''}
 		>
+			<!-- Press tint only, and no `onhold`: in a list you reorder, the hold is
+			     already spoken for, and the lift brings its own scale and shadow. -->
 			<div
 				style:transform={lifted ? `translateY(${drag.offset}px) scale(1.02)` : null}
 				style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
@@ -49,8 +52,9 @@
 					// Opaque and airborne. Tooltip is the only other thing in the app with
 					// a shadow, and it is the only other thing that leaves the layout — so
 					// the rule stays "a shadow means it is off the page".
-					lifted ? 'bg-surface shadow-lg' : 'hover:bg-hover active:bg-surface-2'
+					lifted ? 'bg-surface shadow-lg' : 'hover:bg-hover press:bg-surface-2'
 				]}
+				{@attach press()}
 			>
 				<button
 					type="button"

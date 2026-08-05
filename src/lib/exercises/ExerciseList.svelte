@@ -4,7 +4,7 @@
 
 	const chip =
 		'relative inline-flex min-h-chip items-center rounded-xl bg-sunken px-3 text-sm font-bold ' +
-		'text-ink-muted select-none focus-ring hover:bg-hover active:bg-surface-2 ' +
+		'text-ink-muted select-none focus-ring hover:bg-hover press:bg-surface-2 press-sink ' +
 		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
 
 	// What the merged row is actually pressed on: a link the size of the whole
@@ -14,8 +14,10 @@
 	// share, not to either.
 	const backdrop = 'absolute inset-0 focus-ring';
 
+	// No sink on the cell: it is a fill behind the chips rather than a shape of
+	// its own, and one that shrinks pulls away from the row it is filling.
 	const cell =
-		'relative flex flex-col hover:bg-hover active:bg-surface-2 ' +
+		'relative flex flex-col hover:bg-hover press:bg-surface-2 ' +
 		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
 </script>
 
@@ -30,6 +32,7 @@
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		query: string;
@@ -117,7 +120,13 @@
 
 	<div class={cell}>
 		{#if onpick === undefined}
-			<a href="/exercises/{parent.id}" aria-label={parent.name} data-list-row class={backdrop}></a>
+			<a
+				href="/exercises/{parent.id}"
+				aria-label={parent.name}
+				data-list-row
+				class={backdrop}
+				{@attach press()}
+			></a>
 		{:else}
 			<button
 				type="button"
@@ -126,6 +135,7 @@
 				onclick={() => onpick?.(parent)}
 				data-list-row
 				class={backdrop}
+				{@attach press()}
 			></button>
 		{/if}
 
@@ -137,7 +147,14 @@
 					{@const label = variantLabel(variant.name, parent.name)}
 
 					{#if onpick === undefined}
-						<a href="/exercises/{variant.id}" aria-label={variant.name} class={chip}>{label}</a>
+						<a
+							href="/exercises/{variant.id}"
+							aria-label={variant.name}
+							class={chip}
+							{@attach press()}
+						>
+							{label}
+						</a>
 					{:else}
 						<button
 							type="button"
@@ -145,6 +162,7 @@
 							aria-label={variant.name}
 							aria-pressed={selected === undefined ? undefined : selected.has(variant.id)}
 							class={[chip, 'aria-pressed:bg-accent aria-pressed:text-on-accent']}
+							{@attach press()}
 						>
 							{label}
 						</button>

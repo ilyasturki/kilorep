@@ -10,6 +10,7 @@
 	import { loadModeNote } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
+	import { press } from '$lib/ui/press';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import { statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
@@ -92,7 +93,8 @@
 				type="button"
 				onclick={(e) => onexercise(e.currentTarget)}
 				class="min-w-0 flex-1 rounded-xl px-1 py-1 text-left focus-ring hover:bg-hover
-					active:bg-surface-2"
+					press:bg-surface-2"
+				{@attach press()}
 			>
 				{@render heading()}
 			</button>
@@ -136,7 +138,8 @@
 							1} as done"
 						onclick={() => ontoggle(cursor.set.id)}
 						class="grid size-11 shrink-0 place-items-center rounded-full focus-ring
-							hover:bg-hover active:bg-surface-2"
+							hover:bg-hover press:bg-surface-2"
+						{@attach press()}
 					>
 						<SetMark status={statusOf(cursor)} index={cursor.workingIndex + 1} />
 					</button>
@@ -146,7 +149,8 @@
 					type="button"
 					onclick={() => onopen(cursor.set.id)}
 					class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-2 text-left focus-ring
-						hover:bg-hover active:bg-surface-2"
+						hover:bg-hover press:bg-surface-2"
+					{@attach press()}
 				>
 					{@render numbers(cursor)}
 				</button>
@@ -156,7 +160,8 @@
 					aria-label="Set options"
 					onclick={(e) => onoptions(cursor.set.id, e.currentTarget)}
 					class="grid size-9 shrink-0 place-items-center rounded-lg text-lg text-ink-faint
-						focus-ring hover:bg-hover active:bg-surface-2"
+						focus-ring hover:bg-hover press:bg-surface-2"
+					{@attach press()}
 				>
 					<More size={20} />
 				</button>
@@ -174,7 +179,8 @@
 			type="button"
 			onclick={onadd}
 			class="grid min-h-11 place-items-center rounded-xl border border-dashed border-line
-				text-ink-muted focus-ring hover:bg-hover active:bg-surface-2"
+				text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+			{@attach press()}
 		>
 			<span class="label-caps">+ Add set</span>
 		</button>

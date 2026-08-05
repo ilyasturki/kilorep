@@ -1,7 +1,13 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
+
 	import { completedSetCount, exerciseCount, formatWhen, workoutTitle } from '$lib/history/label';
 	import type { Workout } from '$lib/domain/workout';
+	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
+	import WorkoutRowMenu from '$lib/history/WorkoutRowMenu.svelte';
+	import { syncSoon } from '$lib/sync/client';
 	import { activeWorkout } from '$lib/workout/active.svelte';
+	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -66,6 +72,57 @@
 			sets === 1 ? '1 set' : `${sets} sets`
 		].join(' · ');
 	}
+
+	/**
+	 * The ⋯ stays off this list — a row here is one line of text and a date, and
+	 * hanging a control on the end of each would cost more than the shortcut is
+	 * worth. The gesture is the whole affordance.
+	 */
+	let menuOpen = $state(false);
+	let menuAnchor = $state<HTMLElement | null>(null);
+	let held = $state<Workout | null>(null);
+
+	function hold(anchor: HTMLElement, workout: Workout) {
+		held = workout;
+		menuAnchor = anchor;
+		menuOpen = true;
+	}
+
+	let discardOpen = $state(false);
+	let deleteOpen = $state(false);
+
+	async function launch() {
+		if (held !== null) {
+			await launchRepeat(data.store, held);
+		}
+	}
+
+	async function repeat() {
+		if (await repeatBlocked(data.store)) {
+			discardOpen = true;
+
+			return;
+		}
+
+		await launch();
+	}
+
+	async function remove() {
+		if (held === null) {
+			return;
+		}
+
+		await data.store.deleteWorkout(held.id, Date.now());
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+
+		// The list is the load's own data, so it has to be told. The detail page
+		// navigates away after a delete and gets this for free; here the row has
+		// to leave the screen under the finger that deleted it.
+		await invalidateAll();
+	}
 </script>
 
 <svelte:head>
@@ -119,6 +176,7 @@
 					title={workoutTitle(workout, data.templates)}
 					meta={meta(workout)}
 					href="/history/{workout.id}"
+					onhold={(anchor) => hold(anchor, workout)}
 				>
 					<!-- Both spellings rendered, one hidden: the swap is `lg`, the app's
 					     single shape breakpoint, and picking in CSS keeps the choice out
@@ -132,3 +190,27 @@
 		</section>
 	{/if}
 </main>
+
+<WorkoutRowMenu
+	bind:open={menuOpen}
+	title={held === null ? '' : workoutTitle(held, data.templates)}
+	anchor={menuAnchor}
+	onrepeat={() => void repeat()}
+	ondelete={() => (deleteOpen = true)}
+/>
+
+<AlertDialog
+	bind:open={deleteOpen}
+	title="Delete this workout?"
+	description="Its sets leave history, hints and records for good, on every device."
+	confirmLabel="Delete"
+	onconfirm={() => void remove()}
+/>
+
+<AlertDialog
+	bind:open={discardOpen}
+	title="A workout is in progress"
+	description="Repeating this workout discards it, logged sets and all. Finish it from the Workout tab to keep it."
+	confirmLabel="Discard and start"
+	onconfirm={() => void launch()}
+/>

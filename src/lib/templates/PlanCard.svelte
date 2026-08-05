@@ -11,6 +11,7 @@
 	import MiniStepper from '$lib/ui/MiniStepper.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		meta: Exercise;
@@ -63,12 +64,16 @@
 
 <section class="flex flex-col gap-2 rounded-2xl border border-line-soft bg-surface p-3">
 	<div class="flex items-center gap-1">
+		<!-- The hold lands on the title and not on the card, because the card also
+		     carries the steppers, and holding a + to add a set is not a request for
+		     this exercise's menu. The title is the row that *is* the exercise. -->
 		<h2 class="min-w-0 flex-1">
 			<a
 				href="/exercises/{meta.id}"
-				class="flex min-w-0 flex-col rounded-lg px-1 py-0.5 focus-ring hover:bg-hover
-					active:bg-surface-2 pointer-fine:transition-[background-color]
-					pointer-fine:duration-100"
+				class="flex min-w-0 press-sink flex-col rounded-lg px-1 py-0.5 focus-ring
+					hover:bg-hover pointer-fine:transition-[background-color] pointer-fine:duration-100
+					press:bg-surface-2"
+				{@attach press(() => onoptions)}
 			>
 				<span class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</span>
 				{#if loadModeNote(meta.loadMode)}
@@ -84,7 +89,8 @@
 			aria-label="Options for {meta.name}"
 			onclick={(e) => onoptions(e.currentTarget)}
 			class="grid size-11 shrink-0 place-items-center rounded-full text-ink-faint focus-ring
-				hover:bg-hover active:bg-surface-2"
+				hover:bg-hover press:bg-surface-2"
+			{@attach press()}
 		>
 			<More size={20} />
 		</button>
@@ -117,7 +123,8 @@
 			aria-label="Per-set rep targets for {meta.name}"
 			onclick={() => (expanded = !expanded)}
 			class="grid size-11 shrink-0 place-items-center rounded-xl text-ink-faint focus-ring
-				hover:bg-hover active:bg-surface-2"
+				hover:bg-hover press:bg-surface-2"
+			{@attach press()}
 		>
 			<CaretDown size={16} class={expanded ? 'rotate-180' : ''} />
 		</button>
@@ -130,7 +137,8 @@
 				aria-label="Clear target for {meta.name}"
 				onclick={() => onreps(null)}
 				class="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-md font-bold
-					text-ink-faint focus-ring hover:bg-hover active:bg-surface-2"
+					text-ink-faint focus-ring hover:bg-hover press:bg-surface-2"
+				{@attach press()}
 			>
 				<span aria-hidden="true" class="text-lg leading-none">×</span>
 				Clear target

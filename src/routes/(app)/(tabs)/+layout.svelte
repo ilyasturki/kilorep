@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 
 	import { isActive, navTabs } from '$lib/nav/bar.svelte';
+	import { press } from '$lib/ui/press';
 
 	import type { LayoutProps, Snapshot } from './$types';
 
@@ -171,16 +172,26 @@
 						'focus-ring transition-colors',
 						active ? 'text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
 					]}
+					{@attach press()}
 				>
 					<!-- `h-9` under a thumb: the glyph steps 22→28 there (see the
 					     `data-glyph` table in app.css) and 28 in a 32px capsule left a
 					     2px halo pretending to be a fit. The bar grows the 4px and
 					     nothing else moves. -->
+					<!-- The press tint goes on the capsule, not on the tab, so a thumb
+					     lights the same shape the selected state uses. Written as an
+					     explicit `group-[.is-pressed]` rather than the `press:` variant
+					     because the class the recognizer sets lands on the anchor, and
+					     the shape that has to answer for it is this child. No sink: a
+					     tab that shrinks inside a fixed bar reads as a glitch, and the
+					     bar already has travel of its own. -->
 					<span
 						class={[
 							'flex h-8 w-16 items-center justify-center rounded-full transition-colors',
 							'pointer-coarse:h-9',
-							active ? 'bg-nav-selected' : 'pointer-fine:group-hover:bg-nav-hover'
+							active
+								? 'bg-nav-selected'
+								: 'group-[.is-pressed]:bg-nav-hover pointer-fine:group-hover:bg-nav-hover'
 						]}
 					>
 						<span class="relative flex">

@@ -8,6 +8,7 @@
 		// resolves conflicts by stylesheet order, not by which variant is "more
 		// specific" in the class attribute.
 		'data-[state=off]:hover:bg-hover data-[state=on]:hover:bg-accent-hover ' +
+		'data-[state=off]:press:bg-surface-2 press-sink ' +
 		'pointer-fine:transition-[background-color,color] pointer-fine:duration-100 ' +
 		'disabled:pointer-events-none disabled:opacity-50';
 
@@ -19,6 +20,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { ToggleGroup } from 'bits-ui';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		value: string;
@@ -30,6 +32,10 @@
 	let { value, column: fills = false, 'aria-label': label, children }: Props = $props();
 </script>
 
-<ToggleGroup.Item {value} aria-label={label} class={[chip, fills ? column : token]}>
-	{@render children()}
+<ToggleGroup.Item {value} aria-label={label}>
+	{#snippet child({ props })}
+		<button {...props} class={[chip, fills ? column : token]} {@attach press()}>
+			{@render children()}
+		</button>
+	{/snippet}
 </ToggleGroup.Item>

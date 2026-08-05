@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
+	import { press } from '$lib/ui/press';
 
 	type Props = {
 		title: string;
@@ -8,6 +9,7 @@
 		meta?: string;
 		href?: string;
 		onclick?: () => void;
+		onhold?: (anchor: HTMLElement) => void;
 		chevron?: boolean;
 		dense?: boolean;
 		stacked?: boolean;
@@ -23,6 +25,7 @@
 		meta,
 		href,
 		onclick,
+		onhold,
 		chevron,
 		dense = false,
 		stacked = false,
@@ -48,7 +51,7 @@
 	const shape = $derived([
 		'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left',
 		dense ? 'min-h-row-dense' : 'min-h-row',
-		interactive && 'focus-ring hover:bg-hover active:bg-surface-2',
+		interactive && 'focus-ring hover:bg-hover press:bg-surface-2 press-sink',
 		interactive && 'pointer-fine:transition-[background-color] pointer-fine:duration-100',
 		klass
 	]);
@@ -112,9 +115,16 @@
 {/snippet}
 
 {#if href}
-	<a {href} data-list-row class={shape}>{@render body()}</a>
+	<a {href} data-list-row class={shape} {@attach press(() => onhold)}>{@render body()}</a>
 {:else if onclick}
-	<button type="button" data-list-row aria-pressed={pressed} {onclick} class={shape}>
+	<button
+		type="button"
+		data-list-row
+		aria-pressed={pressed}
+		{onclick}
+		class={shape}
+		{@attach press(() => onhold)}
+	>
 		{@render body()}
 	</button>
 {:else}

@@ -10,6 +10,7 @@
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import ChartBar from '$lib/ui/icons/ChartBar.svelte';
 	import Gear from '$lib/ui/icons/Gear.svelte';
+	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
 
@@ -237,7 +238,8 @@
 			href="/settings"
 			aria-label="Settings"
 			class="grid min-h-chrome w-11 place-items-center rounded-full border border-line
-				text-ink-muted focus-ring hover:bg-surface-2 active:bg-surface-2"
+				text-ink-muted focus-ring hover:bg-surface-2 press:bg-surface-2"
+			{@attach press()}
 		>
 			<Gear size={20} />
 		</a>
@@ -302,7 +304,8 @@
 									onclick={() => (expanded = !expanded)}
 									class="flex min-h-chrome items-center gap-2 self-start rounded-xl px-3
 										text-sm font-bold text-ink-faint focus-ring
-										hover:bg-hover active:bg-surface-2"
+										hover:bg-hover press:bg-surface-2"
+									{@attach press()}
 								>
 									<CaretDown size={14} class={expanded ? 'rotate-180' : ''} />
 									{expanded ? 'Show fewer' : `${hidden} more ${hidden === 1 ? 'best' : 'bests'}`}
