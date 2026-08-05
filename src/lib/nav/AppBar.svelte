@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
+	import BackLink from '$lib/nav/BackLink.svelte';
 	import { appBarSlot, isActive, navTabs, parentOf } from '$lib/nav/bar.svelte';
-	import { backDepth } from '$lib/nav/depth';
 
 	/**
 	 * One bar, both viewports, one row.
@@ -19,6 +19,14 @@
 	 * split the space *left over* beside the action, which is off-centre by half
 	 * an action. Two `1fr` gutters put them on the window's axis whatever sits in
 	 * the right one, including nothing.
+	 *
+	 * Back stands in the first gutter at every width. It used to be the phone's
+	 * alone, which left a desk with no way out of a screen the tabs cannot name:
+	 * an exercise reached from a running workout, a session opened from the
+	 * History list. Both are one level under a tab, both lit that tab and drew
+	 * nothing else, and the only way up was to re-enter through the tab itself —
+	 * losing where you were. The gutter it now fills was empty space, so the tabs
+	 * do not move to make room for it.
 	 */
 	const slot = appBarSlot();
 
@@ -28,22 +36,6 @@
 	const title = $derived(slot.title ?? current?.label ?? '');
 
 	const parent = $derived(parentOf(pathname));
-
-	/**
-	 * Back walks real history wherever there is any of this app's behind us, and
-	 * falls back to the parent where there is not — a cold boot straight onto a
-	 * detail screen, or a notification tap, which has nothing to walk.
-	 */
-	function walkBack(event: MouseEvent): void {
-		const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
-
-		if (event.button !== 0 || modified || backDepth() === 0) {
-			return;
-		}
-
-		event.preventDefault();
-		history.back();
-	}
 </script>
 
 <header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t">
@@ -51,19 +43,13 @@
 		class="flex min-h-chrome items-center gap-2 px-3 py-2 lg:grid
 			lg:grid-cols-[1fr_auto_1fr] lg:gap-3"
 	>
+		<!-- A screen carrying its own leading gives up the back link, at both
+		     widths now rather than only on a phone. Workout is the one that does,
+		     and it is a tab root with nowhere above it to go. -->
 		{#if slot.leading !== null}
 			<div class="lg:hidden">{@render slot.leading()}</div>
 		{:else if parent !== null}
-			<a
-				href={parent}
-				aria-label="Back"
-				onclick={walkBack}
-				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-xl leading-none text-ink-muted focus-ring hover:bg-hover
-					active:bg-surface-2 lg:hidden"
-			>
-				‹
-			</a>
+			<BackLink href={parent} label="Back" class="lg:col-start-1 lg:justify-self-start" />
 		{/if}
 
 		<h1 class="min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight lg:hidden">
