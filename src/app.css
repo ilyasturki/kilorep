@@ -735,7 +735,11 @@
 	z-index: 50;
 	display: flex;
 	flex-direction: column;
-	max-height: 85dvh;
+	/* Named rather than written straight into `max-height`, because the drawer
+	   has to lower this ceiling when the keyboard is up and must not have to
+	   restate the number to do it. */
+	--panel-cap: 85dvh;
+	max-height: var(--panel-cap);
 	background-color: var(--surface);
 	color: var(--ink);
 }
@@ -925,6 +929,43 @@
 	transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 	animation-duration: 0.5s;
 	animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* The sheet with the OS keyboard up. `--sheet-keys` is how much of the screen
+   the keys have taken and `--sheet-pane` is the strip left above them, both
+   written onto this node by Sheet.svelte and both absent whenever no keyboard
+   is showing — which is why every value here falls back to the geometry the
+   drawer has always had. Nothing about a sheet at rest changes.
+
+   `bottom` stands the panel on the keys. The ceiling comes down to the strip so
+   the top edge cannot be pushed off the screen, and a sheet with more content
+   than fits — the exercise picker's list — grows into whatever the strip gives
+   it while a two-field sheet keeps its own height and simply rides up. The
+   gesture-bar inset is subtracted back out of the padding: the keyboard is
+   standing on the gesture bar, so paying for it twice is dead space at the
+   moment there is least to spare.
+
+   The doubled selector is not decoration. vaul-svelte ships these same
+   `[data-vaul-drawer]` rules in a `<style global>` of its own, so a single
+   attribute selector here would be a coin toss on bundle order.
+
+   `transform` is restated because a `transition` shorthand replaces the whole
+   list, and dropping vaul's leg would leave a released drag to snap back
+   instead of settle. `bottom` and `max-height` both move the top edge and so
+   have to travel together, on the sheet's own 180ms rather than the drag's
+   500ms — this is a panel answering the keyboard, not a panel being thrown. */
+[data-vaul-drawer].overlay-drawer {
+	bottom: var(--sheet-keys, 0px);
+	max-height: min(
+		var(--panel-cap),
+		calc(var(--sheet-pane, 100dvh) - max(1.25rem, var(--spacing-safe-t)))
+	);
+	padding-bottom: max(1.25rem, calc(var(--spacing-safe-b) - var(--sheet-keys, 0px)));
+
+	transition:
+		transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+		bottom 180ms var(--ease-sheet),
+		max-height 180ms var(--ease-sheet);
 }
 
 [data-vaul-drawer][data-vaul-snap-points='false'][data-vaul-drawer-direction='bottom'][data-state='open'] {

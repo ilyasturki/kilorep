@@ -47,9 +47,21 @@ export function visiblePane(): Pane {
 	return { top: port.offsetTop, height: port.height };
 }
 
+/**
+ * How much of the layout viewport's bottom edge the keys have taken — which is
+ * exactly what a bottom-anchored `position: fixed` panel wants on `bottom` to
+ * stand on top of them.
+ *
+ * Clamped at zero. A visual viewport taller than the layout one is not a state
+ * to react to, and a negative `bottom` would push the panel off the screen.
+ */
+export function keyboardHeight(pane: Pane): number {
+	return Math.max(0, full() - pane.top - pane.height);
+}
+
 /** Whether the pane leaves enough of the layout viewport covered to be a keyboard. */
 export function keyboardUp(pane: Pane): boolean {
-	return full() - pane.top - pane.height > KEYBOARD_MIN;
+	return keyboardHeight(pane) > KEYBOARD_MIN;
 }
 
 /**

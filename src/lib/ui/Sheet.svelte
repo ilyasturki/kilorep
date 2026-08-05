@@ -3,6 +3,8 @@
 	import { Dialog } from 'bits-ui';
 	import { Drawer } from 'vaul-svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import type { Pane } from '$lib/ui/keyboard';
+	import { keyboardHeight, keyboardUp, visiblePane, watchVisiblePane } from '$lib/ui/keyboard';
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
@@ -17,6 +19,56 @@
 	let { open = $bindable(false), title, description, children, footer }: Props = $props();
 
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
+
+	let panel = $state<HTMLElement | null>(null);
+
+	/**
+	 * Where the sheet stands while the OS keyboard is up. Two numbers, written as
+	 * custom properties the drawer's CSS reads: the height of the keys, and the
+	 * strip of screen left above them.
+	 *
+	 * This is vaul's own `repositionInputs` job, turned off at the root and done
+	 * here instead, because the library's version is the bug. It writes an inline
+	 * pixel `height` onto a panel that has none of its own — the sheet is
+	 * content-sized under a `max-height` — measuring against an
+	 * `initialDrawerHeight` it captures lazily and never clears. Once the keys go
+	 * back down that stale number is what the sheet is restored to, which is how a
+	 * search in the exercise picker left the sheet at half the size it opened at.
+	 *
+	 * Turning the flag off costs nothing else on this platform: the only other
+	 * thing it gates is vaul's `usePreventScroll`, whose body is iOS-only, and the
+	 * scroll lock that matters comes from Bits UI's dialog underneath.
+	 *
+	 * The `transition` it deletes is vaul's, not ours. A released drag that did
+	 * not close writes `transition: transform …` inline as it settles, and a
+	 * `transition` shorthand replaces the whole list — the stylesheet's `bottom`
+	 * and `max-height` legs included, so the next keyboard would arrive by
+	 * teleport. Clearing the inline one hands the rule back. It is safe to do
+	 * mid-drag too: vaul re-writes `transition: none` on every pointer move.
+	 */
+	$effect(() => {
+		if (!open || panel === null) {
+			return;
+		}
+
+		const node = panel;
+
+		const dock = (pane: Pane): void => {
+			if (keyboardUp(pane)) {
+				node.style.setProperty('--sheet-keys', `${keyboardHeight(pane)}px`);
+				node.style.setProperty('--sheet-pane', `${pane.height}px`);
+			} else {
+				node.style.removeProperty('--sheet-keys');
+				node.style.removeProperty('--sheet-pane');
+			}
+
+			node.style.removeProperty('transition');
+		};
+
+		dock(visiblePane());
+
+		return watchVisiblePane(dock);
+	});
 </script>
 
 {#snippet header(closable: boolean)}
@@ -72,11 +124,11 @@
 		</Dialog.Portal>
 	</Dialog.Root>
 {:else}
-	<Drawer.Root bind:open>
+	<Drawer.Root bind:open repositionInputs={false}>
 		<Drawer.Portal>
 			<Drawer.Overlay class="overlay-scrim-drawer" />
 
-			<Drawer.Content class="overlay-panel overlay-drawer">
+			<Drawer.Content bind:ref={panel} class="overlay-panel overlay-drawer">
 				<Drawer.Handle class="mt-3" />
 				{@render header(false)}
 				{@render body()}
