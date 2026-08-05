@@ -18,6 +18,7 @@ import {
 	joinEntry,
 	markSet,
 	moveEntry,
+	moveExercise,
 	parseEntry,
 	prefillFor,
 	rateSet,
@@ -764,6 +765,55 @@ describe('splitEntry', () => {
 
 	test('an unknown entry is refused rather than silently ignored', () => {
 		expect(splitEntry(freshWorkout(0), 'nope', freshEntry)).toBe(false);
+	});
+});
+
+describe('moveExercise', () => {
+	test('a leg trades places with the one beside it', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(moveExercise(workout, 'we-b', -1)).toBe(true);
+		expect(orderOf(workout)).toEqual(['bench-press', 'pec-deck', 'cable-fly']);
+
+		expect(moveExercise(workout, 'we-b', 1)).toBe(true);
+		expect(orderOf(workout)).toEqual(['bench-press', 'cable-fly', 'pec-deck']);
+	});
+
+	test('the interleave follows, so the next set up is the new first leg', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(idsOf(workout).slice(-5)).toEqual(['a-1', 'b-1', 'a-2', 'b-2', 'a-3']);
+
+		moveExercise(workout, 'we-b', -1);
+
+		expect(idsOf(workout).slice(-5)).toEqual(['b-1', 'a-1', 'b-2', 'a-2', 'a-3']);
+	});
+
+	test('logged sets ride along, untouched', () => {
+		const workout = superset(freshWorkout(0));
+		commitSet(workout, 'b-1', 12, 15);
+
+		moveExercise(workout, 'we-b', -1);
+
+		expect(at(workout, 'b-1').set.completed).toBe(true);
+		expect(at(workout, 'b-1').set.weight).toBe(12);
+		expect(at(workout, 'b-1').entry.id).toBe('superset');
+	});
+
+	test('the ends of an entry refuse rather than wrapping', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(moveExercise(workout, 'we-a', -1)).toBe(false);
+		expect(moveExercise(workout, 'we-b', 1)).toBe(false);
+		expect(orderOf(workout)).toEqual(['bench-press', 'cable-fly', 'pec-deck']);
+	});
+
+	test('a lone exercise has no neighbour of its own to trade with', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(moveExercise(workout, 'we-bench', 1)).toBe(false);
+		expect(moveExercise(workout, 'nope', -1)).toBe(false);
+		expect(orderOf(workout)).toEqual(['bench-press', 'cable-fly', 'pec-deck']);
 	});
 });
 

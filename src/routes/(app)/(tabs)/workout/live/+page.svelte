@@ -631,7 +631,17 @@
 						     their own headers and their own ⋯; what says they are one thing
 						     is `EntryStack`'s bracket. -->
 						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-5">
-							<EntryStack legs={entry.legs} superset={entry.superset}>
+							<!-- The seam trades the two legs, here as in the editor: the order
+							     planned at a desk is not always the order the floor allows, and
+							     a rack already taken is reason enough to lead with the other
+							     movement. The cursor does not follow — see
+							     `session.moveExercise` for why it must not. -->
+							<EntryStack
+								legs={entry.legs}
+								superset={entry.superset}
+								onswap={(leg) => session.moveExercise(leg.id)}
+								swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
+							>
 								{#snippet leg(leg)}
 									<ExerciseBlock
 										meta={leg.meta}

@@ -6,7 +6,14 @@ import {
 import type { ExerciseIds, NewExerciseIds } from './tree.ts';
 import type { Workout, WorkoutEntry } from './workout.ts';
 
-export { joinEntry, moveEntry, removeExercise, removeSet, splitEntry } from './tree.ts';
+export {
+	joinEntry,
+	moveEntry,
+	moveExercise,
+	removeExercise,
+	removeSet,
+	splitEntry
+} from './tree.ts';
 export type { ExerciseIds, NewExerciseIds } from './tree.ts';
 
 export type TemplateSet = {

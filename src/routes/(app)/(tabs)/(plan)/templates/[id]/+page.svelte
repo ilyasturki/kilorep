@@ -9,6 +9,7 @@
 		addSet,
 		isBlank,
 		moveEntry,
+		moveExercise,
 		PLANNED_SET_COUNT,
 		removeExercise,
 		removeSet,
@@ -490,7 +491,17 @@
 						>
 							<!-- The workout pane's bracket, on the plan that starts it, so a
 							     superset reads the same wherever it is looked at. -->
-							<EntryStack legs={entry.legs} superset={entry.superset}>
+							<!-- `onswap` is what makes the bracket's seam a control: which of a
+							     planned pair is done first was the one thing about a superset
+							     that could not be changed once it was built. The entry drags as
+							     one and always did; the legs inside it had no order but the
+							     order they arrived in. -->
+							<EntryStack
+								legs={entry.legs}
+								superset={entry.superset}
+								onswap={(leg) => moveExercise(template, leg.id, -1)}
+								swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
+							>
 								{#snippet leg(leg, at)}
 									<PlanCard
 										meta={leg.meta}

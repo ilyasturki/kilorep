@@ -10,6 +10,7 @@ import {
 	insertedSetCount,
 	markSet,
 	moveEntry as relocateEntry,
+	moveExercise as relocateExercise,
 	prefillFor,
 	rateSet,
 	removeExercise as dropExercise,
@@ -205,6 +206,23 @@ export class WorkoutSession {
 
 	public moveEntry(entryId: string, index: number): void {
 		relocateEntry(this.workout, entryId, index);
+	}
+
+	/**
+	 * Trade a superset leg with the one above it, mid-session.
+	 *
+	 * The cursor is deliberately left alone. It holds a *set* id, and no set
+	 * changes hands here — the same set stays open on the same exercise, and only
+	 * the order the pane interleaves them in moves. A lifter who reorders while
+	 * standing at the rack keeps the set they were about to log, which is the
+	 * in-gym rule's answer: the reorder is a change of plan, never a change of
+	 * where they are in it.
+	 *
+	 * Nothing is destroyed either, so nothing is confirmed — unlike swap and
+	 * remove, which take logged sets with them and ask first.
+	 */
+	public moveExercise(exerciseId: string): void {
+		relocateExercise(this.workout, exerciseId, -1);
 	}
 
 	public removeSet(setId: string): void {

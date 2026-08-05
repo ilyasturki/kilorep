@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Template } from '$lib/domain/template';
+	import { catalogById } from '$lib/catalog';
+	import { planLine } from '$lib/templates/plan';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -41,16 +42,6 @@
 	 * id without anything having to reset one.
 	 */
 	const blank = `/templates/${crypto.randomUUID()}`;
-
-	function planned(template: Template): string {
-		const count = template.entries.flatMap((entry) => entry.exercises).length;
-
-		if (count === 0) {
-			return 'No exercises yet';
-		}
-
-		return count === 1 ? '1 exercise' : `${count} exercises`;
-	}
 </script>
 
 <svelte:head>
@@ -81,9 +72,15 @@
 					<!-- A persisted template can be nameless — named-nothing but planned-
 					     something escapes the blank rule — and a row with no title reads
 					     as a bug, not a choice. -->
+					<!-- `stacked`, so the movements get a line of their own. `ListRow`'s
+					     default packs the meta in beside the title and clips it when the
+					     name leaves no room — fair where the meta is a glance's
+					     convenience, and not here: this line *is* what the row has to say,
+					     and a plan under a long name would be painted nowhere. -->
 					<ListRow
 						title={template.name.trim() === '' ? 'Untitled' : template.name}
-						meta={planned(template)}
+						meta={planLine(template, catalogById)}
+						stacked
 						href="/templates/{template.id}"
 					/>
 				{/each}

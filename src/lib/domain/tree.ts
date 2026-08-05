@@ -149,6 +149,49 @@ export function removeSet(tree: Tree<{ sets: { id: string }[] }>, setId: string)
 	return false;
 }
 
+/**
+ * Trade a leg with the one beside it, inside its own entry.
+ *
+ * The reorder a superset needs and the only one it needs: which exercise is
+ * done first. `moveEntry` moves whole entries past each other and has nothing
+ * to say about the order *within* one, so a planned pair was fixed in the order
+ * it happened to be built in.
+ *
+ * Adjacent-swap rather than move-to-index, because that is what the divider
+ * between two legs can honestly offer — it sits between exactly two of them.
+ * A giant set reorders by composing swaps, which is the same bargain a list
+ * with up-and-down arrows makes and needs no drag to keep honest.
+ *
+ * `towards` is the neighbour's direction, so `-1` on the first leg and `+1` on
+ * the last are refused rather than wrapping: a swap that carried the top leg to
+ * the bottom would be a move nobody asked a two-item control for.
+ */
+export function moveExercise<E extends { id: string }>(
+	tree: Tree<E>,
+	exerciseId: string,
+	towards: -1 | 1
+): boolean {
+	for (const entry of tree.entries) {
+		const at = entry.exercises.findIndex((e) => e.id === exerciseId);
+
+		if (at === -1) {
+			continue;
+		}
+
+		const to = at + towards;
+
+		if (to < 0 || to >= entry.exercises.length) {
+			return false;
+		}
+
+		[entry.exercises[at], entry.exercises[to]] = [entry.exercises[to], entry.exercises[at]];
+
+		return true;
+	}
+
+	return false;
+}
+
 export function moveEntry<E>(tree: Tree<E>, entryId: string, toIndex: number): boolean {
 	const from = tree.entries.findIndex((e) => e.id === entryId);
 

@@ -37,8 +37,32 @@
 		onreps(shape.reps === null ? PLANNED_REPS : shape.reps + 1);
 	}
 
+	/**
+	 * `−` lowers the target, and the bottom of the scale is Open.
+	 *
+	 * That last clause is the whole of what used to be a "Clear target" button on
+	 * a row of its own under this one. The row was there because a range or a
+	 * mixed plan had no way back to Open at all — both arms are dead on those,
+	 * since there is no single number to step from — so the only control that
+	 * could reach Open was one that stood outside the stepper and duplicated its
+	 * job.
+	 *
+	 * It is not the same journey from every kind, and it cannot be: from a fixed
+	 * target `−` counts down and Open is the step past 1, while from a range or a
+	 * mixed plan there is no number to count down *from*, so Open is the next step
+	 * immediately. Both are the same sentence — the arm moves toward Open and gets
+	 * there — and neither reading leaves a plan stuck with a target it cannot
+	 * take back.
+	 *
+	 * `+` stays dead on a range and a mixed plan. Lowering an unequal target has
+	 * an obvious floor to collapse to and raising it has no obvious ceiling, so
+	 * the way back up is through Open and the per-set panel below, which is where
+	 * an unequal target was written in the first place.
+	 */
 	function lowerShared() {
 		if (shape.reps === null) {
+			onreps(null);
+
 			return;
 		}
 
@@ -111,7 +135,7 @@
 			label="Rep target"
 			value={repsLabel(shape)}
 			dim={shape.kind === 'open'}
-			ondec={shared && shape.reps !== null ? lowerShared : null}
+			ondec={shape.kind === 'open' ? null : lowerShared}
 			oninc={shared ? raiseShared : null}
 			class="flex-1"
 		/>
@@ -129,22 +153,6 @@
 			<CaretDown size={16} class={expanded ? 'rotate-180' : ''} />
 		</button>
 	</div>
-
-	{#if shape.kind !== 'open'}
-		<div class="flex justify-end">
-			<button
-				type="button"
-				aria-label="Clear target for {meta.name}"
-				onclick={() => onreps(null)}
-				class="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-md font-bold
-					text-ink-faint focus-ring hover:bg-hover press:bg-surface-2"
-				{@attach press()}
-			>
-				<span aria-hidden="true" class="text-lg leading-none">×</span>
-				Clear target
-			</button>
-		</div>
-	{/if}
 
 	{#if expanded}
 		<div

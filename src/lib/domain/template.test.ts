@@ -8,6 +8,7 @@ import {
 	isBlank,
 	joinEntry,
 	moveEntry,
+	moveExercise,
 	removeExercise,
 	removeSet,
 	replaceExercise,
@@ -305,6 +306,46 @@ describe('planning supersets', () => {
 
 	test('a lone exercise was never a superset, and says so', () => {
 		expect(splitEntry(pair(), 'cable-fly-entry', mint('e'))).toBe(false);
+	});
+
+	test('a leg trades places with the one beside it', () => {
+		const template = pair();
+		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');
+
+		expect(moveExercise(template, 'lateral-raise-node', -1)).toBe(true);
+		expect(orderOf(template)).toEqual(['lateral-raise', 'cable-fly']);
+
+		expect(moveExercise(template, 'lateral-raise-node', 1)).toBe(true);
+		expect(orderOf(template)).toEqual(['cable-fly', 'lateral-raise']);
+	});
+
+	test('the targets ride along with the leg', () => {
+		const template = pair();
+		setPlannedReps(template, 'lateral-raise-set-1', 15);
+		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');
+
+		moveExercise(template, 'lateral-raise-node', -1);
+
+		expect(targetsOf(template, 'lateral-raise-node')).toEqual([15, null, null]);
+	});
+
+	test('the ends of an entry refuse rather than wrapping', () => {
+		const template = pair();
+		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');
+
+		expect(moveExercise(template, 'cable-fly-node', -1)).toBe(false);
+		expect(moveExercise(template, 'lateral-raise-node', 1)).toBe(false);
+		expect(orderOf(template)).toEqual(['cable-fly', 'lateral-raise']);
+	});
+
+	test('a leg never leaves its own entry, and an unknown one is refused', () => {
+		const template = pair();
+
+		// Two entries of one leg each: the swap has no neighbour to trade with
+		// inside its entry, and the exercise standing beside it is not one.
+		expect(moveExercise(template, 'cable-fly-node', 1)).toBe(false);
+		expect(moveExercise(template, 'nope', -1)).toBe(false);
+		expect(orderOf(template)).toEqual(['cable-fly', 'lateral-raise']);
 	});
 
 	test('a fresh leg joins with open targets, like any planned exercise', () => {

@@ -7,7 +7,14 @@ import {
 } from './tree.ts';
 import type { ExerciseIds, NewExerciseIds } from './tree.ts';
 
-export { joinEntry, moveEntry, removeExercise, removeSet, splitEntry } from './tree.ts';
+export {
+	joinEntry,
+	moveEntry,
+	moveExercise,
+	removeExercise,
+	removeSet,
+	splitEntry
+} from './tree.ts';
 export type { ExerciseIds, NewExerciseIds } from './tree.ts';
 
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';

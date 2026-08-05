@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 
+	import { catalogById } from '$lib/catalog';
 	import { startFrom } from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
+	import { planLine } from '$lib/templates/plan';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -83,17 +85,6 @@
 
 	/** The idle list stays a glance, not a page: the tab holds the rest. */
 	const idleTemplates = $derived(data.templates.slice(0, 4));
-
-	// The Templates tab's own wording, so the same plan reads the same on both.
-	function planned(template: Template): string {
-		const count = template.entries.flatMap((entry) => entry.exercises).length;
-
-		if (count === 0) {
-			return 'No exercises yet';
-		}
-
-		return count === 1 ? '1 exercise' : `${count} exercises`;
-	}
 </script>
 
 <svelte:head>
@@ -118,9 +109,17 @@
 
 				<div class="list-group">
 					{#each idleTemplates as template (template.id)}
+						<!-- Named movements rather than a count, `planLine`'s doing and the
+						     Templates tab's verbatim: the two screens print the same plan and
+						     have to word it identically, which is why the wording is one
+						     function in `plan.ts` now rather than a copy here and a comment
+						     saying it must not drift. It earns more on this screen than on
+						     that one — a row here *starts* the session, and what is in the
+						     plan is the whole of what the choice turns on. -->
 						<ListRow
 							title={template.name.trim() === '' ? 'Untitled' : template.name}
-							meta={planned(template)}
+							meta={planLine(template, catalogById)}
+							stacked
 							chevron={false}
 							onclick={() => void startTemplate(template)}
 						/>
