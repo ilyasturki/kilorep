@@ -43,15 +43,21 @@ async function remove(listener: Promise<{ remove: () => Promise<void> }>): Promi
  * fires on the cold paths, where minting an entry would be worst: a
  * notification tap has nothing behind it to begin with.
  *
- * `/workout/live` is passed as a root alongside the bar's own, which is the one
- * address the tab list cannot supply. It sits under `/workout`, so without this
- * it would be a screen *inside* a tab: back would walk real history out of a
- * live session — to whatever page happened to precede it — and, with nothing
- * behind it, fall back to `/workout`, the idle screen, which bounces a live
+ * `tabRoots()` is taken whole and nothing is added to it here. `/workout/live`
+ * used to be appended at this call site, being the one address the tab list did
+ * not supply — it sits under `/workout`, so untreated it is a screen *inside* a
+ * tab: back would walk real history out of a live session, and with nothing
+ * behind it fall back to `/workout`, the idle screen, which bounces a live
  * session straight back here for a keypress that visibly does nothing. As a
  * root it minimizes, which is what back does from every other tab and what it
  * should do from the middle of a set: the way out of a workout is FINISH, not
  * a hardware button.
+ *
+ * That was right and it was in the wrong file. Stated only here, the bar above
+ * the same screen still believed `/workout/live` had a parent, and was only not
+ * drawing a link to it because the screen happened to fill the slot the link
+ * would have used. It is Train's `owns` now — one answer, read by the hardware
+ * button and by the back link alike.
  */
 export function wireHardwareBack(): () => void {
 	if (!import.meta.env.APP_BUILD) {
@@ -64,7 +70,7 @@ export function wireHardwareBack(): () => void {
 		const decision = decideBack({
 			pathname: location.pathname,
 			overlayOpen: hasOpenOverlay(),
-			tabRoots: [...tabRoots(), '/workout/live'],
+			tabRoots: tabRoots(),
 			parentOf,
 			depth: backDepth()
 		});

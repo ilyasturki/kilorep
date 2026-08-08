@@ -20,9 +20,9 @@ vi.mock('$lib/ui/icons/Gear.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/Stack.svelte', () => ({ default: {} }));
 vi.mock('$lib/workout/active.svelte', () => ({ activeWorkout: { session: null } }));
 
-// Exactly what `hardware-back.ts` passes: the bar's roots plus `/workout/live`,
-// the one address the tab list cannot supply.
-const tabRoots = [...navRoots(), '/workout/live'];
+// Exactly what `hardware-back.ts` passes, which is now the list whole:
+// `/workout/live` used to be appended at that call site and is Train's `owns`.
+const tabRoots = navRoots();
 
 function decide(
 	pathname: string,
@@ -89,5 +89,32 @@ describe('decideBack', () => {
 
 	it('walks real history off the tab grid, when there is history to walk', () => {
 		expect(decide('/history')).toEqual({ kind: 'history-back' });
+	});
+});
+
+/**
+ * The other reader of the same answer: the bar draws its back link from
+ * `parentOf`, so a parent invented here is a link on screen. The pair below is
+ * why this is tested apart from `decideBack` — as a root, `/workout/live` never
+ * reaches the `goto` branch, so nothing above would have caught the bar being
+ * offered `/workout` as its way up.
+ */
+describe('parentOf', () => {
+	it('gives a tab root no parent, so the bar draws no way up from one', () => {
+		for (const root of navRoots()) {
+			expect(parentOf(root)).toBeNull();
+		}
+	});
+
+	it('gives the live session none either, rather than the address that redirects back to it', () => {
+		expect(navRoots()).toContain('/workout/live');
+		expect(parentOf('/workout/live')).toBeNull();
+	});
+
+	it('still walks a screen inside a tab up to the root that owns it', () => {
+		expect(parentOf('/exercises/bench-press')).toBe('/exercises');
+		expect(parentOf('/templates/t1')).toBe('/templates');
+		expect(parentOf('/history/abc')).toBe('/history');
+		expect(parentOf('/history')).toBe('/progress');
 	});
 });

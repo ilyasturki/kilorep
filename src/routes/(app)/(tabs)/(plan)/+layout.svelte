@@ -17,11 +17,15 @@
 	 * one level down, and a segment on them would offer to swap the screen you
 	 * are standing on for a sibling of its parent.
 	 *
-	 * Not sticky, and now by choice rather than by conflict: `top-0` in this
-	 * scroll box used to belong to Exercises' search field, which has since moved
-	 * into the bar. What is left is a switch between two destinations, read on
-	 * arrival and not reached for mid-scroll — and pinning it would put a second
-	 * strip of chrome directly under the real one for no act at all.
+	 * Not sticky, and neither is the search field that sits directly below it on
+	 * the Exercises half. Both are read on arrival and not reached for
+	 * mid-scroll, and pinning either would put a second strip of chrome under
+	 * the real one — which is what `top-0` in this scroll box bought the last
+	 * two times it was tried. See the note on the field itself.
+	 *
+	 * The bar above says "Plan" on both halves; this segment is what says which
+	 * half. That division is the whole reason the tab reads as one destination:
+	 * neither half renames the top of the app on the way in.
 	 */
 	let { children }: LayoutProps = $props();
 

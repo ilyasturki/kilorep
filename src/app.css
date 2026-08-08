@@ -292,6 +292,16 @@
 	--target-row: 3.875rem; /* 62 */
 	--target-row-dense: 2.75rem; /* 44 */
 	--target-commit: 4.875rem; /* 78 */
+
+	/* Not a target — nothing is tapped at this size. It is the top bar's row,
+	   held to one height whatever it happens to hold: a chrome control plus the
+	   `py-2` the row sets around it. Without it the bar was 41px on a tab root,
+	   where the tallest thing in it is a line of text, and 57px one level down,
+	   where a 40px back link stands — so going into an exercise moved the top of
+	   every screen while the pane below it was sliding sideways. Derived rather
+	   than typed, so it follows `--target-chrome` wherever that goes, and a
+	   `min-h-*` like the rest, so OS text scaling still grows it. */
+	--target-bar: calc(var(--target-chrome) + 1rem);
 }
 
 @media (pointer: fine) {
@@ -453,6 +463,7 @@
 	--spacing-row: var(--target-row);
 	--spacing-row-dense: var(--target-row-dense);
 	--spacing-commit: var(--target-commit);
+	--spacing-bar: var(--target-bar);
 }
 
 @theme {

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
-	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import SearchField from '$lib/ui/SearchField.svelte';
 
 	import type { PageProps, Snapshot } from './$types';
@@ -13,22 +12,6 @@
 	let { data }: PageProps = $props();
 
 	let query = $state('');
-
-	/**
-	 * The field lives in the bar, not on the page.
-	 *
-	 * It was a sticky strip at the top of this screen, pinned there because
-	 * search is the act this screen exists for and must never be a scroll away.
-	 * The bar is where that argument actually leads: sticky bought the same
-	 * permanence by covering the first row of the list with a copy of the chrome
-	 * one line below the real one, and 56px of a phone's screen went to the seam
-	 * between them.
-	 *
-	 * One field, rendered once. `wideAction` gives it the phone row the title
-	 * steps out of; at `lg` it is the bar's last track, sized here because the
-	 * bar has no business knowing how wide a search field wants to be.
-	 */
-	fillAppBar(() => ({ action: search, wideAction: true }));
 
 	/**
 	 * The search survives a trip into an exercise and back.
@@ -48,14 +31,29 @@
 	};
 </script>
 
-{#snippet search()}
-	<SearchField label="Search exercises" bind:value={query} class="w-full lg:w-64" />
-{/snippet}
-
 <svelte:head>
 	<title>Exercises | Kilorep</title>
 </svelte:head>
 
 <main class="column-content flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
+	<!-- The field stands under the segment, on the page, and the bar above keeps
+	     its title.
+
+	     It has been in three places. A sticky strip here, pinned because search
+	     is the act this screen exists for — which bought its permanence by
+	     covering the first row of the list with a copy of the chrome one line
+	     below the real one. Then the bar, which took the strip's seam out and
+	     paid for the row by putting the title off screen — so the Plan tab had
+	     one chrome on Templates and a different one here, and switching halves
+	     changed the shape of the top of the app rather than its contents.
+
+	     Here it is the same shape on both halves and the field is read where the
+	     segment is: on arrival, before the list is touched. Not pinned, for the
+	     reason the segment is not — a query is typed once and the results are
+	     what you scroll, and a second strip of chrome under the real one is what
+	     both earlier attempts were. It sits ~100px lower than the bar did, which
+	     is a text field moved toward the thumb rather than away from it. -->
+	<SearchField label="Search exercises" bind:value={query} class="w-full lg:w-80" />
+
 	<ExerciseList {query} lastPerformed={data.lastPerformed} />
 </main>

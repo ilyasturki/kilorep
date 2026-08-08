@@ -664,27 +664,49 @@
 	 * leaving any of it set would put FINISH on a screen with no workout to
 	 * finish.
 	 *
-	 * The leading slot is the session overview rather than a back button, which
-	 * is the whole reason that slot exists: this address is a tab root, so the
-	 * bar would otherwise draw nothing there, and the overview is what a thumb
-	 * reaches for mid-session. FINISH keeps the right-hand slot on both
-	 * viewports — the thumb that never scrolls still finds it without leaving
-	 * the top of the screen, which is rule 7's whole claim on this bar.
+	 * No title, which is how the bar comes to read `Train` — the word the lit tab
+	 * says, taken from the tab list rather than spelled again here, so the two
+	 * cannot come apart. This screen used to hand over "Workout" and that was the
+	 * one place the app's two pieces of nav contradicted each other: a tab lit
+	 * Train, a bar reading Workout, one screen. A session running is not a
+	 * different place, and the accent dot on the tab is what says the loop is
+	 * live — exactly as the tab bar's own note argues.
+	 *
+	 * Both controls share the right-hand slot, because the left of the bar is
+	 * the way up and belongs to no screen. It used to be the overview's, and a
+	 * corner that is the exit on every other screen and a drawer on this one is
+	 * a corner you have to read before you press. FINISH stays the outer one, in
+	 * the corner it has always had — rule 7 wants it findable without a scroll
+	 * and far from the thumb that is logging sets — and the overview sits inboard
+	 * of it. The swipe on the pane and `OverviewPeek` are how a thumb actually
+	 * opens that drawer; this button is the keyboard's and the screen reader's
+	 * way to the same place.
+	 *
+	 * `lg:hidden` on the overview alone, because at that width the session is
+	 * already standing in the left gutter — the `aside` below is `lg:block` —
+	 * and a button that opens a drawer over a list you can see is a second way
+	 * to reach what is not hidden. FINISH crosses the breakpoint; the overview
+	 * does not.
 	 */
-	fillAppBar(() => ({ title: 'Workout', leading: overviewButton, action: finish }));
+	fillAppBar(() => ({ action: liveActions }));
 </script>
 
-{#snippet overviewButton()}
-	<button
-		type="button"
-		aria-label="Session overview"
-		onclick={() => (overview = true)}
-		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-			border-line text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
-		{@attach press()}
-	>
-		<Stack size={20} />
-	</button>
+{#snippet liveActions()}
+	<div class="flex items-center gap-2">
+		<button
+			type="button"
+			aria-label="Session overview"
+			onclick={() => (overview = true)}
+			class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
+				border-line text-ink-muted focus-ring hover:bg-hover lg:hidden
+				press:bg-surface-2"
+			{@attach press()}
+		>
+			<Stack size={20} />
+		</button>
+
+		{@render finish()}
+	</div>
 {/snippet}
 
 <!-- Finish has no ceremony: no summary, no confetti, one question and out. What
