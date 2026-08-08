@@ -13,12 +13,21 @@
 		step?: number;
 		min?: number;
 		max?: number;
-		/** Open the ruler when the number is tapped. Opt-in, and only three fields
-		 * take it: the two on the active set and the custom exertion value. The
-		 * body-weight page and the history editor keep the bare keyboard — they are
-		 * not the logging loop, and a full-screen panel is a lot of screen to spend
-		 * on a number typed once a week. */
+		/** Open the ruler when the number is tapped. Opt-in, and it goes on the
+		 * fields a thumb reaches for daily: the two on the active set, the custom
+		 * exertion value, and today's body weight. The history editor and the
+		 * body-weight page's past-day sheet keep the bare keyboard — a correction
+		 * is aimed at a number you already know, and a full-screen panel is a lot
+		 * of screen to spend on typing it. */
 		ruler?: boolean;
+		/** What one detent of the ruler is worth, when that is not what one tap of
+		 * an arm is worth. Body weight steps 0.1 on the arms and 0.05 on the strip:
+		 * a tap below a bathroom scale's own resolution is a tap that does nothing
+		 * you can verify, while a drag is aimed rather than counted and may as well
+		 * land anywhere the scale can read. */
+		rulerStep?: number;
+		/** How many detents between the ruler's emphasised rungs. */
+		major?: number;
 		onchange?: (value: number | null) => void;
 		onpreview?: (value: number | null) => void;
 		class?: ClassValue;
@@ -32,10 +41,16 @@
 		min = 0,
 		max = Infinity,
 		ruler = false,
+		rulerStep,
+		major,
 		onchange,
 		onpreview,
 		class: klass
 	}: Props = $props();
+
+	/* A `$derived` rather than a destructuring default, which would have to read
+	   `step` while `step` is still being bound. */
+	const detent = $derived(rulerStep ?? step);
 
 	/* At a fine pointer, focusing the field does exactly what it always did. The
 	   ruler is a gesture, and a gesture aimed with a mouse is a worse way to reach
@@ -329,7 +344,8 @@
 		value={value ?? recalled ?? min}
 		{typed}
 		{label}
-		{step}
+		step={detent}
+		{major}
 		{min}
 		{max}
 		onscrub={scrub}

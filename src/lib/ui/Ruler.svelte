@@ -12,6 +12,11 @@
 		typed: string | null;
 		label: string;
 		step: number;
+		/** How many detents between emphasised rungs. The landmarks have to be
+		 * numbers the reader already thinks in, and which those are is a fact
+		 * about the quantity rather than about the strip: every fourth 2.5 kg
+		 * plate is 10 kg, and every tenth 0.05 kg of body weight is half a kilo. */
+		major?: number;
 		min: number;
 		max: number;
 		/** A detent crossed under the thumb. Fires per step, like a held arm. */
@@ -23,7 +28,18 @@
 		ondismiss: () => void;
 	};
 
-	let { value, typed, label, step, min, max, onscrub, onpick, ondismiss }: Props = $props();
+	let {
+		value,
+		typed,
+		label,
+		step,
+		major: majorEvery = 4,
+		min,
+		max,
+		onscrub,
+		onpick,
+		ondismiss
+	}: Props = $props();
 
 	/* 52px per detent. The trade is pure travel against precision — vertical
 	   stacking means the labels never collide, so pitch buys nothing but reach —
@@ -97,7 +113,7 @@
 				continue;
 			}
 
-			const major = i % 4 === 0;
+			const major = i % majorEvery === 0;
 
 			out.push({
 				i,

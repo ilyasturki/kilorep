@@ -16,14 +16,21 @@
 	 * carrying what the days under it could not say on their own — what the month
 	 * averaged, and which way it moved.
 	 *
-	 * Only the newest month opens. Not "the current month": a log whose last
+	 * One month at a time. Opening a month closes the one that was open, and
+	 * tapping the open one closes it too — so "everything folded to headers" is
+	 * a state you can reach on purpose, and it is the best reading of the log
+	 * there is: twelve lines, each an average and a direction. Left free, months
+	 * accumulated open behind you and the record you were trying to read became
+	 * the scrollbar the grouping exists to prevent.
+	 *
+	 * The newest month opens. Not "the current month": a log whose last
 	 * weigh-in was in June should open on June rather than on an empty August,
 	 * and "the first group" is the same rule for both cases without a branch.
 	 *
-	 * Which months are open is deliberately unremembered. It is a reading
-	 * posture, not a setting, and a screen that reopened with four months
-	 * expanded because of something you did last Tuesday is one you have to
-	 * re-tidy before you can read it.
+	 * Which month is open is deliberately unremembered. It is a reading
+	 * posture, not a setting, and a screen that reopened on a month because of
+	 * something you did last Tuesday is one you have to re-tidy before you can
+	 * read it.
 	 */
 	type Props = {
 		entries: BodyweightEntry[];
@@ -37,20 +44,24 @@
 	const groups = $derived(monthGroups(entries));
 
 	/**
-	 * By month key rather than by index, so a backfill that inserts a new month
-	 * above does not slide every open group down onto its neighbour. Seeded
-	 * lazily: the newest month is open until something is explicitly toggled,
-	 * which keeps this from having to be re-seeded every time the newest month
-	 * changes under it.
+	 * The open month, keyed by month rather than by index so a backfill that
+	 * inserts a new month above does not slide the open group down onto its
+	 * neighbour.
+	 *
+	 * Three states, and the third is why this is not a plain `string | null`:
+	 * `undefined` is *untouched*, which reads as the newest month whatever that
+	 * turns out to be, while `null` is a deliberate all-closed. Seeding with
+	 * `groups[0].month` instead would have to be re-seeded every time the newest
+	 * month changed under it — and would seed to nothing at all on a log that
+	 * has no months yet when it mounts.
 	 */
-	let toggled = $state(new Map<string, boolean>());
+	let chosen = $state<string | null | undefined>();
 
-	const isOpen = (month: string, index: number) => toggled.get(month) ?? index === 0;
+	const isOpen = (month: string, index: number) =>
+		chosen === undefined ? index === 0 : chosen === month;
 
 	function toggle(month: string, index: number) {
-		// A new Map rather than a mutation: `Map` is not deeply reactive, so a
-		// `set` on the same instance would not be seen by the `{#each}` reading it.
-		toggled = new Map(toggled).set(month, !isOpen(month, index));
+		chosen = isOpen(month, index) ? null : month;
 	}
 </script>
 

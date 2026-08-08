@@ -91,9 +91,22 @@
 	// `value` is state and `recalled` is not: the field is controlled, so the
 	// specimen has to hold the value for the arms to move it, and the dot has to
 	// have a fixed thing to be measured against.
-	const steppers = $state([
+	type Stepper = {
+		value: number | null;
+		recalled: number;
+		label: string;
+		step: number;
+		ruler: boolean;
+		rulerStep?: number;
+		major?: number;
+		min?: number;
+		max?: number;
+		prop: string;
+	};
+
+	const steppers = $state<Stepper[]>([
 		{
-			value: 82.5 as number | null,
+			value: 82.5,
 			recalled: 82.5,
 			label: 'kg',
 			step: 2.5,
@@ -101,7 +114,7 @@
 			prop: 'step={2.5}'
 		},
 		{
-			value: 7 as number | null,
+			value: 7,
 			recalled: 7,
 			label: 'reps',
 			step: 1,
@@ -109,12 +122,26 @@
 			prop: 'step={1}'
 		},
 		{
-			value: 100 as number | null,
+			value: 100,
 			recalled: 100,
 			label: 'kg',
 			step: 2.5,
 			ruler: true,
 			prop: 'ruler (touch only)'
+		},
+		// Body weight's: arms a tenth, strip a twentieth, a landmark every half
+		// kilo. The one place the two steps disagree, so the one worth showing.
+		{
+			value: 82.4,
+			recalled: 82.4,
+			label: 'kg',
+			step: 0.1,
+			ruler: true,
+			rulerStep: 0.05,
+			major: 10,
+			min: 20,
+			max: 300,
+			prop: 'rulerStep={0.05}'
 		}
 	]);
 
@@ -422,6 +449,10 @@
 								label={stepper.label}
 								step={stepper.step}
 								ruler={stepper.ruler}
+								rulerStep={stepper.rulerStep}
+								major={stepper.major}
+								min={stepper.min}
+								max={stepper.max}
 							/>
 							<span class={caption}>{stepper.prop}</span>
 						</div>

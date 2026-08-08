@@ -58,6 +58,20 @@
 	 */
 	const today = localDateOf(new Date());
 
+	/**
+	 * What a human body weighs, in kg, generously. Wide enough that nobody who
+	 * lifts is ever fenced out — the lightest competitive powerlifting class is
+	 * 43 kg and the heaviest recorded strongman a little over 200 — and narrow
+	 * enough that the field cannot be stepped or dragged somewhere absurd.
+	 *
+	 * The floor is also where an empty field's ruler opens, having nothing
+	 * recalled to open on. That is a *bound*, not a suggestion: a first-ever
+	 * weigh-in is still typed, and 20 kg is simply where the strip starts if you
+	 * drag it instead. Every weigh-in after it opens on the last one.
+	 */
+	const LIGHTEST = 20;
+	const HEAVIEST = 300;
+
 	const todayEntry = $derived(entries.find((entry) => entry.date === today) ?? null);
 	const latest = $derived(entries.at(-1) ?? null);
 
@@ -308,11 +322,27 @@
 			{/if}
 		</div>
 
+		<!--
+			The one field on this screen a thumb reaches for daily, so it scrubs the
+			way the active set's two do — and only on a coarse pointer, which
+			`StepperField` decides for itself.
+
+			0.05 on the strip against 0.1 on the arms: a drag is aimed rather than
+			counted, so it may as well land anywhere a scale can read, while a tap
+			that moved less than the scale's own resolution would be a tap you
+			cannot verify. Majors every ten detents puts a landmark on each half
+			kilo — the numbers a bathroom scale is already read in.
+		-->
 		<StepperField
 			bind:value={kg}
 			{recalled}
 			label="kg"
 			step={0.1}
+			ruler
+			rulerStep={0.05}
+			major={10}
+			min={LIGHTEST}
+			max={HEAVIEST}
 			class="lg:ml-auto lg:min-h-15 lg:w-64 lg:shrink-0"
 		/>
 
@@ -426,7 +456,18 @@
 			{/if}
 		{/if}
 
-		<StepperField bind:value={sheetKg} recalled={sheetRecalled} label="kg" step={0.1} />
+		<!-- No ruler here, for the reason the history editor has none: a correction
+		     is aimed at a number you already know, and this sheet is the one surface
+		     on the screen that is not the daily act. The bounds it does take —
+		     they are a fact about the quantity, not about the control. -->
+		<StepperField
+			bind:value={sheetKg}
+			recalled={sheetRecalled}
+			label="kg"
+			step={0.1}
+			min={LIGHTEST}
+			max={HEAVIEST}
+		/>
 
 		<Button
 			variant="commit"
