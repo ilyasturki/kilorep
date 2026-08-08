@@ -1,22 +1,43 @@
 import { prefersReducedMotion } from 'svelte/motion';
 
 /**
- * The screen's one duration and one curve.
+ * The app's two durations and one curve.
  *
- * Everything the workout screen moves by itself — the pane travelling to the
- * live set, the card growing into an editor while another collapses, the
- * overview panel settling after a swipe, a set sliding into place, a block
- * sliding under a reorder — runs on these two numbers. They were 200ms in three
- * files and instant in a fourth, which is four components each deciding what a
- * moment is; the same act seen twice at two speeds reads as two acts.
+ * Motion here is sorted by how far it goes, not by which component owns it. A
+ * thing that rearranges in place is `QUICK_MS`; a thing that crosses the screen
+ * is `TRAVEL_MS`. Before this there were nine numbers — 90, 100, 120, 150, 160,
+ * 180, 200, 250, 500 — which is nine components each deciding what a moment is,
+ * and the same act seen twice at two speeds reads as two acts.
  *
- * 160ms because this sits inside the logging loop and rule 7 is watching: long
- * enough to say which way the screen moved, short enough that a thumb between
- * sets never waits on it. The curve is `--ease-sheet`, spelled out here because
- * a JS animation cannot read a custom property that Tailwind resolves at build
- * time — the two spellings are one value and have to stay one value.
+ * The curve is `--ease-sheet`, and both numbers are also `--dur-quick` and
+ * `--dur-travel` in `app.css`. Spelled out in both places because a JS animation
+ * cannot read a custom property that Tailwind resolves at build time — each pair
+ * is one value and has to stay one value.
+ */
+
+/**
+ * In-place motion: a card growing into an editor while another collapses, the
+ * pane travelling to the live set, a set sliding into position, a block sliding
+ * under a reorder, a dropdown falling open under its field.
+ *
+ * 160ms because most of this sits inside the logging loop and rule 7 is
+ * watching: long enough to say which way the screen moved, short enough that a
+ * thumb between sets never waits on it.
  */
 export const QUICK_MS = 160;
+
+/**
+ * Screen-crossing motion: a page pushing on or popping off the stack, a sheet
+ * rising from the bottom edge, a drawer, a dialog, the scrim under any of them.
+ *
+ * 20ms more than `QUICK_MS`, and the gap is the point rather than an accident.
+ * These cover a whole viewport instead of a card's worth of height, and a full
+ * screen width crossed in 160ms reads as a cut rather than a move — but two
+ * durations a user can actually tell apart would be two motion systems. 180 is
+ * far enough to keep the long travel legible and near enough that nobody can
+ * name the difference.
+ */
+export const TRAVEL_MS = 180;
 
 /** `--ease-sheet` in the form `Element.animate` and `transition` both accept. */
 export const QUICK_EASE = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
@@ -32,6 +53,11 @@ export const QUICK_EASE = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
  */
 export function quickMs(): number {
 	return prefersReducedMotion.current ? 0 : QUICK_MS;
+}
+
+/** `TRAVEL_MS` under the same preference, on the same terms as `quickMs`. */
+export function travelMs(): number {
+	return prefersReducedMotion.current ? 0 : TRAVEL_MS;
 }
 
 /**

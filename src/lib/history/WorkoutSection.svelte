@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { prefersReducedMotion } from 'svelte/motion';
 	import { slide } from 'svelte/transition';
 	import { weightStep } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
@@ -10,6 +9,7 @@
 	import { loadModeNote } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
+	import { quickMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import { statusOf } from '$lib/workout/groups';
@@ -113,7 +113,7 @@
 
 	{#each cursors as cursor (cursor.set.id)}
 		{#if editing && cursor.set.id === openSetId}
-			<div transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}>
+			<div transition:slide={{ duration: quickMs() }}>
 				{#key cursor.set.id}
 					<EditSet
 						{cursor}

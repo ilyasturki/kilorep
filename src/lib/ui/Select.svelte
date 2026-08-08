@@ -14,6 +14,7 @@
 	import SheetHeader from '$lib/ui/SheetHeader.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
+	import { travelMs } from '$lib/ui/motion';
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
@@ -110,9 +111,12 @@
 
 			     Svelte's own fade rather than the `[data-starting-style]` hooks
 			     `overlay-scrim` reads, because Bits UI sets those on parts it owns
-			     and this is not one. The duration matches the utility's. -->
+			     and this is not one. `travelMs()` is the number the utility itself
+			     transitions on — read through the token rather than restated as a
+			     literal, so the app's one scrim cannot end up with two speeds
+			     depending on which component raised it. -->
 			{#if open}
-				<div class="overlay-scrim" transition:fade={{ duration: 180 }}></div>
+				<div class="overlay-scrim" transition:fade={{ duration: travelMs() }}></div>
 			{/if}
 
 			<Select.ContentStatic class="overlay-panel overlay-sheet">

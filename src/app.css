@@ -399,7 +399,15 @@
    surface pushed back.
 
    For surfaces, not for chrome. A ⋯ or a stepper arm shrinking by 2% is
-   invisible at that size, and the tab bar has its own travel. */
+   invisible at that size, and the tab bar has its own travel.
+
+   Outside the `--dur-quick` / `--dur-travel` scale on purpose, curve and both
+   numbers. Everything on that scale is something moving from one place to
+   another and the duration says how far; this is a surface answering a finger,
+   where the duration says how hard. Put the release on `--ease-sheet` and the
+   spring goes with it — which is the one thing in the app a thumb is touching
+   on every single set. It coincidentally shares 160ms with `--dur-quick`; that
+   is not the token and must not be replaced by it. */
 @utility press-sink {
 	@media (pointer: coarse) {
 		transition: scale 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -511,6 +519,20 @@
 	   overlay utilities so a panel and anything animating alongside it — a
 	   backdrop, a chip settling — cannot disagree about the easing. */
 	--ease-sheet: cubic-bezier(0.2, 0.8, 0.3, 1);
+
+	/* The app's two durations, sorted by distance travelled and not by owner:
+	   `quick` rearranges something in place, `travel` crosses the screen. The
+	   argument for each number, and for the 20ms between them, is in
+	   `lib/ui/motion.ts`, which declares the same two values as `QUICK_MS` and
+	   `TRAVEL_MS` — a JS animation cannot read a custom property Tailwind
+	   resolves at build time, so each pair is written twice and has to stay one
+	   value. Change one, change its twin.
+
+	   Two motions deliberately sit outside this scale, both with the reasoning
+	   at their site: `press-sink`'s spring, which is feedback rather than
+	   travel, and `RestBar`'s fill, which is a clock rather than a transition. */
+	--dur-quick: 160ms;
+	--dur-travel: 180ms;
 
 	/* Safe-area insets as ordinary spacing values: `pb-safe-b`, `pt-safe-t`, … .
 	   Dead without `viewport-fit=cover` in app.html.
@@ -757,7 +779,7 @@
 	/* The panel's own duration and curve: the backdrop is part of the same
 	   gesture, and a scrim still settling under a sheet that has arrived is the
 	   disagreement `--ease-sheet` exists to prevent. */
-	transition: opacity 180ms var(--ease-sheet);
+	transition: opacity var(--dur-travel) var(--ease-sheet);
 
 	&[data-starting-style],
 	&[data-ending-style] {
@@ -806,8 +828,8 @@
 	/* The sheet rises. Its opacity is untouched below `sm` — a panel that fades
 	   while it travels reads as slower than one that simply arrives. */
 	transition:
-		translate 180ms var(--ease-sheet),
-		opacity 180ms var(--ease-sheet);
+		translate var(--dur-travel) var(--ease-sheet),
+		opacity var(--dur-travel) var(--ease-sheet);
 
 	&[data-starting-style],
 	&[data-ending-style] {
@@ -850,10 +872,14 @@
    the trigger, and the variable is namespaced per component so the call site
    is the only place that can name it.
 
-   The list arrives 4px above where it lands, the direction a menu falls open.
-   Faster than a sheet's 180ms — a sheet crosses the screen and this crosses a
-   hairline, and a dropdown that takes as long to appear as a sheet feels
-   broken rather than smooth. */
+   The list arrives 4px above where it lands, the direction a menu falls open,
+   and it only travels: a panel that fades while it moves reads as slower than
+   one that simply arrives, and this one has somewhere to go. The scrim and the
+   centred dialog keep their fades because they do not.
+
+   `--dur-quick` and not `--dur-travel`: this crosses a hairline rather than the
+   screen, which is the same reason a card growing in place gets the shorter
+   number. It was 120ms and a fifth duration of its own before the scale. */
 @utility overlay-menu {
 	z-index: 50;
 	display: flex;
@@ -865,13 +891,10 @@
 	color: var(--ink);
 	@apply shadow-lg;
 
-	transition:
-		opacity 120ms var(--ease-sheet),
-		translate 120ms var(--ease-sheet);
+	transition: translate var(--dur-quick) var(--ease-sheet);
 
 	&[data-starting-style],
 	&[data-ending-style] {
-		opacity: 0;
 		translate: 0 -0.25rem;
 	}
 }
@@ -886,8 +909,8 @@
 	border-radius: var(--radius-sheet);
 
 	transition:
-		opacity 180ms var(--ease-sheet),
-		scale 180ms var(--ease-sheet);
+		opacity var(--dur-travel) var(--ease-sheet),
+		scale var(--dur-travel) var(--ease-sheet);
 
 	&[data-starting-style],
 	&[data-ending-style] {
@@ -964,21 +987,53 @@
 }
 
 /* vaul's base stylesheet, cut to what the app renders: a bottom drawer with no
-   snap points. vaul-svelte ships no CSS — the drag is inline style, but the
-   enter and exit ride these `data-vaul-*` attributes and are left to the
-   consumer, so the rules come from the upstream React package's style.css.
+   snap points. The enter and the exit ride these `data-vaul-*` attributes, so
+   the rules are restated here from the upstream package.
 
-   The 0.5s cubic-bezier(0.32, 0.72, 0, 1) is not the sheet's 180ms and stays
-   that way deliberately: the library hard-codes the same duration and curve
-   into the inline transition a released drag settles with, and a drawer that
-   arrives in 180ms but snaps back from a drag in 500ms is two animations
-   disagreeing about one panel. */
+   These are duplicates, not the only copy. vaul-svelte ships this same block in
+   a `<style global>` inside `drawer.svelte`, which lands *after* `app.css` in
+   the bundle — so at equal specificity the library wins every tie. Anything
+   here that merely matches upstream is inert but harmless; anything here that
+   *disagrees* with upstream is silently dead. See the pair below. */
 [data-vaul-drawer] {
 	touch-action: none;
 	will-change: transform;
 	transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
-	animation-duration: 0.5s;
-	animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* The drawer's enter and exit, and the one rule here that has to beat vaul
+   rather than echo it.
+
+   A drawer is a sheet wearing the phone's geometry, so it arrives and leaves on
+   `--dur-travel` like every other panel. At the library's 0.5s it was the
+   slowest motion in the app by nearly triple, on the platform the app is
+   actually used on.
+
+   The extra class is load-bearing and is the whole reason this is a second
+   rule. Upstream's selector is a bare `[data-vaul-drawer]` — one attribute, and
+   it loads last — so writing these two declarations into the block above sets
+   them and then watches the library overwrite them, which is exactly what it
+   did. `.overlay-panel` is on both drawers the app renders, the bottom sheet
+   and the workout overview, so one class covers both and outranks upstream by a
+   full step. Verified by computed style, not by reading: the first attempt read
+   `animation-duration: 0.5s` off a live drawer with `var(--dur-travel)` sitting
+   right there in the stylesheet.
+
+   Only `animation-*` is ours. `transition: transform` above keeps the library's
+   0.5s and the library's curve, because vaul re-writes that same declaration
+   inline on every release from `TRANSITIONS.DURATION`, a module constant with
+   no prop behind it — the only ways to reach it are patching the dependency or
+   an `!important`, and neither is worth it for the one case it shows in:
+   dragging a sheet partway and letting go without dismissing it.
+
+   Note what that split does not cost. The exit already outruns vaul's unmount
+   timer — `use-drawer-root` clears the portal on `afterSleep(DURATION * 1000)`
+   regardless of what the CSS did — so a dismissed drawer is gone at 180ms and
+   mounted until 500ms either way. That is the library's, not this choice's, and
+   it is invisible because the panel is off-screen for all of it. */
+[data-vaul-drawer].overlay-panel {
+	animation-duration: var(--dur-travel);
+	animation-timing-function: var(--ease-sheet);
 }
 
 /* The sheet with the OS keyboard up. `--sheet-keys` is how much of the screen
@@ -1014,8 +1069,8 @@
 
 	transition:
 		transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
-		bottom 180ms var(--ease-sheet),
-		max-height 180ms var(--ease-sheet);
+		bottom var(--dur-travel) var(--ease-sheet),
+		max-height var(--dur-travel) var(--ease-sheet);
 }
 
 [data-vaul-drawer][data-vaul-snap-points='false'][data-vaul-drawer-direction='bottom'][data-state='open'] {
@@ -1034,9 +1089,18 @@
 	animation-name: vaul-slide-to-left;
 }
 
-[data-vaul-overlay][data-vaul-snap-points='false'] {
-	animation-duration: 0.5s;
-	animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+/* The scrim travels with the panel it dims, so it takes the same number the
+   panel's enter and exit now take. Vaul writes this element's opacity inline
+   during a drag, which those frames own; this is only the fade at each end.
+
+   Three selectors deep, and count them before shortening it. Upstream's rule is
+   `[data-vaul-overlay][data-vaul-snap-points='false']` — two — so the obvious
+   `[data-vaul-overlay].overlay-scrim-drawer` ties at two and loses on order,
+   the same way the panel did. Both attributes plus the class is what clears it.
+   `.overlay-scrim-drawer` is on both drawers' overlays. */
+[data-vaul-overlay][data-vaul-snap-points='false'].overlay-scrim-drawer {
+	animation-duration: var(--dur-travel);
+	animation-timing-function: var(--ease-sheet);
 }
 
 [data-vaul-overlay][data-vaul-snap-points='false'][data-state='open'] {
@@ -1057,11 +1121,11 @@
    frame of a drawer mounted open and true from the next one on, which is a
    hydration concern and not reachable from a call site. The workout pane needs
    the same suppression on demand — a swipe drags a stand-in panel all the way
-   in and then hands over to the real drawer, and the 0.5s slide from the edge
-   would be that panel leaving and coming back.
+   in and then hands over to the real drawer, and a slide from the edge —
+   whatever its duration — would be that panel leaving and coming back.
 
    Keyed on the open state alone, so a drawer that arrived silently still leaves
-   on vaul's curve — and so the class can be taken off the moment it closes
+   normally — and so the class can be taken off the moment it closes
    without handing `animation-name` back to an element still in `[data-state=
    'open']`, which would replay the entrance it was there to prevent. */
 .drawer-instant[data-state='open'] {
@@ -1180,7 +1244,8 @@
    descendant of <html> — which never exists, and the rule silently never
    matches. That was the bug: written with the space, all four direction rules
    were dead, the UA's default crossfade survived underneath them, and every
-   route change in this app was a 250ms fade. It looked like nothing at all on
+   route change in this app was a fade on the duration below — 250ms at the
+   time, which is where that number went. It looked like nothing at all on
    a phone, where the two screens are similar enough that a fade reads as a
    repaint, and like a morphing blur on a desk. Rules without a combinator —
    the duration below, `root` — matched all along, which is why the layer
@@ -1197,14 +1262,32 @@
 	view-transition-name: page;
 }
 
+::view-transition-group(root),
 ::view-transition-old(root),
 ::view-transition-new(root) {
 	animation: none;
 }
 
+/* `--dur-travel`, the same number a sheet rises on: both cross the screen, and
+   a push that took 250ms while the sheet it leads to took 180ms was the app
+   disagreeing with itself about how long "somewhere else" takes. The distance
+   is untouched — the parallax is still 30/100 — so this is the same move, told
+   faster.
+
+   `group` is named alongside `old` and `new`, and leaving it out is a trap worth
+   spelling out. The UA gives every group its own animation — geometry, at a
+   default 250ms — and a transition is not over until its *longest* animation
+   ends. Style only the two halves and the panes stop moving at 180ms while the
+   snapshot overlay hangs on for another 70ms, un-interactive and with nothing
+   drawn moving. Invisible while all three numbers matched, which is why it went
+   unnoticed until they stopped. The group's geometry never changes here — both
+   halves are the same rectangle, per `vt-page` — so this duration governs a
+   no-op and exists purely to end it on time. `root`'s group is killed outright
+   below, for the same reason and by the same argument. */
+::view-transition-group(page),
 ::view-transition-old(page),
 ::view-transition-new(page) {
-	animation-duration: 250ms;
+	animation-duration: var(--dur-travel);
 	animation-timing-function: var(--ease-sheet);
 }
 

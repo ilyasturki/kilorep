@@ -69,7 +69,14 @@
 			     overtime — `restProgress` clamps — so the track never contradicts the
 			     digits beside it. `accent-soft` and not the accent itself: the lime
 			     fill in this app means "this logs a set", and a bar that filled with
-			     it would be promising a button. -->
+			     it would be promising a button.
+
+			     200ms linear, and deliberately outside the app's motion scale: this
+			     is a clock being drawn, not a panel arriving. The tick above is
+			     250ms, so the fill is sized to run just short of the next one and
+			     the bar reads as continuous. On `--dur-quick` it would finish 90ms
+			     early every tick and visibly stutter, and on any easing it would
+			     race and then crawl through a second that passes at one speed. -->
 			<div
 				aria-hidden="true"
 				class="absolute inset-y-0 left-0 bg-accent-soft

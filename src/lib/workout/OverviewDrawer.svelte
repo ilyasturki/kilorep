@@ -12,12 +12,12 @@
 		 *
 		 * Set by the pane when a swipe dragged the stand-in panel all the way in
 		 * and this drawer is taking over from it: the panel is at rest on screen
-		 * already, and a 0.5s slide-in from the edge would be it leaving and
-		 * coming back. It stays set for as long as this opening lasts, because
-		 * lifting it mid-open would hand `animation-name` back to an element in
+		 * already, and a slide-in from the edge would be it leaving and coming
+		 * back. It stays set for as long as this opening lasts, because lifting it
+		 * mid-open would hand `animation-name` back to an element in
 		 * `[data-state='open']` and replay the slide from nothing. Closing is
 		 * untouched either way — the rule in `app.css` answers only for the open
-		 * state, so a drawer that arrived silently still leaves on vaul's curve.
+		 * state, so a drawer that arrived silently still leaves normally.
 		 */
 		instant?: boolean;
 		entries: Entry[];

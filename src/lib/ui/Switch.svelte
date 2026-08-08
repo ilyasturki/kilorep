@@ -42,10 +42,10 @@
 
 	<span
 		class="flex h-7 w-12 shrink-0 items-center rounded-full border border-line bg-line-soft p-0.5
-			transition-colors duration-150 group-data-[state=checked]:bg-accent"
+			transition-colors duration-100 group-data-[state=checked]:bg-accent"
 	>
 		<Switch.Thumb
-			class="size-5.5 rounded-full border border-line bg-surface transition-transform duration-150
+			class="size-5.5 rounded-full border border-line bg-surface transition-transform duration-100
 				data-[state=checked]:translate-x-5"
 		/>
 	</span>
