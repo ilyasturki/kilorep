@@ -7,6 +7,19 @@
 		title: string;
 		match?: { start: number; end: number } | null;
 		meta?: string;
+		/**
+		 * A line under the name that says what the row does, for the rows whose
+		 * control is a choice rather than a destination. Unlike `meta` it wraps
+		 * rather than truncates: a sentence is not a glance's convenience, and
+		 * half of one is worse than a taller row.
+		 */
+		description?: string;
+		/**
+		 * The name's weight. `extrabold` is the list's own voice and the default;
+		 * `bold` is for a row that stands beside controls carrying their own label,
+		 * where the heavier name would read as a heading over them.
+		 */
+		weight?: 'extrabold' | 'bold';
 		href?: string;
 		onclick?: () => void;
 		onhold?: (anchor: HTMLElement) => void;
@@ -32,6 +45,8 @@
 		title,
 		match = null,
 		meta,
+		description,
+		weight = 'extrabold',
 		href,
 		onclick,
 		onhold,
@@ -87,38 +102,45 @@
 	     meta is the substance instead and dropping it would lose the only copy:
 	     it keeps the line of its own that a fact deserves. Reach for it on that
 	     test alone, never to buy a long title more room. -->
-	<span
-		class={[
-			'flex min-w-0 flex-1 gap-x-2 text-base',
-			stacked
-				? 'flex-col'
-				: 'max-h-[calc(var(--text-base)*var(--text-base--line-height))] flex-wrap' +
-					' items-baseline overflow-hidden'
-		]}
-	>
+	<span class="flex min-w-0 flex-1 flex-col">
 		<span
 			class={[
-				'min-w-0 truncate font-extrabold tracking-tight',
-				tone === 'danger' ? 'text-danger' : 'text-ink'
+				'flex min-w-0 gap-x-2 text-base',
+				stacked
+					? 'flex-col'
+					: 'max-h-[calc(var(--text-base)*var(--text-base--line-height))] flex-wrap' +
+						' items-baseline overflow-hidden'
 			]}
 		>
-			<!-- One line on purpose: whitespace between the slices would render. -->
-			{#if match !== null}
-				{title.slice(0, match.start)}<mark
-					class="bg-transparent text-inherit underline decoration-2 underline-offset-2"
-					>{title.slice(match.start, match.end)}</mark
-				>{title.slice(match.end)}
-			{:else}
-				{title}
+			<span
+				class={[
+					'min-w-0 truncate tracking-tight',
+					weight === 'bold' ? 'font-bold' : 'font-extrabold',
+					tone === 'danger' ? 'text-danger' : 'text-ink'
+				]}
+			>
+				<!-- One line on purpose: whitespace between the slices would render. -->
+				{#if match !== null}
+					{title.slice(0, match.start)}<mark
+						class="bg-transparent text-inherit underline decoration-2 underline-offset-2"
+						>{title.slice(match.start, match.end)}</mark
+					>{title.slice(match.end)}
+				{:else}
+					{title}
+				{/if}
+			</span>
+			{#if badge}
+				<span class="flex shrink-0 items-center">{@render badge()}</span>
+			{/if}
+			{#if meta}
+				<span class={['text-sm font-bold text-ink-faint', stacked ? 'truncate' : 'shrink-0']}>
+					{meta}
+				</span>
 			{/if}
 		</span>
-		{#if badge}
-			<span class="flex shrink-0 items-center">{@render badge()}</span>
-		{/if}
-		{#if meta}
-			<span class={['text-sm font-bold text-ink-faint', stacked ? 'truncate' : 'shrink-0']}>
-				{meta}
-			</span>
+
+		{#if description}
+			<span class="text-sm font-bold text-ink-faint">{description}</span>
 		{/if}
 	</span>
 

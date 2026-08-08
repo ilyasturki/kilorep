@@ -62,7 +62,10 @@
 
 <Section title="Sets">
 	<li>
-		<ListRow title="Rating scale">
+		<!-- `bold` and a description, because the two rows under it carry their own
+		     label and their own line of explanation. At the list's usual weight this
+		     name reads as a heading over them rather than as their equal. -->
+		<ListRow title="Rating scale" weight="bold" description="The same set reads RPE 8 or RIR 2">
 			{#snippet trailing()}
 				<ChipGroup
 					bind:value={() => exertionScale.current, (next) => void chooseScale(next)}
@@ -99,17 +102,4 @@
 			onchange={(next) => void chooseRest({ seconds: next })}
 		/>
 	</li>
-
-	{#snippet footer()}
-		<p class="text-sm text-pretty text-ink-muted">
-			The same set reads <span class="font-bold text-ink">RPE 8</span>
-			or <span class="font-bold text-ink">RIR 2</span>.
-		</p>
-
-		<p class="text-sm text-pretty text-ink-muted">
-			Rest counts down when you log a working set — never after a warmup, and once per round in a
-			superset. It runs at the foot of the app rather than on a screen of its own, and the phone is
-			notified when it ends. An exercise can carry its own duration; that lives on the exercise.
-		</p>
-	{/snippet}
 </Section>
