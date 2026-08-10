@@ -11,6 +11,17 @@ export const MIN_REST_SECONDS = 15;
 export const MAX_REST_SECONDS = 600;
 
 /**
+ * How long SKIP stays undoable.
+ *
+ * Five seconds, which is the length of a change of mind and not of a decision:
+ * long enough for the thumb that skipped to notice it skipped, short enough
+ * that the strip is gone before the bar is racked. Beyond that the offer would
+ * be sitting on screen through a set — the timer as a thing to dismiss twice,
+ * which is the shape MARKET.md refuses.
+ */
+export const REST_UNDO_MS = 5000;
+
+/**
  * Everything the rules below need to know about the user's taste, flattened.
  *
  * `overrides` is per exercise and tri-state, and the third state is the point:

@@ -1,5 +1,11 @@
 import { catalogById } from '$lib/catalog';
-import { MAX_REST_SECONDS, nudgedEnd, restLabel, restProgress } from '$lib/domain/rest';
+import {
+	MAX_REST_SECONDS,
+	REST_UNDO_MS,
+	nudgedEnd,
+	restLabel,
+	restProgress
+} from '$lib/domain/rest';
 import type { RestStart } from '$lib/domain/rest';
 import { cancelRestEnd, scheduleRestEnd } from '$lib/notify/rest';
 import { getStore } from '$lib/store/store';
@@ -26,10 +32,34 @@ class RestTimer {
 	/** Pushed in by the bar's interval; the only clock this module has. */
 	public now: number = $state(Date.now());
 
+	/**
+	 * The rest SKIP threw away, for as long as it can be asked back.
+	 *
+	 * In memory and nowhere else: it never reaches the snapshot, so a reload or
+	 * a long walk away from the phone lands on a session with no rest running,
+	 * which is what a skip meant when it was pressed. Only `skip()` fills it —
+	 * `clear()` is also what a warmup or a never-rest exercise gets on commit,
+	 * and an undo offer arriving mid-log is the friction the strip exists to
+	 * avoid.
+	 */
+	#dismissed: RestStart | null = $state(null);
+
+	#dismissedAt = 0;
+
 	#rang = false;
 
 	public get running(): boolean {
 		return this.endsAt !== null;
+	}
+
+	public get undoing(): boolean {
+		return this.#dismissed !== null;
+	}
+
+	public get dismissedName(): string | null {
+		const id = this.#dismissed?.exerciseId;
+
+		return id === undefined ? null : (catalogById[id]?.name ?? null);
 	}
 
 	/** Negative is overtime, and overtime is a state, not an error. */
@@ -77,6 +107,7 @@ class RestTimer {
 		this.endsAt = at + rest.seconds * 1000;
 		this.now = at;
 		this.#rang = false;
+		this.#dismissed = null;
 
 		this.#announce();
 		void this.#persist();
@@ -112,9 +143,47 @@ class RestTimer {
 		this.exerciseId = null;
 		this.seconds = 0;
 		this.#rang = false;
+		this.#dismissed = null;
 
 		void cancelRestEnd();
 		void this.#persist();
+	}
+
+	/**
+	 * SKIP: the same clearing, plus five seconds in which it can be taken back.
+	 *
+	 * The offer is recorded after the clear, because clearing is what drops any
+	 * older one and this is the new one.
+	 */
+	public skip(at: number = Date.now()): void {
+		const dismissed = this.snapshot;
+
+		this.clear();
+
+		if (dismissed === null) {
+			return;
+		}
+
+		this.#dismissed = { exerciseId: dismissed.exerciseId, seconds: dismissed.seconds };
+		this.#dismissedAt = at;
+		this.now = at;
+	}
+
+	/**
+	 * The skip, taken back — as a fresh rest of the same length, not as the
+	 * remainder that was thrown away. Standing up and sitting back down is the
+	 * gesture, and the body that just got two seconds of it is owed the whole
+	 * duration rather than whatever the clock had left when the thumb slipped.
+	 */
+	public undo(at: number = Date.now()): void {
+		const dismissed = this.#dismissed;
+
+		if (dismissed === null) {
+			return;
+		}
+
+		this.#dismissed = null;
+		this.start(dismissed, at);
 	}
 
 	/**
@@ -133,6 +202,7 @@ class RestTimer {
 		this.exerciseId = null;
 		this.seconds = 0;
 		this.#rang = false;
+		this.#dismissed = null;
 
 		void cancelRestEnd();
 	}
@@ -140,6 +210,7 @@ class RestTimer {
 	public resume(rest: RestSnapshot | null, muted: boolean): void {
 		this.muted = muted;
 		this.now = Date.now();
+		this.#dismissed = null;
 		this.endsAt = rest?.endsAt ?? null;
 		this.seconds = rest?.seconds ?? 0;
 		this.exerciseId = rest?.exerciseId ?? null;
@@ -162,6 +233,12 @@ class RestTimer {
 	 */
 	public tick(now: number): void {
 		this.now = now;
+
+		// The undo window closes on the same clock the countdown runs on, so a
+		// skip owes the app no timeout of its own.
+		if (this.#dismissed !== null && now - this.#dismissedAt >= REST_UNDO_MS) {
+			this.#dismissed = null;
+		}
 
 		if (this.endsAt === null || this.#rang || now < this.endsAt) {
 			return;
