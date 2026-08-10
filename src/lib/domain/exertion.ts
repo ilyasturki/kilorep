@@ -5,7 +5,16 @@ export const EXERTION_MAX = 10;
 
 export const EXERTION_STEP = 0.5;
 
-export const EXERTION_RUNGS: readonly number[] = [7, 7.5, 8, 8.5, 9, 9.5, 10];
+/**
+ * The ratings the picker offers as one tap, which is not the whole scale.
+ *
+ * The top of it, because a working set below RPE 7 is rare enough to type. 7.5
+ * is the one gap inside the range, and it is the price of the dash that clears
+ * a rating: the grid holds eight and the eighth had to be one of them. Every
+ * half-step either way is still reachable through the picker's own field —
+ * `EXERTION_STEP` is what the chips skip, not what the domain stores.
+ */
+export const EXERTION_RUNGS: readonly number[] = [7, 8, 8.5, 9, 9.5, 10];
 
 export function settleExertion(value: number): number {
 	const stepped = Math.round(value / EXERTION_STEP) * EXERTION_STEP;

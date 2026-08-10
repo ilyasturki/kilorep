@@ -56,8 +56,39 @@ export function fullyVisible(node: HTMLElement): boolean {
  */
 let gliding: number | undefined;
 
+/** Raised only for the duration of an `instantly` call; see below. */
+let arriving = false;
+
 /**
- * Move the scroller by `delta`, over the screen's one duration and curve.
+ * Run `body`'s reveals with no travel at all — whatever they aim at, the pane
+ * is simply there.
+ *
+ * A switch around the call rather than a flag on each of the four reveals,
+ * because the caller this exists for does not know which of them it is about
+ * to reach: the workout screen picks between three on its way to the active
+ * set, and on the first pass after it mounts every one of them has to land
+ * rather than glide. A pane that animates from a scroll offset the user never
+ * saw is motion with nothing to say — the eye has no earlier frame to relate
+ * it to, so there is no continuity for the travel to preserve.
+ *
+ * Synchronous by contract. Every reveal in this module measures and starts its
+ * scroll before it returns, so the flag never has to outlive `body`.
+ */
+export function instantly(body: () => void): void {
+	arriving = true;
+
+	try {
+		body();
+	} finally {
+		arriving = false;
+	}
+}
+
+/**
+ * Move the scroller by `delta`, over the screen's one duration and curve —
+ * or over no duration at all, which is both what the OS asks for under reduced
+ * motion and what `instantly` asks for on an arrival. One branch answers both,
+ * because a zero-length travel is the same act either way.
  *
  * Hand-driven rather than `scrollIntoView({ behavior: 'smooth' })`, which is the
  * browser's duration and the browser's curve with no way to ask for either — and
@@ -83,7 +114,7 @@ function glide(scroller: HTMLElement, delta: number): void {
 		return;
 	}
 
-	const ms = quickMs();
+	const ms = arriving ? 0 : quickMs();
 	const from = scroller.scrollTop;
 	const to = from + delta;
 

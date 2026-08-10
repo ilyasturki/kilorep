@@ -27,7 +27,7 @@
 	import { playMorphs } from '$lib/ui/morph';
 	import { quickMs } from '$lib/ui/motion';
 	import { coarsePointer } from '$lib/ui/pointer';
-	import { fullyVisible, revealNearest, revealSpan, revealStart } from '$lib/ui/scroll';
+	import { fullyVisible, instantly, revealNearest, revealSpan, revealStart } from '$lib/ui/scroll';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import { press, SLOP } from '$lib/ui/press';
 
@@ -109,6 +109,24 @@
 	let scheduled = false;
 
 	/**
+	 * The first landing after the screen mounts does not travel.
+	 *
+	 * Every reveal after it is a move the eye can follow, because the eye saw
+	 * where the pane was a moment ago. The first one is not: the pane is at zero
+	 * because it has just been built, and a 160ms glide down from an offset
+	 * nobody was ever shown is a page that appears to be still loading. Arriving
+	 * mid-session — the tab bar, a reload in the gym — should look like the
+	 * screen was always at the live set, which is what `(tabs)/+layout.svelte`
+	 * already tells the snapshot it is competing with.
+	 *
+	 * Consumed rather than checked, so a mount with no active set to reveal —
+	 * a session whose last set is logged — spends it on whatever reveal comes
+	 * first instead of animating one arrival and holding the instant one back
+	 * forever.
+	 */
+	let arriving = true;
+
+	/**
 	 * Where the pane has to be, measured and started. Called once per change by
 	 * `settle`, which is the only thing that knows the layout has settled.
 	 */
@@ -173,7 +191,13 @@
 		await tick();
 		scheduled = false;
 
-		reveal();
+		if (arriving) {
+			arriving = false;
+			instantly(reveal);
+		} else {
+			reveal();
+		}
+
 		playMorphs();
 	}
 
