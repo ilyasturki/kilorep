@@ -4,7 +4,7 @@
 	import { Drawer } from 'vaul-svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import type { Pane } from '$lib/ui/keyboard';
-	import { keyboardHeight, keyboardUp, visiblePane, watchVisiblePane } from '$lib/ui/keyboard';
+	import { dockBottom, keyboardUp, visiblePane, watchVisiblePane } from '$lib/ui/keyboard';
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
@@ -62,7 +62,7 @@
 
 		const dock = (pane: Pane): void => {
 			if (keyboardUp(pane)) {
-				node.style.setProperty('--sheet-keys', `${keyboardHeight(pane)}px`);
+				node.style.setProperty('--sheet-keys', `${dockBottom(pane)}px`);
 				node.style.setProperty('--sheet-pane', `${pane.height}px`);
 			} else {
 				node.style.removeProperty('--sheet-keys');

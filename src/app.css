@@ -1036,11 +1036,13 @@
 	animation-timing-function: var(--ease-sheet);
 }
 
-/* The sheet with the OS keyboard up. `--sheet-keys` is how much of the screen
-   the keys have taken and `--sheet-pane` is the strip left above them, both
-   written onto this node by Sheet.svelte and both absent whenever no keyboard
-   is showing — which is why every value here falls back to the geometry the
-   drawer has always had. Nothing about a sheet at rest changes.
+/* The sheet with the OS keyboard up. `--sheet-keys` is how far off the bottom a
+   fixed box has to sit to stand on the keys — `dockBottom`, not the keys' own
+   height, since the browser pans the visual viewport under a focused field and
+   the two part company — and `--sheet-pane` is the strip left above them. Both
+   are written onto this node by Sheet.svelte and both are absent whenever no
+   keyboard is showing, which is why every value here falls back to the geometry
+   the drawer has always had. Nothing about a sheet at rest changes.
 
    `bottom` stands the panel on the keys. The ceiling comes down to the strip so
    the top edge cannot be pushed off the screen, and a sheet with more content

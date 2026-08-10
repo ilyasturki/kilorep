@@ -48,14 +48,36 @@ export function visiblePane(): Pane {
 }
 
 /**
- * How much of the layout viewport's bottom edge the keys have taken — which is
- * exactly what a bottom-anchored `position: fixed` panel wants on `bottom` to
- * stand on top of them.
+ * The keys' own height: what the layout viewport has and the visual one does
+ * not. Deliberately blind to `top` — see `dockBottom`, which is the number that
+ * has to care where the visual viewport currently sits.
  *
  * Clamped at zero. A visual viewport taller than the layout one is not a state
- * to react to, and a negative `bottom` would push the panel off the screen.
+ * to react to.
  */
 export function keyboardHeight(pane: Pane): number {
+	return Math.max(0, full() - pane.height);
+}
+
+/**
+ * What a bottom-anchored `position: fixed` panel wants on `bottom` to stand on
+ * top of the keys.
+ *
+ * Not `keyboardHeight`, and the gap between the two is a whole class of bug: a
+ * fixed box is placed against the *layout* viewport, so once the browser pans
+ * the visual viewport down to lift the focused field clear of the keys — the
+ * second event `watchVisiblePane` exists to catch — `top` is how far the two
+ * have come apart, and the panel has to give that distance back or it sinks
+ * behind the keys by exactly that much.
+ *
+ * A panned keyboard is still a keyboard, though, which is why this subtraction
+ * lives here and not in the height above. Asking `keyboardUp` a question phrased
+ * this way answered "no" at the end of every pan, and the ruler, which reads
+ * that as the keyboard having gone away, closed itself a second after it opened.
+ *
+ * Clamped at zero: a negative `bottom` would push the panel off the screen.
+ */
+export function dockBottom(pane: Pane): number {
 	return Math.max(0, full() - pane.top - pane.height);
 }
 
