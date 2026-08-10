@@ -61,7 +61,7 @@
 			label="Rest after this exercise"
 			description={rests
 				? 'A countdown starts when a working set is logged'
-				: 'No countdown — not timed in this plan'}
+				: 'No countdown. Not timed in this plan'}
 			bind:checked={() => rests, (next) => onchange(next ? shown : null)}
 		/>
 

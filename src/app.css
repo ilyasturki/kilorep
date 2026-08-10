@@ -419,6 +419,111 @@
 	}
 }
 
+/* The switch, whose two halves have to agree. The track filling with accent and
+   the thumb crossing to meet it are one act seen twice, so they run on
+   `--dur-quick` and `--ease-sheet` — before this they shared a `duration-100`
+   that belonged to neither the scale nor anything else.
+
+   The travel keeps the sheet curve rather than borrowing the spring below. A
+   thumb crossing its track is a thing moving from one place to another, which
+   is exactly what `motion.ts` sorts the duration scale by; the spring is
+   feedback, and it is spent on the only part of this that answers a finger.
+
+   That part is the zoom, and it is `press-sink` inverted. `press-sink` says at
+   its own site that it is for surfaces and not for chrome, and it is right: a
+   22px thumb losing 2% is nothing anyone can see. So the same two numbers and
+   the same curve are spent the other way — the thumb *grows* under the finger
+   and settles back through the overshoot. Down quick and flat, up slow and
+   springy, for `press-sink`'s reason and no other.
+
+   The press state is read off the root, which is the element the finger is
+   actually on and the element `ui/press.ts` marks. `.group` is the hook it
+   already wears for `data-state`; a private attribute here would be a second
+   handle saying the same thing. */
+/* The segmented control: a well, and one raised pill that travels between the
+   segments rather than a fill that appears under whichever is current.
+
+   The pill is absolutely positioned and sized in `calc`, so nothing measures
+   anything and there is no observer to keep in step with a resize. The three
+   numbers that make the arithmetic work — the well's padding, the gap between
+   segments, and how many segments there are — are all read from custom
+   properties. `--seg-pad` and `--seg-gap` are declared here, on the well, and
+   not written as Tailwind classes on the element, because a `p-1` and a `gap-1`
+   sitting in a class attribute could be changed without anyone noticing that
+   the pill's width is quoting them. `--seg-count` and `--seg-index` come from
+   the component, which is the only thing that knows the list.
+
+   `translate` and not `left`: a percentage on `translate` resolves against the
+   element's own width, which is exactly one segment, so the pitch is `100% +
+   gap` and the index multiplies it. Animating `left` would work and would also
+   animate the pill's layout on every frame.
+
+   `--dur-quick` because the pill rearranges something in place — it crosses a
+   control, not a screen.
+
+   Nothing is needed to stop it sliding in on mount: the first render already
+   puts `translate` at its final value, and a transition with no previous value
+   to travel from does not fire. */
+@utility segmented-well {
+	--seg-pad: 0.25rem;
+	--seg-gap: 0.25rem;
+
+	position: relative;
+	display: flex;
+	width: 100%;
+	gap: var(--seg-gap);
+	padding: var(--seg-pad);
+}
+
+@utility segmented-pill {
+	position: absolute;
+	top: var(--seg-pad);
+	bottom: var(--seg-pad);
+	left: var(--seg-pad);
+	width: calc(
+		(100% - 2 * var(--seg-pad) - (var(--seg-count) - 1) * var(--seg-gap)) / var(--seg-count)
+	);
+	translate: calc(var(--seg-index) * (100% + var(--seg-gap)));
+	transition: translate var(--dur-quick) var(--ease-sheet);
+}
+
+/* The label's colour travels with the pill instead of snapping when it arrives.
+   This used to be behind `pointer-fine:`, which meant a finger got no
+   transition at all — correct when the tint *was* the whole feedback and any
+   lag read as the tap not landing, and wrong now that something is visibly
+   moving underneath for the same 160ms. */
+@utility segmented-item {
+	transition: color var(--dur-quick) var(--ease-sheet);
+}
+
+@utility switch-track {
+	transition: background-color var(--dur-quick) var(--ease-sheet);
+}
+
+@utility switch-thumb {
+	transition:
+		translate var(--dur-quick) var(--ease-sheet),
+		scale 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+	@media (pointer: coarse) {
+		.group.is-pressed & {
+			scale: 1.15;
+			transition:
+				translate var(--dur-quick) var(--ease-sheet),
+				scale 90ms ease-out;
+		}
+	}
+
+	@media (pointer: fine) {
+		.group:active & {
+			scale: 1.15;
+			transition:
+				translate var(--dur-quick) var(--ease-sheet),
+				scale 90ms ease-out;
+		}
+	}
+}
+
 @theme inline {
 	--color-canvas: var(--canvas);
 	--color-surface: var(--surface);
@@ -1161,16 +1266,36 @@
 }
 
 /* The grab handle, in the app's neutrals rather than vaul's grey. The hitarea
-   is the library's: the visible pill is 5px tall and the touch target is not
-   allowed to be. */
-[data-vaul-handle] {
+   is the library's: the visible pill is 8px tall and the touch target is not
+   allowed to be.
+
+   Bigger than vaul's own 5x32, and bigger than the iOS grabber both are copying,
+   because `--line` is the hairline border colour and at 5px the pill read as one
+   more rule rather than as the one part of the sheet you are meant to grab. The
+   colour is the constraint here: size is what is left to carry it, so it takes a
+   real step rather than a polite one.
+
+   The selector is doubled, and that is the load-bearing part. vaul-svelte styles
+   its own handle from inside the drawer component — `:global([data-vaul-handle])`
+   with `background: #e2e2e4`, `opacity: 0.7` and 5x32 — which compiles to a plain
+   attribute selector at the same specificity as this one, injected after the
+   stylesheet, so it won on document order. Everything this rule said was true of
+   nothing: the handle has never been `--line`, and in light mode a 70% #e2e2e4 on
+   a white panel is most of why it could not be seen. Doubling the attribute takes
+   the specificity to 0-2-0 and settles it without `!important`.
+
+   `opacity` is reset for the same reason. The library's only other handle rule
+   raises it to 1 on hover and active, so at 0-2-0 the two agree rather than
+   fight. */
+[data-vaul-handle][data-vaul-handle] {
 	display: block;
 	position: relative;
 	margin-inline: auto;
-	height: 5px;
-	width: 2.5rem;
+	height: 8px;
+	width: 3.5rem;
 	border-radius: 1rem;
 	background-color: var(--line);
+	opacity: 1;
 	touch-action: pan-y;
 }
 

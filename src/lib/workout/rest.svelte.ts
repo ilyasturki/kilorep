@@ -181,7 +181,7 @@ class RestTimer {
 
 		const name = this.exerciseName;
 
-		void scheduleRestEnd(this.endsAt, name === null ? 'Next set up.' : `${name} — next set up.`);
+		void scheduleRestEnd(this.endsAt, name === null ? 'Next set up.' : `${name}, next set up.`);
 	}
 
 	/**

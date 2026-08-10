@@ -398,7 +398,7 @@
 					label="Rest on this exercise"
 					description={rests
 						? 'A countdown starts when a working set is logged'
-						: 'No countdown — this one is never timed'}
+						: 'No countdown. This one is never timed'}
 					bind:checked={() => rests, (next) => void write(next ? effective : null)}
 				/>
 

@@ -18,17 +18,22 @@
 	// and `surface` over `sunken` is the depth ramp saying "selected" neutrally in
 	// both themes without a per-theme pair.
 	//
+	// The pill is one element that travels, and it is a sibling rather than the
+	// selected segment's own background — see `segmented-pill` in app.css. Which
+	// means the segment carries no fill of its own: `relative` is what puts it in
+	// the same paint layer as the absolutely positioned pill, where DOM order
+	// decides, and the pill is written first so every label sits above it.
+	//
 	// The two states are styled under separate `data-[state=…]` prefixes rather
 	// than one plain rule and one override — Tailwind resolves a conflict by
 	// stylesheet order, not by how specific a class looks in the attribute, so a
 	// bare `text-ink-faint` could win over the selected colour.
 	const segment =
-		'flex min-h-chrome flex-1 items-center justify-center gap-2 rounded-xl px-2 ' +
-		'text-md font-bold select-none focus-ring ' +
-		'data-[state=on]:bg-surface data-[state=on]:text-ink ' +
+		'segmented-item relative flex min-h-chrome flex-1 items-center justify-center gap-2 ' +
+		'rounded-xl px-2 text-md font-bold select-none focus-ring ' +
+		'data-[state=on]:text-ink ' +
 		'data-[state=off]:text-ink-faint data-[state=off]:press:bg-surface-2 ' +
-		'data-[state=off]:pointer-fine:hover:text-ink-muted ' +
-		'pointer-fine:transition-colors pointer-fine:duration-100';
+		'data-[state=off]:pointer-fine:hover:text-ink-muted';
 </script>
 
 <script lang="ts">
@@ -75,6 +80,15 @@
 
 	let { items, value = $bindable(''), label, onchange }: Props = $props();
 
+	/**
+	 * Which segment the pill is parked on, and -1 for none of them — a link group
+	 * on a route no segment claims, or a bound value before anything has been
+	 * chosen. The pill is withheld rather than parked on the first segment: an
+	 * indicator under a segment that is not current is a lie, and an empty well
+	 * is only a well.
+	 */
+	const index = $derived(items.findIndex((item) => item.value === value));
+
 	function pick(next: string) {
 		if (next === value) {
 			return;
@@ -96,13 +110,23 @@
 <Toolbar.Root
 	aria-label={label}
 	data-sveltekit-replacestate
-	class="flex w-full gap-1 rounded-2xl bg-sunken p-1"
+	style="--seg-count: {items.length}; --seg-index: {index}"
+	class="segmented-well rounded-2xl bg-sunken"
 >
+	<!-- Decorative and deliberately unreadable: what is selected is already said
+	     by `data-state`, by `aria-current` on the links, and by the toolbar's own
+	     ARIA. A screen reader announcing a second, wordless thing here would be
+	     the same fact twice. -->
+	{#if index !== -1}
+		<span aria-hidden="true" class="segmented-pill rounded-xl bg-surface"></span>
+	{/if}
+
 	{#each items as item (item.value)}
 		{@const state = item.value === value ? 'on' : 'off'}
 
 		<!-- No `press-sink`: a segment that shrinks inside a fixed well reads as a
-		     glitch, the same call the tab bar makes. The tint is the whole feedback. -->
+		     glitch, the same call the tab bar makes. The pill arriving is the
+		     feedback, and `press:bg-surface-2` answers the finger until it does. -->
 		{#if item.href === undefined}
 			<Toolbar.Button onclick={() => pick(item.value)}>
 				{#snippet child({ props })}

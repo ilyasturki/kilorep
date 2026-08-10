@@ -353,7 +353,7 @@
 				<h2 class="px-1 label-caps">Strength</h2>
 
 				{#if prs.length === 0 && liftRows.length === 0}
-					<p class="px-1 pb-1 {SUB}">No trend yet — a few weeks of sessions draw one.</p>
+					<p class="px-1 pb-1 {SUB}">No trend yet. A few weeks of sessions draw one.</p>
 				{:else}
 					{#if prs.length > 0}
 						<div class="flex flex-col gap-1">
@@ -472,7 +472,7 @@
 
 							<span class={SUB}>
 								{#if habitLabel === null}
-									Last 7 days — your usual shows after a full week
+									Last 7 days, your usual shows after a full week
 								{:else}
 									Last 7 days, usually {habitLabel} a week
 								{/if}
@@ -576,7 +576,7 @@
 
 					{#if weightNow === null}
 						<span class="px-1 pb-1 {SUB}">
-							No weigh-ins yet — the trend starts on the Weight screen.
+							No weigh-ins yet. The trend starts on the Weight screen.
 						</span>
 					{:else}
 						<span class="flex items-end justify-between gap-4 px-1 pb-1">
@@ -585,7 +585,7 @@
 									{Math.round(weightNow.kg * 10) / 10}<span class={UNIT}>&nbsp;kg</span>
 								</span>
 
-								<span class={SUB}>{rateLabel ?? 'Keep logging — a rate needs two weeks'}</span>
+								<span class={SUB}>{rateLabel ?? 'Keep logging, a rate needs two weeks'}</span>
 							</span>
 
 							<Sparkline

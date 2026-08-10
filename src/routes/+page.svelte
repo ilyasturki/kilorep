@@ -12,7 +12,7 @@
 		},
 		{
 			name: 'Fast',
-			body: 'The in-gym loop is the product. The most common set — same as last time — is one tap.'
+			body: 'The in-gym loop is the product. The most common set, same as last time, is one tap.'
 		},
 		{
 			name: 'Offline',
@@ -64,6 +64,6 @@
 			<Button href={repo} variant="commit">View on GitHub</Button>
 			<Button href="/login" variant="secondary">Sign in</Button>
 		</div>
-		<p class="text-sm text-ink-faint">In development — no release yet.</p>
+		<p class="text-sm text-ink-faint">In development. No release yet.</p>
 	</footer>
 </main>

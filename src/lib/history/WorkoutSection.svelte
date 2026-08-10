@@ -63,9 +63,13 @@
 			cursor.set.completed ? 'font-extrabold text-ink' : 'font-bold text-ink-faint'
 		]}
 	>
-		{cursor.set.weight !== null && cursor.set.reps !== null
-			? `${cursor.set.weight} × ${cursor.set.reps}`
-			: '—'}
+		<!-- Blank, not a placeholder mark. A set with neither number is one nobody
+		     logged, and an em dash standing in for that says the same thing while
+		     also reading as a value. The `flex-1` holds the column open, so what
+		     follows stays where it sits on every other row. -->
+		{#if cursor.set.weight !== null && cursor.set.reps !== null}
+			{cursor.set.weight} × {cursor.set.reps}
+		{/if}
 	</span>
 
 	{#if felt !== null}

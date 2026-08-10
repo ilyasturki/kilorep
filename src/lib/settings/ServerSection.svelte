@@ -425,7 +425,7 @@
 <Sheet
 	bind:open={addressOpen}
 	title="Use my own server"
-	description="It has to be reachable from here — a LAN address works while the phone is on that network, and stops working when it leaves."
+	description="It has to be reachable from here. A LAN address works while the phone is on that network, and stops working when it leaves."
 >
 	<div class="flex flex-col gap-5 pt-2">
 		<Input
