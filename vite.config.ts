@@ -5,39 +5,12 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
 
-/**
- * One tree, two artifacts (STACK.md, app shape):
- *
- * - `BUILD_TARGET=app` → `adapter-static` with a fallback, which is the bundle
- *   Capacitor wraps. Server endpoints are compiled and then silently omitted,
- *   which is precisely why a client must never call a bare relative `/api/…`.
- * - anything else → `adapter-node`, the server, which also hosts the SPA.
- *
- * Both are named explicitly by the `build:app` / `build:server` scripts, so
- * neither artifact is ever produced by accident, and they write to separate
- * directories — the two adapters both default to `build/`, where the second
- * build of the day silently replaces the first.
- */
 const isAppBuild = process.env.BUILD_TARGET === 'app';
 
 const adapter = isAppBuild
 	? staticAdapter({ pages: 'build/app', assets: 'build/app', fallback: 'index.html' })
 	: node({ out: 'build/server' });
 
-/**
- * The dev styleguide, emptied for the app.
- *
- * `routes/dev/ui` is 258 kB compiled — nearly half the app bundle — and a
- * WebView has no address bar, so nothing in the APK could reach it anyway. Nix
- * already excludes it from the server artifact by fileset; this is the same
- * exclusion for the other one.
- *
- * A plugin rather than configuration because SvelteKit has none to offer:
- * `kit.files.routes` names the directory and nothing narrows it, so the only
- * place to intervene is the module graph. Emptying the source is enough — the
- * route entry survives in the manifest at a few bytes, and every import it
- * pulled in stops being reachable.
- */
 function stripDevRoutes(): Plugin {
 	return {
 		name: 'kilorep-strip-dev-routes',
@@ -49,47 +22,12 @@ function stripDevRoutes(): Plugin {
 }
 
 export default defineConfig({
-	/**
-	 * Which artifact is being built, readable from application code.
-	 *
-	 * A `define` rather than a `VITE_`-prefixed variable because the answer is
-	 * decided by the build script, not by a `.env` file, and there is exactly one
-	 * source of it — the same `process.env.BUILD_TARGET` the adapter switches on.
-	 * Two switches reading two variables is how the bundle and the shell end up
-	 * disagreeing about which one they are.
-	 *
-	 * Substituted literally, so `if (import.meta.env.APP_BUILD)` collapses at
-	 * build time and the branch not taken is not shipped.
-	 */
 	define: {
 		'import.meta.env.APP_BUILD': JSON.stringify(isAppBuild),
-
-		/**
-		 * The instance the app offers to sign in to — the one address in the
-		 * product nobody typed.
-		 *
-		 * Substituted rather than written into `client.ts` so a fork can ship its
-		 * own APK without patching the transport, and read from the environment
-		 * rather than from a `.env` file for the reason above it: the build script
-		 * decides, and one source of it. `vitest.config.ts` restates this literal,
-		 * because it deliberately runs without this plugin.
-		 */
 		'import.meta.env.DEFAULT_SERVER': JSON.stringify(
 			process.env.DEFAULT_SERVER ?? 'https://kilorep.com'
 		)
 	},
-
-	/**
-	 * Agent worktrees are checkouts of this same tree, sitting inside the root.
-	 *
-	 * Each one regenerates its own `.svelte-kit/tsconfig.json`, and Vite reacts
-	 * to *any* watched `tsconfig.json` by invalidating every module graph and
-	 * forcing a full reload — so a worktree the running server never reads would
-	 * blow away its state, repeatedly, while it is minding its own business.
-	 *
-	 * Merged with Vite's own defaults (`.git`, `node_modules`, the cache dir),
-	 * not a replacement for them.
-	 */
 	server: {
 		watch: {
 			ignored: ['**/.claude/**']

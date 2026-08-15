@@ -12,16 +12,6 @@
 		"strict": true,
 		"moduleResolution": "bundler"
 	},
-	// `include` replaces the generated one rather than adding to it — TypeScript does
-	// not merge array options across `extends` — so the list below restates what
-	// .svelte-kit/tsconfig.json includes (rewritten relative to this file) and adds the
-	// two trees SvelteKit does not know about: `scripts/` and the root config files.
-	//
-	// Not cosmetic. A file outside the program is a file the type-aware linter has no
-	// types for: every `Array.prototype.toReversed` in `scripts/seed/` resolved to the
-	// error type, and the seventeen `no-unsafe-*` errors that CI reported on 3a2fb5d
-	// were all downstream of those two calls. `svelte-check` reads this file too, so
-	// the same gap meant `bun run check` never type-checked the seed script at all.
 	"include": [
 		".svelte-kit/ambient.d.ts",
 		".svelte-kit/env.d.ts",
@@ -33,6 +23,4 @@
 		"scripts/**/*.ts",
 		"*.config.ts"
 	]
-	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
-	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
 }

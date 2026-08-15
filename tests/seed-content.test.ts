@@ -1,13 +1,3 @@
-/**
- * What the seeded database has to be true of, checked against the same
- * derivations the screens read it through.
- *
- * The generator is data, and data rots quietly: a slug renamed in the catalog,
- * a set left completed with no weight on it, an edge state planted twice and
- * cancelling itself out. None of that fails a build — it fails as a screen that
- * looks subtly wrong weeks later, which is the worst way to find it.
- */
-
 import { describe, expect, it } from 'vitest';
 
 import { catalogById } from '$lib/catalog';

@@ -2,13 +2,5 @@
 
 .data/kilorep.db
 .data/kilorep.db-wal
-
 .env
 .env.google
-
-# node_modules is deliberately absent. The copy walks regular files only and
-# drops every symlink — and node_modules/.bin is nothing but symlinks, so the
-# worktree got 500MB of packages and not one executable: no prettier, no vite,
-# no vitest, no oxlint. The format hook's "node_modules missing" message was
-# that, every time. `.claude/hooks/deps.sh` runs `bun install` instead, which
-# hardlinks from bun's global cache: ~1.5s, no duplicated disk, working .bin.
