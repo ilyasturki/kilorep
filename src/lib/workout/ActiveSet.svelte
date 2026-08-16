@@ -17,8 +17,6 @@
 		cursor: SetCursor;
 		history: History;
 		step: number;
-		/** What the weight field calls itself — `kg`, or `kg / hand` on a load
-		 * mode where the number typed is not the number lifted. */
 		unit: string;
 		oncommit: (weight: number, reps: number) => void;
 		ondraft: (weight: number | null, reps: number | null) => void;

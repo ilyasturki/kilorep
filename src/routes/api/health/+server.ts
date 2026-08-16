@@ -6,14 +6,6 @@ import { appliedMigrationCount } from '$lib/server/db/migrate';
 
 import type { RequestHandler } from './$types';
 
-/**
- * Liveness plus schema state, for the container healthcheck and for confirming
- * a deploy without shell access to the volume.
- *
- * Unauthenticated, so it says as little as it can get away with: no database
- * path (that is the host's filesystem layout) and no error text (that is the
- * internals). The detail goes to the server log, where the operator is.
- */
 export const GET: RequestHandler = () => {
 	try {
 		const db = getDatabase();

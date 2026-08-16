@@ -24,14 +24,7 @@ function viewport(scroller: HTMLElement): { top: number; bottom: number } {
 		: scroller.getBoundingClientRect();
 }
 
-/**
- * The element's own `scroll-margin`, in pixels.
- *
- * Reading it back off the computed style is what keeps the air a card claims
- * declared in one place — its class list — rather than restated as a constant
- * here that nobody would think to change with it. A computed `scroll-margin` is
- * always an absolute length, so trimming the unit is the whole parse.
- */
+// A computed scroll-margin is always an absolute px length.
 function px(length: string): number {
 	return Number(length.replace('px', '')) || 0;
 }
@@ -49,31 +42,10 @@ export function fullyVisible(node: HTMLElement): boolean {
 	return rect.top >= bounds.top && rect.bottom <= bounds.bottom;
 }
 
-/**
- * One glide at a time, per app. Two reveals in flight would each be writing
- * `scrollTop` on the same frame from two different starting points, and the
- * pane would land wherever the later `requestAnimationFrame` happened to fire.
- */
 let gliding: number | undefined;
 
-/** Raised only for the duration of an `instantly` call; see below. */
 let arriving = false;
 
-/**
- * Run `body`'s reveals with no travel at all — whatever they aim at, the pane
- * is simply there.
- *
- * A switch around the call rather than a flag on each of the four reveals,
- * because the caller this exists for does not know which of them it is about
- * to reach: the workout screen picks between three on its way to the active
- * set, and on the first pass after it mounts every one of them has to land
- * rather than glide. A pane that animates from a scroll offset the user never
- * saw is motion with nothing to say — the eye has no earlier frame to relate
- * it to, so there is no continuity for the travel to preserve.
- *
- * Synchronous by contract. Every reveal in this module measures and starts its
- * scroll before it returns, so the flag never has to outlive `body`.
- */
 export function instantly(body: () => void): void {
 	arriving = true;
 
@@ -84,26 +56,7 @@ export function instantly(body: () => void): void {
 	}
 }
 
-/**
- * Move the scroller by `delta`, over the screen's one duration and curve —
- * or over no duration at all, which is both what the OS asks for under reduced
- * motion and what `instantly` asks for on an arrival. One branch answers both,
- * because a zero-length travel is the same act either way.
- *
- * Hand-driven rather than `scrollIntoView({ behavior: 'smooth' })`, which is the
- * browser's duration and the browser's curve with no way to ask for either — and
- * the whole point here is that the pane travels on exactly the curve the cards
- * are changing height on. `scrollTop` is not an animatable property, so there is
- * no CSS route to it and no Web Animations route either; a frame loop is the
- * only way to spend a named easing on a scroll.
- *
- * `delta` is measured against the layout the caller can see *after* the update
- * that prompted the reveal, so the destination is already the final one even
- * while the heights along the way are still moving. What that costs is the last
- * frame: a scroller whose content is still growing clamps a `scrollTop` past its
- * current maximum, so the target is written once more on the frame after the
- * travel ends, when everything has settled and the clamp is gone.
- */
+// `scrollTop` is not animatable; a frame loop is the only way to scroll on a named easing.
 function glide(scroller: HTMLElement, delta: number): void {
 	if (gliding !== undefined) {
 		cancelAnimationFrame(gliding);
@@ -137,6 +90,7 @@ function glide(scroller: HTMLElement, delta: number): void {
 			return;
 		}
 
+		// A still-growing scroller clamps `scrollTop`; write the target once more after settling.
 		gliding = requestAnimationFrame(() => {
 			gliding = undefined;
 			scroller.scrollTop = to;
@@ -146,13 +100,6 @@ function glide(scroller: HTMLElement, delta: number): void {
 	gliding = requestAnimationFrame(frame);
 }
 
-/**
- * How far the pane is from having `node` where `block` asks for it — the same
- * arithmetic `scrollIntoView` performs internally, done by hand because a
- * scroll that animates on our own curve has to know the number rather than hand
- * the job over. `scroll-margin` is honoured the way the native call honours it,
- * which is what keeps `scroll-mt-3` on an exercise header meaning something.
- */
 function shortfall(node: HTMLElement, block: 'start' | 'end' | 'nearest'): number {
 	const bounds = viewport(scrollParent(node));
 	const rect = node.getBoundingClientRect();
@@ -184,17 +131,6 @@ function land(node: HTMLElement, block: 'start' | 'end' | 'nearest'): void {
 	glide(scrollParent(node), shortfall(node, block));
 }
 
-/**
- * Bring `node` just inside its scroller — unless every pixel of it is already
- * on screen, in which case the page holds still.
- *
- * To the nearest edge, not to the centre. Centring moved the whole session
- * every time the editor grew by a line, and a page that jumps further than it
- * needed to costs the eye the same re-orientation whether it travelled 40px or
- * 400. `nearest` scrolls by the shortfall and no more, so a set that has half
- * left the bottom rises half a card and everything the thumb had its bearings
- * on is still where it was.
- */
 export function revealNearest(node: HTMLElement): void {
 	if (fullyVisible(node)) {
 		return;
@@ -203,18 +139,6 @@ export function revealNearest(node: HTMLElement): void {
 	land(node, 'nearest');
 }
 
-/**
- * Bring `node`'s bottom edge up to the scroller's floor — with the same gate:
- * a node already fully on screen is left exactly where it is.
- *
- * This is the editors' focus reveal. Bottom-aligning is what serves a raised
- * keyboard — the commit bar under the fields is the very next tap, so it is
- * the edge worth paying for — but done unconditionally it also fired at a
- * desk, where no keyboard ever comes and every click into a field slid the
- * whole page for nothing. When the card is on screen and the keyboard does
- * rise, the browser's own scroll on the focused input takes over, and the
- * input's `scroll-mb` is what makes that native move carry the commit bar too.
- */
 export function revealEnd(node: HTMLElement): void {
 	if (fullyVisible(node)) {
 		return;
@@ -223,32 +147,10 @@ export function revealEnd(node: HTMLElement): void {
 	land(node, 'end');
 }
 
-/**
- * Put `node`'s top edge at the top of its scroller, wherever it already was.
- *
- * Ungated on purpose, unlike the other two: this is the deliberate-arrival
- * reveal — a tap on an exercise in the session list — and a tap that names a
- * destination should land on it in the same place every time. The caller
- * decides when the pane is entitled to hold still instead; see the workout
- * screen, which spends `fullyVisible` on that question itself because what has
- * to be on screen there is two elements, not one.
- */
 export function revealStart(node: HTMLElement): void {
 	land(node, 'start');
 }
 
-/**
- * Reveal `from`'s top and `to`'s bottom together, moving the pane as little as
- * possible — and if the two cannot fit on screen at once, give up on `from`
- * and reveal `to` alone.
- *
- * This is `revealNearest` for a pair: the workout screen wants an exercise's
- * title and the set being logged inside it, and it wants the title *only while
- * it is free*. Six sets deep in an exercise the header no longer fits above the
- * live card, and holding on to it there would mean scrolling past the one thing
- * the screen exists for. So the span is measured first, and the set wins the
- * moment there is a conflict.
- */
 export function revealSpan(from: HTMLElement, to: HTMLElement): void {
 	const scroller = scrollParent(to);
 	const bounds = viewport(scroller);

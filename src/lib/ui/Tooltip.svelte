@@ -3,12 +3,6 @@
 		'focus-ring inline-grid size-6 shrink-0 place-items-center rounded-full align-middle ' +
 		'text-ink-faint hover:text-ink-muted';
 
-	/**
-	 * Exported for `TipButton`, which is the other half of this idea: this
-	 * component hangs an ⓘ off a word, that one turns a button's own glyph into
-	 * the trigger. Two triggers, one bubble — a second rounding or a second
-	 * shadow would read as a second kind of thing being said.
-	 */
 	export const bubble =
 		'z-50 max-w-64 rounded-xl border border-line bg-surface px-3 py-2 ' +
 		'text-sm font-bold text-ink shadow-lg';

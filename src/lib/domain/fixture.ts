@@ -57,14 +57,6 @@ const entry = (n: number, key: string, exerciseId: string, sets: WorkoutSet[]): 
 	exercises: [{ id: `we-${key}`, exerciseId, sets }]
 });
 
-/**
- * A fresh copy every call. The screen mutates this tree in place, so handing
- * out a shared object would let one run leak into the next and quietly ruin the
- * second half of a comparison.
- *
- * `startedAt` is stamped by the caller rather than read here, so the module has
- * no clock of its own and the session is genuinely identical every time.
- */
 export function freshWorkout(startedAt: number): Workout {
 	return {
 		id: 'fixture-workout',

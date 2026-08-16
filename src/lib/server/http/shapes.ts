@@ -25,14 +25,6 @@ export type PublicUser = {
 	currentPasswordRequired: boolean;
 };
 
-/**
- * `hasPassword` names the button — setting a first one and replacing one are
- * the same request and different sentences. `currentPasswordRequired` names the
- * field, and is `currentPasswordRequired()`'s answer rather than the two facts
- * it reads, so the form cannot come to its own conclusion about a rule the
- * endpoint enforces. Neither says anything about Google that the account's own
- * sign-in screen did not already.
- */
 export function publicUser(user: User): PublicUser {
 	return {
 		id: user.id,

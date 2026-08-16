@@ -54,13 +54,6 @@
 	const interactive = $derived(Boolean(onselect));
 </script>
 
-<!--
-	The press lives on the shell rather than the button inside it. The ⋯ is a
-	sibling holding the right edge, so a tint on the button alone would light two
-	thirds of a row — and the class the recognizer toggles, unlike `:active`,
-	does not travel up to ancestors on its own. Pointer and click events do bubble
-	up to here from the button, which is what lets one attachment cover both.
--->
 <div
 	class={[
 		'@container relative grid grid-cols-[1fr_auto] items-center overflow-hidden',

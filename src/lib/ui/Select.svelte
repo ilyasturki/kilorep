@@ -103,18 +103,6 @@
 		</Select.Portal>
 	{:else}
 		<Select.Portal>
-			<!-- Select has no Overlay part, so the scrim is ours — and so is its
-			     lifetime. `Select.Portal` is only a portal: it mounts its children
-			     whether or not the list is open, and it is `ContentStatic` that Bits
-			     UI gates on presence. Without this `{#if}` the scrim sits over the
-			     page permanently, which is exactly how it first shipped.
-
-			     Svelte's own fade rather than the `[data-starting-style]` hooks
-			     `overlay-scrim` reads, because Bits UI sets those on parts it owns
-			     and this is not one. `travelMs()` is the number the utility itself
-			     transitions on — read through the token rather than restated as a
-			     literal, so the app's one scrim cannot end up with two speeds
-			     depending on which component raised it. -->
 			{#if open}
 				<div class="overlay-scrim" transition:fade={{ duration: travelMs() }}></div>
 			{/if}

@@ -5,11 +5,6 @@ import { publicToken, publicUser } from '$lib/server/http/shapes';
 
 import type { RequestHandler } from './$types';
 
-/**
- * Who the caller is, and which credential said so. The client's way to ask "am
- * I still signed in?" without guessing from a 401 on some unrelated request.
- */
-
 export const GET: RequestHandler = ({ locals }) => {
 	const { user, token } = requireCredential(locals);
 

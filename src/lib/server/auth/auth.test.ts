@@ -253,12 +253,6 @@ describe('currentPasswordRequired', () => {
 		expect(publicUser(user!)).toMatchObject({ hasPassword: false, currentPasswordRequired: false });
 	});
 
-	/**
-	 * The forgotten-password path, and the whole reason the rule reads `googleSub`
-	 * rather than just the hash: a linked account can always come back through
-	 * Google, so demanding the password it came here to replace would lock out
-	 * nobody but its owner.
-	 */
 	test('stops asking once Google is linked to an account that had a password', async () => {
 		await createUser(db, 'lifter@example.com', PASSWORD);
 		const linked = resolveGoogleIdentity(
@@ -513,9 +507,6 @@ describe('token ownership', () => {
 		expect(deleteUser(db, 'lifter@example.com')).toBe(false);
 	});
 
-	// The cascade is declared in the schema, not written here: a `pragma
-	// foreign_keys` that stopped being set would leave rows behind and no other
-	// test would notice.
 	test('deleting empties every table that names the account', async () => {
 		const user = await createUser(db, 'lifter@example.com', PASSWORD);
 		const other = await createUser(db, 'other@example.com', PASSWORD);
@@ -538,8 +529,6 @@ describe('token ownership', () => {
 			[]
 		);
 
-		// The neighbour is untouched: the cascade follows the key, and a delete
-		// that took the whole table with it would pass every assertion above.
 		expect(db.select().from(records).where(eq(records.userId, other.id)).all()).toHaveLength(1);
 
 		expect(deleteUser(db, 'lifter@example.com')).toBe(false);

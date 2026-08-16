@@ -25,17 +25,8 @@ function isApiPath(pathname: string): boolean {
 	return pathname === '/api' || pathname.startsWith('/api/');
 }
 
-/**
- * The path SvelteKit routed on, which is not the one it hands this hook.
- *
- * `find_route` runs against the percent-decoded path while `event.url.pathname`
- * stays exactly as it arrived, and the gap between the two is an authentication
- * bypass: `GET /%61pi/workouts` reaches the `/api/workouts` handler, while a
- * `startsWith('/api/')` on the raw string reads it as a page and waves it
- * through with no identity, no allowlist check and no CORS. Splitting on `%25`
- * first is what SvelteKit itself does — decoding it would turn a literal percent
- * in the path into the start of an escape nobody wrote.
- */
+// SvelteKit routes on the decoded path, so `GET /%61pi/x` reaches `/api/x`: matching
+// the raw pathname instead is an auth bypass. `%25` is split, not decoded, on purpose.
 function routedPath(pathname: string): string {
 	try {
 		return pathname

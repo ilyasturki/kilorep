@@ -234,9 +234,8 @@ describe('templates', () => {
 		expect(listed.map((t) => t.id)).toEqual(['new', 'old']);
 	});
 
-	// `saveTemplate` builds its payload field by field rather than copying the
-	// object, so every field added to `Template` has to be added there too or it
-	// is dropped silently on the way to disk. This is the test that says so.
+	// `saveTemplate` builds its payload field by field; a field added to `Template`
+	// but not there is silently dropped on the way to disk.
 	it('persists the mark, the order and the archive stamp', async () => {
 		const marked = template('t1', 100);
 
@@ -467,9 +466,6 @@ describe('exercise notes', () => {
 		expect(await store.dirtyRecords()).toHaveLength(1);
 	});
 
-	// The whole reason a note is its own record and not one map of them all:
-	// last-write-wins is per record, so two exercises edited on two devices do
-	// not clobber each other.
 	it('keeps one exercise clear of another', async () => {
 		await store.setExerciseNote('bench-press', 'Seat 4', 100);
 		await store.setExerciseNote('cable-fly', 'Pin 3', 200);
@@ -478,8 +474,6 @@ describe('exercise notes', () => {
 		expect(await store.exerciseNote('cable-fly')).toBe('Pin 3');
 	});
 
-	// Notes and rest overrides share the `preference` kind and its index, so
-	// each scan has to walk past the other's records untouched.
 	it('does not read as a rest override, nor a rest override as a note', async () => {
 		await store.setExerciseNote('bench-press', 'Seat 4', 100);
 		await store.setRestOverride('bench-press', 150, 200);

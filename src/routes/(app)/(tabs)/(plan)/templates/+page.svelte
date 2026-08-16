@@ -20,39 +20,11 @@
 
 	import type { PageProps } from './$types';
 
-	/**
-	 * The template list as its own tab — the planning surface's front door,
-	 * carried over from the Start page when that page folded into the Workout
-	 * tab. A list read standing still earns an address of its own; the one
-	 * button pressed mid-stride lives on Workout.
-	 *
-	 * A template row opens its editor, where Start lives; it does not start the
-	 * workout itself. The immediate-start rule was weighed and retired — see
-	 * PRODUCT.md's Start section — because one row cannot honestly carry both
-	 * "open this plan" and "begin lifting now", and a mis-tap that starts a
-	 * workout costs more than the tap it saved.
-	 *
-	 * "New template" navigates before any record exists: the editor owns the
-	 * blank-birth rule and writes nothing until the plan says something, so a
-	 * mis-tap here leaves no junk behind. The id is minted now because the
-	 * route is the id.
-	 */
 	let { data }: PageProps = $props();
 
-	// The page owns the live list, the load's copy is the starting point — the
-	// same bargain the editor strikes with its tree. A drag has to reorder the
-	// rows under the finger before the write lands, and re-reading the load
-	// would settle them a round trip late.
 	// svelte-ignore state_referenced_locally
 	const templates = $state(data.templates);
 
-	/**
-	 * Two lists off one array, both sorted the way the store sorted it.
-	 *
-	 * Re-sorted here and not trusted from the load, because a drag mutates a
-	 * rank in place: the array keeps its old positions and only `byRank` knows
-	 * the new ones.
-	 */
 	const active = $derived(templates.filter((t) => !isArchived(t)).toSorted(byRank));
 
 	const archived = $derived(templates.filter((t) => isArchived(t)).toSorted(byRank));
@@ -81,20 +53,6 @@
 		}
 	});
 
-	/**
-	 * The address of the template nobody has written yet.
-	 *
-	 * A link and not a button, so the press is a navigation the browser
-	 * performs — which is what makes it middle-clickable, openable in a new tab,
-	 * and reachable by the same keys every other row on this screen answers to.
-	 * That costs one thing: an anchor has to know where it goes before it is
-	 * pressed, so the id is minted here at mount rather than inside a handler.
-	 *
-	 * Which the blank-birth rule makes free. An id that is visited and abandoned
-	 * leaves no record, and one that is never visited leaves less; the page
-	 * remounts on every return to this tab, so the next new template is a new
-	 * id without anything having to reset one.
-	 */
 	const blank = `/templates/${crypto.randomUUID()}`;
 
 	let showArchived = $state(false);
@@ -106,19 +64,6 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
-<!-- One row, drawn the same way in both lists: the archived half is the active
-     half dimmed, and a plan that reads differently once it is put away reads as
-     a different plan.
-
-     A persisted template can be nameless — named-nothing but planned-something
-     escapes the blank rule — and a row with no title reads as a bug, not a
-     choice.
-
-     `stacked`, so the movements get a line of their own. `ListRow`'s default
-     packs the meta in beside the title and clips it when the name leaves no
-     room — fair where the meta is a glance's convenience, and not here: this
-     line *is* what the row has to say, and a plan under a long name would be
-     painted nowhere. -->
 {#snippet planRow(template: Template, klass?: string, draggable = false)}
 	{@const mark = drawableMark(template)}
 
@@ -128,22 +73,6 @@
 		{/if}
 	{/snippet}
 
-	<!-- The grip rides inside the anchor, in the trailing slot ahead of the
-	     chevron, and the row is whole again — one box, one outline, one target
-	     that fills its own width. It sat outside as a sibling for a while, which
-	     cost the row a strip of itself and put a 44px hole in the middle of a
-	     card.
-
-	     `presentation`, because the grip is nothing but a place to hear the
-	     pointer from: the anchor around it keeps the role and the name, and is
-	     what a keyboard and a screen reader reach. Nothing interactive is nested
-	     in the link — a `<button>` here would be invalid inside an `<a>` and
-	     would take a tab stop that leads nowhere.
-
-	     A plain tap on it needs no handler of its own: the grip lifts the row on
-	     `pointerdown` without waiting for a hold, so the click that ends the tap
-	     is a click a drag has already spent, and the capture listener upstream
-	     is the same one that stops a reorder from opening the plan it moved. -->
 	{#snippet grip()}
 		<span
 			role="presentation"
@@ -172,58 +101,23 @@
 
 <main class="column-content flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
 	{#if templates.length === 0}
-		<!-- Centred in the pane, action inside — an empty tab is one decision,
-		     and the dashed grow-by-one row waits until there is a list to grow. -->
 		<EmptyState title="No templates yet" description="Plan a session once, start it every gym day.">
 			{#snippet icon()}
 				<Stack size={24} />
 			{/snippet}
 			{#snippet action()}
-				<!-- Compact: the commit at planning scale — the gym-sized slab
-				     belongs to the floor, and this screen is not it. -->
 				<Button variant="commit" compact href={blank}>New template</Button>
 			{/snippet}
 		</EmptyState>
 	{:else}
 		<section class="flex flex-col gap-3">
-			<!-- The card, which the list wears everywhere else a row means "open
-			     this": one outline, one set of corners, hairlines between. It was
-			     traded for separate rows on a gap while the drag was built, because
-			     `overflow: hidden` is what gives a card those corners and it shears
-			     a lifted row off at the edge — the fix belongs in the utility, where
-			     the clip is suspended for the length of a lift, and not in every
-			     list that would rather not be a card for one gesture's sake.
-
-			     `drag.root` is this box because this box is the one that lays the
-			     rows out: the geometry is measured off real rects — the seam between
-			     the first two is the gap, whether a flex rule or a hairline border
-			     put it there. -->
 			<div bind:this={drag.root} class="list-group">
 				{#each active as template (template.id)}
 					{@const lifted = drag.isLifted(template.id)}
 					{@const settling = drag.settlingId === template.id}
 
-					<!-- The pointer handlers sit out here rather than on the row, because
-					     the row is an anchor and stays one: middle-click and open-in-new-tab
-					     are the whole reason a template row is a link, and a `<button>` with
-					     a `goto` would quietly drop both. Pointer events bubble, so this box
-					     hears the press that lands on the anchor — and hears the grip's
-					     first, which lifts on the spot and leaves the hold-to-lift below it
-					     with nothing to do.
-
-					     `data-lifted` is what the card reads to stop clipping. An attribute
-					     and not a class, because it is a fact about the row that CSS asks
-					     about from the outside, and `:has()` is the one selector that can.
-
-					     `dragstart` is refused because a row is a link and a mouse offers
-					     to drag links somewhere: the browser claims the gesture on the
-					     first few pixels, and claiming it fires `pointercancel`, which is
-					     the drag ending before it has moved. A finger never asks — which
-					     is exactly how this survived being tested on one. Refused here on
-					     the way past rather than with `draggable={false}` on the anchor,
-					     because dragging a link out to a window is a real thing to want
-					     and it is only this list, where the gesture is already spoken for,
-					     that has to give it up. -->
+					<!-- `dragstart` is refused: the browser claims a link-drag on the first
+					     few pixels and fires `pointercancel`, killing the reorder (mouse only). -->
 					<div
 						data-drag-id={template.id}
 						data-lifted={lifted ? '' : undefined}
@@ -252,21 +146,10 @@
 				{/each}
 			</div>
 
-			<!-- `raised` and not the dashed `AddRow` this used to be: standing on the
-			     canvas under a solid card of rows, a dashed hairline was the quietest
-			     thing on a screen whose whole job is starting a new plan. Filled with
-			     `surface` — the colour the card above it already is — it weighs what
-			     the rows weigh, and the accent stays out of it: nothing on this screen
-			     logs a set. See `Button`'s `raised` for why the dashed silhouette is
-			     still right everywhere it sits *inside* a card. -->
 			<Button variant="raised" class="w-full" href={blank}>+ New template</Button>
 		</section>
 
 		{#if archived.length > 0}
-			<!-- Under the new-template button, not above it: what is put away ranks
-			     below the one act this screen exists for. Collapsed, because the
-			     count is the whole of what an archived plan has to say until it is
-			     asked for. -->
 			<section class="flex flex-col gap-1">
 				<button
 					type="button"
@@ -283,10 +166,6 @@
 				{#if showArchived}
 					<div transition:slide={{ duration: grow }} class="list-group">
 						{#each archived as template (template.id)}
-							<!-- Still a link to its editor, which is where the way back out
-							     lives. Not draggable: order is a property of the list you
-							     choose from, and this is the list you have stopped choosing
-							     from. -->
 							{@render planRow(template, 'opacity-60')}
 						{/each}
 					</div>

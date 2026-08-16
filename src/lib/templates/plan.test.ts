@@ -86,7 +86,6 @@ const catalog = {
 	'lateral-raise': named('lateral-raise', 'Lateral Raise')
 };
 
-/** A plan given as its entries, each entry given as the legs standing in it. */
 function shaped(entries: string[][]): Template {
 	return {
 		id: 't1',
@@ -140,9 +139,6 @@ describe('what a template says about itself in a list', () => {
 		expect(templateTitle(shaped([['bench-press']]))).toBe('Push day');
 	});
 
-	// Named-nothing but planned-something escapes the blank rule, so this record
-	// really exists and four screens print it. Whitespace counts as nameless:
-	// a row titled with a space is a row with no title and a stray gap.
 	test('a nameless plan reads Untitled, whitespace included', () => {
 		const plan = shaped([['bench-press']]);
 
@@ -153,9 +149,6 @@ describe('what a template says about itself in a list', () => {
 		expect(templateTitle(plan)).toBe('Untitled');
 	});
 
-	// A record whose exercise has left the catalog — the same case `entryTitle`
-	// already filters for. An entry that names nothing is dropped whole rather
-	// than contributing an empty slot to the line or to the count.
 	test('an entry the catalog no longer knows is dropped, not printed blank', () => {
 		const template = shaped([['gone'], ['bench-press'], ['cable-fly']]);
 

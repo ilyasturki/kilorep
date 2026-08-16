@@ -2,9 +2,6 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Button from '$lib/ui/Button.svelte';
 
-	// The three claims the product is built on: data ownership, the in-gym
-	// loop, and extreme offline. Nothing here may promise a feature the
-	// product does not have.
 	const pillars = [
 		{
 			name: 'Yours',
@@ -55,11 +52,6 @@
 	</dl>
 
 	<footer class="flex flex-col items-start gap-4">
-		<!-- Sign in stays `secondary`: only one filled button exists per screen and
-		     the pitch's own call to action holds it. It is a plain anchor, so this
-		     page stays prerenderable and the client router takes over on click.
-		     It exists because someone opening their own instance lands here, and
-		     typing `/login` from memory is not a way in. -->
 		<div class="flex flex-wrap items-center gap-3">
 			<Button href={repo} variant="commit">View on GitHub</Button>
 			<Button href="/login" variant="secondary">Sign in</Button>

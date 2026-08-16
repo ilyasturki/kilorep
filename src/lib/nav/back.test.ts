@@ -5,13 +5,6 @@ import type { BackDecision } from './back';
 import { decideBack } from './back';
 import { parentOf, tabRoots as navRoots } from './bar.svelte';
 
-/**
- * The real bar, not a copy of it. A hand-written root list is what let History
- * leave the bar without anything noticing that `/history/{id}` no longer had a
- * way up — the press quit the app instead. Only the icons and the live-session
- * flag are stubbed, because vitest has no Svelte compiler for the components
- * `bar.svelte` imports, and neither one is part of the nav graph.
- */
 vi.mock('$lib/ui/icons/Barbell.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/BarbellFill.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/ChartBar.svelte', () => ({ default: {} }));
@@ -20,8 +13,6 @@ vi.mock('$lib/ui/icons/Gear.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/Stack.svelte', () => ({ default: {} }));
 vi.mock('$lib/workout/active.svelte', () => ({ activeWorkout: { session: null } }));
 
-// Exactly what `hardware-back.ts` passes, which is now the list whole:
-// `/workout/live` used to be appended at that call site and is Train's `owns`.
 const tabRoots = navRoots();
 
 function decide(
@@ -70,9 +61,6 @@ describe('decideBack', () => {
 		});
 	});
 
-	// History and Weight are Progress' children by the nav's design rather than
-	// by their addresses, and they stopped being tab roots when History left the
-	// bar. A cold boot onto a workout's detail used to quit the app.
 	it('walks a child of Progress up to its list, and the list up to Progress', () => {
 		expect(decide('/history/abc', { depth: 0 })).toEqual({ kind: 'goto', path: '/history' });
 		expect(decide('/history', { depth: 0 })).toEqual({ kind: 'goto', path: '/progress' });
@@ -92,13 +80,6 @@ describe('decideBack', () => {
 	});
 });
 
-/**
- * The other reader of the same answer: the bar draws its back link from
- * `parentOf`, so a parent invented here is a link on screen. The pair below is
- * why this is tested apart from `decideBack` — as a root, `/workout/live` never
- * reaches the `goto` branch, so nothing above would have caught the bar being
- * offered `/workout` as its way up.
- */
 describe('parentOf', () => {
 	it('gives a tab root no parent, so the bar draws no way up from one', () => {
 		for (const root of navRoots()) {

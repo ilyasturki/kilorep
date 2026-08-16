@@ -67,10 +67,6 @@
 		type="single"
 		bind:value
 		onValueChange={(picked) => {
-			// Picking a day is the panel's whole question answered, so it leaves
-			// with the answer — the same close `selectToday` performs, found the
-			// hard way: a panel that stayed open sat over the sheet under it and
-			// swallowed the Save tap. Deselecting (undefined) is not an answer.
 			if (picked !== undefined) {
 				open = false;
 			}
@@ -83,9 +79,6 @@
 	>
 		{#snippet children({ months, weekdays })}
 			<Calendar.Header class="flex items-center justify-between pb-1">
-				<!-- `child`, so the press attachment has a real element to hold onto:
-				     bits-ui renders its own button otherwise, and an attachment cannot
-				     reach through a component. Same shape `MenuItem` uses. -->
 				<Calendar.PrevButton aria-label="Previous month">
 					{#snippet child({ props })}
 						<button {...props} class={nav} {@attach press()}>‹</button>

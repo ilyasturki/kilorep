@@ -5,10 +5,7 @@
 		dots: BodyweightEntry[];
 		line: BodyweightEntry[];
 		today: string;
-		/** The window's left edge, inclusive. The caller owns it because the
-		 *  range control does, and `all` has no day count to derive it from. */
 		from: string;
-		/** Spoken to a screen reader, which cannot see the range control. */
 		range: string;
 	};
 
@@ -25,16 +22,12 @@
 	const innerWidth = $derived(Math.max(0, width - LEFT - RIGHT));
 	const innerHeight = HEIGHT - TOP - BOTTOM;
 
-	// ISO date-only strings parse as UTC midnight — a fixed ruler, immune to
-	// the DST steps a local-time parse would fold into the spacing.
 	const at = (date: string): number => Date.parse(date);
 
 	const t0 = $derived(at(from));
 	const t1 = $derived(at(today));
 
-	// A window one day wide would divide by zero and put every dot at `NaN`.
-	// `all` on a log with one entry is exactly that, and it is the first thing
-	// anybody sees after their first weigh-in.
+	// Floor of 1: a zero-wide window divides by zero and puts every dot at `NaN`.
 	const axisSpan = $derived(Math.max(1, t1 - t0));
 
 	const x = $derived((date: string) => LEFT + ((at(date) - t0) / axisSpan) * innerWidth);
@@ -65,16 +58,6 @@
 		return out;
 	});
 
-	/**
-	 * Every month boundary inside the window, then thinned until at most seven
-	 * survive. Twelve `Jan Feb Mar…` under a year of data is a grey smear rather
-	 * than a scale, and the thinning steps through 1 · 2 · 3 · 6 · 12 months
-	 * because those are the divisions of a year a reader already holds — a step
-	 * of five would put labels on May and October and mean nothing.
-	 *
-	 * Anchored to the last boundary rather than the first, so the label nearest
-	 * today always survives: that is the end of the axis the eye starts from.
-	 */
 	const months = $derived.by(() => {
 		const all: string[] = [];
 		const start = new Date(t0);
@@ -106,21 +89,8 @@
 		return all.filter((_, index) => (all.length - 1 - index) % step === 0);
 	});
 
-	/**
-	 * The year rides along the moment the window crosses one, because `Feb`
-	 * drawn twice on a two-year axis names two different Februaries and the
-	 * reader has no way to tell which is which. Two digits, not four: `Feb 25`
-	 * is unambiguous at 11px and `February 2025` is a paragraph on a tick.
-	 *
-	 * Below that it stays off. On the default twelve weeks the year is the same
-	 * one every label already implies, and printing it is noise on the axis a
-	 * reader looks at most.
-	 */
 	const yearly = $derived(from.slice(0, 4) !== today.slice(0, 4));
 
-	// Dense windows draw a hairline dot with no halo: at a year the raw entries
-	// outnumber the pixels between them, and a 3px circle ringed in `surface`
-	// merges into a band that hides the average line it is supposed to sit under.
 	const dotSize = $derived.by(() => {
 		if (dots.length > 160) {
 			return 1.4;
@@ -129,14 +99,6 @@
 		return dots.length > 90 ? 2 : 3;
 	});
 
-	/**
-	 * Which end of the label sits on its tick. Centred everywhere in the middle
-	 * of the axis, and turned inward at the two edges — the newest boundary can
-	 * land within a few days of `today`, which puts a centred `Aug 26` half
-	 * outside the SVG and clipped. Re-anchoring keeps the label attached to the
-	 * tick it names, where nudging its `x` would quietly move it to a date it
-	 * does not mean.
-	 */
 	function anchorAt(px: number): 'start' | 'middle' | 'end' {
 		if (px > width - RIGHT - 22) {
 			return 'end';
@@ -151,8 +113,6 @@
 	const monthLabel = enGB({ month: 'short', timeZone: 'UTC' });
 	const monthYearLabel = enGB({ month: 'short', year: '2-digit', timeZone: 'UTC' });
 	const dayLabel = enGB({ day: 'numeric', month: 'short', timeZone: 'UTC' });
-	// The readout carries the year exactly when the axis has stopped naming
-	// months: `3 Aug` on a five-year chart names five different days.
 	const dayYearLabel = enGB({ day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 	const path = $derived(

@@ -26,16 +26,7 @@ export type TemplateExercise = {
 	id: string;
 	exerciseId: string;
 	sets: TemplateSet[];
-	/**
-	 * What this plan rests after this exercise, in the same three states the
-	 * exercise's own preference has: absent means "whatever the exercise and the
-	 * default say", a number means "this instead", and `null` means *never rest
-	 * on this here* — the circuit written as a plan rather than as a change of
-	 * mind about the movement.
-	 *
-	 * Optional because every template written before this existed reads as the
-	 * absent state, which is what those plans meant.
-	 */
+	// Tri-state: absent key = inherit exercise/default, number = override, null = never rest here.
 	restSeconds?: number | null;
 };
 
@@ -44,16 +35,6 @@ export type TemplateEntry = {
 	exercises: TemplateExercise[];
 };
 
-/**
- * The fifteen glyphs a template can wear, keyed by what the movement is rather
- * than by what the icon draws.
- *
- * Keyed that way because the key is what persists: `legs` survives someone
- * deciding the shoe should be a different shoe, where `sneakerMove` would pin
- * the record to a drawing. The mapping from key to component lives in
- * `$lib/templates/marks`, on the UI side of the framework line this module
- * keeps.
- */
 export const MARK_ICONS = [
 	'push',
 	'pull',
@@ -74,25 +55,10 @@ export const MARK_ICONS = [
 
 export type MarkIcon = (typeof MARK_ICONS)[number];
 
-/** Six hues, none of them the accent. The reasoning is in `app.css`. */
 export const MARK_COLOURS = ['amber', 'teal', 'blue', 'violet', 'fuchsia', 'slate'] as const;
 
 export type MarkColour = (typeof MARK_COLOURS)[number];
 
-/**
- * Glyph and hue, stored together and chosen apart.
- *
- * One object rather than two fields, because they are chosen in one surface
- * and because "no mark yet" is then a single absent value rather than two
- * half-states every reader would have to reconcile.
- *
- * Either half may be null, and that is the whole of what makes the picker's
- * two grids independent: a hue with no glyph is a filled tile, a glyph with no
- * hue is a neutral one, and a mark is `null` — not `{ icon: null, colour:
- * null }` — the moment both are gone. Nothing infers one half from the other;
- * an app that picks a glyph for you because you touched a colour has made a
- * choice and not mentioned it.
- */
 export type TemplateMark = {
 	icon: MarkIcon | null;
 	colour: MarkColour | null;
@@ -103,41 +69,11 @@ export type Template = {
 	name: string;
 	createdAt: number;
 	entries: TemplateEntry[];
-	/**
-	 * Absent until picked, and absent is a rendering: an unmarked template sits
-	 * flush where a marked one is indented by its tile.
-	 */
 	mark?: TemplateMark | null;
-	/**
-	 * Where the template sits in the list, absent until it has been dragged.
-	 *
-	 * Absent rather than backfilled, so the field means "someone placed this"
-	 * and nothing else. `templateRank` below is what reconciles the two states
-	 * onto one number line; nothing else may compare `order` directly.
-	 */
 	order?: number;
-	/**
-	 * When the template was put away, or absent/null while it is in use.
-	 *
-	 * Not a tombstone. `deletedAt` still means gone and still resurrects
-	 * nothing; this one keeps the record whole and readable — History's
-	 * drift-vs-template line looks a plan up by id long after anyone stopped
-	 * training it, and archiving must not be the thing that empties that page.
-	 */
 	archivedAt?: number | null;
 };
 
-/**
- * The one number the list sorts on, whether or not the template was ever
- * dragged.
- *
- * `createdAt` stands in for an absent `order`, which is what makes this a
- * migration nobody has to run: every existing template already has a creation
- * stamp, those stamps are already the order the list was in, and the two live
- * on one scale from the first render. A dragged template gets an `order` that
- * lands between its new neighbours' ranks; an untouched one keeps answering
- * with its birthday forever.
- */
 export function templateRank(template: Template): number {
 	return template.order ?? template.createdAt;
 }
@@ -150,34 +86,9 @@ export function isArchived(template: Template): boolean {
 	return template.archivedAt !== undefined && template.archivedAt !== null;
 }
 
-/**
- * The gap a template is placed at when it lands on an end of the list.
- *
- * Ranks start life as epoch milliseconds, so the scale is ~1.7e12 and any
- * constant is small beside it. A thousand rather than one because a rank has
- * to survive being halved repeatedly — see `reorder` — and starting an end
- * placement one millisecond off its neighbour spends that headroom on the
- * first drag.
- */
+// 1000, not 1: ranks are epoch-ms scale and must survive repeated midpoint halving in `reorder`.
 const RANK_GAP = 1000;
 
-/**
- * Place `id` at `index` in `order`, and answer with the rank that puts it
- * there — or null if the drag was a no-op.
- *
- * The midpoint of its new neighbours, so a drag writes exactly one record.
- * Renumbering the list from zero would be simpler to read and would push every
- * template on every drop; with each template its own synced record, that turns
- * one gesture into N dirty rows and N conflicts to lose. The neighbours are
- * read from the list *without* the dragged template in it, which is what makes
- * the index the drop reports mean the same thing whether the card travelled up
- * or down.
- *
- * Halving a gap forever is the known cost, and it is not one in practice: the
- * ranks are milliseconds apart at rest, and a double survives ~50 halvings of
- * even a single-millisecond gap. Nothing here renumbers to recover, because
- * the renumber is the write storm this exists to avoid.
- */
 export function reorder(templates: Template[], id: string, index: number): number | null {
 	const ordered = templates.toSorted(byRank);
 	const from = ordered.findIndex((template) => template.id === id);
@@ -201,24 +112,8 @@ export function reorder(templates: Template[], id: string, index: number): numbe
 	return (templateRank(before) + templateRank(after)) / 2;
 }
 
-/**
- * A mark this build can draw, or none.
- *
- * Sync is the reason this exists. A record can arrive from a device running a
- * build whose set is bigger than this one's, and an unknown key would reach
- * the component map as an undefined lookup and render nothing inside a tile
- * that still took up space. Falling back to unmarked is the honest read: this
- * build genuinely does not know what that glyph is.
- *
- * Each half falls back on its own, which is what the two halves being
- * independent buys here: a glyph from a newer build leaves the hue standing
- * rather than blanking a row that still has something to say. Only when
- * neither half survives is there no mark to draw.
- *
- * It is deliberately not a write path — the payload keeps whatever it arrived
- * with, so the device that understands the key still draws it, and an upgrade
- * here restores the mark rather than finding it erased.
- */
+// Synced records can carry mark keys from newer builds; unknown halves render as absent
+// but the stored payload is never rewritten.
 export function drawableMark(template: Template): TemplateMark | null {
 	const mark = template.mark;
 
@@ -235,14 +130,6 @@ export function drawableMark(template: Template): TemplateMark | null {
 	return icon === null && colour === null ? null : { icon, colour };
 }
 
-/**
- * What "New template" opens on: nothing named, nothing planned.
- *
- * The id and the timestamp are the caller's — this module has no clock and no
- * randomness, the same reason `freshWorkout` is handed its `startedAt` — and
- * the id doubles as the route the editor lives at, so it has to exist before
- * the template does.
- */
 export function blankTemplate(id: string, createdAt: number): Template {
 	return { id, name: '', createdAt, entries: [] };
 }
@@ -370,14 +257,8 @@ export function setExerciseReps(
 	return true;
 }
 
-/**
- * The plan's own rest for one exercise, in all three states.
- *
- * `undefined` is a value here and not a missing argument: it is how a card says
- * *inherit again*, and it deletes the key rather than writing an undefined one
- * — `restSecondsOf` reads an absence, and a key that is present and undefined
- * is a distinction no payload should have to carry.
- */
+// `undefined` means "inherit again" and deletes the key — `restSecondsOf` reads an absence,
+// never a present-but-undefined key.
 export function setExerciseRest(
 	template: Template,
 	exerciseId: string,
@@ -416,11 +297,6 @@ export function startFrom(template: Template, startedAt: number, mint: () => str
 				}))
 			};
 
-			// Copied, not looked up later: the session has to survive this template
-			// being edited or deleted from under it, and a workout repeated out of
-			// History has no template to ask at all. Set only when the plan has an
-			// opinion, so an inherited rest stays an absence rather than becoming a
-			// key holding undefined.
 			if (exercise.restSeconds !== undefined) {
 				copy.restSeconds = exercise.restSeconds;
 			}

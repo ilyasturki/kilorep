@@ -5,16 +5,8 @@ import { syncCounters } from './schema.ts';
 
 export type Executor = Database | Parameters<Parameters<Database['transaction']>[0]>[0];
 
-/**
- * Claims the next `seq` for a user and advances the counter, in one atomic
- * `update … returning`. Sync order comes from this number and never from a
- * device clock: two phones disagree about the time, and one of them is in a
- * gym with no signal.
- *
- * Call it inside the same transaction as the write it stamps — otherwise a
- * crash between the two leaves a consumed number attached to no record, and
- * the client's watermark steps over a row that was never written.
- */
+// Call inside the same transaction as the write it stamps: a crash between the
+// two burns a seq that the client's watermark then steps over.
 export function claimSeq(executor: Executor, userId: string): number {
 	const row = executor
 		.update(syncCounters)
@@ -27,7 +19,5 @@ export function claimSeq(executor: Executor, userId: string): number {
 		throw new Error(`No sync counter for user ${userId}`);
 	}
 
-	// `returning` yields the row *after* the update, so the value just claimed
-	// is one behind the counter's new position.
 	return row.nextSeq - 1;
 }

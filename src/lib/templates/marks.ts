@@ -17,20 +17,6 @@ import Spiral from '$lib/ui/icons/Spiral.svelte';
 import Star from '$lib/ui/icons/Star.svelte';
 import Steps from '$lib/ui/icons/Steps.svelte';
 
-/**
- * Key to component, by ordinary static import.
- *
- * This is the map the icon README's no-dispatcher rule allows and the
- * `<Icon name="…">` component it forbids: every glyph is named in an import
- * at author time, so Vite still sees the exact set a screen can reach and
- * nothing is resolved from a string at runtime. The cost is that all fifteen
- * are in the bundle wherever this module is imported — which is correct, since
- * the picker can draw any of them and a list can hold all fifteen at once.
- *
- * Phosphor has no `squat` and no `hinge`, so the pattern set stops where the
- * family does and the remaining keys name equipment or intensity instead;
- * `barbell` and `machine` reuse glyphs already vendored for other screens.
- */
 export const MARK_GLYPHS: Record<MarkIcon, Component<{ size?: number; class?: string }>> = {
 	push: ArrowFatUp,
 	pull: ArrowFatDown,
@@ -49,25 +35,11 @@ export const MARK_GLYPHS: Record<MarkIcon, Component<{ size?: number; class?: st
 	star: Star
 };
 
-/**
- * What a key is called out loud: the key, title-cased.
- *
- * The picker is the one place a mark is named — on a row the tile is
- * `aria-hidden`, because the plan's name is already beside it — and there the
- * glyph and the hue *are* the choice, so each needs a word a reader can say.
- */
 export function markLabel(key: MarkIcon | MarkColour): string {
 	return key.charAt(0).toUpperCase() + key.slice(1);
 }
 
-/**
- * Hue to the class pair that paints a tile: soft fill, saturated glyph.
- *
- * Literal strings and not `bg-tpl-${colour}-soft`, because Tailwind's scanner
- * reads source text and never runs this file — an interpolated class name is
- * a class that does not get generated. Same discipline as the glyph map above,
- * for a different tool.
- */
+// Literal class names, never `bg-tpl-${colour}-soft`: Tailwind's scanner does not generate interpolated classes.
 export const MARK_TILES: Record<MarkColour, string> = {
 	amber: 'bg-tpl-amber-soft text-tpl-amber',
 	teal: 'bg-tpl-teal-soft text-tpl-teal',
@@ -77,18 +49,6 @@ export const MARK_TILES: Record<MarkColour, string> = {
 	slate: 'bg-tpl-slate-soft text-tpl-slate'
 };
 
-/**
- * The same six at full strength: the hue as the fill, `tpl-on` as the ink.
- *
- * Two places need a hue to be the loudest thing in its box rather than a tint
- * behind a glyph. The picker's chosen tile, where the soft pair cannot carry
- * selection — it is what every *unchosen* tile would wear once the grid
- * previews the hue, so the two states would differ by fill strength alone. And
- * a mark that has a colour and no glyph, where the soft tile is a 32px square
- * of near-nothing.
- *
- * Literal strings for the same reason `MARK_TILES` spells its pairs out.
- */
 export const MARK_FILLS: Record<MarkColour, string> = {
 	amber: 'bg-tpl-amber text-tpl-on',
 	teal: 'bg-tpl-teal text-tpl-on',

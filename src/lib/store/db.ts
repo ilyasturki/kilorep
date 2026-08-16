@@ -1,16 +1,3 @@
-/**
- * The device database: IndexedDB, opened through `idb`'s typed promise
- * wrapper. This module owns the schema — names, key paths, indexes, the
- * version — and hands back a connection; what the records mean is `store.ts`'s
- * business.
- *
- * IndexedDB and not SQLite or localStorage, decided once: it is the one
- * storage that behaves identically in the browser and the Capacitor WebView,
- * needs no native plugin, and holds structured records at a size localStorage
- * cannot. Plain TypeScript per CLAUDE.md hard rule 1 — `idb` is a wrapper over
- * a web standard, not a framework.
- */
-
 import type { DBSchema, IDBPDatabase } from 'idb';
 import { openDB } from 'idb';
 

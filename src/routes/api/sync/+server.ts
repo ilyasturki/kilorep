@@ -9,18 +9,6 @@ import { MAX_PUSH, isWireRecord } from '$lib/sync/protocol';
 
 import type { RequestHandler } from './$types';
 
-/**
- * The sync round trip: push and pull in one request, because the client that
- * matters is a phone on gym signal and two round trips is a failure window
- * with a name. The heavy lifting — last-write-wins, seq claims, the pull —
- * lives in `syncExchange`; this file is the boundary, and does what boundaries
- * do: authenticate, validate, translate.
- *
- * Every failure is a 400 with a field name, same contract as the auth
- * endpoints: the caller is the APK, and whoever is debugging it has no server
- * log in front of them.
- */
-
 function readWatermark(body: Record<string, unknown>): number {
 	const value = body.watermark;
 

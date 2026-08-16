@@ -1,8 +1,4 @@
 <script lang="ts">
-	// Phosphor `arrow-counter-clockwise`, bold. The bare arc, not
-	// `ClockCounterClockwise`'s dialled version — that one is History's glyph, and a
-	// clock face on Unlog would say the set is being sent somewhere rather than
-	// being un-said.
 	import Glyph from './Glyph.svelte';
 
 	let { size = 24, class: klass }: { size?: number; class?: string } = $props();

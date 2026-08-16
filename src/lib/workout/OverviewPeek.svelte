@@ -3,29 +3,11 @@
 	import SessionPanel from '$lib/workout/SessionPanel.svelte';
 	import { QUICK_EASE, quickMs } from '$lib/ui/motion';
 
-	/**
-	 * The session panel while the finger is still deciding.
-	 *
-	 * vaul only ever starts a drag from a pointer that went down on its own
-	 * content, and it owns the panel's transform for as long as it is open — so a
-	 * gesture that begins out on the pane, over a set row, cannot be handed to
-	 * it. This is that gesture's panel: the same `SessionPanel` in the same skin,
-	 * translated by however far the swipe has travelled, painting nothing else.
-	 * On release it slides the rest of the way and the real drawer takes over at
-	 * the exact position this one reached — see `instant` on `OverviewDrawer`.
-	 *
-	 * `pointer-events-none` throughout, on both the scrim and the panel: the
-	 * pointer this is following belongs to the pane, which captured it, and a
-	 * panel arriving under a moving finger must not start answering it. Nothing
-	 * here is reachable and nothing here is announced — the drawer this hands
-	 * over to is the dialog, with the focus trap and the title.
-	 */
+	// vaul only drags from a pointerdown on its own content; this stand-in covers a
+	// swipe starting outside it, and the drawer takes over on release.
 	type Props = {
-		/** How far in the panel is pulled, in pixels from its own left edge. */
 		offset: number;
-		/** Its rendered width, measured rather than restated from the stylesheet. */
 		width?: number;
-		/** Whether `offset` is being animated to its resting value right now. */
 		settling: boolean;
 		entries: Entry[];
 		activeSetId: string | null;
@@ -36,10 +18,6 @@
 
 	let panel = $state<HTMLElement | null>(null);
 
-	// Read after the DOM update and before the paint, so the first frame the user
-	// sees already has the real number in it. `min(80vw, 20rem)` lives in
-	// `app.css` and is not repeated here; a peek that computed its own width
-	// would be a second place for that rule to be changed and forgotten.
 	$effect(() => {
 		if (panel !== null) {
 			width = panel.offsetWidth;
@@ -72,9 +50,6 @@
 	ontransitionend={settled}
 	aria-hidden="true"
 >
-	<!-- Nothing in here can be tapped, so the handlers are the honest shape of
-	     that: this panel is a picture of the session for as long as the swipe
-	     lasts, and every act it appears to offer belongs to the drawer behind. -->
 	<SessionPanel
 		{entries}
 		{activeSetId}

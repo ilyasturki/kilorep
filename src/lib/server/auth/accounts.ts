@@ -75,22 +75,6 @@ export async function createUser(db: Database, email: string, password: string):
 	return insertUser(db, email, passwordHash, null);
 }
 
-/**
- * Whether this account has to prove itself with its current password before it
- * is given a new one.
- *
- * No, twice over, and for different reasons. An account with no hash has
- * nothing to be asked for — a Google identity created it and this is the first
- * password it will ever hold. An account that *is* Google-linked has a hash
- * worth asking for right up until you notice that whoever holds the Google
- * identity can mint a fresh session whenever they like: the old password guards
- * a door standing open beside it, and asking for it would only lock out the one
- * person it was meant to help, the one who forgot it.
- *
- * One function because it is one rule, and it is answered here rather than
- * re-derived on the client — `publicUser` carries the verdict, not the two
- * facts behind it, so the form and the endpoint cannot drift apart on it.
- */
 export function currentPasswordRequired(user: User): boolean {
 	return user.passwordHash !== null && user.googleSub === null;
 }
@@ -243,20 +227,6 @@ export function revokeToken(db: Database, userId: string, tokenId: string): bool
 	return removed !== undefined;
 }
 
-/**
- * Every credential this account owns except one, and the count of them.
- *
- * `keep` is the credential asking — a browser that signed its own cookie out
- * mid-request would land on a 401 for the next thing it did and read as a bug.
- * Null keeps nothing, which is what the CLI needs: it holds no credential, so
- * there is none to spare.
- *
- * Deliberately not what logging out does. TESTING.md makes per-credential
- * revocation the rule, so that the browser signing out cannot end a workout on
- * the phone — but a password changing is the one moment where the question is
- * whether somebody else has been holding it, and the answer has to be able to
- * reach every device at once.
- */
 export function revokeOtherTokens(db: Database, userId: string, keep: string | null): number {
 	const scope =
 		keep === null

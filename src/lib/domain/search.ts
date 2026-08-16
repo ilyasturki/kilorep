@@ -34,7 +34,6 @@ function substringRank(query: string, name: string, aliases: string[]): number {
 	return -1;
 }
 
-/** Classic two-row Levenshtein. The pool is small; clarity beats cleverness. */
 function editDistance(a: string, b: string): number {
 	let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
 

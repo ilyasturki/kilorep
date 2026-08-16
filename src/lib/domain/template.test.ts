@@ -348,8 +348,6 @@ describe('planning supersets', () => {
 	test('a leg never leaves its own entry, and an unknown one is refused', () => {
 		const template = pair();
 
-		// Two entries of one leg each: the swap has no neighbour to trade with
-		// inside its entry, and the exercise standing beside it is not one.
 		expect(moveExercise(template, 'cable-fly-node', 1)).toBe(false);
 		expect(moveExercise(template, 'nope', -1)).toBe(false);
 		expect(orderOf(template)).toEqual(['cable-fly', 'lateral-raise']);
@@ -634,10 +632,6 @@ describe('reorder', () => {
 	test('repeated drags into the same gap keep their order', () => {
 		let templates = list();
 
-		// Halving the same gap again and again is the known cost of writing one
-		// record per drag. Always dragging whichever card is currently on top
-		// into the middle is what actually walks the gap down — dragging the same
-		// card twice is a no-op the second time, which the guard already answers.
 		for (let i = 0; i < 40; i += 1) {
 			const top = templates[0];
 			const order = reorder(templates, top.id, 1);
@@ -720,9 +714,6 @@ describe('drawableMark', () => {
 		const template = marked('hinge', 'blue');
 
 		expect(drawableMark(template)).toEqual({ icon: null, colour: 'blue' });
-		// Read-only: the record keeps the key, so the device that knows it still
-		// draws it and an upgrade here restores the glyph rather than finding it
-		// erased.
 		expect(template.mark).toEqual({ icon: 'hinge', colour: 'blue' });
 	});
 

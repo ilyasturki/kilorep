@@ -11,11 +11,6 @@ export function requireCredential(locals: App.Locals): Credential {
 	return locals.credential;
 }
 
-/**
- * The Google client, or the 404 every Google route owes an instance that has
- * none: no identity provider means there is nothing here to describe, and
- * saying so in any other words would describe its setup.
- */
 export function requireGoogleClient(): { id: string; secret: string } {
 	const client = googleClient();
 	if (client === undefined) {

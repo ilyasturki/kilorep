@@ -50,34 +50,21 @@
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
-	// An overview of the component library: one card per component, everything
-	// live. A card is titled with the component it renders and every instance
-	// carries the prop that makes it that instance, so the page can be read as
-	// the API rather than as a mock screen. Tokens and the type scale are not
-	// here — src/app.css names them and holds the reasoning.
-
-	// The page's own furniture. Written out rather than composed at runtime:
-	// Tailwind scans source text, so an arbitrary property it has not seen
-	// spelled out in full is never emitted.
+	// Tailwind scans source text: a class composed at runtime is never emitted.
 	const card = 'flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-4';
 	const caption = 'text-xs font-extrabold text-ink-faint';
 	const tile = 'grid size-8 place-items-center text-ink-muted';
-	// One instance and the prop that names it.
 	const specimen = 'flex flex-col items-start gap-1.5';
-	// The round icon button the template editor's chrome wears, borrowed so the
-	// TipButton card demonstrates the real thing rather than a shape near it.
 	const chromeButton =
 		'grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line ' +
 		'text-ink-muted focus-ring hover:bg-hover press:bg-surface-2';
 
-	// `as const` so each `variant` is the literal Button expects, not `string`.
 	const outlined = [
 		{ variant: 'secondary', label: 'Add note' },
 		{ variant: 'destructive', label: 'Clear' },
 		{ variant: 'chrome', label: 'Reopen' }
 	] as const;
 
-	// Typed, so a mistyped status is a compile error rather than a silent cast.
 	const marks: { status: SetStatus; index?: number }[] = [
 		{ status: 'done' },
 		{ status: 'active', index: 3 },
@@ -85,12 +72,6 @@
 		{ status: 'warmup' }
 	];
 
-	// `prop` is spelled out rather than derived from `step`, so the caption
-	// reads as the Svelte one would write at the call site, braces and all.
-	//
-	// `value` is state and `recalled` is not: the field is controlled, so the
-	// specimen has to hold the value for the arms to move it, and the dot has to
-	// have a fixed thing to be measured against.
 	type Stepper = {
 		value: number | null;
 		recalled: number;
@@ -129,8 +110,6 @@
 			ruler: true,
 			prop: 'ruler (touch only)'
 		},
-		// Body weight's: arms a tenth, strip a twentieth, a landmark every half
-		// kilo. The one place the two steps disagree, so the one worth showing.
 		{
 			value: 82.4,
 			recalled: 82.4,
@@ -185,9 +164,6 @@
 		{ tone: 'danger', label: 'Failed' }
 	] as const;
 
-	// The drag card's list. One row is deliberately taller than the rest — the
-	// drag measures each row's own height at lift, and a list that happened to
-	// be uniform would showcase nothing about that.
 	type DragItem = { id: string; name: string; meta: string; note?: string };
 
 	const dragItems = $state<DragItem[]>([
@@ -219,20 +195,13 @@
 		}
 	});
 
-	// The same reduced-motion split the real lists make: the row in hand keeps
-	// following the finger, the displaced rows stop sliding.
 	const dragSlide = $derived(prefersReducedMotion.current ? 0 : 200);
 
 	let setType = $state('normal');
-	// The stored value, always RPE — the two specimens below share it, which is
-	// how the page shows that RIR is a label and not a second field.
 	let rpe = $state<number | null>(8);
 	let overviewOpen = $state(false);
 	let optionsOpen = $state(false);
 
-	// One Menu instance addressed by whichever ⋯ asked, the way every screen
-	// holds one — the SetRow specimens and the Menu card all open it, so the
-	// gallery answers the gesture the way the app does.
 	let menuOpen = $state(false);
 	let menuAnchor = $state<HTMLElement | null>(null);
 
@@ -247,9 +216,6 @@
 	let equipment = $state('dumbbell');
 	let muscles = $state(['chest', 'triceps']);
 	let chipMuscles = $state(['chest']);
-	// Buttons here, not links: the Plan layout passes an `href` per segment and
-	// lets the route own the value, which on this page would navigate off it.
-	// Everything else about the two is the same control.
 	let half = $state('templates');
 	const halves = [
 		{ value: 'templates', label: 'Templates', icon: Cards },
@@ -259,8 +225,6 @@
 	let keepAwake = $state(true);
 	let syncEnabled = $state(false);
 	let deleteOpen = $state(false);
-	// The card reports what the confirm actually did, so the dialog can be
-	// checked for the thing it is for rather than for opening prettily.
 	let deleted = $state(false);
 </script>
 
@@ -268,9 +232,6 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && dragList.cancel()} />
 
-<!-- The two ChipGroups. Shown twice — standalone and inside the options sheet —
-     and the point of the page is that they are the same thing. `annotated` is
-     what differs: the card names the props, the sheet is the real screen. -->
 {#snippet pickers(annotated: boolean)}
 	<div class="flex items-baseline gap-2">
 		<h3 class="label-caps">Set type</h3>
@@ -286,11 +247,6 @@
 		<h3 class="label-caps">Exertion</h3>
 		{#if annotated}<span class={caption}>collapsed · chips · Other</span>{/if}
 	</div>
-	<!-- The real control rather than a row of chips standing in for one: what the
-	     rungs are, how the row collapses and where an off-ladder value is entered
-	     are the component's business now, and a specimen restating them by hand
-	     would be the first thing to go stale. Both scales are shown because the
-	     conversion is the part worth being able to eyeball. -->
 	<div class="flex flex-col gap-2">
 		<ExertionPicker value={rpe} scale="rpe" onchange={(next) => (rpe = next)} />
 		<ExertionPicker value={rpe} scale="rir" onchange={(next) => (rpe = next)} />
@@ -299,13 +255,6 @@
 
 <div class="min-h-dvh bg-canvas px-6 pt-safe-t pb-16 text-ink">
 	<div class="mx-auto flex max-w-[1280px] flex-col gap-6 pt-6">
-		<!-- A bento, not a terrace. Cards vary wildly in height — the numpad is three
-		     times the badge card — so the five tallest take row-span-2 and the flow is
-		     dense, which lets a later short card backfill the cell a tall one skipped
-		     past. Rows then differ little enough that the default stretch is affordable:
-		     every card fills its cell, so the grid reads flush instead of leaving a hole
-		     under each short one. The spans are inert at one column, so the phone
-		     layout is untouched. -->
 		<div
 			class="grid grid-flow-row-dense [grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr))] gap-4"
 		>
@@ -329,10 +278,6 @@
 				</div>
 			</article>
 
-			<!-- The one card that cannot be read, only pressed. Everything here is
-			     invisible on a mouse: `press:` falls back to `:active`, the sink is
-			     coarse-only, and the hold is a touch gesture with `contextmenu` as
-			     its desk stand-in. Open it on a phone, or with device emulation on. -->
 			<article class={card}>
 				<h2 class="label-caps">press</h2>
 
@@ -404,10 +349,6 @@
 							{#snippet right()}warmup{/snippet}
 						</SetRow>
 					</div>
-					<!-- `onselect` where `ExerciseBlock` passes it, and withheld from the
-					     warmup where it withholds it: that prop is what decides whether a
-					     row says it is tappable, so a showcase that never passed it would
-					     display four states the screen never renders. -->
 					<div class="flex flex-col gap-1">
 						<span class={caption}>status="done"</span>
 						<SetRow
@@ -478,9 +419,6 @@
 
 			<article class={card}>
 				<h2 class="label-caps">Menu</h2>
-				<!-- The adaptive ⋯: a sheet under a thumb, a list anchored to the
-				     button under a pointer. The SetRow specimens open the same
-				     instance from their own ⋯. -->
 				<div class={specimen}>
 					<button
 						type="button"
@@ -617,8 +555,6 @@
 
 			<article class={card}>
 				<h2 class="label-caps">list-group</h2>
-				<!-- On `canvas`, which is the only place the fill is visible: dropped on
-				     a Sheet the card is border and dividers alone, by design. -->
 				<div class="rounded-xl bg-canvas p-2">
 					<div class="list-group">
 						<ListRow title="Bench Press" meta="80 kg × 8" href="#list-group" />
@@ -636,9 +572,6 @@
 						{@const lifted = dragList.isLifted(item.id)}
 						{@const settling = dragList.settlingId === item.id}
 
-						<!-- The outer/inner split, the sunken slot and the settle spring,
-						     exactly as SessionList wires them — the card is the gesture on
-						     dummy rows, not a second implementation of it. -->
 						<div
 							data-drag-id={item.id}
 							animate:flip={{ duration: dragSlide }}
@@ -729,10 +662,6 @@
 
 			<article class={card}>
 				<h2 class="label-caps">TipButton</h2>
-				<!-- The other half of Tooltip: there the ⓘ is the trigger and a word is
-				     the thing explained, here the button is both. For a glyph that is
-				     the button's only label — an archive box and a stack are one drawing
-				     at 20px until you have met both. -->
 				<div class={specimen}>
 					<div class="flex items-center gap-2">
 						<TipButton label="Archive template" onclick={() => {}} class={chromeButton}>
@@ -810,9 +739,6 @@
 						<span class={caption}>Books</span>
 					</div>
 				</div>
-				<!-- The nav's glyphs, each above its selected-state partner. Bold on
-				     top, fill under it — the pairing the README calls the intended
-				     one, and the reason ListBullets stands alone is in its own file. -->
 				<div class="flex flex-wrap items-center gap-5 border-t border-line-soft pt-3">
 					<div class="flex flex-col items-center gap-1.5">
 						<div class={tile}><Play size={22} /></div>
@@ -829,9 +755,6 @@
 						<span class={caption}>ListBullets</span>
 					</div>
 				</div>
-				<!-- The marks the font already supplies, so nothing is drawn for them:
-				     the search field's clear, the calendar's month arrows, the row
-				     chevron. Measured against the vendored subset, not assumed. -->
 				<div class="flex flex-wrap items-center gap-5 border-t border-line-soft pt-3">
 					{#each ['×', '‹', '›', '·', '−'] as glyph (glyph)}
 						<div class="flex flex-col items-center gap-1.5">

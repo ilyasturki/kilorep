@@ -19,32 +19,10 @@ const LOAD_MODE_UNITS: Record<LoadMode, string> = {
 	unilateral: 'kg / side'
 };
 
-/**
- * What the weight field calls itself, which is where the load mode belongs on
- * the logging card: `per hand` was a note under the exercise name, two lines
- * above the box it governs, and the question it answers — *what number do I
- * type* — is asked with a thumb already on that box.
- *
- * `/ hand` and not `per hand`: the field is half the card wide, less two 44px
- * arms, which leaves about 72px for a `label-caps` line. Measured, `KG PER
- * HAND` does not fit there and `KG / HAND` does.
- *
- * Not `loadModeNote`. That one is prose for a page describing an exercise —
- * `one side at a time` reads as a sentence and would be nonsense as a unit.
- */
 export function loadUnitLabel(mode: LoadMode): string {
 	return LOAD_MODE_UNITS[mode];
 }
 
-/**
- * Last time's heaviest set, spelled the way the workout screen spells a hint.
- * `bestSet`'s rule — heaviest, tie-broken by reps — rather than the last set
- * of the session, because a session that ended on a back-off set is not
- * described by it.
- *
- * The `×` is the character `hintLabel` uses, and for the same reason: the
- * vendored font subset carries it.
- */
 export function lastSetLabel(session: PastSession | undefined): string | undefined {
 	if (session === undefined) {
 		return undefined;

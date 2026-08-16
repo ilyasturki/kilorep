@@ -3,13 +3,6 @@ import type { RestSettings } from '$lib/domain/rest';
 import type { RestDefaultPreference } from '$lib/domain/preference';
 import type { Store } from '$lib/store/store';
 
-/**
- * The user's standing rest taste, held where every reader can see it.
- *
- * Replaced wholesale on every write rather than mutated in place: it is read as
- * one value by `restAfter`, and a half-updated object crossing that call is a
- * rest of the wrong length.
- */
 class RestSettingsHolder {
 	public current: RestSettings = $state(defaultRestSettings());
 
@@ -45,11 +38,8 @@ class RestSettingsHolder {
 		await store.setRestOverride(exerciseId, settled, Date.now());
 	}
 
-	/**
-	 * Back to no opinion, which is not the same as never-rest. The key leaves the
-	 * map rather than being set to undefined, so `restSecondsFor` sees an absence
-	 * and falls to the default.
-	 */
+	// The key leaves the map rather than being set: an absent override falls back
+	// to the default, while a stored `null` means never rest.
 	public async clearOverride(store: Store, exerciseId: string): Promise<void> {
 		const { [exerciseId]: _dropped, ...rest } = this.current.overrides;
 

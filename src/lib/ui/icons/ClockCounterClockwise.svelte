@@ -1,7 +1,4 @@
 <script lang="ts">
-	// Phosphor `clock-counter-clockwise`, bold. Bold alone, like ListBullets: the
-	// fill weight redraws the ring at regular-weight strokes rather than filling a
-	// silhouette, so beside a true solid it reads thinner, not selected.
 	import Glyph from './Glyph.svelte';
 
 	let { size = 24, class: klass }: { size?: number; class?: string } = $props();

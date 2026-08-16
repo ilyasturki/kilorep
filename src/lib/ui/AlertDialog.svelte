@@ -8,11 +8,6 @@
 		title: string;
 		description?: string;
 		confirmLabel: string;
-		/**
-		 * Set when this dialog is asked from another overlay — the Weight log's
-		 * Delete, raised from the edit sheet. Without it the scrim lands under the
-		 * panel that raised it and the sheet stays lit behind the question.
-		 */
 		stacked?: boolean;
 		onconfirm: () => void;
 	};
@@ -30,14 +25,6 @@
 
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
-	// Bits UI focuses the panel itself, which is correct for a dialog you are
-	// about to read and wrong for one you are about to dismiss. The safe choice
-	// is the one under the thumb: a stray Enter or Space cancels.
-	//
-	// The button arrives through `bind:ref` on the Cancel part rather than a
-	// marker attribute and a `querySelector`: the part already exposes the node,
-	// and a private `data-` handle nothing else reads breaks silently the day
-	// someone removes it.
 	function focusCancel(event: Event) {
 		event.preventDefault();
 		cancel?.focus();

@@ -94,8 +94,7 @@ describe('the block', () => {
 		const last = starts.at(-1) ?? 0;
 
 		expect(last).toBeLessThan(NOW);
-		// Yesterday, unless yesterday was a rest day — Friday to Monday is the
-		// widest the Mon/Wed/Fri grid ever gets.
+		// Friday to Monday is the widest gap the Mon/Wed/Fri grid produces.
 		expect(NOW - last).toBeLessThan(4 * DAY);
 	});
 
@@ -152,8 +151,7 @@ describe('the sets', () => {
 	});
 
 	it('keeps warmups out of history', () => {
-		// The bench warmup is 40 kg and every working set is heavier, so a warmup
-		// leaking into `performedSets` shows up as a load that cannot be there.
+		// The bench warmup is 40 kg and every working set is heavier.
 		const performed = content.workouts.flatMap((workout) => performedSets(workout, 'bench-press'));
 
 		expect(performed.length).toBeGreaterThan(0);
@@ -213,8 +211,6 @@ describe('the planted states', () => {
 			(workout) => workout.templateId === tombstoned.template.id
 		)!;
 
-		// The live list is what the History screen holds — the tombstone is
-		// filtered out of it long before the title is asked for.
 		expect(workoutTitle(orphan, live)).toBe('Bench Press + 4 more');
 	});
 });
@@ -223,7 +219,6 @@ describe('the weigh-ins', () => {
 	it('runs oldest first, one per day, ending just before the anchor', () => {
 		const dates = content.bodyweight.map(({ entry }) => entry.date);
 
-		// ISO dates order lexicographically, which is also what makes them keys.
 		expect(dates).toStrictEqual(dates.toSorted());
 		expect(new Set(dates).size).toBe(dates.length);
 
@@ -234,8 +229,7 @@ describe('the weigh-ins', () => {
 	});
 
 	it('misses days the way a real log does', () => {
-		// Sixty calendar days, minus the Sundays and one weekend away: the trend
-		// must render gaps, and a log with an entry every single day tests none.
+		// Sixty calendar days, minus the Sundays and one weekend away.
 		expect(content.bodyweight.length).toBeGreaterThan(40);
 		expect(content.bodyweight.length).toBeLessThan(60);
 	});

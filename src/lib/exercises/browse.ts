@@ -36,18 +36,6 @@ export function sections(pool: Exercise[]): Section[] {
 	})).filter((section) => section.families.length > 0);
 }
 
-/**
- * Every other member of `exercise`'s family, flat and by name: its parent, its
- * parent's other children, or — when it is the parent — its own. One list and
- * no direction, because a variant relation is symmetric to the person reading
- * it: whoever is on screen, the rest of the family is what they might have
- * meant instead. `variantOf` still names a canonical parent, and the browse
- * fold still reads it; that asymmetry belongs to the shelf, not to this list.
- *
- * A `variantOf` naming an exercise the pool lacks makes the entry its own root,
- * exactly as `sections` treats it — the two must agree or a family would shelve
- * under a head that its own members do not list.
- */
 export function kin(pool: Exercise[], exercise: Exercise): Exercise[] {
 	const ids = new Set(pool.map((entry) => entry.id));
 

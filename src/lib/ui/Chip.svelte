@@ -4,9 +4,8 @@
 		'text-base font-extrabold select-none focus-ring ' +
 		'bg-sunken text-ink-muted ' +
 		'data-[state=on]:bg-accent data-[state=on]:text-on-accent ' +
-		// Scoped to the off state so it cannot race the selected fill: Tailwind
-		// resolves conflicts by stylesheet order, not by which variant is "more
-		// specific" in the class attribute.
+		// Scoped to the off state so it cannot race the selected fill: Tailwind resolves
+		// conflicts by stylesheet order, not by order in the class attribute.
 		'data-[state=off]:hover:bg-hover data-[state=on]:hover:bg-accent-hover ' +
 		'data-[state=off]:press:bg-surface-2 press-sink ' +
 		'pointer-fine:transition-[background-color,color] pointer-fine:duration-100 ' +

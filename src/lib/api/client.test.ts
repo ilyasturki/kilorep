@@ -13,18 +13,6 @@ import {
 	setLastServer
 } from './client.ts';
 
-/**
- * The transport, and specifically the two things about it that cannot be seen
- * in Chrome: what `apiBase` answers when nothing is connected, and whether the
- * credential the phone holds actually leaves on the request.
- *
- * `APP_BUILD` is false under vitest, so what is exercised here is the in-memory
- * half of both — which is the half every call reads. Persistence is one
- * `localStorage` write behind a build flag; the deep-link and WebView paths that
- * surround it only exist on a device, and `docs/TESTING.md` is where that is
- * driven.
- */
-
 const CAPTURED: { url: string; init: RequestInit }[] = [];
 
 beforeEach(() => {
@@ -125,14 +113,6 @@ describe('the default instance', () => {
 		expect(DEFAULT_SERVER.endsWith('/')).toBe(false);
 	});
 
-	/**
-	 * The whole point of the constant being separate from `apiBase`. Settings
-	 * offers it, a sign-in installs it, and nothing else may: a phone that has
-	 * never signed in stays local-only, so a fresh install neither reaches the
-	 * network nor has an address to reach it at. `location` is stubbed to the web
-	 * half here — `APP_BUILD` is false under vitest — so the assertion is that
-	 * even the fallback is the origin and never this.
-	 */
 	it('is never what `apiBase` falls back to on its own', () => {
 		vi.stubGlobal('location', { origin: 'https://web.example.com' });
 		setApiBase(null);
@@ -142,11 +122,6 @@ describe('the default instance', () => {
 });
 
 describe('the address somebody typed', () => {
-	/**
-	 * Sign-out clears the active server, because on the phone signing in is what
-	 * connected it. This is the half that must outlive that — otherwise a
-	 * self-hoster retypes a LAN name on a phone keyboard every time.
-	 */
 	it('outlives the connection it was used for', () => {
 		vi.stubGlobal('location', { origin: 'https://web.example.com' });
 

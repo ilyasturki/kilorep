@@ -2,16 +2,6 @@
 	import { backDepth } from '$lib/nav/depth';
 	import { press } from '$lib/ui/press';
 
-	/**
-	 * The bar's way up: an ordinary link to the parent, which walks real history
-	 * instead wherever there is any of this app's behind us.
-	 *
-	 * A link and not a button, because `href` is what makes it a middle-click,
-	 * a long-press "open in new tab", and a keyboard's link — and what answers
-	 * the one case history cannot, a cold boot straight onto a detail screen or
-	 * a notification tap, which has nothing to walk. Any modified click is left
-	 * to the browser for the same reason.
-	 */
 	let {
 		href,
 		label,

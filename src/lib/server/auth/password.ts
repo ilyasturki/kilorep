@@ -1,19 +1,5 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 
-/**
- * Passwords are hashed with scrypt from `node:crypto` — memory-hard, on
- * OWASP's approved list, and built into the platform, so the container stays
- * free of compiled dependencies for the same reason `node:sqlite` was chosen
- * over better-sqlite3.
- *
- * Asynchronous, unlike the rest of this layer, and deliberately so: a single
- * hash costs ~370 ms and ~128 MB, `adapter-node` is one process that also
- * serves the SPA, and `scryptSync` would hold the event loop for the whole of
- * it — a handful of parallel login attempts would be a denial of service.
- * `crypto.scrypt` does the same work on the libuv threadpool. (`DatabaseSync`
- * next door is sync because SQLite offers nothing else; this had a choice.)
- */
-
 type ScryptParams = { N: number; r: number; p: number };
 
 const PARAMS: ScryptParams = { N: 2 ** 17, r: 8, p: 1 };
@@ -37,10 +23,6 @@ async function deriveKey(
 ): Promise<Buffer> {
 	const { N, r, p } = params;
 
-	// The one hand-rolled promise in the codebase, and it earns its exception:
-	// `crypto.scrypt` is a Node callback API, and `promisify` resolves it to the
-	// wrong overload — `unknown`, three parameters — which would cost a type
-	// assertion to undo. A callback wrapped once, here, is the smaller lie.
 	// oxlint-disable-next-line promise/avoid-new
 	const key = await new Promise<Buffer>((resolve, reject) => {
 		scrypt(
@@ -66,9 +48,6 @@ function parseParams(rawN: string, rawR: string, rawP: string): ScryptParams | u
 	const r = Number(rawR);
 	const p = Number(rawP);
 
-	// `2 ** Math.round(Math.log2(N))` rather than a bitwise test: the bitwise
-	// operators are off across this repo, and the round-trip is exact for every
-	// power of two in range.
 	if (!Number.isInteger(N) || N < 2 || N > MAX_N || 2 ** Math.round(Math.log2(N)) !== N) {
 		return undefined;
 	}
@@ -136,9 +115,6 @@ export async function verifyPassword(password: string, stored: string): Promise<
 	}
 
 	const { params, salt, expected } = parsed;
-	// The key length comes from the stored hash, so the two buffers match by
-	// construction — which is what `timingSafeEqual` requires, and why the
-	// length is bounded above rather than trusted.
 	const actual = await deriveKey(password, salt, expected.length, params);
 
 	return timingSafeEqual(actual, expected);

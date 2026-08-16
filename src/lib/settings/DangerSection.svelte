@@ -9,29 +9,8 @@
 
 	import type { Account } from '$lib/api/auth';
 
-	/**
-	 * Deleting the account: the one irreversible thing this app can be asked to
-	 * do, and the reason this section is at the foot of the page in a heading of
-	 * its own rather than as a fourth row under Account.
-	 *
-	 * Two acts, not one, and the sheet asks which before it asks whether. The
-	 * server side is the same either way — the row goes and the cascade takes
-	 * every record with it — and what differs is the copy on this device, which
-	 * is data the server never had a claim on. Somebody deleting an account to
-	 * stop syncing is not the same person as somebody deleting one to be gone,
-	 * and the difference is not something a default can guess.
-	 *
-	 * The confirmation stands in front of the chosen one rather than the choice,
-	 * so the address is retyped in front of a named outcome. `scripts/account.ts`
-	 * asks for the same thing at a terminal.
-	 */
 	type Props = {
 		user: Account;
-		/**
-		 * The aftermath, which is the page's: what happens to the store, to the
-		 * connection, and to where the user ends up. Called only once the server
-		 * has confirmed the account is gone.
-		 */
 		ondeleted: (keepLocal: boolean) => Promise<void>;
 	};
 
@@ -81,9 +60,6 @@
 
 		const keepLocal = confirming === 'keep';
 
-		// Closed before the aftermath, which ends in a navigation on the web and
-		// in a reload of this very screen on the phone. A sheet still open across
-		// either is a panel over a page that has moved on.
 		confirming = null;
 		pending = false;
 
@@ -129,15 +105,10 @@
 	</div>
 </Sheet>
 
-<!-- A Sheet and not the AlertDialog the other confirmations use: this one has a
-     field to fill in, and AlertDialog is two buttons under a sentence by
-     design. -->
 <Sheet
 	bind:open={
 		() => confirming !== null,
 		(next) => {
-			// Dismissal is a cancellation and nothing else — there is nothing in
-			// flight to abandon, only a decision not yet made.
 			if (!next) {
 				confirming = null;
 			}
@@ -162,9 +133,6 @@
 			error={typedError}
 		/>
 
-		<!-- Live whatever is in the field rather than disabled until it matches: an
-		     outlined button has no disabled look to wear, so it reads as pressable
-		     and says nothing about why. The error under the field is the answer. -->
 		<Button variant="destructive" disabled={pending} onclick={confirm}>
 			{pending ? 'Deleting…' : 'Delete account'}
 		</Button>

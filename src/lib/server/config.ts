@@ -19,9 +19,8 @@ const CAPACITOR_ORIGINS = ['https://localhost', 'capacitor://localhost', 'http:/
 
 function toOrigin(entry: string): string | undefined {
 	try {
-		// Non-special schemes have an opaque origin and `URL` reports it as the
-		// string "null", which would match nothing and, worse, would match a
-		// literal `Origin: null` — the header a sandboxed iframe sends.
+		// A non-special scheme yields the origin string "null", which would match the
+		// literal `Origin: null` a sandboxed iframe sends.
 		const { origin } = new URL(entry);
 		return origin === 'null' ? undefined : origin;
 	} catch {

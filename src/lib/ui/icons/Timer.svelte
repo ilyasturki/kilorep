@@ -1,7 +1,4 @@
 <script lang="ts">
-	// Phosphor `timer`, bold. Bold alone: the fill weight is a solid disc with the
-	// hand knocked out of it, which beside the menu's outline marks reads as a
-	// different glyph rather than a heavier one.
 	import Glyph from './Glyph.svelte';
 
 	let { size = 24, class: klass }: { size?: number; class?: string } = $props();

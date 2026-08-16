@@ -9,15 +9,10 @@
 let
   cfg = config.services.kilorep;
 
-  # The service's identity, in one place: the unit and the account CLI below must
-  # name the same user and the same StateDirectory or the CLI opens a different
-  # database than the server writes.
   serviceUser = "kilorep";
   stateDirectory = "kilorep";
   stateDir = "/var/lib/${stateDirectory}";
 
-  # Loopback in the spellings `host` accepts. Binding to one of these is the only
-  # signal available that something is proxying the instance.
   loopbackHosts = [
     "127.0.0.1"
     "::1"
@@ -25,14 +20,8 @@ let
     "localhost"
   ];
 
-  # `kilorep-account` cannot simply be run from a shell: DynamicUser means the
-  # state directory belongs to a uid systemd allocates, and a root-run CLI would
-  # leave the database and its WAL sidecars owned by root for a service that
-  # cannot write them. Naming the same User= gets the same dynamic uid back, and
-  # StateDirectory= puts /var/lib/kilorep in front of it with the right owner.
-  #
-  # Root only — a system transient unit is not something an unprivileged user
-  # can start.
+  # DynamicUser: only the same User= and StateDirectory= reach the service's uid, so a
+  # shell-run CLI would leave the database root-owned.
   accountTool = pkgs.writeShellScriptBin "kilorep-account" ''
     exec ${config.systemd.package}/bin/systemd-run \
       --quiet --collect --pty --pipe \
@@ -205,9 +194,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Believing x-forwarded-for with nothing in front to overwrite it is worse
-    # than not reading it at all, and binding off loopback is the only signal
-    # available that nothing is.
     warnings =
       lib.optional (cfg.trustedProxyHops > 0 && !lib.elem cfg.host loopbackHosts) ''
         services.kilorep binds ${cfg.host} with trustedProxyHops = ${toString cfg.trustedProxyHops}.
@@ -215,9 +201,6 @@ in
         puts in x-forwarded-for, and the login throttle can be bypassed at will.
         Set trustedProxyHops = 0 for a directly-exposed instance.
       ''
-      # The half-configured case fails silently otherwise: the server needs both
-      # halves before it will offer Google at all, so the login screen just shows
-      # no button and nothing anywhere says why.
       ++ lib.optional (cfg.googleClientId != "" && cfg.environmentFile == null) ''
         services.kilorep sets googleClientId but no environmentFile, so
         GOOGLE_CLIENT_SECRET cannot reach the service and Google sign-in stays
@@ -267,12 +250,8 @@ in
         StateDirectoryMode = "0750";
         WorkingDirectory = stateDir;
 
-        # Cheap fork-bomb guard. No memory cap: this box is shared and a cap
-        # buys a coarse backstop at the price of OOM-killing the app under
-        # legitimate load.
         TasksMax = 256;
 
-        # Hardening. Node needs outbound network and the state directory.
         NoNewPrivileges = true;
         PrivateTmp = true;
         PrivateDevices = true;
@@ -289,8 +268,7 @@ in
         RestrictRealtime = true;
         RestrictSUIDSGID = true;
         LockPersonality = true;
-        # V8's JIT needs writable+executable pages; leaving this on crashes Node
-        # at startup.
+        # V8's JIT needs writable+executable pages; `true` crashes Node at startup.
         MemoryDenyWriteExecute = false;
         SystemCallArchitectures = "native";
         SystemCallFilter = [

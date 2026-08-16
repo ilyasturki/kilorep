@@ -70,9 +70,6 @@
 			Superset with…
 		{/if}
 	</MenuItem>
-	<!-- Withheld while rest is switched off in Settings, exactly as the exercise
-	     screen withholds its whole Rest section: a duration for a timer that
-	     never runs is a question with no consequence. -->
 	{#if restSettings.current.enabled}
 		<MenuItem
 			onselect={() => {

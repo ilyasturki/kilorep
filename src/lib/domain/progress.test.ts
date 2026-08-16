@@ -191,8 +191,6 @@ describe('weeklyWork', () => {
 	});
 
 	test('a session lands in a bucket by age, counted back from now', () => {
-		// Six days back is inside the last seven; eight days back is the bucket
-		// before it. Neither boundary is a weekday.
 		const weeks = weeklyWork(
 			[workout(ago(6), 'bench-press', [set(100, 5)]), workout(ago(8), 'bench-press', [set(50, 5)])],
 			NOW,
@@ -244,16 +242,7 @@ describe('rollingConsistency', () => {
 	});
 
 	test('the last seven days are counted against the seven-day windows behind them', () => {
-		const startedAts = [
-			ago(1),
-			ago(4), // last 7 days: 2
-			ago(9),
-			ago(11),
-			ago(13), // the window before: 3
-			ago(16), // and the one before that: 1
-			ago(25),
-			ago(27) // and that: 2
-		];
+		const startedAts = [ago(1), ago(4), ago(9), ago(11), ago(13), ago(16), ago(25), ago(27)];
 
 		const result = rollingConsistency(startedAts, NOW);
 

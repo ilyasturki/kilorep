@@ -13,9 +13,6 @@ describe('exercise note ids', () => {
 		expect(noteId('bench-press')).toBe('note:bench-press');
 	});
 
-	// The two prefixes share the `preference` kind and the same index, so the
-	// scan that reads every rest override walks the notes too. It has to leave
-	// them alone: a note read as an override would come back as a duration.
 	test('the note prefix is not the rest prefix', () => {
 		expect(NOTE_PREFIX).not.toBe(REST_PREFIX);
 		expect(restOverrideExercise(noteId('bench-press'))).toBeNull();
@@ -27,10 +24,7 @@ describe('isNotePreference', () => {
 		expect(isNotePreference({ text: 'Seat 4' })).toBe(true);
 	});
 
-	// Empty is a legal payload even though nothing writes one — a device on an
-	// older build may have, and reading it as a note that says nothing is
-	// honest, where rejecting it would show the `Add note` row over a record
-	// that exists.
+	// Nothing writes empty text now, but a device on an older build may have.
 	test('empty text is still a note', () => {
 		expect(isNotePreference({ text: '' })).toBe(true);
 	});

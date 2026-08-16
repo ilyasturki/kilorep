@@ -1,13 +1,5 @@
 name: ci
 
-# Every push to main, and every pull request. Runs beside nix-build.yml, which
-# covers the other half: this one the TypeScript and the app bundle, that one
-# the packaged server.
-#
-# `v2` was listed here while the rewrite lived on a branch of that name. It is
-# main now — the branch was renamed, not merged — so the filter is back to one
-# entry. The first version keeps its own workflows on `v1`.
-
 on:
   push:
     branches: [main]

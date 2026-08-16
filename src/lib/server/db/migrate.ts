@@ -4,35 +4,11 @@ import { sql } from 'drizzle-orm';
 import type { Database } from './client.ts';
 import { migrationsFolder } from './config.ts';
 
-/**
- * Applied at boot from `hooks.server.ts`, not by a separate command: a
- * self-hoster pulls a new image, runs it, and the database is correct. The
- * upgrade step that must be remembered is the one that gets skipped.
- *
- * Foreign keys are off for the duration, and that is not a convenience.
- *
- * SQLite cannot alter a column, so drizzle-kit emits the standard rebuild for
- * any change to one: create a new table, copy the rows, `DROP TABLE` the old,
- * rename. Every such migration therefore drops `users` — and `auth_tokens` and
- * `sync_counters` both reference it `on delete cascade`, so with enforcement on,
- * the implicit delete inside `DROP TABLE` takes every credential and every sync
- * counter with it. Silently: the migration reports success, everyone is signed
- * out, and each account's `seq` restarts at 1 while its devices hold watermarks
- * far ahead of it — so a pull returns nothing and never recovers.
- *
- * drizzle-kit knows this and writes `PRAGMA foreign_keys=OFF` into the migration
- * itself. It cannot work there: the migrator runs each file in a transaction,
- * and that pragma is a documented no-op inside one. Issued here it is outside
- * any transaction and takes effect, which is also what the procedure in SQLite's
- * own ALTER TABLE documentation prescribes.
- *
- * `foreign_key_check` afterwards is the other half of that procedure, and the
- * reason turning enforcement off is safe rather than merely quiet: a migration
- * that leaves an orphan behind fails loudly here instead of years later.
- */
 export function runMigrations(db: Database, folder: string = migrationsFolder): void {
 	const sqlite = db.$client;
 
+	// With enforcement on, drizzle's column-change rebuild (`DROP TABLE users`) cascade-deletes its
+	// dependents; the PRAGMA drizzle writes into the migration is a no-op inside a transaction.
 	sqlite.exec('pragma foreign_keys = off');
 	try {
 		migrate(db, { migrationsFolder: folder });

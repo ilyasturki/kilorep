@@ -7,35 +7,17 @@
 		title: string;
 		match?: { start: number; end: number } | null;
 		meta?: string;
-		/**
-		 * A line under the name that says what the row does, for the rows whose
-		 * control is a choice rather than a destination. Unlike `meta` it wraps
-		 * rather than truncates: a sentence is not a glance's convenience, and
-		 * half of one is worse than a taller row.
-		 */
 		description?: string;
-		/**
-		 * The name's weight. `extrabold` is the list's own voice and the default;
-		 * `bold` is for a row that stands beside controls carrying their own label,
-		 * where the heavier name would read as a heading over them.
-		 */
 		weight?: 'extrabold' | 'bold';
 		href?: string;
 		onclick?: () => void;
 		onhold?: (anchor: HTMLElement) => void;
 		chevron?: boolean;
-		/** `danger` colours the title alone: a destructive row is still a row. */
 		tone?: 'default' | 'danger';
 		dense?: boolean;
 		stacked?: boolean;
 		pressed?: boolean;
 		leading?: Snippet;
-		/**
-		 * A marker that belongs to the name rather than to the row — a PR pill, a
-		 * state. It rides with the title, inside the line the meta wraps out of,
-		 * which is what parts it from `trailing`: that group holds the row's
-		 * values and is read right to left.
-		 */
 		badge?: Snippet;
 		trailing?: Snippet;
 		class?: ClassValue;
@@ -63,17 +45,10 @@
 
 	const interactive = $derived(Boolean(href || onclick));
 
-	// A chevron says "this goes somewhere", so unasked it follows whether the
-	// row does. Said outright it is believed either way: a row can be inert and
-	// still be the thing you press, when what carries the press is a backdrop
-	// beneath it rather than the row itself.
 	const marker = $derived(chevron ?? interactive);
 
-	// Three explicit elements rather than one `<svelte:element>`: the dynamic
-	// form compiles to a tag the a11y checker cannot see, so it has to assume
-	// the click handler landed on a `<div>` and warns. Spelling out the anchor
-	// and the button says the same thing to the compiler that the props already
-	// say to a reader.
+	// Three explicit elements, not `<svelte:element>`: the dynamic tag defeats the a11y
+	// checker, which then assumes the click handler landed on a `<div>` and warns.
 	const shape = $derived([
 		'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left',
 		dense ? 'min-h-row-dense' : 'min-h-row',
@@ -88,20 +63,6 @@
 		<span class="flex shrink-0 items-center text-ink-muted">{@render leading()}</span>
 	{/if}
 
-	<!-- Title and meta share one line, and the title never yields for it: the
-	     meta is allowed to wrap, and a single line's worth of height clips the
-	     line it wraps to, so a name that leaves no room beside it simply takes
-	     the row alone. That is the whole mechanism — flexbox breaks the line
-	     before an item that will not fit, and `overflow` decides whether the
-	     break is visible. No measuring, no breakpoint, and the answer follows
-	     the actual name rather than a guess at how long a name gets.
-
-	     A clipped meta is painted nowhere but still read aloud, which is the
-	     trade, and it is only a fair one where the meta is a glance's
-	     convenience — a last set, a date. `stacked` is for the rows where the
-	     meta is the substance instead and dropping it would lose the only copy:
-	     it keeps the line of its own that a fact deserves. Reach for it on that
-	     test alone, never to buy a long title more room. -->
 	<span class="flex min-w-0 flex-1 flex-col">
 		<span
 			class={[
@@ -119,7 +80,6 @@
 					tone === 'danger' ? 'text-danger' : 'text-ink'
 				]}
 			>
-				<!-- One line on purpose: whitespace between the slices would render. -->
 				{#if match !== null}
 					{title.slice(0, match.start)}<mark
 						class="bg-transparent text-inherit underline decoration-2 underline-offset-2"

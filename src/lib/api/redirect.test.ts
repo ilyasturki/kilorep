@@ -30,9 +30,6 @@ describe('resolveRedirect', () => {
 	});
 
 	test('refuses a scheme that is not navigation at all', () => {
-		// The literal is the point of the case: this is the string an attacker
-		// puts in the query, and a test that spelled it any other way would not
-		// be testing what arrives.
 		// oxlint-disable-next-line eslint/no-script-url
 		expect(resolveRedirect('javascript:alert(1)', ORIGIN)).toBe(AFTER_LOGIN);
 		expect(resolveRedirect('data:text/html,<h1>hi', ORIGIN)).toBe(AFTER_LOGIN);

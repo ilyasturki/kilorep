@@ -4,27 +4,17 @@
 	import { keyboardUp, visiblePane, watchVisiblePane } from '$lib/ui/keyboard';
 
 	type Props = {
-		/** Where the strip sits when it opens, and nothing after that: the ruler
-		 * owns its own position for the rest of its life. */
 		value: number;
-		/** What is being typed on the real keyboard, or `null` when nothing is.
-		 * The band shows it, because the field behind this panel cannot. */
 		typed: string | null;
 		label: string;
 		step: number;
-		/** How many detents between emphasised rungs. The landmarks have to be
-		 * numbers the reader already thinks in, and which those are is a fact
-		 * about the quantity rather than about the strip: every fourth 2.5 kg
-		 * plate is 10 kg, and every tenth 0.05 kg of body weight is half a kilo. */
 		major?: number;
 		min: number;
 		max: number;
-		/** A detent crossed under the thumb. Fires per step, like a held arm. */
 		onscrub: (value: number) => void;
-		/** A number tapped on the strip: take it and finish. */
 		onpick: (value: number) => void;
-		/** The keyboard went away without us — the OS back gesture eats the press
-		 * before the app ever sees it, so this is the only word we get. */
+		// Android eats the OS back gesture that drops the keyboard, so keyboard-down is the
+		// only dismissal signal there is.
 		ondismiss: () => void;
 	};
 
@@ -41,16 +31,9 @@
 		ondismiss
 	}: Props = $props();
 
-	/* 52px per detent. The trade is pure travel against precision — vertical
-	   stacking means the labels never collide, so pitch buys nothing but reach —
-	   and 52 puts nine steps in a full-height drag on a phone while leaving each
-	   number a slab a thumb can aim at. */
 	const PITCH = 52;
 
-	/* The band is 56 tall and the rungs are laid out from their centres, so a rung
-	   is "under" the band while it is within a bit over half a pitch of it. 0.6
-	   rather than 0.5: at exactly half the departing rung and the draft are drawn
-	   in the same place for one frame. */
+	// 0.6, not 0.5: at exactly half a pitch the departing rung and the draft overlap for a frame.
 	const UNDER_BAND = 0.6;
 
 	const lo = $derived(Math.ceil(min / step));
@@ -59,17 +42,12 @@
 	const clampIndex = (i: number) => Math.min(Math.max(i, lo), hi);
 	const at = (i: number) => settle(i * step, min, max);
 
-	/* The continuous index under the band. Read from `value` once, at open —
-	   after that the strip is the source of truth and `value` is an echo of it. */
 	// svelte-ignore state_referenced_locally
 	let pos = $state(clampIndex(value / step));
 
 	let height = $state(0);
 	let pane = $state(visiblePane());
 
-	/* Seeded rather than started at `false`: moving from the weight field to the
-	   reps field beside it opens a second ruler under a keyboard that never went
-	   down, so no resize fires and nothing would ever set this. */
 	// svelte-ignore state_referenced_locally
 	let sawKeyboard = keyboardUp(pane);
 
@@ -107,8 +85,6 @@
 				continue;
 			}
 
-			// While something is being typed the band belongs to the draft, so the
-			// rung that would sit under it stands down rather than showing through.
 			if (draft !== null && Math.abs(i - pos) < UNDER_BAND) {
 				continue;
 			}
@@ -142,10 +118,8 @@
 	let drag: { y: number; moved: number; at: number } | null = null;
 
 	function grab(event: PointerEvent & { currentTarget: HTMLElement }) {
-		// The field behind this panel is focused and has to stay that way — the
-		// keyboard is the other half of the editor. A press on a non-focusable box
-		// blurs it by default, which would drop the keyboard and close the panel
-		// on the first frame of every drag.
+		// A press on a non-focusable box blurs the focused field, dropping the keyboard and
+		// closing the panel on the first frame of every drag.
 		event.preventDefault();
 
 		event.currentTarget.setPointerCapture(event.pointerId);
@@ -161,10 +135,6 @@
 		drag.y = event.clientY;
 		drag.moved += Math.abs(dy);
 
-		// Pull down for more. The strip moves with the thumb and the numbers rise
-		// up the column past a needle that never moves, which is what a physical
-		// ruler does; mapping it the other way is a scrollbar's convention, and
-		// there is no scrollbar here to borrow it from.
 		pos = clampIndex(pos + dy / PITCH);
 		settleTo(Math.round(pos));
 	}
@@ -192,20 +162,12 @@
 	}
 </script>
 
-<!-- Everything above the keyboard, and nothing left over. The set card and the
-     page behind it are covered outright — which is what buys the strip its full
-     height, and why the band has to carry the value: nothing else on screen is
-     still showing it. -->
 <div
 	class="fixed inset-x-0 z-50 overflow-hidden bg-surface select-none"
 	style="top:{pane.top}px;height:{pane.height}px"
 	role="group"
 	aria-label="Pick a {label}"
 >
-	<!-- A filled band behind the number rather than a line across it: a rule
-	     through a numeral reads as a strikethrough, which is the one thing the
-	     selection may never look like. The grips sit at the ends, where nothing
-	     is written. -->
 	<div
 		class="pointer-events-none absolute inset-x-2 top-1/2 -mt-7 h-14 rounded-[0.875rem]
 			bg-accent-soft"

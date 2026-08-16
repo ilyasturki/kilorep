@@ -5,35 +5,12 @@ import { promisify } from 'node:util';
 import { trace } from 'potrace';
 import { optimize } from 'svgo';
 
-/**
- * The second half of the illustration pipeline: `raw/<id>.png` → potrace →
- * svgo → `static/illustrations/<id>.svg`. The first half — generating the PNGs
- * — is a model's job and lives in PROMPTS.md.
- *
- * Both stages are load-bearing and neither is tunable in passing. The potrace
- * options below are the ones the shipped set was traced with, and svgo runs on
- * its bare defaults: re-run this file against the same PNG and it reproduces
- * the committed SVG byte for byte. Change a number here and every asset in the
- * catalog is a different drawing than the one beside it.
- *
- * `raw/` is not in the repository (PNGs are megabytes and the model can make
- * them again), so a fresh clone traces nothing until PROMPTS.md has been run.
- * That is the intended state: this script converts whatever is sitting in
- * `raw/`, and never reaches for a source it was not given.
- */
-
 const rawDir = path.join(import.meta.dirname, 'raw');
 const outDir = path.join(import.meta.dirname, '..', '..', 'static', 'illustrations');
 
 const traceAsync = promisify(trace);
 
-/**
- * `color: 'currentColor'` is why the same file reads on both themes: potrace
- * fills the traced path with it and `ExerciseIllustration.svelte` inlines the
- * SVG rather than using `<img>`, so the path inherits the ink of whatever
- * container it lands in. No background rect is emitted, so nothing ever paints
- * a white box behind the figure.
- */
+// The shipped catalog was traced with these values; changing one re-draws every asset differently.
 const options = {
 	threshold: 128,
 	color: 'currentColor',

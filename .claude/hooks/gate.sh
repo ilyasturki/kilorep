@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-# Stop — project-wide `bun run format` before the turn ends.
-#
-# The per-file PostToolUse hook only sees files it was handed; this catches
-# anything written by a shell command, and any drift after a prettier config
-# change. It runs only when a source file actually changed this turn (the dirty
-# marker), so conversational turns stay free.
-#
-# Linting is not run here. `bun run lint` stays a deliberate command.
-#
-# Blocking is capped at MAX_BLOCKS per turn. A blanket `stop_hook_active` guard
-# would exit on the second pass and never re-verify the fix, which defeats the
-# gate; a counter lets it verify and still converge.
 
 set -uo pipefail
 
@@ -32,10 +20,6 @@ blocks="$state/claude-kilorep-blocks-$session"
 root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
 [[ -n $root && -f "$root/package.json" ]] || exit 0
 
-# A turn that only wrote through shell commands never reached format.sh, so a
-# fresh worktree can still be bare by the time the gate runs. Install, and skip
-# the check rather than block the turn if that fails — the message for a broken
-# install belongs to the hook that tried it, not here.
 [[ -x $deps ]] && "$deps" --ensure "$root" >/dev/null 2>&1
 [[ -x "$root/node_modules/.bin/prettier" ]] || exit 0
 

@@ -37,12 +37,7 @@ export type WorkoutExercise = {
 	id: string;
 	exerciseId: string;
 	sets: WorkoutSet[];
-	/**
-	 * The rest the plan asked for, copied in at start — see `TemplateExercise`
-	 * for the three states, and `restSecondsOf` for what an absence falls to.
-	 * The gym floor never writes it: ±30s and mute move this rest and this
-	 * session, and neither is an edit to the plan.
-	 */
+	// Copied from the plan at start; tri-state as in TemplateExercise.restSeconds.
 	restSeconds?: number | null;
 };
 
@@ -131,19 +126,6 @@ export function hintFor(
 	return (history[exerciseId] ?? [])[workingIndex] ?? null;
 }
 
-/**
- * Last time as the screen spells it, or null when there is nothing to recall.
- *
- * The `×` is a character rather than an `x` because the vendored font subset
- * carries it, and the phrasing is shown in two places at once — beside the
- * active set and down the pending rows. One owner, so they cannot disagree.
- *
- * `scale` grows the line by how the set felt, where last time carried a rating:
- * `82.5 × 7 · RPE 8`. Passed in rather than read from anywhere, because which
- * of the two names it wears is a preference and this module is plain domain —
- * and null is the honest way to ask for the numbers alone, which is what a
- * caller with no user in front of it (a test, an export) wants.
- */
 export function hintLabel(
 	history: History,
 	cursor: SetCursor,
@@ -179,27 +161,6 @@ function carriedInto(cursor: SetCursor): Prefill {
 	return { weight: null, reps: null };
 }
 
-/**
- * Precedence: what the set already holds, then the plan, then the set above
- * it, then last time.
- *
- * Reps take a planned value over everything because a planned rep count is an
- * instruction for today, and neither the set just done nor the memory of last
- * week outranks an instruction. Weight has no planned tier by design —
- * PRODUCT.md: progression is recall, never prescription — so it falls straight
- * from the set to the carry.
- *
- * The carry sits *above* the recall: mid-exercise, the number that answers
- * "what is this set" is the one just lifted at the bench being lifted at, not
- * last week's entry at the same index. Recall-first was tried and it made the
- * cursor argue with the session — log set one at 45 after a hint of 40, and
- * set two reopened on 40, presenting the user's own decision of a minute ago
- * as something to re-enter. The recall keeps the two places carry cannot
- * reach: the first working set, which has nothing above it to carry, and a set
- * following only warmups. And it keeps the label — "Last 40 × 10" stays
- * printed beside the card either way, memory as reference rather than as
- * prefill.
- */
 export function prefillFor(cursor: SetCursor, history: History): Prefill {
 	const recalled = hintFor(history, cursor.exercise.exerciseId, cursor.workingIndex) ?? {
 		weight: null,
@@ -214,17 +175,10 @@ export function prefillFor(cursor: SetCursor, history: History): Prefill {
 	};
 }
 
-/* Digits, an optional leading sign and at most one separator — and never
-   `Number()`'s wider dialect, which reads `1e3` as 1000 and `0x10` as 16. Both
-   are numbers to the language and neither is a weight anyone typed on purpose,
-   so a field that has just refused every letter would be accepting the two
-   strings a letter can still hide inside. */
+// Gates before Number(), whose wider dialect reads `1e3` and `0x10` as numbers.
 const ENTRY = /^-?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/u;
 
-/* What may sit in the field on the way to one. Every prefix of an entry counts,
-   which is what makes a strict grammar typeable at all: `-`, `.` and `8.` are
-   nothing yet, but refusing them would mean refusing the keystroke that starts
-   `-5`, `.5` and `8.5`. */
+// Every prefix of ENTRY — `-`, `.`, `8.` must stay typeable mid-entry.
 const DRAFT = /^-?\d*(?:[.,]\d*)?$/u;
 
 export function isEntryDraft(raw: string): boolean {
@@ -340,24 +294,6 @@ export function supersetWith(
 	return supersetWithTree(workout, entryId, catalogId, ids, blankExercise(catalogId));
 }
 
-/**
- * Appends a working set to an exercise. Null when the exercise is not here.
- *
- * It arrives empty, and `plannedReps` stays null rather than becoming a copy of
- * the set above it. Nothing prescribed this set: plans live in templates, and a
- * plan invented here would be the app claiming a target nobody set.
- *
- * What the row *opens* on is a different question, and `prefillFor` answers it:
- * the hint where history has a corresponding set, the set above it where it
- * does not. The fifth set of an exercise you did four of last week is a set the
- * app has no memory of, and the honest fallback is the fourth one you just did
- * — carried as values, never as a plan, so nothing here claims it was intended.
- *
- * The id is the caller's. This module has no clock and no randomness — the same
- * reason `freshWorkout` is handed its `startedAt` — and minting at the edge is
- * where it belongs anyway, since the store that will own these records keys
- * them by id and syncs them by it.
- */
 export function addSet(workout: Workout, exerciseId: string, id: string): WorkoutSet | null {
 	const exercise = exerciseIn(workout, exerciseId);
 
@@ -459,9 +395,6 @@ export function repeatFrom(past: Workout, startedAt: number, mint: () => string)
 				}))
 			};
 
-			// Repeating a session repeats how it was rested. The plan it came from
-			// may since have changed or gone; this copy is the record of what that
-			// day actually asked for. Untouched where the day inherited its rests.
 			if (exercise.restSeconds !== undefined) {
 				repeated.restSeconds = exercise.restSeconds;
 			}

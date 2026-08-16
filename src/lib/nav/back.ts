@@ -7,10 +7,7 @@ export type BackDecision =
 export type BackContext = {
 	pathname: string;
 	overlayOpen: boolean;
-	/** The addresses back answers by leaving the app rather than by going up. */
 	tabRoots: readonly string[];
-	/** Where this screen goes when there is no history to walk. `bar.svelte`
-	 *  owns the answer, because it is the same one the bar's back link uses. */
 	parentOf: (pathname: string) => string | null;
 	depth: number;
 };

@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 
 import { formatLogDay, formatMonth, formatMonthMeta, formatSheetDay } from '$lib/weight/label';
 
-// Wednesday 5 August 2026, which is what every relative case below counts from.
 const today = '2026-08-05';
 
 describe('formatLogDay', () => {
@@ -23,8 +22,6 @@ describe('formatLogDay', () => {
 	});
 
 	test('a future date reads as Today rather than counting backwards', () => {
-		// Records arrive from other devices, and two phones a minute apart must
-		// not print `-1d`.
 		expect(formatLogDay('2026-08-06', today)).toBe('Today');
 	});
 });

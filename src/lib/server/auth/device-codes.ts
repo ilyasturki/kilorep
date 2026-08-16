@@ -53,9 +53,6 @@ export function claimCode(
 	const presented = Buffer.from(challengeFor(verifier));
 	const expected = Buffer.from(row.challenge);
 
-	// `timingSafeEqual` throws on a length mismatch rather than returning false,
-	// and a stored challenge of another length is a client that sent something
-	// other than a base64url SHA-256 — refused, not crashed.
 	if (presented.length !== expected.length || !timingSafeEqual(presented, expected)) {
 		return null;
 	}

@@ -15,7 +15,6 @@
 
 	type Props = {
 		tokens: PublicToken[];
-		/** The one window in which a freshly minted secret exists — dismissed, it is gone. */
 		minted: { token: string; label: string } | null;
 	};
 
@@ -65,7 +64,7 @@
 			await navigator.clipboard.writeText(minted.token);
 			copied = true;
 		} catch {
-			// Clipboard access refused: the cleartext is on screen to copy by hand.
+			/* empty */
 		}
 	}
 
@@ -92,8 +91,6 @@
 </script>
 
 {#if minted !== null}
-	<!-- Above the card and never in the row it belongs to: the list shows
-	     hashes' shadows, and this is the secret itself, once. -->
 	<div class="flex flex-col gap-2 rounded-2xl border border-line bg-surface px-4 py-3">
 		<p class="text-sm font-bold text-ink-muted">
 			The token for “{minted.label}”. Copy it now — it is shown this once and stored only as a hash.
@@ -117,10 +114,6 @@
 
 	{#each tokens as token (token.id)}
 		<li>
-			<!-- `stacked`, because this meta is the row: which client, which prefix,
-			     when it was last used. A token's label alone identifies nothing —
-			     two of them read `Web` — so the line that tells them apart cannot be
-			     the line that yields when the label is long. -->
 			<ListRow
 				stacked
 				title={token.label}
@@ -147,9 +140,6 @@
 			</ListRow>
 		</li>
 	{/each}
-
-	<!-- No empty state, because there is no empty list: whatever credential asked
-	     for this page is in it, wearing the badge. -->
 
 	{#snippet footer()}
 		<div aria-live="polite">

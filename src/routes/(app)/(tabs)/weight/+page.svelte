@@ -24,63 +24,19 @@
 
 	import type { PageProps } from './$types';
 
-	/**
-	 * The Weight screen: log on top, trend under it, the entries under that —
-	 * in that order because the screen's daily job is the log, and a chart
-	 * headline would make it a reading screen that happens to log.
-	 *
-	 * On a desk that order becomes a shape rather than a stack. Today's field
-	 * flattens into a bar across the top and the two reading surfaces divide the
-	 * space beneath it, which is the one arrangement that spends the extra width
-	 * on the *act*: every two-column variant tried first put the stepper in a
-	 * 320px rail, narrower than the same control gets on a phone.
-	 *
-	 * PRODUCT.md's whole model is one line — date + kg, one per day,
-	 * re-logging overwrites — and the interactions keep to it: today's field
-	 * opens on the most recent entry the way a set row opens on its hint, a
-	 * past day is corrected or backfilled from its row, and a delete is the
-	 * row's edit sheet's second act.
-	 */
 	let { data }: PageProps = $props();
 
-	/**
-	 * The page owns the live list; the load's copy is where it starts. Read
-	 * once by design, the same bargain History's detail strikes — every path
-	 * back in re-enters through the tab.
-	 */
 	// svelte-ignore state_referenced_locally
 	const entries = $state(data.entries);
 
-	/**
-	 * Captured once per mount, like the exercise detail's `now`: a screen left
-	 * open across midnight mislabels "today" until the next navigation, and
-	 * that is a cheaper wrong than a clock ticking under a half-typed entry.
-	 */
 	const today = localDateOf(new Date());
 
-	/**
-	 * What a human body weighs, in kg, generously. Wide enough that nobody who
-	 * lifts is ever fenced out — the lightest competitive powerlifting class is
-	 * 43 kg and the heaviest recorded strongman a little over 200 — and narrow
-	 * enough that the field cannot be stepped or dragged somewhere absurd.
-	 *
-	 * The floor is also where an empty field's ruler opens, having nothing
-	 * recalled to open on. That is a *bound*, not a suggestion: a first-ever
-	 * weigh-in is still typed, and 20 kg is simply where the strip starts if you
-	 * drag it instead. Every weigh-in after it opens on the last one.
-	 */
 	const LIGHTEST = 20;
 	const HEAVIEST = 300;
 
 	const todayEntry = $derived(entries.find((entry) => entry.date === today) ?? null);
 	const latest = $derived(entries.at(-1) ?? null);
 
-	/**
-	 * The field opens on today's entry when one exists, else on the most
-	 * recent weigh-in — tomorrow's weight is approximately today's, the same
-	 * recall idiom the set row runs on. `recalled` is what the stepper's tint
-	 * measures deviation against, so logging settles the colour back to ink.
-	 */
 	// svelte-ignore state_referenced_locally
 	let kg = $state<number | null>(
 		data.entries.find((entry) => entry.date === today)?.kg ?? data.entries.at(-1)?.kg ?? null
@@ -88,11 +44,6 @@
 
 	const recalled = $derived(todayEntry === null ? (latest?.kg ?? null) : todayEntry.kg);
 
-	/**
-	 * Inert once today's number is on the record and the field still shows it:
-	 * there is nothing left to claim. One tap logs the recalled value on a
-	 * fresh day — the check committing the hint, deliberately.
-	 */
 	const settled = $derived(kg === null || (todayEntry !== null && kg === todayEntry.kg));
 
 	function upsert(entry: BodyweightEntry) {
@@ -124,11 +75,6 @@
 		await save({ date: today, kg });
 	}
 
-	/**
-	 * How far back the trend is drawn, and it outlives the visit: the load hands
-	 * over what the store remembers, and every change writes it straight back.
-	 * A synced preference rather than a local one — see `WeightRangePreference`.
-	 */
 	// svelte-ignore state_referenced_locally
 	let range = $state<ChartRange>(data.range);
 
@@ -156,19 +102,10 @@
 		}
 	}
 
-	// The average runs over the whole log and is windowed after, so the first
-	// visible points rest on the days just before the window rather than
-	// opening artificially jumpy.
 	const chartFrom = $derived(rangeStart(entries, today, range));
 	const chartDots = $derived(inRange(entries, today, range));
 	const chartLine = $derived(inRange(rollingAverage(entries), today, range));
 
-	/**
-	 * One sheet for both gestures against a past day: correcting a row (date
-	 * fixed, delete offered) and backfilling (date picked, clamped to today).
-	 * A date that already holds an entry saves as an overwrite — the same
-	 * "one per day" put every write here is.
-	 */
 	let sheetOpen = $state(false);
 	let sheetFixed = $state(false);
 	let sheetDate = $state<DateValue | undefined>();
@@ -197,13 +134,11 @@
 			: 'Log a past day'
 	);
 
-	/** The entry a backfill would overwrite, surfaced rather than sprung. */
 	const replaces = $derived.by(() => {
 		if (sheetFixed || sheetDate === undefined) {
 			return null;
 		}
 
-		// Read once outside the callback: the closure can outlive the narrowing.
 		const date = sheetDate.toString();
 
 		return entries.find((entry) => entry.date === date) ?? null;
@@ -218,8 +153,6 @@
 
 		await save(entry);
 
-		// A correction to today's record settles the top field too, or it would
-		// sit tinted against a number that just moved under it.
 		if (entry.date === today) {
 			kg = entry.kg;
 		}
@@ -241,12 +174,6 @@
 		}
 	}
 
-	/**
-	 * The day a confirmed Delete would remove, and the only thing the dialog
-	 * needs to know. Held here rather than read back off the sheet because both
-	 * gestures end in this dialog — the sheet's trash and a held row's ⋯ — and
-	 * only one of them has a sheet open behind it.
-	 */
 	let doomed = $state<string | null>(null);
 	let confirmOpen = $state(false);
 
@@ -263,9 +190,6 @@
 		await removeEntry(doomed);
 
 		doomed = null;
-		// Closed after the fact rather than before: the sheet is what the dialog
-		// was asked from, and dropping it first would animate the panel away under
-		// a question still on screen.
 		sheetOpen = false;
 	}
 
@@ -279,8 +203,7 @@
 		menuOpen = true;
 	}
 
-	// UTC over a date-only string, so a negative-offset timezone cannot shift the
-	// header onto the day before.
+	// UTC: a date-only string in a negative-offset zone would render the day before.
 	const day = new Intl.DateTimeFormat('en-GB', {
 		weekday: 'short',
 		day: 'numeric',
@@ -295,19 +218,7 @@
 	<title>Weight | Kilorep</title>
 </svelte:head>
 
-<!--
-	`column-board` and not `column-content`, for the Dashboard's reason: this is a
-	screen of surfaces read beside each other, and it cannot take the step *down*
-	that `column-content` makes at `lg` to leave gutter for the Workout rail — a
-	rail this screen has no use for.
--->
 <main class="column-board flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
-	<!--
-		The card that becomes a bar. One element and one set of parts, re-flowed
-		at `lg` rather than a second component: the desk shape and the phone shape
-		have to keep saying the same thing, and two of them is two chances to
-		drift.
-	-->
 	<section
 		class="flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-3
 			lg:flex-row lg:items-center lg:gap-4 lg:py-2.5 lg:pr-2.5 lg:pl-4"
@@ -322,17 +233,6 @@
 			{/if}
 		</div>
 
-		<!--
-			The one field on this screen a thumb reaches for daily, so it scrubs the
-			way the active set's two do — and only on a coarse pointer, which
-			`StepperField` decides for itself.
-
-			0.05 on the strip against 0.1 on the arms: a drag is aimed rather than
-			counted, so it may as well land anywhere a scale can read, while a tap
-			that moved less than the scale's own resolution would be a tap you
-			cannot verify. Majors every ten detents puts a landmark on each half
-			kilo — the numbers a bathroom scale is already read in.
-		-->
 		<StepperField
 			bind:value={kg}
 			{recalled}
@@ -373,31 +273,13 @@
 			{/snippet}
 		</EmptyState>
 
-		<!-- Backfill stays reachable before the list exists to carry it: the
-		     first entry ever logged may well be yesterday's. -->
 		<AddRow label="Log a past day" onclick={openBackfill} />
 	{:else}
-		<!--
-			Two thirds to the chart and one to the log. Not an even split: the chart
-			is the only thing on the screen whose readability is a function of its
-			width, and a log row is a date and a number that has never needed more
-			than a phone's column.
-		-->
 		<div class="flex flex-col gap-4 lg:grid lg:grid-cols-[2fr_minmax(0,1fr)] lg:items-start">
-			<!--
-				Sticky at `lg` and nowhere else. The log is a fixed handful of headers
-				but two years of them is still a screen and a half, and a chart that
-				scrolled away would leave the whole left half of the window blank while
-				you read the right. It sticks to the pane rather than to the window —
-				the app bar is not fixed, the scroll box under it is.
-			-->
 			<section
 				class="flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-3
 					lg:sticky lg:top-0"
 			>
-				<!-- The heading is the control: a `Last 12 weeks` above a segment
-				     already reading `12w` would be the same fact twice, and the one
-				     of them that answers back is the one worth the line. -->
 				<Segmented
 					items={RANGES}
 					value={range}
@@ -456,10 +338,6 @@
 			{/if}
 		{/if}
 
-		<!-- No ruler here, for the reason the history editor has none: a correction
-		     is aimed at a number you already know, and this sheet is the one surface
-		     on the screen that is not the daily act. The bounds it does take —
-		     they are a fact about the quantity, not about the control. -->
 		<StepperField
 			bind:value={sheetKg}
 			recalled={sheetRecalled}
@@ -490,8 +368,6 @@
 	}}
 />
 
-<!-- `stacked` only when it was asked from the sheet: raised from a held row
-     there is nothing above the page for it to clear. -->
 <AlertDialog
 	bind:open={confirmOpen}
 	stacked={sheetOpen}

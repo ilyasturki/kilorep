@@ -31,7 +31,6 @@ function logged(setId: string): Workout {
 	return workout;
 }
 
-/** What a template's rest looks like once it has been copied into a session. */
 function planned(workout: Workout, node: string, seconds: number | null): Workout {
 	const exercise = workout.entries
 		.flatMap((entry) => entry.exercises)
@@ -44,14 +43,8 @@ function planned(workout: Workout, node: string, seconds: number | null): Workou
 	return workout;
 }
 
-/**
- * Bench, supersetted with a second leg of three sets.
- *
- * The leg is an exercise the fixture does not already hold, because
- * `supersetWith` relocates a standing exercise into the entry when it finds one
- * rather than minting a second copy of it — pairing with `cable-fly` would move
- * the fixture's third entry in and leave these ids unused.
- */
+// An exercise the fixture does not already hold: `supersetWith` would relocate a
+// standing one into the entry instead of adding, leaving these ids unused.
 function paired(): Workout {
 	const workout = freshWorkout(0);
 
@@ -192,8 +185,6 @@ describe('supersets rest by the round', () => {
 	test('a ragged round is closed by whichever leg still has a set in it', () => {
 		const workout = paired();
 
-		// Bench has four working sets to the second leg's three, so round four
-		// exists on one leg only.
 		commitSet(workout, 'bench-4', 80, 6);
 
 		expect(restAfter(workout, 'bench-4', settings())).toEqual({

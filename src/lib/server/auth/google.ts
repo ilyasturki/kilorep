@@ -6,10 +6,7 @@ import { isRecord, jsonObject } from '../json.ts';
 const AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 
-/**
- * Google has issued tokens under both spellings for years and its discovery
- * document names the first; both are Google and neither is anybody else.
- */
+// Google issues tokens under both spellings; narrowing this breaks real sign-ins.
 const ISSUERS = new Set(['https://accounts.google.com', 'accounts.google.com']);
 
 const SCOPE = 'openid email profile';
@@ -18,11 +15,6 @@ export function callbackUri(origin: string): string {
 	return new URL(GOOGLE_CALLBACK_PATH, origin).toString();
 }
 
-/**
- * Tolerance for the `exp` check. Two machines' clocks disagree, and a sign-in
- * refused because the server is thirty seconds fast is unexplainable to the
- * person it happens to.
- */
 const CLOCK_SKEW_MS = 60 * 1000;
 
 export type GoogleIdentity = {
@@ -78,14 +70,6 @@ export type IdentityProblem =
 export type IdentityResult =
 	{ ok: true; identity: GoogleIdentity } | { ok: false; problem: IdentityProblem };
 
-/**
- * Every claim that has to hold before a token is allowed to name a person.
- *
- * `aud` is the one that is easy to skip and must not be: without it, a token
- * minted for a *different* Google client — anybody's — signs its bearer in here.
- * `email_verified` is the second: an unverified address is a string somebody
- * typed, and this design links accounts by address.
- */
 export function verifyClaims(idToken: string, clientId: string, now: number): IdentityResult {
 	const claims = readClaims(idToken);
 	if (claims === undefined) {

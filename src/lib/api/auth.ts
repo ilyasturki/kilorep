@@ -5,9 +5,7 @@ export type Account = {
 	id: string;
 	email: string;
 	createdAt: number;
-	/** Whether this is a first password or a replacement — the button's wording. */
 	hasPassword: boolean;
-	/** The server's verdict, never re-derived here. See `publicUser`. */
 	currentPasswordRequired: boolean;
 };
 
@@ -82,12 +80,7 @@ export async function signInDevice(
 	return adoptToken(token, fetch);
 }
 
-/**
- * `current` is null exactly when the account was told it would not be asked —
- * `Account.currentPasswordRequired`. The field is left off the body entirely
- * rather than sent empty, so an account that does owe one cannot satisfy the
- * check with a blank string.
- */
+// `current` is null only when the server set `currentPasswordRequired` false.
 export async function setPassword(
 	password: string,
 	current: string | null,
@@ -101,14 +94,6 @@ export async function setPassword(
 	});
 }
 
-/**
- * The account and everything the server holds for it, gone.
- *
- * The credential is dropped on success only, and never in a `finally`: a
- * mistyped address comes back 403 with the account still standing, and taking
- * the token away there would sign the phone out of a server it is still a user
- * of, mid-correction.
- */
 export async function deleteAccount(email: string, fetch?: Fetch): Promise<void> {
 	await request<undefined>('/api/auth/account', { method: 'DELETE', body: { email }, fetch });
 

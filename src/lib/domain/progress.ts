@@ -63,12 +63,6 @@ export function estTrend(past: PastSession[], since: number): TrendPoint[] {
 
 export const WEEK = 7 * 86_400_000;
 
-/**
- * The set of sets every figure on the screen is counted from: completed,
- * working, and carrying both numbers. Warmups never count and uncompleted sets
- * never count — PRODUCT.md's rule, applied once here so tonnage and set count
- * can never disagree about what a set is.
- */
 function workingSets(sets: WorkoutSet[]): { weight: number; reps: number }[] {
 	const out: { weight: number; reps: number }[] = [];
 
@@ -83,17 +77,6 @@ function workingSets(sets: WorkoutSet[]): { weight: number; reps: number }[] {
 
 export type WorkWeek = { start: number; kg: number; sets: number };
 
-/**
- * Tonnage and working sets in each of the trailing seven-day windows, oldest
- * first — the last bucket ending at `now`, not on a Sunday.
- *
- * Rolling and not calendar, which is the whole point: a Monday-anchored chart
- * ends on a bucket that is one to seven days old and draws it beside buckets
- * that are seven, so the trailing bar always slopes down and the slope means
- * nothing. Every bucket here is a full week wide, so any two are comparable and
- * the last one is a fact about the last seven days rather than about what day
- * it happens to be.
- */
 export function weeklyWork(
 	workouts: Workout[],
 	now: number,
@@ -112,8 +95,7 @@ export function weeklyWork(
 			continue;
 		}
 
-		// Clamped rather than skipped: a session logged a moment ago rounds into
-		// the bucket after the last one on any clock that has drifted forward.
+		// Clamped: forward clock drift can round a just-logged session past the last bucket.
 		const bucket = Math.min(weeks - 1, Math.floor((workout.startedAt - oldest) / WEEK));
 
 		for (const entry of workout.entries) {
@@ -137,16 +119,6 @@ export type Consistency = {
 	weeks: number[];
 };
 
-/**
- * Sessions in the last seven days, against the median of the seven-day windows
- * before it — the same rolling anchor `weeklyWork` uses, and for the same
- * reason. "This week" used to mean since Monday, which on a Tuesday compared a
- * day and a half against eight full weeks and read as a collapse.
- *
- * A window that ended before the log began is not a zero, it is not a week: it
- * counts for nothing and stays out of both the median and the bars, which is
- * why a fresh log has no median rather than a median of none.
- */
 export function rollingConsistency(startedAts: number[], now: number, weeks = 8): Consistency {
 	const within = (from: number, to: number): number =>
 		startedAts.filter((at) => at >= from && at < to).length;
@@ -176,18 +148,6 @@ export function rollingConsistency(startedAts: number[], now: number, weeks = 8)
 
 export type MuscleSets = { muscle: Muscle; direct: number; indirect: number };
 
-/**
- * Working sets per muscle, split by how the muscle earned them: the exercise's
- * primary target takes a direct set, each secondary takes an indirect one.
- *
- * Sets and not kilos, because the two are not the same question. Volume in kg
- * is dominated by whatever the heaviest movement in the split is — a squat day
- * buries an arm day under an order of magnitude — so the card that exists to
- * show neglect was answering with load instead. Sets are what a programme is
- * actually written in, and they are also the only unit in which a secondary
- * target can be counted honestly: 55 of the 79 catalog entries carry
- * secondaries, and none of them says what fraction of the bar the muscle took.
- */
 export function muscleSets(
 	workouts: Workout[],
 	since: number,

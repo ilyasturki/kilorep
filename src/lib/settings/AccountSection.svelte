@@ -14,9 +14,7 @@
 
 	type Props = {
 		user: Account;
-		/** The page's, because it drops the address too. Throws on failure. */
 		onsignout: () => Promise<void>;
-		/** Cleared when a change of password revokes the token it is showing. */
 		onrevokedothers: () => void;
 	};
 
@@ -40,17 +38,6 @@
 		signOutPending = false;
 	}
 
-	/**
-	 * Setting one, replacing one, and the one case that looks like neither: a
-	 * Google account being given its first, which is also how somebody who
-	 * forgot theirs gets back in. The server decides which of the three this is
-	 * — `currentPasswordRequired` on the account — and this screen only draws
-	 * the field that answer asks for.
-	 *
-	 * The confirm box exists here for the reason it exists in `account:create`:
-	 * a password is typed blind and there is no wrong-password screen to catch a
-	 * typo, only a lockout weeks later.
-	 */
 	let passwordOpen = $state(false);
 	let currentPassword = $state('');
 	let newPassword = $state('');
@@ -111,9 +98,6 @@
 			return;
 		}
 
-		// A token minted a moment ago may be on screen in cleartext, and the sweep
-		// above has just killed it. Leaving it there offers a secret to copy that
-		// authenticates nothing.
 		if (signOutOthers) {
 			onrevokedothers();
 		}
@@ -127,9 +111,6 @@
 			? 'Password changed, and every other device signed out.'
 			: 'Password changed.';
 
-		// The account's own shape moved — a first password makes the row read
-		// differently — and so did the token list, which is where the revocations
-		// have to stop being drawn.
 		await invalidateAll();
 	}
 </script>

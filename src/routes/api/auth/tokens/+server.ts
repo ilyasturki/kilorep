@@ -8,21 +8,6 @@ import { publicToken } from '$lib/server/http/shapes';
 
 import type { RequestHandler } from './$types';
 
-/**
- * The credential list, and minting a new one.
- *
- * Since nothing expires, this list is the entire safety mechanism: it is where
- * a phone that was lost, or a token pasted into a tool you stopped trusting,
- * gets taken away. Which is why it exists now rather than with the Settings
- * screen that will eventually display it.
- */
-
-/**
- * `web` is deliberately not mintable here. A web credential is delivered as a
- * cookie by logging in; minting one through this route would create a row whose
- * secret is handed to the caller as a string, which is the exact property the
- * cookie exists to avoid.
- */
 function isMintableKind(value: unknown): value is 'device' | 'api' {
 	return value === 'device' || value === 'api';
 }
@@ -48,6 +33,5 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	const { token, record } = issueToken(getDatabase(), user.id, label, kind);
 
-	// The cleartext appears here and never again — it is stored only as a hash.
 	return json({ token, credential: publicToken(record, false) }, { status: 201 });
 };

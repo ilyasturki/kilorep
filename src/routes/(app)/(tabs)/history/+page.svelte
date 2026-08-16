@@ -16,48 +16,14 @@
 
 	import type { PageProps } from './$types';
 
-	/**
-	 * Every finished session, newest first — the order a lifter asks "what did
-	 * I do last time" in. Rows only: the reading happens on the detail, and a
-	 * list that tried to say more would just be a slower way to tap through.
-	 *
-	 * All of it at once, no paging: the store's list is already the whole
-	 * history in memory, and a year of lifting is hundreds of rows, not
-	 * millions. The day paging earns its complexity is the day the store
-	 * needs a date index too.
-	 */
 	let { data }: PageProps = $props();
 
 	const workouts = $derived(data.workouts.toReversed());
 
-	/**
-	 * The session still being logged, pinned above the list.
-	 *
-	 * Read straight off the holder rather than through the load: it is module
-	 * state the `(app)` layout refills from the snapshot before any load runs,
-	 * so it is already true on the first frame, and a `depends` here would only
-	 * buy a re-run that changes nothing this screen writes. The counts below it
-	 * move as sets are checked on another screen, which is the point — this row
-	 * is the running session, not a copy of it.
-	 *
-	 * It goes to `/workout/live`, not `/history/{id}`: there is no record yet.
-	 * Which is also why it stands outside the list below rather than leading it
-	 * — every row in that group opens a finished workout, and one row in the
-	 * same card that went somewhere else would be a lie the card tells.
-	 */
 	const live = $derived(activeWorkout.session);
 
-	// Captured once per mount, the idiom every read-only screen here uses. A
-	// list left open across midnight keeps yesterday's wording until you
-	// navigate, which is a smaller surprise than labels rewriting themselves
-	// under a thumb.
 	const now = Date.now();
 
-	/**
-	 * The ⋯ stays off this list — a row here is one line of text and a date, and
-	 * hanging a control on the end of each would cost more than the shortcut is
-	 * worth. The gesture is the whole affordance.
-	 */
 	let menuOpen = $state(false);
 	let menuAnchor = $state<HTMLElement | null>(null);
 	let held = $state<Workout | null>(null);
@@ -98,14 +64,9 @@
 			syncSoon(data.user.id);
 		}
 
-		// The list is the load's own data, so it has to be told. The detail page
-		// navigates away after a delete and gets this for free; here the row has
-		// to leave the screen under the finger that deleted it.
 		await invalidateAll();
 	}
 
-	// A child of Progress rather than a tab, so the bar has no lit tab to take a
-	// word from.
 	fillAppBar(() => ({ title: 'History' }));
 </script>
 
@@ -115,9 +76,6 @@
 
 <main class="column-content flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
 	{#if live !== null}
-		<!-- Its own card, above the group and never inside it: this row resumes,
-		     the rows below it read. The dot is the accent, which in this app means
-		     "this logs a set" — the one thing on the screen that still does. -->
 		<section class="list-group">
 			<ListRow
 				title={workoutTitle(live.workout, data.templates)}
@@ -135,8 +93,6 @@
 	{/if}
 
 	{#if workouts.length === 0}
-		<!-- Not a dead end: the tab that records sessions points at the tab that
-		     starts them. Outlined — the lit commit belongs to Workout's own Start. -->
 		<EmptyState title="No workouts yet" description="Finish a session and it lands here.">
 			{#snippet icon()}
 				<ClockCounterClockwise size={24} />
@@ -156,9 +112,6 @@
 					href="/history/{workout.id}"
 					onhold={(anchor) => hold(anchor, workout)}
 				>
-					<!-- Both spellings rendered, one hidden: the swap is `lg`, the app's
-					     single shape breakpoint, and picking in CSS keeps the choice out
-					     of a width the component would have to measure. -->
 					{#snippet trailing()}
 						<span class="lg:hidden">{when.short}</span>
 						<span class="hidden lg:inline">{when.long}</span>

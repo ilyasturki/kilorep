@@ -77,25 +77,6 @@ const RECENT_SESSIONS = 10;
 
 const SHELF = 8;
 
-/**
- * The exercises trained most across the recent sessions, most-trained first —
- * what the insert picker pins above the catalog.
- *
- * Counted in *sessions*, never in sets: an exercise is on the shelf because it
- * keeps coming back, and counting sets would let one twelve-set arm day
- * outrank the squat trained every week. Which is also why an exercise
- * performed twice in one workout counts once — `exercisesIn` already dedupes,
- * and the second appearance is one session's shape, not a second session.
- *
- * Ties go to the more recent, so a rotation that has just changed sorts ahead
- * of the one it replaced while both still count the same. Below that the order
- * is the sessions' own, which is stable across reads — nothing here consults a
- * clock.
- *
- * Ids rather than exercises, because this module knows nothing of the catalog
- * and should not start now: the sheet joins them, and drops any it cannot
- * resolve.
- */
 export function frequentFrom(workouts: FinishedWorkout[], limit: number = SHELF): string[] {
 	const recent = workouts.toSorted((a, b) => b.startedAt - a.startedAt).slice(0, RECENT_SESSIONS);
 	const counts = new Map<string, { sessions: number; last: number }>();

@@ -1,16 +1,6 @@
 <script lang="ts" module>
-	/**
-	 * One fetch per id per app, not per mount: the catalog list now draws a
-	 * thumb on every row and the insert sheet re-mounts that list on every
-	 * open, which would otherwise be one fetch per catalog entry a tap. Keyed
-	 * by id, holding the promise rather than the text so concurrent rows share
-	 * one request.
-	 *
-	 * A 404 caches as `null` — the file is genuinely absent (customs, and any
-	 * entry shipped without art) and asking again will not draw it. A *thrown*
-	 * fetch is different: that is the network, not the catalog, so the entry
-	 * is dropped and the next mount retries.
-	 */
+	// A 404 caches as `null` (the art is genuinely absent); a thrown fetch is
+	// evicted so the next mount retries.
 	const cache = new Map<string, Promise<string | null>>();
 
 	function load(id: string): Promise<string | null> {

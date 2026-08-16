@@ -16,17 +16,6 @@ export const users = sqliteTable(
 
 export type User = typeof users.$inferSelect;
 
-/**
- * Every credential in the system, for every client. The web session and the
- * device/API/MCP token are one mechanism: an opaque secret, stored only as a
- * SHA-256 hash, delivered as an HttpOnly cookie to the browser and as a Bearer
- * header everywhere else. One table, one verification path, and revocation is
- * a row delete rather than a clock comparison.
- *
- * `tokenPrefix` keeps the leading characters of the cleartext so the UI can
- * match a row to the value pasted into an MCP client's config; the cleartext
- * itself is shown exactly once, at creation.
- */
 export const authTokens = sqliteTable(
 	'auth_tokens',
 	{

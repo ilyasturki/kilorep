@@ -27,10 +27,8 @@
 
 	let mode = $state<'pill' | 'chips' | 'custom'>('pill');
 
-	/** The expanded control, and the test for what counts as a tap outside it. */
 	let box = $state<HTMLElement | null>(null);
 
-	/** The chip that clears. Not a rating, so it never collides with a rung. */
 	const CLEAR = '-';
 
 	const rating = $derived(isExertion(value) ? value : null);
@@ -49,18 +47,7 @@
 		rating !== null && EXERTION_RUNGS.includes(rating) ? String(shownExertion(rating, scale)) : ''
 	);
 
-	/**
-	 * Two ways to clear and they arrive here as two strings: `CLEAR` is the dash
-	 * tapped, and `''` is the toggle group deselecting itself when the lit chip
-	 * is tapped again. The gesture was always there; the chip is what makes it
-	 * something a thumb can find, and the only thing that reaches a rating which
-	 * lights no chip at all — clearing a custom 6 used to mean opening ⋯ and
-	 * emptying the field.
-	 *
-	 * It fits because 7.5 stopped asking for a slot. Eight items fill four
-	 * columns exactly and nine do not, so the grid is a budget the scale spends:
-	 * six rungs, the dash, and ⋯. See `EXERTION_RUNGS`.
-	 */
+	// `CLEAR` is the dash tapped; `''` is the toggle group deselecting the lit chip.
 	function pick(next: string) {
 		if (next === 'custom') {
 			mode = 'custom';
@@ -72,33 +59,6 @@
 		mode = 'pill';
 	}
 
-	/**
-	 * Everything that puts the control away without touching the rating.
-	 *
-	 * Escape first, and only the second one when a field has focus: the stepper
-	 * behind ⋯ answers the first press itself by reverting what was typed, and a
-	 * key that undid an edit and closed the control in one press would be two
-	 * acts on one press. Once the field has let go — target is the body — the
-	 * next Escape is this one's.
-	 *
-	 * Then the tap outside, which is two listeners because the parts of it want
-	 * different phases. `pointerdown` decides *whether* the tap is outside,
-	 * while the thing it landed on is still where the finger found it; `click`
-	 * decides *when* the control closes, which has to be after the tap has done
-	 * its own job. Collapsing on the press instead would move the commit button
-	 * up into the pill's row between the finger going down and coming up, and
-	 * the tap that was aimed at logging the set would land on nothing.
-	 *
-	 * Capture on the click for the same reason it is safe to close there: the
-	 * event's path is fixed when dispatch begins, so the button still gets its
-	 * turn even though this ran first and the layout is about to change under
-	 * it. A keyboard-activated click brings no `pointerdown` and so closes
-	 * nothing — that is Escape's job, and it has it.
-	 *
-	 * Armed only while expanded, which is also what keeps the tap that opened
-	 * the control from immediately closing it: that press was over before this
-	 * effect existed.
-	 */
 	$effect(() => {
 		if (mode === 'pill') {
 			return;
@@ -136,24 +96,6 @@
 		return () => listening.abort();
 	});
 
-	/**
-	 * One height for both expanded states, so entering and leaving ⋯ does not
-	 * move the commit button underneath — a button that shifts under a thumb
-	 * already travelling toward it is the logging loop's own kind of bug.
-	 *
-	 * Under a thumb the chip grid is the tall one: two rows of `chip` plus the
-	 * `gap-2` between them. Written as a calc off the token rather than as 112px,
-	 * so it still fits when the OS text size grows the chips. At a fine pointer
-	 * the chips are one 40px line and the stepper's 76px is the tall one instead,
-	 * which is what `min-h-19` restores.
-	 *
-	 * Alignment is not in here, and deliberately: the chips are centred in the box
-	 * so a desk's one-line row is never stretched into slabs, and the custom row
-	 * fills it, because a stepper as tall as the box is a fatter target and
-	 * nothing else is competing for the space. Two `align-items` utilities in one
-	 * class list would be settled by Tailwind's own ordering rather than by which
-	 * was written last, so the mode picks one and only one is ever emitted.
-	 */
 	const reserved =
 		'flex basis-full min-h-[calc(2*var(--spacing-chip)+0.5rem)] pointer-fine:min-h-19';
 </script>
@@ -181,9 +123,6 @@
 		<span class="label-caps">{name}</span>
 	</button>
 {:else}
-	<!-- One box for both expanded states, and not one per state: it is what a
-	     tap has to miss to count as outside, and a box that were replaced on the
-	     way into ⋯ would make that move look like a tap on nothing. -->
 	<div
 		bind:this={box}
 		class={[reserved, mode === 'chips' ? 'items-center' : 'items-stretch gap-2']}
@@ -195,7 +134,6 @@
 				label="{name} for this set"
 				class="w-full"
 			>
-				<!-- The dash leads, where the pill's own unrated face puts it. -->
 				<Chip value={CLEAR} column aria-label="Clear the {name}">–</Chip>
 
 				{#each rungs as rung (rung)}

@@ -17,18 +17,8 @@ export type Handshake = {
 	challenge?: string;
 };
 
-/**
- * `sameSite: 'lax'` is load-bearing rather than copied: the callback arrives as
- * a top-level navigation from accounts.google.com, which is cross-site, and
- * `strict` would withhold the cookie on exactly the one request that needs it.
- * The failure would surface as a state mismatch — an error pointing at the wrong
- * thing entirely.
- *
- * `secure` comes from `secureCookies` rather than being re-derived here, for the
- * reason written where it lives: a `Secure` cookie sent over plain http is
- * dropped without a word, and the LAN self-hoster would get a sign-in that
- * always fails and never says why.
- */
+// sameSite must stay 'lax': the callback is a cross-site top-level navigation
+// from Google, and 'strict' would withhold the cookie on exactly that request.
 export function setHandshake(cookies: Cookies, url: URL, handshake: Handshake): void {
 	cookies.set(HANDSHAKE_COOKIE, JSON.stringify(handshake), {
 		path: COOKIE_PATH,

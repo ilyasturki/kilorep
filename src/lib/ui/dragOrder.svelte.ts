@@ -247,30 +247,18 @@ export class DragOrder {
 		document.addEventListener('pointerup', this.#docUp);
 		document.addEventListener('pointercancel', this.#docUp);
 
-		// The capture is now only a courtesy — it keeps hover states and text
-		// selection from lighting up under a row being dragged across them, and
-		// the first crossing clears it anyway. It is taken against `target` and
-		// not `currentTarget`, because the long-press path reads this event half
-		// a second after dispatch, by which time the browser has already nulled
-		// `currentTarget`.
-		//
-		// Not fatal if it is refused. `setPointerCapture` throws when the pointer
-		// is no longer active, and a lift is already half-built by this line — an
-		// exception here would leave a row marked lifted with nothing driving it
-		// and no way to put it down.
+		// Against `target`, not `currentTarget`: the long-press path reads this event
+		// half a second after dispatch, by which time `currentTarget` is null.
 		try {
 			if (event.target instanceof Element) {
 				event.target.setPointerCapture(this.#pointerId);
 			}
 		} catch {
-			// See above: an inactive pointer throws, and a half-built lift is worse.
+			// `setPointerCapture` throws on a pointer that is no longer active.
 		}
 
-		// Non-passive, so it can actually refuse the pan. Registering it only now
-		// is what makes that stick: a lift follows 500ms of a stationary finger,
-		// so the browser has not yet committed to a scroll it would be too late to
-		// take back. The handle path never needs this — `touch-action: none` on
-		// the handle has already said the same thing in CSS.
+		// Non-passive so it can refuse the pan, and registered only now: after 500ms of a
+		// stationary finger the browser has not yet committed to a scroll.
 		document.addEventListener('touchmove', refuse, { passive: false });
 
 		this.#frame = requestAnimationFrame(this.#tick);

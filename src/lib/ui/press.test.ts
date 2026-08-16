@@ -8,10 +8,6 @@ type Tracked = {
 	holds: () => number;
 };
 
-/**
- * `'none'` is an element with no hold at all; `'takes'` one whose hold opens
- * something; `'declines'` one that was asked and had nothing to offer.
- */
 type Holding = 'none' | 'takes' | 'declines';
 
 function tracked(holding: Holding = 'none'): Tracked {
@@ -94,9 +90,6 @@ describe('press tracker', () => {
 		expect(marks).toEqual([true, false]);
 	});
 
-	// The row was asked and had no menu to open. Nothing happened, so nothing
-	// should look like it did: the finger is still down on a live target, and the
-	// tap it ends with is the honest one the element was there for.
 	it('leaves a declined hold looking like the press it still is', () => {
 		const { tracker, marks, holds } = tracked('declines');
 
@@ -122,9 +115,6 @@ describe('press tracker', () => {
 		expect(tracker.swallowsClick()).toBe(false);
 	});
 
-	// A hold whose finger wandered off the element before lifting produces no
-	// click at all, so the swallow is never spent. The next press has to clear it,
-	// or that flag eats an honest tap somewhere down the line.
 	it('does not let an unspent swallow eat the next tap', () => {
 		const { tracker } = tracked('takes');
 

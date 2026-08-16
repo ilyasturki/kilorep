@@ -11,43 +11,12 @@ import { claimSeq } from '../src/lib/server/db/seq.ts';
 
 import { seedContent } from './seed/content.ts';
 
-/**
- * Development bootstrap only: the credentials below are public, in the
- * repository. A real instance makes its first account with
- * `bun run account:create`, which never touches the network.
- *
- * Two halves. The account is the one `docs/TESTING.md` documents and the
- * reason this script exists; the content is eight weeks of training planted on
- * it, so a fresh worktree opens on an app that has been used rather than on a
- * hint system with nothing to recall. Both halves are idempotent — the second
- * run says so and changes nothing — and `--force` replants the content against
- * today's date without touching anything logged by hand.
- */
-
 const EMAIL = 'dev@kilorep.local';
-// Eight characters because `createUser` enforces a floor and this is a caller
-// like any other; there is nothing else to read into the value.
+// `createUser` enforces an eight-character minimum.
 const PASSWORD = 'devdevdev';
 
-/**
- * Every id `seedContent` mints starts with this, which is what makes the
- * content half idempotent *and* non-destructive: the planter recognises its
- * own rows by prefix, so replanting overwrites those and leaves a workout you
- * logged in the browser exactly where it is.
- */
 const SEED_PREFIX = 'seed-';
 
-/**
- * Writes the seed as sync records, one claimed `seq` each, all in one
- * transaction — CLAUDE.md's rule, and here the claim and the write are the
- * same statement's arguments so they cannot come apart.
- *
- * Templates first, then sessions oldest to newest, so the seqs tell the story
- * in the order it happened. Upsert rather than insert because `--force` runs
- * over ids that already exist; a client that has synced already pulls the
- * replacements on its next round trip, since every replanted row claims a
- * fresh seq above its watermark.
- */
 function plant(db: Database, userId: string, now: number): number {
 	const { templates, workouts, bodyweight } = seedContent(now);
 
@@ -56,9 +25,7 @@ function plant(db: Database, userId: string, now: number): number {
 			...templates.map(({ template, deletedAt }) => ({
 				id: template.id,
 				kind: 'template' as const,
-				// The tombstone rule: `updatedAt` moves with `deletedAt`, or a delete
-				// carrying the older timestamp loses last-write-wins and undeletes
-				// itself on the next pull.
+				// `updatedAt` must move with `deletedAt`, or the delete loses last-write-wins and undeletes.
 				updatedAt: deletedAt ?? template.createdAt,
 				deletedAt,
 				payload: template
@@ -70,12 +37,8 @@ function plant(db: Database, userId: string, now: number): number {
 				deletedAt: null,
 				payload: workout
 			})),
-			// The one kind that cannot wear the seed prefix: a day's entry has
-			// exactly one id, `bodyweight-<date>`, or the app's own put for that
-			// day would sit beside the seed's as a duplicate. The costs are small
-			// and accepted — the planted-count check above does not see these
-			// rows (the prefixed ones already answer it), and a `--force` replant
-			// overwrites a hand-logged weight on a day the seed covers.
+			// A day has exactly one bodyweight id, so these rows cannot carry the seed prefix:
+			// they are invisible to the planted-count check, and `--force` overwrites hand-logged weights.
 			...bodyweight.map(({ entry, loggedAt }) => ({
 				id: bodyweightId(entry.date),
 				kind: 'bodyweight' as const,

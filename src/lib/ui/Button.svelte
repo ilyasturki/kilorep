@@ -11,8 +11,6 @@
 	const outlined =
 		'min-h-14 rounded-xl px-5 border border-line hover:bg-hover press:bg-surface-2 press-sink';
 
-	// The nudge downwards was the press state before there was a scale; keeping
-	// both would sink the button twice for one finger.
 	const filled =
 		'bg-accent text-on-accent press-sink ' +
 		'hover:bg-accent-hover press:[filter:var(--accent-press)] pointer-fine:active:translate-y-px';
@@ -100,16 +98,6 @@
 	const look = $derived((compact ? compacts[key] : undefined) ?? looks[key]);
 </script>
 
-<!--
-	`<svelte:element>` rather than two branches. Two branches read better but do
-	not typecheck: `rest` is button-shaped down to its ~450 event handlers, and
-	spreading a `ClipboardEventHandler<HTMLButtonElement>` onto an `<a>` is an
-	error. The alternative was casting the spread, which hides the same looseness
-	somewhere less obvious.
-
-	`disabled` is forced to `undefined` on a link — an anchor has no such
-	attribute, and the inert look is a disabled *commit*, which a link never is.
--->
 <svelte:element
 	this={href ? 'a' : 'button'}
 	{href}

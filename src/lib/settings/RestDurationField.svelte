@@ -19,18 +19,6 @@
 
 	let { label, description, seconds, disabled = false, onchange }: Props = $props();
 
-	/**
-	 * Not `StepperField`. That component belongs to the logging loop — it carries
-	 * a recalled value, a preview channel and a typable input, all of which exist
-	 * because a weight is a number the user has an opinion about mid-set. A rest
-	 * is `2:00`, and typing `120` into a box labelled seconds is a translation
-	 * step nobody should be asked to perform.
-	 *
-	 * Fifteen-second steps: the difference between 2:00 and 2:15 is real and the
-	 * difference between 2:00 and 2:01 is not, and the coarser step is what keeps
-	 * a change of mind to two taps rather than eight.
-	 */
-
 	const shown = $derived(restLabel(seconds * 1000));
 
 	const atFloor = $derived(seconds <= MIN_REST_SECONDS);

@@ -1,10 +1,6 @@
 @import 'tailwindcss';
 
-/* Nunito, variable weight 200–1000, latin subset only (39 KB).
-   Committed rather than pulled from a CDN: the APK must render with no network.
-   `block` over `swap` — a rounded face swapping in over Roboto mid-workout is
-   exactly the flash this app does not accept. The file is local, so the block
-   period is never actually reached. */
+/* Committed locally — the APK must render offline; the file being local means `block` never actually blocks. */
 @font-face {
 	font-family: 'Nunito';
 	src: url('./lib/assets/fonts/nunito-latin-wght.woff2') format('woff2');
@@ -13,32 +9,12 @@
 	font-display: block;
 }
 
-/* Semantic tokens. Components name intent only — `bg-surface`, never
-   `bg-neutral-950`. Dark reassigns what each name points at, so a component
-   cannot be styled for one theme and not the other.
-
-   Most values are Tailwind swatches. Both depth ramps are the exception, each
-   for its own theme's version of one problem — the neutral scale has no rungs
-   where the depths need to sit — and each block carries its reason.
-
-   Theme follows the OS and nothing else: no toggle, no persistence, no JS.
-   Adding a Light/Dark/System setting later means moving this media query to
-   `:root:not([data-theme=light])` and stamping the attribute before paint. */
+/* Semantic tokens: components name intent (`bg-surface`), dark reassigns the values. Theme follows the
+   OS only; a manual toggle later means `:root:not([data-theme=light])` and stamping before paint. */
 :root {
 	color-scheme: light dark;
 
-	/* Four depths. `canvas` is the page, `surface` the card that sits on it,
-	   `surface-2` a step up inside that card, `sunken` a well pressed into it
-	   (numpad keys, stepper fields). Four distinct values in both themes: a Chip
-	   wears `sunken` and sits on `canvas` as often as it sits inside a `surface`,
-	   and the two were the same swatch in dark until the ramp was re-spaced.
-
-	   Custom oklch below `surface`, for light's version of the disease the dark
-	   block describes: riding the swatch rungs crammed all four depths into
-	   three points of lightness, and a card sat 1.5 points off the page with
-	   its hairline doing all the work. Cards stay white — the brightest plane —
-	   and the ground drops away beneath them: 4 points to the page, 6 to a fill
-	   inside a card, 9.5 to a well. */
+	/* Depth scale: page, card, step inside a card, well. Custom oklch — the neutral swatches have no rungs where the depths need to sit. */
 	--canvas: oklch(96% 0 0);
 	--surface: var(--color-white);
 	--surface-2: oklch(94% 0 0);
@@ -51,96 +27,32 @@
 	--line: var(--color-neutral-300);
 	--line-soft: var(--color-neutral-200);
 
-	/* What a pointer resting on a thing paints. Split from `surface-2` when the
-	   ramp above was re-spaced: `surface-2` is a *fill* — chips, shelves, the
-	   picker's highlight — and every re-spacing that serves the fills drags the
-	   feedback with it, which is how dark's hover came to jump five points
-	   where light's jumped three. This is the value light's hover always had;
-	   `active:` keeps `surface-2` everywhere, so a press is a visible step past
-	   a hover rather than the same paint twice. */
+	/* Pointer hover. `active:` keeps `surface-2`, so a press is a visible step past a hover. */
 	--hover: var(--color-neutral-100);
 
-	/* The two fills a nav tab wears, because the depth scale cannot supply them.
-	   A selected tab has to sit a visible step beyond a hovered one, and there
-	   is no single existing token that is that step in both themes: `surface-2`
-	   is a shade *darker* than the bar in light and a shade *lighter* in dark,
-	   and `sunken` reverses direction again. Painted with one name each, hover
-	   and selected came out a hair apart in light and inverted in dark.
-
-	   So each theme moves away from its own bar in the direction that theme
-	   already reads as raised — down from white, up from neutral-900 — two even
-	   steps, hover then selected. Neutral on purpose: the accent means "this
-	   logs a set", and the live dot is the only thing in either bar entitled to
-	   it. Named for the job because the bars are the only chrome in the app with
-	   a selected state to show. */
+	/* Nav tab fills: two even steps off each theme's own bar. Neutral on purpose — the accent means "this logs a set". */
 	--nav-hover: var(--color-neutral-100);
 	--nav-selected: var(--color-neutral-200);
 
-	/* The accent is a fill, and only a fill. `lime-500` is identical in both
-	   themes — the DESIGN.md promise — because it is only ever painted behind
-	   `on-accent`, which is dark in both. It cannot be used as text: on white
-	   it lands at 1.95:1.
-
-	   `accent-text` is the accent-coloured *string* — SKIP, NOW, the sub-15s
-	   countdown, the SUPERSET badge. It has to be a per-theme pair, and no
-	   choice of swatch avoids that: 4.5:1 against white needs luminance ≤0.183,
-	   against neutral-950 it needs ≥0.20. No single colour is both.
-
-	   It is the wider of the two meanings, and deliberately so: the fill says
-	   "this logs a set", the string says "this is the thing the screen is for".
-	   On a screen that logs nothing those are different sentences — Progress
-	   spends it on one headline figure per card and the PR pill, and on nothing
-	   else, which is what keeps a page of numbers from reading as a page of
-	   accents. A chart never takes it: bars and sparklines are ink, or the
-	   accent would be claiming it means "a number". */
+	/* The accent is a fill, never text — 1.95:1 on white. `accent-text` is the accent-coloured *string*
+	   and must stay a per-theme pair: no single colour clears 4.5:1 against both themes' grounds. */
 	--accent: var(--color-lime-500);
 	--on-accent: var(--color-neutral-950);
 	--accent-text: var(--color-lime-700);
 	--accent-soft: var(--color-lime-200);
 
-	/* The two states a filled accent wears under a mouse. Both are per-theme
-	   pairs even though `--accent` itself is one colour in both, and that is not
-	   a contradiction: the resting fill is judged against `on-accent`, which is
-	   dark in both themes, while an interaction fill is judged against the
-	   surface it is sitting on. Darkening in dark reads as dimmed rather than
-	   touched, so each theme steps away from its own canvas in the direction it
-	   already treats as raised — the same reasoning as `nav-hover` above.
-
-	   `--accent-press` is a whole filter and not a colour, because the press is
-	   still a filter: it lands on top of whichever fill is underneath, which on
-	   a mouse is the hover colour and on a thumb — where `hover:` never fires —
-	   is the accent itself. It stays out of `@theme` for that reason; it is
-	   consumed as `var()` directly, the way `focus-ring` consumes
-	   `--accent-text`. */
+	/* `--accent-press` is a filter, not a colour: it lands on the hover fill under a mouse and on the
+	   accent itself under a thumb, where `hover:` never fires. */
 	--accent-hover: var(--color-lime-600);
 	--accent-press: brightness(0.94);
 
 	--danger: var(--color-red-600);
-	/* The soft danger fill, a per-theme pair for the same reason `accent-soft`
-	   is one: `--danger` is red-600 in light and red-400 in dark, so a single
-	   alpha over it reads as two different colours. */
+	/* Per-theme pair: `--danger` differs per theme, so a single alpha over it reads as two colours. */
 	--danger-soft: var(--color-red-100);
 	--scrim: rgb(0 0 0 / 0.4);
 
-	/* The six template marks: a soft tile with a saturated glyph on it, the
-	   shape `accent-soft` and `danger-soft` already establish. Six because a
-	   list of plans is a handful and a seventh hue would be told apart by
-	   nobody; `slate` is the sixth on purpose, so "a mark without a colour" is
-	   a choice the set can express rather than a gap in it.
-
-	   None of them is lime, and that is the constraint the set was picked
-	   under: the accent means "this logs a set" and a template that borrowed it
-	   would be making a promise the planning surface cannot keep. The hues run
-	   49° (amber) → 186° (teal) → 264° (blue) → 293° (violet) → 324°
-	   (fuchsia), stepping around lime's 130° rather than through it, with slate
-	   sitting at blue's angle and near-zero chroma — it reads as grey beside a
-	   saturated blue, never as a second one.
-
-	   Measured, not eyeballed: glyph-on-tile clears 4.5:1 in both themes, the
-	   floor being amber in light at 4.54:1. That bar is reachable at all only
-	   because the glyph is judged against its *own* tile rather than against
-	   the card — both sides move together per theme, which is exactly what
-	   `--accent-text` has no way to do and why it needs a per-theme pair. */
+	/* The six template marks. The hues step around lime's 130°, never through it — the accent is not a
+	   mark. Glyph-on-tile clears 4.5:1 in both themes. */
 	--tpl-amber: var(--color-amber-700);
 	--tpl-amber-soft: var(--color-amber-100);
 	--tpl-teal: var(--color-teal-700);
@@ -151,38 +63,17 @@
 	--tpl-violet-soft: var(--color-violet-100);
 	--tpl-fuchsia: var(--color-fuchsia-700);
 	--tpl-fuchsia-soft: var(--color-fuchsia-100);
-	/* Slate takes the 600 on a 200: its 700 on a 100 is a grey-on-grey pair
-	   that reads as disabled rather than as a mark. */
+	/* 600-on-200: slate's 700-on-100 reads as disabled. */
 	--tpl-slate: var(--color-slate-600);
 	--tpl-slate-soft: var(--color-slate-200);
 
-	/* What sits *on* a hue used as a fill rather than as ink — the picker's
-	   chosen tile, and a mark that has a colour and no glyph yet.
-
-	   One token for all six, and it can be one because within a theme the six
-	   are all on the same side of the lightness line: the 700s in light, the
-	   300s in dark. So white clears every light fill — floor amber at 5.02:1 —
-	   and `sunken`'s near-black clears every dark one, floor blue at 11.6:1.
-	   Two tokens' worth of contrast checking collapses into one because the
-	   ramp was picked per theme in the first place. */
+	/* Ink on a mark used as a fill. One token works: per theme, all six fills sit on the same side of the lightness line. */
 	--tpl-on: var(--color-white);
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		/* The depth ramp, lifted off near-black and re-spaced evenly. It used to
-		   start at `neutral-950` — 14.5%, four points off black — with the three
-		   depths above it crammed into the next twelve and `sunken` doubling as
-		   `canvas`. The page read as a void with cards floating in it.
-
-		   These four name no Tailwind swatch, because the neutral scale has no
-		   rung between 800 (26.9%) and 700 (37.1%) and nothing below 950 at all.
-		   Forcing the ramp onto the rungs that exist is what produced both the
-		   uneven steps and the collapse — and later, the same crowding in light.
-
-		   oklch at chroma zero, so the spacing is checkable by reading down the
-		   column rather than by converting hex: steps of 4.5, 4.2 and 4.9. A new
-		   depth, if there is ever a fifth, belongs at that interval too. */
+		/* Depth ramp in even oklch steps — the neutral scale has no rungs here. A fifth depth belongs at the same ~4.5-point interval. */
 		--sunken: oklch(17.3% 0 0);
 		--canvas: oklch(21.8% 0 0);
 		--surface: oklch(26% 0 0);
@@ -190,57 +81,32 @@
 
 		--ink: var(--color-neutral-100);
 		--ink-muted: var(--color-neutral-400);
-		/* `neutral-500` measured 4.18:1 on the old canvas — already under AA
-		   before the lift made it worse, and this token carries every caps label
-		   and every placeholder in the app. 65% clears the bar on the new
-		   ground: 5.4:1 on `canvas`, 4.8:1 on `surface`. */
+		/* `neutral-500` sat under AA; 65% clears it on both `canvas` and `surface`. */
 		--ink-faint: oklch(65% 0 0);
 
-		/* Both rise with the ramp. `line-soft` was `neutral-800`, which is what
-		   `surface-2` was as well — a divider inside a raised card had nothing to
-		   draw against. */
 		--line: oklch(39% 0 0);
 		--line-soft: oklch(32.1% 0 0);
 
-		/* Halfway from `surface` to `surface-2`. The borrowed `surface-2` jumped
-		   4.9 points where light's hover jumps 3, and on a dark ground the same
-		   distance reads farther still — the hover that shouted. */
 		--hover: oklch(28.4% 0 0);
 
-		/* Still the two even steps up from the bar described on `:root`, now
-		   +4.3 and +8.6 from the lifted `surface`. */
 		--nav-hover: oklch(30.3% 0 0);
 		--nav-selected: oklch(34.6% 0 0);
 
 		--accent: var(--color-lime-500);
 		--on-accent: var(--color-neutral-950);
 		--accent-text: var(--color-lime-500);
-		/* The soft fills lift too, keeping their swatch's hue and chroma. Left at
-		   `lime-950` and `red-950` they now sit *below* `surface`, so a badge
-		   reads as a hole punched in the card rather than as a fill on it. */
+		/* Lifted above `surface`: at the 950 swatches a badge reads as a hole in the card. */
 		--accent-soft: oklch(31.5% 0.078 132.109);
-		/* Midway lime-500 → 400, not the full swatch step: a whole rung up read
-		   as a flash on the loudest fill on screen. */
+		/* Midway 500 → 400: a full swatch step read as a flash. */
 		--accent-hover: oklch(80.5% 0.235 129.9);
 		--accent-press: brightness(1.06);
 
 		--danger: var(--color-red-400);
 		--danger-soft: oklch(29.5% 0.095 26.042);
-		/* A lighter page needs less dimming to read as dimmed. */
 		--scrim: rgb(0 0 0 / 0.55);
 
-		/* The marks lift the way the two soft fills above them do, and are built
-		   the same way: the tint keeps its swatch's hue and lands just clear of
-		   `surface`, the glyph drops to the 300 rung. Measured on the lifted
-		   ground — glyph-on-tile 7.4:1 (violet, blue) to 9.3:1 (amber), and the
-		   tiles sit 1.12–1.23 off `surface`, which brackets the shipped
-		   `accent-soft` at 1.23 and `danger-soft` at 1.08. A mark is a tint on
-		   the card, not a hole in it.
-
-		   Amber and teal carry less chroma than the rest because that is all
-		   sRGB has at 30.5% lightness on those hues — 0.064 and 0.056 are the
-		   gamut edge, solved for rather than guessed, and a bigger number would
-		   be clamped by the browser into a colour nobody chose. */
+		/* Tints keep their hue and land just clear of `surface`. Amber and teal's chroma (0.064, 0.056)
+		   is the sRGB gamut edge at this lightness — anything bigger gets clamped. */
 		--tpl-amber: var(--color-amber-300);
 		--tpl-amber-soft: oklch(30.5% 0.064 95.746);
 		--tpl-teal: var(--color-teal-300);
@@ -251,41 +117,16 @@
 		--tpl-violet-soft: oklch(30.5% 0.085 293.283);
 		--tpl-fuchsia: var(--color-fuchsia-300);
 		--tpl-fuchsia-soft: oklch(30.5% 0.085 319.62);
-		/* Slate needs the extra 1.5 points its near-zero chroma denies it: at
-		   30.5% the other five are lifted by their colour as much as by their
-		   lightness, and a grey tile at that number disappeared. */
+		/* +1.5 points: near-zero chroma denies slate the lift colour gives the others. */
 		--tpl-slate: var(--color-slate-300);
 		--tpl-slate-soft: oklch(32% 0.015 255.508);
-		/* `sunken`'s own value, spelled out rather than `var(--sunken)`: this is
-		   the ink a fill takes, and it must not follow the depth ramp if that
-		   ramp is ever re-spaced. */
+		/* `sunken`'s value spelled out — this ink must not follow the depth ramp if it is re-spaced. */
 		--tpl-on: oklch(17.3% 0 0);
 	}
 }
 
-/* Touch targets, named after the job rather than the number: 40 chrome,
-   52 chip, 62 key/row, 78 commit. They are `min-h-*`, never `h-*`, so a box
-   grows when the OS text size does — DESIGN.md requires the app honour
-   Dynamic Type and Android font scale, and a fixed px height silently
-   defeats that.
-
-   They shrink when the primary pointer is a mouse. The guard must be exactly
-   `(pointer: fine)` — the predicate behind Tailwind's own `pointer-fine:`
-   variant — because these tokens and those utilities style the same elements.
-   An `any-pointer` guard here was measured disagreeing with itself on a
-   touchscreen laptop: the variant fired and the tokens did not, so a row got
-   its mouse affordances at thumb size.
-
-   The consequence is deliberate: a hybrid device follows its primary input and
-   lands on 44px rows, still above the 44pt/48dp touch minimums.
-
-   `row-dense` is the one that does not shrink, because it is already the small
-   one: 44px on every pointer. It belongs to a row you *read* rather than tap
-   through — Progress', where eight rows at thumb size were the reason the
-   screen scrolled past its own first card on a phone. The gym-floor 62 is for
-   the surfaces a sweaty hand works, and a screen you only read is not one;
-   44 still clears both platform minimums, which is what makes the trade
-   payable at all. Nothing on the workout loop may reach for it — rule 7. */
+/* Touch targets — `min-h-*`, never `h-*`, so OS text scaling can grow them. The guard must be exactly
+   `(pointer: fine)`, the predicate behind Tailwind's `pointer-fine:`, or the two disagree on hybrids. */
 :root {
 	--target-chrome: 2.5rem; /* 40 */
 	--target-chip: 3.25rem; /* 52 */
@@ -293,14 +134,7 @@
 	--target-row-dense: 2.75rem; /* 44 */
 	--target-commit: 4.875rem; /* 78 */
 
-	/* Not a target — nothing is tapped at this size. It is the top bar's row,
-	   held to one height whatever it happens to hold: a chrome control plus the
-	   `py-2` the row sets around it. Without it the bar was 41px on a tab root,
-	   where the tallest thing in it is a line of text, and 57px one level down,
-	   where a 40px back link stands — so going into an exercise moved the top of
-	   every screen while the pane below it was sliding sideways. Derived rather
-	   than typed, so it follows `--target-chrome` wherever that goes, and a
-	   `min-h-*` like the rest, so OS text scaling still grows it. */
+	/* Not a target — the top bar's one height (a chrome control plus its `py-2`), derived so it follows `--target-chrome`. */
 	--target-bar: calc(var(--target-chrome) + 1rem);
 }
 
@@ -312,24 +146,8 @@
 	}
 }
 
-/* Glyphs, one step up under a thumb. The touch targets above already split on
-   pointer; this is the same split for what sits inside them — an 18px mark
-   read at arm's length between sets is smaller than the job asks. Call sites
-   keep writing the desk size (`size={18}`), and the thumb's step lives here
-   in one table rather than as a second number in fifty call sites.
-
-   The step is 2px at every size, and that uniformity is the point. It used to
-   widen with the glyph — +4 at 18, +6 at 22 — which read as a thumb bonus
-   compounding into a different drawing: a 28px tab glyph over a 12px label
-   is an icon shouting its own name. One step means the whole set keeps the
-   proportions it was drawn at, and only crosses the room by 2px.
-
-   `[width='…']` works because the icon contract renders `size` as the SVG's
-   width/height *attributes* — presentational hints, which any stylesheet
-   outranks — and every vendored icon carries `data-glyph` so nothing else
-   with a width attribute is caught. `(pointer: coarse)` rather than
-   `not (pointer: fine)` because a step *up* should need a thumb attested,
-   not merely a mouse unproven. */
+/* Glyphs step up 2px under a thumb; call sites keep writing the desk size. Works because `size` renders
+   as width/height *attributes* — presentational hints any stylesheet outranks — scoped by `data-glyph`. */
 @media (pointer: coarse) {
 	svg[data-glyph][width='14'] {
 		width: 16px;
@@ -365,14 +183,7 @@
 	}
 }
 
-/* What a press looks like. Who decides one is happening is `ui/press.ts`:
-   `:active` on a mouse, the `is-pressed` class on a finger.
-
-   Components write `press:bg-surface-2` where they used to write `active:`,
-   and stop caring which of the two is answering. The split is `(pointer:
-   coarse)` / `(pointer: fine)` — the same predicate as the target tokens and
-   Tailwind's own `pointer-fine:`, so an element cannot get a mouse's press
-   state at thumb size. */
+/* A press: `:active` on a mouse, `.is-pressed` (stamped by `ui/press.ts`) on a finger. */
 @custom-variant press {
 	@media (pointer: coarse) {
 		&.is-pressed {
@@ -386,28 +197,8 @@
 	}
 }
 
-/* The press that travels. A surface takes ~2% under the thumb and springs back
-   past its own size on release — the overshoot is the whole point, and it is
-   `dragOrder`'s SETTLE curve, because a lifted row and a pressed one are the
-   same hand doing the same thing.
-
-   `scale` and not `transform`: drag offsets already own `transform` on some of
-   these elements, and an independent property cannot fight one.
-
-   Down is quick and flat, up is slow and springy. Symmetry would be wrong —
-   the press has to feel like it met the finger, and the release like the
-   surface pushed back.
-
-   For surfaces, not for chrome. A ⋯ or a stepper arm shrinking by 2% is
-   invisible at that size, and the tab bar has its own travel.
-
-   Outside the `--dur-quick` / `--dur-travel` scale on purpose, curve and both
-   numbers. Everything on that scale is something moving from one place to
-   another and the duration says how far; this is a surface answering a finger,
-   where the duration says how hard. Put the release on `--ease-sheet` and the
-   spring goes with it — which is the one thing in the app a thumb is touching
-   on every single set. It coincidentally shares 160ms with `--dur-quick`; that
-   is not the token and must not be replaced by it. */
+/* ~2% sink with a springy release. `scale`, never `transform` — drag offsets own `transform`.
+   The 160ms coincides with `--dur-quick` but is deliberately not the token. */
 @utility press-sink {
 	@media (pointer: coarse) {
 		transition: scale 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -419,51 +210,8 @@
 	}
 }
 
-/* The switch, whose two halves have to agree. The track filling with accent and
-   the thumb crossing to meet it are one act seen twice, so they run on
-   `--dur-quick` and `--ease-sheet` — before this they shared a `duration-100`
-   that belonged to neither the scale nor anything else.
-
-   The travel keeps the sheet curve rather than borrowing the spring below. A
-   thumb crossing its track is a thing moving from one place to another, which
-   is exactly what `motion.ts` sorts the duration scale by; the spring is
-   feedback, and it is spent on the only part of this that answers a finger.
-
-   That part is the zoom, and it is `press-sink` inverted. `press-sink` says at
-   its own site that it is for surfaces and not for chrome, and it is right: a
-   22px thumb losing 2% is nothing anyone can see. So the same two numbers and
-   the same curve are spent the other way — the thumb *grows* under the finger
-   and settles back through the overshoot. Down quick and flat, up slow and
-   springy, for `press-sink`'s reason and no other.
-
-   The press state is read off the root, which is the element the finger is
-   actually on and the element `ui/press.ts` marks. `.group` is the hook it
-   already wears for `data-state`; a private attribute here would be a second
-   handle saying the same thing. */
-/* The segmented control: a well, and one raised pill that travels between the
-   segments rather than a fill that appears under whichever is current.
-
-   The pill is absolutely positioned and sized in `calc`, so nothing measures
-   anything and there is no observer to keep in step with a resize. The three
-   numbers that make the arithmetic work — the well's padding, the gap between
-   segments, and how many segments there are — are all read from custom
-   properties. `--seg-pad` and `--seg-gap` are declared here, on the well, and
-   not written as Tailwind classes on the element, because a `p-1` and a `gap-1`
-   sitting in a class attribute could be changed without anyone noticing that
-   the pill's width is quoting them. `--seg-count` and `--seg-index` come from
-   the component, which is the only thing that knows the list.
-
-   `translate` and not `left`: a percentage on `translate` resolves against the
-   element's own width, which is exactly one segment, so the pitch is `100% +
-   gap` and the index multiplies it. Animating `left` would work and would also
-   animate the pill's layout on every frame.
-
-   `--dur-quick` because the pill rearranges something in place — it crosses a
-   control, not a screen.
-
-   Nothing is needed to stop it sliding in on mount: the first render already
-   puts `translate` at its final value, and a transition with no previous value
-   to travel from does not fire. */
+/* Segmented control: the pill is sized by `calc` off the `--seg-*` properties — nothing measures, no
+   observer. `translate`, not `left`: a % resolves against the pill's own width, exactly one segment. */
 @utility segmented-well {
 	--seg-pad: 0.25rem;
 	--seg-gap: 0.25rem;
@@ -487,15 +235,11 @@
 	transition: translate var(--dur-quick) var(--ease-sheet);
 }
 
-/* The label's colour travels with the pill instead of snapping when it arrives.
-   This used to be behind `pointer-fine:`, which meant a finger got no
-   transition at all — correct when the tint *was* the whole feedback and any
-   lag read as the tap not landing, and wrong now that something is visibly
-   moving underneath for the same 160ms. */
 @utility segmented-item {
 	transition: color var(--dur-quick) var(--ease-sheet);
 }
 
+/* The switch's two halves are one act — same duration and curve; the thumb grows under the press (press-sink inverted). */
 @utility switch-track {
 	transition: background-color var(--dur-quick) var(--ease-sheet);
 }
@@ -552,8 +296,7 @@
 	--color-danger-soft: var(--danger-soft);
 	--color-scrim: var(--scrim);
 
-	/* Exposed as utilities rather than consumed through a `style` attribute;
-	   `marks.ts` holds the six class pairs as literals, and says why. */
+	/* `marks.ts` holds the six class pairs as literals. */
 	--color-tpl-amber: var(--tpl-amber);
 	--color-tpl-amber-soft: var(--tpl-amber-soft);
 	--color-tpl-teal: var(--tpl-teal);
@@ -568,9 +311,7 @@
 	--color-tpl-slate-soft: var(--tpl-slate-soft);
 	--color-tpl-on: var(--tpl-on);
 
-	/* `inline` matters here: the value stays a live `var()`, so `min-h-row`
-	   resolves through the pointer media query above instead of being frozen
-	   at build time. */
+	/* `inline` keeps these live `var()`s, so `min-h-row` resolves through the pointer query instead of freezing at build. */
 	--spacing-chrome: var(--target-chrome);
 	--spacing-chip: var(--target-chip);
 	--spacing-row: var(--target-row);
@@ -582,11 +323,7 @@
 @theme {
 	--font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
 
-	/* The design's scale replaces Tailwind's rather than sitting beside it —
-	   `initial` clears the namespace first so a step we did not choose cannot
-	   be reached by accident. 11 and 13 carry the dense labels and have no
-	   Tailwind equivalent; 32 and 40 are the display numerals, which the
-	   design used raw and unnamed. */
+	/* Replaces Tailwind's scale — `initial` clears the namespace so an unchosen step cannot be reached. */
 	--text-*: initial;
 	--text-xs: 0.6875rem; /* 11 */
 	--text-xs--line-height: 1.35;
@@ -607,108 +344,31 @@
 	--text-4xl: 2.5rem; /* 40 */
 	--text-4xl--line-height: 1;
 
-	/* Display numerals are set tight; caps labels are set loose. Everything
-	   else uses Tailwind's own tracking steps.
-
-	   Two caps steps, not one: 0.12em is right for an 11px section label and
-	   far too loose inside a 13px button, where the word has to stay a word. */
+	/* Two caps steps: 0.12em is right at 11px and far too loose inside a 13px button. */
 	--tracking-numeral: -0.035em;
 	--tracking-label: 0.12em;
 	--tracking-caps: 0.06em;
 
-	/* 8/12/16 are Tailwind's lg/xl/2xl already. 22 is the sheet's top corners
-	   and nothing else, so it is named for that. */
 	--radius-sheet: 1.375rem;
 
-	/* The design's sheet curve. Named here rather than written inline in the
-	   overlay utilities so a panel and anything animating alongside it — a
-	   backdrop, a chip settling — cannot disagree about the easing. */
 	--ease-sheet: cubic-bezier(0.2, 0.8, 0.3, 1);
 
-	/* The app's two durations, sorted by distance travelled and not by owner:
-	   `quick` rearranges something in place, `travel` crosses the screen. The
-	   argument for each number, and for the 20ms between them, is in
-	   `lib/ui/motion.ts`, which declares the same two values as `QUICK_MS` and
-	   `TRAVEL_MS` — a JS animation cannot read a custom property Tailwind
-	   resolves at build time, so each pair is written twice and has to stay one
-	   value. Change one, change its twin.
-
-	   Two motions deliberately sit outside this scale, both with the reasoning
-	   at their site: `press-sink`'s spring, which is feedback rather than
-	   travel, and `RestBar`'s fill, which is a clock rather than a transition. */
+	/* Twinned with `QUICK_MS` / `TRAVEL_MS` in `lib/ui/motion.ts` — JS cannot read a build-time property. Change one, change its twin. */
 	--dur-quick: 160ms;
 	--dur-travel: 180ms;
 
-	/* Safe-area insets as ordinary spacing values: `pb-safe-b`, `pt-safe-t`, … .
-	   Dead without `viewport-fit=cover` in app.html.
-
-	   Three sources, in order of trust. `--safe-area-inset-*` is what a native
-	   shell injects when it knows the real insets; Android WebViews before 140
-	   report `env()` wrongly, so on the surface that matters most the browser is
-	   the least reliable of the three. `env()` is the answer everywhere else, and
-	   `0px` is the floor — without it an unresolvable `env()` makes the whole
-	   declaration invalid and the utility silently does nothing, which is the
-	   same failure `viewport-fit` was guarding against. */
+	/* Safe-area insets; dead without `viewport-fit=cover` in app.html. The shell-injected
+	   `--safe-area-inset-*` outranks `env()` (Android WebViews before 140 misreport it); the 0px floor
+	   keeps an unresolvable `env()` from invalidating the whole declaration. */
 	--spacing-safe-t: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
 	--spacing-safe-b: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
 	--spacing-safe-l: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
 	--spacing-safe-r: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
 }
 
-/* The app has three content widths, named here rather than written as a
-   `max-w-*` at each call site. Written by hand they had already drifted to four
-   different numbers across five screens, none of which was a decision — a new
-   screen should reach for the job it is doing, not guess a number.
-
-   `column-content` is a screen that holds content: Exercises and its detail,
-   the Workout pane, History. The cap is not generosity, it is the set row —
-   stretched across a wide monitor it puts the weight and the reps a hand apart,
-   and the pair has to be read as one thing.
-
-   `column-action` is a screen that is one decision: Start, sign-in. These do
-   not grow with the window, because a lone button 768px wide is worse than a
-   narrow column, not better.
-
-   `column-board` is a screen of cards read side by side, which today is
-   Progress alone. It exists because that screen cannot take the step *down*
-   the next paragraph describes: its cards stacked in a 576px column made a
-   desk window scroll to reach a figure a phone could already see, and the
-   cap that pays for the Workout rail buys nothing on a screen that has no
-   rail. Wider, but still capped and still one step of the same scale — a row of
-   name-then-number has the set row's problem in miniature, and 56rem in two
-   columns puts each pair back within one glance. It grows at `lg` and not
-   before: below it there is no room for a second column and the phone cap is
-   already right.
-
-   All three centre themselves and none sets a gutter: horizontal padding belongs
-   to the screen, which knows whether its rows bleed to the edge. It goes inside
-   the cap — on the element carrying it or on a child, never on a wrapper around
-   it. The top bar's column and the page's column are two different boxes with
-   the same cap, and padding on opposite sides of it is how they end up 12px out
-   of true with each other, which is visible and reads as a mistake.
-
-   The breakpoint is `lg`. Everything that changes shape between a phone and a
-   desk — the nav bar swapping ends, Start's thumb-zone anchor — changes there,
-   so there is one number to hold in your head and nothing that can half-flip at
-   a width nobody tested.
-
-   Which is why `column-content` itself steps down at `lg`, from 48rem to 36rem:
-   the Workout rail floats in the gutter left over beside this cap, and the
-   gutter is (window − cap) / 2. Behind the old 48rem a 208px card sitting 32px
-   off the column needed 240px of gutter, which no window under 1248px has — so
-   the rail waited for `xl`, and every laptop in between got the top bar but not
-   the rail: a screen with room to spare and a sheet where a sidebar should be.
-   At 36rem the same card with 16px of air fits at exactly 1024px —
-   576 + 2 × (208 + 16) = 1024, which is `lg` to the pixel — so the rail arrives
-   with the bar and there is no band where the desk layout is only half itself.
-   Below `lg` there is no rail and no reason to give the width back, so the cap
-   stays 48rem there: a tablet reads at the width it always did.
-
-   `xl` is the one exception left, and it is arithmetic rather than taste: the
-   rail grows from 208px to 288px when the gutter can pay for it, and
-   576 + 2 × (288 + 16) = 1184 first clears at a breakpoint at 1280px — `xl`,
-   rather than a third number nobody else uses. Nothing else may take `xl` for
-   a reason that is not this one, and nothing takes `2xl` at all. */
+/* The three content widths. `column-content` steps *down* at lg so the workout rail fits the gutter:
+   576 + 2 × (208 + 16) = 1024, lg to the pixel. `xl` is the 288px rail's same arithmetic — nothing
+   else may take it, and nothing takes 2xl. */
 @utility column-content {
 	width: 100%;
 	max-width: var(--container-3xl);
@@ -724,13 +384,6 @@
 	max-width: var(--container-3xl);
 	margin-inline: auto;
 
-	/* Up rather than down, the one cap that moves the other way — and only one
-	   step, to 4xl. It is `column-content`'s phone width below `lg`, because a
-	   single column of cards is what a phone has room for either way, so the two
-	   screens either side of a tab tap are the same width until the layout
-	   actually changes. 56rem leaves 32px of gutter at 1024px, the width this
-	   fires at; the same step again would have the cards touching the window
-	   edge there, and `xl` is spoken for. */
 	@media (width >= theme(--breakpoint-lg)) {
 		max-width: var(--container-4xl);
 	}
@@ -742,16 +395,8 @@
 	margin-inline: auto;
 }
 
-/* Two recipes that were being copied by hand into every control. Both take
-   `var(--accent-text)` and not `var(--color-accent-text)`: the `--color-*`
-   names live in `@theme inline`, which inlines its values into the utilities
-   that use them rather than promising a custom property at runtime. The
-   `--accent-text` on `:root` is an ordinary property and is always there.
-
-   `focus-ring` is the outward form and `focus-ring-inset` the one for a
-   control that fills its box — a key in the pad grid, a row in the set list —
-   where an outward ring would be clipped by the parent. Which of the two a
-   control wants is the only decision left at the call site. */
+/* `var(--accent-text)`, not `var(--color-accent-text)`: `@theme inline` inlines its values — only the
+   `:root` property exists at runtime. Inset is for a control that fills its box. */
 @utility focus-ring {
 	&:focus-visible {
 		outline: 2px solid var(--accent-text);
@@ -766,14 +411,8 @@
 	}
 }
 
-/* The third form, for a control whose focus target is an input inside it but
-   whose visible shape is the whole box — StepperField, where a ring hugging
-   the bare number in the middle read as a fragment of the field lighting up.
-   `:has(input:focus)` and not `:focus-within`: the stepper's arms live in the
-   same box and carry their own inset rings, and a held + must not light the
-   whole field around it. Plain `:focus` rather than `:focus-visible` because
-   every engine already treats a focused text input as focus-visible — the ring
-   follows a tap exactly as it follows a Tab. */
+/* `:has(input:focus)`, not `:focus-within` — the stepper's arms carry their own rings and must not
+   light the whole field. Plain `:focus`: engines already treat a focused text input as focus-visible. */
 @utility focus-ring-within {
 	&:has(input:focus) {
 		outline: 2px solid var(--accent-text);
@@ -781,23 +420,8 @@
 	}
 }
 
-/* The one box every value is typed or picked into: Input, Textarea,
-   SearchField, and the triggers on Select and DatePicker. Outlined with a
-   transparent fill rather than the `sunken` well the numpad and stepper use,
-   for a reason the depth scale makes unavoidable — in dark, `--sunken` and
-   `--canvas` are the same swatch, so a sunken field sitting on the page rather
-   than inside a card disappears. Sign-in and Settings are exactly that page.
-   Outlined also makes a field and a secondary Button read as siblings in the
-   same form, which they are.
-
-   Border *colour* is deliberately absent: the call site passes `border-line`
-   or `border-danger`, so the valid and invalid cases never both land in the
-   class attribute and Tailwind is never asked to break a tie by stylesheet
-   order. Height is absent for the same reason — a Textarea is not `min-h-row`.
-
-   Nunito's own placeholder colour would inherit `--ink`; `--ink-faint` is what
-   the design uses for a value that is a suggestion rather than a claim, and
-   it is the same distinction the numpad draws before its first keypress. */
+/* Border colour and height deliberately absent — the call site passes `border-line` or
+   `border-danger`, so Tailwind is never asked to break a tie by stylesheet order. */
 @utility field-box {
 	width: 100%;
 	border-radius: var(--radius-xl);
@@ -820,10 +444,6 @@
 	}
 }
 
-/* The `field-box` a value is *picked* into rather than typed into: the Select
-   and DatePicker triggers, which are buttons wearing a field's clothes. Named
-   because those two were otherwise the same sixty-character class string in two
-   files, which is the drift `field-box` itself was extracted to stop. */
 @utility field-trigger {
 	display: flex;
 	align-items: center;
@@ -832,58 +452,13 @@
 	text-align: left;
 }
 
-/* The layered surfaces: the scrim behind them, the skin they share, and the
-   geometries laid over it. A panel is written `overlay-panel overlay-sheet` or
-   `overlay-panel overlay-centred` — the skin is named once so the confirm
-   dialog and the sheet cannot drift apart in surface, border or height.
-
-   Sheet takes `overlay-sheet` — a bottom sheet within thumb reach on a phone, a
-   centred dialog from `sm` up, because a sheet welded to the bottom edge of a
-   1400px window is a phone habit rather than a layout.
-
-   Select and DatePicker take `overlay-sheet` below `sm` and `overlay-menu` from
-   `sm` up, and that swap is made in JS against `viewport.ts` rather than here.
-   A picker is not a dialog: it has a trigger, and on a pointer that can be
-   parked anywhere the answer belongs under the question rather than in the
-   middle of the window with the page dimmed behind it. What the stylesheet
-   cannot do is make Bits UI anchor the list — that is `Content` instead of
-   `ContentStatic`, a different element, so the decision has to be structural.
-   The phone case is unchanged and stays the reason `overlay-sheet` exists: a
-   list anchored to a trigger near the top of a tall phone opens where a thumb
-   cannot reach.
-
-   `overlay-menu` therefore carries no position of its own — Floating UI owns
-   the anchored element's coordinates, and a `position: fixed` from
-   `overlay-panel` would fight it — which is why it is a whole skin rather than
-   a third geometry laid over that one.
-
-   AlertDialog takes `overlay-centred` and is deliberately the one overlay that
-   does not rise from the bottom. A confirm that looks like the set-options
-   sheet inherits the reflex to dismiss the set-options sheet, and "delete this
-   template" is not a thing to dismiss by muscle memory.
-
-   Utilities rather than four copied class lists, for the reason `label-caps`
-   is one: a recipe in four files drifts in three of them. The cost is paid
-   here — an `@utility` body takes real media queries and real attribute
-   selectors, not Tailwind's `sm:` and `data-[…]:` variants — so `theme()`
-   reads the breakpoint rather than 40rem being spelled out again.
-
-   `[data-starting-style]` and `[data-ending-style]` are Bits UI's enter and
-   exit hooks. Both states are identical in each utility, so a panel leaves
-   along the path it arrived on.
-
-   `max-height` is set here and was not set on the hand-rolled sheet: content
-   long enough to matter (a twenty-row Select, a six-week month) grows a
-   bottom-anchored panel straight off the top of the viewport, and the
-   scrolling region inside it never gets the chance to scroll. */
+/* Overlay skins: a panel is `overlay-panel` plus one geometry. `[data-starting-style]` /
+   `[data-ending-style]` are Bits UI's enter and exit hooks. */
 @utility overlay-scrim {
 	position: fixed;
 	inset: 0;
 	z-index: 40;
 	background-color: var(--scrim);
-	/* The panel's own duration and curve: the backdrop is part of the same
-	   gesture, and a scrim still settling under a sheet that has arrived is the
-	   disagreement `--ease-sheet` exists to prevent. */
 	transition: opacity var(--dur-travel) var(--ease-sheet);
 
 	&[data-starting-style],
@@ -897,26 +472,15 @@
 	z-index: 50;
 	display: flex;
 	flex-direction: column;
-	/* Named rather than written straight into `max-height`, because the drawer
-	   has to lower this ceiling when the keyboard is up and must not have to
-	   restate the number to do it. */
+	/* Named so the drawer can lower the ceiling when the keyboard is up. */
 	--panel-cap: 85dvh;
 	max-height: var(--panel-cap);
 	background-color: var(--surface);
 	color: var(--ink);
 }
 
-/* The one rung above the pair. An overlay opened *from* an overlay — today only
-   the Weight log's Delete, asked from the edit sheet that names the day — sits
-   at 40/50 like everything else, which puts its scrim under the panel that
-   raised it: the page behind dims and the sheet in front of it does not, so two
-   panels compete at full brightness for the same eye.
-
-   Both the scrim and the panel take it, and they land on the same number
-   deliberately. Painting order inside one portal is DOM order, and bits UI
-   renders the overlay before the content, so the panel is above its own scrim
-   without a second rung — while a third overlay, if there is ever one, would
-   need this same treatment rather than inheriting a gap nobody documented. */
+/* An overlay opened from an overlay. Scrim and panel share the rung on purpose: within one portal,
+   DOM order already paints the panel above its own scrim. */
 @utility overlay-stacked {
 	z-index: 70;
 }
@@ -927,11 +491,8 @@
 	border-top: 1px solid var(--line);
 	border-start-start-radius: var(--radius-sheet);
 	border-start-end-radius: var(--radius-sheet);
-	/* Clear of the gesture bar, but never less than the design's own padding. */
 	padding-bottom: max(1.25rem, var(--spacing-safe-b));
 
-	/* The sheet rises. Its opacity is untouched below `sm` — a panel that fades
-	   while it travels reads as slower than one that simply arrives. */
 	transition:
 		translate var(--dur-travel) var(--ease-sheet),
 		opacity var(--dur-travel) var(--ease-sheet);
@@ -953,7 +514,6 @@
 		border-radius: var(--radius-sheet);
 		padding-bottom: 1.25rem;
 
-		/* Centred, it only fades: a centred box sliding is noise. */
 		&[data-starting-style],
 		&[data-ending-style] {
 			translate: -50% -50%;
@@ -962,29 +522,9 @@
 	}
 }
 
-/* The anchored picker list: Select's options and DatePicker's month from `sm`
-   up. Elevation rather than a scrim, because nothing is dimmed — the page stays
-   readable under a list that is a continuation of the field, not a mode.
-
-   `--radius-xl` and not `--radius-sheet`: this hangs off a `field-box` and
-   reads as the same object, where 22px corners would read as a sheet that lost
-   its way. `shadow-lg` is `@apply`ed rather than written as `var(--shadow-lg)`
-   so Tailwind counts the usage — a theme variable nothing references is not
-   emitted, and the shadow would quietly vanish the day Tooltip stops using it.
-
-   No `max-height` here, unlike `overlay-panel`: the ceiling is Floating UI's
-   `--bits-*-content-available-height`, which knows how much room is left below
-   the trigger, and the variable is namespaced per component so the call site
-   is the only place that can name it.
-
-   The list arrives 4px above where it lands, the direction a menu falls open,
-   and it only travels: a panel that fades while it moves reads as slower than
-   one that simply arrives, and this one has somewhere to go. The scrim and the
-   centred dialog keep their fades because they do not.
-
-   `--dur-quick` and not `--dur-travel`: this crosses a hairline rather than the
-   screen, which is the same reason a card growing in place gets the shorter
-   number. It was 120ms and a fifth duration of its own before the scale. */
+/* The anchored picker list. `shadow-lg` is `@apply`ed so Tailwind counts the usage — an unreferenced
+   theme variable is not emitted. No `max-height`: the ceiling is Floating UI's per-component
+   available-height variable, named at the call site. */
 @utility overlay-menu {
 	z-index: 50;
 	display: flex;
@@ -1024,36 +564,19 @@
 	}
 }
 
-/* The drawer: what Sheet wears below `sm`, where vaul-svelte drives the panel.
-   vaul owns every movement — the drag follows the finger through inline
-   transforms, and a release settles or dismisses on the library's own 0.5s
-   curve — so this skin is `overlay-sheet`'s phone geometry with the motion
-   removed. The `translate` transition and `[data-starting-style]` rules cannot
-   come along: two owners for one panel's position play against each other. */
+/* `overlay-sheet`'s phone geometry with the motion removed — vaul owns the panel's position, and two
+   owners for it play against each other. */
 @utility overlay-drawer {
 	inset-inline: 0;
 	bottom: 0;
 	border-top: 1px solid var(--line);
 	border-start-start-radius: var(--radius-sheet);
 	border-start-end-radius: var(--radius-sheet);
-	/* Clear of the gesture bar, but never less than the design's own padding. */
 	padding-bottom: max(1.25rem, var(--spacing-safe-b));
 }
 
-/* The session overview docked to the left edge, below `lg` — the same
-   `SessionList` the rail holds above it, arriving from the side the rail
-   lives on. Still vaul, still a drawer: `direction="left"` makes the drag
-   horizontal and the flick leftward, so the gesture the bottom sheets teach
-   works here rotated a quarter turn.
-
-   Width is most of the phone but never all of it — the sliver of workout
-   left showing is what says the session is still behind this. The cap keeps
-   a tablet from serving a half-metre list.
-
-   `max-height: none` unsets `overlay-panel`'s 85dvh: that ceiling exists so
-   a bottom sheet cannot swallow the screen, and a side drawer's whole job is
-   the full height. Safe insets are the drawer's own problem — it stands
-   under the status bar where page content never does. */
+/* The left session drawer. `max-height: none` unsets the 85dvh cap — a side drawer's job is the full
+   height; safe insets are its own problem, it stands under the status bar. */
 @utility overlay-drawer-left {
 	inset-block: 0;
 	left: 0;
@@ -1067,10 +590,8 @@
 	padding-left: var(--spacing-safe-l);
 }
 
-/* The scrim under the drawer. `overlay-scrim`'s 180ms opacity transition would
-   turn every drag frame — vaul writes the overlay's opacity inline as the
-   panel moves — into a tween running behind the finger. Static color; the
-   fade in and out is vaul's, in the keyframes below. */
+/* Static colour on purpose: vaul writes the overlay's opacity inline on every drag frame, and a
+   transition would tween behind the finger. */
 @utility overlay-scrim-drawer {
 	position: fixed;
 	inset: 0;
@@ -1078,94 +599,32 @@
 	background-color: var(--scrim);
 }
 
-/* Stamped on <html> by DragOrder for exactly the length of a lift. The first
-   crossing relocates the row's node and clears pointer capture, so from then
-   on the cursor is hit-tested against whatever the row is passing — a drag
-   that flickers through text-beams and pointers. This holds it at `grabbing`
-   for the duration, and the selection rule keeps a mouse that lifted
-   mid-sentence from painting a selection under the travelling row. Unlayered
-   on purpose: it has to win over the grip's own `cursor-grab` utility. */
+/* Stamped on <html> by DragOrder for the length of a lift. Unlayered on purpose — it has to win over
+   the grip's own `cursor-grab`. */
 .drag-in-hand,
 .drag-in-hand * {
 	cursor: grabbing;
 	user-select: none;
 }
 
-/* vaul's base stylesheet, cut to what the app renders: a bottom drawer with no
-   snap points. The enter and the exit ride these `data-vaul-*` attributes, so
-   the rules are restated here from the upstream package.
-
-   These are duplicates, not the only copy. vaul-svelte ships this same block in
-   a `<style global>` inside `drawer.svelte`, which lands *after* `app.css` in
-   the bundle — so at equal specificity the library wins every tie. Anything
-   here that merely matches upstream is inert but harmless; anything here that
-   *disagrees* with upstream is silently dead. See the pair below. */
+/* Restated from vaul-svelte, which ships the same rules in a `<style global>` that loads *after*
+   app.css — at equal specificity the library wins every tie, so any disagreement here is silently dead. */
 [data-vaul-drawer] {
 	touch-action: none;
 	will-change: transform;
 	transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* The drawer's enter and exit, and the one rule here that has to beat vaul
-   rather than echo it.
-
-   A drawer is a sheet wearing the phone's geometry, so it arrives and leaves on
-   `--dur-travel` like every other panel. At the library's 0.5s it was the
-   slowest motion in the app by nearly triple, on the platform the app is
-   actually used on.
-
-   The extra class is load-bearing and is the whole reason this is a second
-   rule. Upstream's selector is a bare `[data-vaul-drawer]` — one attribute, and
-   it loads last — so writing these two declarations into the block above sets
-   them and then watches the library overwrite them, which is exactly what it
-   did. `.overlay-panel` is on both drawers the app renders, the bottom sheet
-   and the workout overview, so one class covers both and outranks upstream by a
-   full step. Verified by computed style, not by reading: the first attempt read
-   `animation-duration: 0.5s` off a live drawer with `var(--dur-travel)` sitting
-   right there in the stylesheet.
-
-   Only `animation-*` is ours. `transition: transform` above keeps the library's
-   0.5s and the library's curve, because vaul re-writes that same declaration
-   inline on every release from `TRANSITIONS.DURATION`, a module constant with
-   no prop behind it — the only ways to reach it are patching the dependency or
-   an `!important`, and neither is worth it for the one case it shows in:
-   dragging a sheet partway and letting go without dismissing it.
-
-   Note what that split does not cost. The exit already outruns vaul's unmount
-   timer — `use-drawer-root` clears the portal on `afterSleep(DURATION * 1000)`
-   regardless of what the CSS did — so a dismissed drawer is gone at 180ms and
-   mounted until 500ms either way. That is the library's, not this choice's, and
-   it is invisible because the panel is off-screen for all of it. */
+/* The extra class is load-bearing: upstream's bare `[data-vaul-drawer]` loads later and wins ties.
+   Only `animation-*` is ours — vaul rewrites `transition: transform` inline from a module constant. */
 [data-vaul-drawer].overlay-panel {
 	animation-duration: var(--dur-travel);
 	animation-timing-function: var(--ease-sheet);
 }
 
-/* The sheet with the OS keyboard up. `--sheet-keys` is how far off the bottom a
-   fixed box has to sit to stand on the keys — `dockBottom`, not the keys' own
-   height, since the browser pans the visual viewport under a focused field and
-   the two part company — and `--sheet-pane` is the strip left above them. Both
-   are written onto this node by Sheet.svelte and both are absent whenever no
-   keyboard is showing, which is why every value here falls back to the geometry
-   the drawer has always had. Nothing about a sheet at rest changes.
-
-   `bottom` stands the panel on the keys. The ceiling comes down to the strip so
-   the top edge cannot be pushed off the screen, and a sheet with more content
-   than fits — the exercise picker's list — grows into whatever the strip gives
-   it while a two-field sheet keeps its own height and simply rides up. The
-   gesture-bar inset is subtracted back out of the padding: the keyboard is
-   standing on the gesture bar, so paying for it twice is dead space at the
-   moment there is least to spare.
-
-   The doubled selector is not decoration. vaul-svelte ships these same
-   `[data-vaul-drawer]` rules in a `<style global>` of its own, so a single
-   attribute selector here would be a coin toss on bundle order.
-
-   `transform` is restated because a `transition` shorthand replaces the whole
-   list, and dropping vaul's leg would leave a released drag to snap back
-   instead of settle. `bottom` and `max-height` both move the top edge and so
-   have to travel together, on the sheet's own 180ms rather than the drag's
-   500ms — this is a panel answering the keyboard, not a panel being thrown. */
+/* Keyboard-up geometry. `--sheet-keys` / `--sheet-pane` are written by Sheet.svelte and absent when no
+   keyboard shows. The doubled selector beats vaul's own global rules; `transform` is restated because
+   the `transition` shorthand would drop vaul's leg and a released drag would snap instead of settle. */
 [data-vaul-drawer].overlay-drawer {
 	bottom: var(--sheet-keys, 0px);
 	max-height: min(
@@ -1196,15 +655,8 @@
 	animation-name: vaul-slide-to-left;
 }
 
-/* The scrim travels with the panel it dims, so it takes the same number the
-   panel's enter and exit now take. Vaul writes this element's opacity inline
-   during a drag, which those frames own; this is only the fade at each end.
-
-   Three selectors deep, and count them before shortening it. Upstream's rule is
-   `[data-vaul-overlay][data-vaul-snap-points='false']` — two — so the obvious
-   `[data-vaul-overlay].overlay-scrim-drawer` ties at two and loses on order,
-   the same way the panel did. Both attributes plus the class is what clears it.
-   `.overlay-scrim-drawer` is on both drawers' overlays. */
+/* Both attributes plus the class on purpose: upstream's two-part rule loads later, and a two-part
+   selector here would tie and lose on order. */
 [data-vaul-overlay][data-vaul-snap-points='false'].overlay-scrim-drawer {
 	animation-duration: var(--dur-travel);
 	animation-timing-function: var(--ease-sheet);
@@ -1222,25 +674,13 @@
 	animation: none !important;
 }
 
-/* A drawer that is already on screen when it opens.
-
-   vaul's own `data-vaul-animate` is not this: it is false for exactly the first
-   frame of a drawer mounted open and true from the next one on, which is a
-   hydration concern and not reachable from a call site. The workout pane needs
-   the same suppression on demand — a swipe drags a stand-in panel all the way
-   in and then hands over to the real drawer, and a slide from the edge —
-   whatever its duration — would be that panel leaving and coming back.
-
-   Keyed on the open state alone, so a drawer that arrived silently still leaves
-   normally — and so the class can be taken off the moment it closes
-   without handing `animation-name` back to an element still in `[data-state=
-   'open']`, which would replay the entrance it was there to prevent. */
+/* On-demand entrance suppression — vaul's own `data-vaul-animate` is hydration-only. Keyed on the open
+   state so a drawer that arrived silently still leaves normally. */
 .drawer-instant[data-state='open'] {
 	animation: none !important;
 }
 
-/* The tail below the drawer, wearing the drawer's own surface: an overdrag
-   upward would otherwise open a gap between the panel and the screen edge. */
+/* Overdrag tail: no gap between the panel and the screen edge. */
 [data-vaul-drawer][data-vaul-drawer-direction='bottom']::after {
 	content: '';
 	position: absolute;
@@ -1252,8 +692,7 @@
 	background-color: inherit;
 }
 
-/* The left drawer's tail, same argument rotated: an overdrag rightward must
-   not open a gap along the screen's left edge. */
+/* Same, rotated for the left drawer. */
 [data-vaul-drawer][data-vaul-drawer-direction='left']::after {
 	content: '';
 	position: absolute;
@@ -1265,28 +704,8 @@
 	background-color: inherit;
 }
 
-/* The grab handle, in the app's neutrals rather than vaul's grey. The hitarea
-   is the library's: the visible pill is 8px tall and the touch target is not
-   allowed to be.
-
-   Bigger than vaul's own 5x32, and bigger than the iOS grabber both are copying,
-   because `--line` is the hairline border colour and at 5px the pill read as one
-   more rule rather than as the one part of the sheet you are meant to grab. The
-   colour is the constraint here: size is what is left to carry it, so it takes a
-   real step rather than a polite one.
-
-   The selector is doubled, and that is the load-bearing part. vaul-svelte styles
-   its own handle from inside the drawer component — `:global([data-vaul-handle])`
-   with `background: #e2e2e4`, `opacity: 0.7` and 5x32 — which compiles to a plain
-   attribute selector at the same specificity as this one, injected after the
-   stylesheet, so it won on document order. Everything this rule said was true of
-   nothing: the handle has never been `--line`, and in light mode a 70% #e2e2e4 on
-   a white panel is most of why it could not be seen. Doubling the attribute takes
-   the specificity to 0-2-0 and settles it without `!important`.
-
-   `opacity` is reset for the same reason. The library's only other handle rule
-   raises it to 1 on hover and active, so at 0-2-0 the two agree rather than
-   fight. */
+/* The doubled attribute is load-bearing: vaul styles its own handle at equal specificity, injected
+   later. `opacity: 1` so the library's hover rule agrees instead of fighting. */
 [data-vaul-handle][data-vaul-handle] {
 	display: block;
 	position: relative;
@@ -1339,9 +758,7 @@
 	}
 }
 
-/* Plain -100% where the bottom pair reads `--initial-transform`: that
-   variable is vaul's nested-drawer offset, always phrased for the positive
-   axis, and the app nests nothing. */
+/* Plain -100%: `--initial-transform` is vaul's nested-drawer offset, and the app nests nothing. */
 @keyframes vaul-slide-from-left {
 	from {
 		transform: translate3d(-100%, 0, 0);
@@ -1357,34 +774,9 @@
 	}
 }
 
-/* Route changes slide; `nav/transitions.ts` decides how and stamps one
-   attribute on <html> — `data-nav`, the direction. The box that travels is `vt-page`,
-   which the `(app)` layout owns so that both halves of every navigation are
-   the same rectangle. Only stacked screens travel, and only on a touchscreen;
-   `nav/move.ts` and `slidingWanted` own those two rules respectively, so
-   nothing here needs to ask.
-
-   NOTE THE MISSING SPACE, in every rule below that names an attribute. These
-   pseudo-elements originate from the *document element itself*, not from
-   anything inside it, so `html[data-nav='push'] ::view-transition-old(page)`
-   with a descendant combinator asks for a snapshot originating from some
-   descendant of <html> — which never exists, and the rule silently never
-   matches. That was the bug: written with the space, all four direction rules
-   were dead, the UA's default crossfade survived underneath them, and every
-   route change in this app was a fade on the duration below — 250ms at the
-   time, which is where that number went. It looked like nothing at all on
-   a phone, where the two screens are similar enough that a fade reads as a
-   repaint, and like a morphing blur on a desk. Rules without a combinator —
-   the duration below, `root` — matched all along, which is why the layer
-   looked half-alive rather than absent.
-
-   The travel is parallax: the pane being covered gives up 30% while the
-   arriving one crosses everything, and that difference is what says one went
-   behind the other. `root` stays pinned because its snapshots are the desk's
-   top bar, identical on both sides.
-
-   No reduced-motion rule here because none is needed: the JS never opens a
-   transition when the preference is set, per the app's existing idiom. */
+/* Route slides; `nav/transitions.ts` stamps `data-nav` on <html>. NO SPACE before
+   `::view-transition-*`: the pseudo-elements originate from the document element itself, and with a
+   descendant combinator the rule silently never matches. */
 .vt-page {
 	view-transition-name: page;
 }
@@ -1395,22 +787,8 @@
 	animation: none;
 }
 
-/* `--dur-travel`, the same number a sheet rises on: both cross the screen, and
-   a push that took 250ms while the sheet it leads to took 180ms was the app
-   disagreeing with itself about how long "somewhere else" takes. The distance
-   is untouched — the parallax is still 30/100 — so this is the same move, told
-   faster.
-
-   `group` is named alongside `old` and `new`, and leaving it out is a trap worth
-   spelling out. The UA gives every group its own animation — geometry, at a
-   default 250ms — and a transition is not over until its *longest* animation
-   ends. Style only the two halves and the panes stop moving at 180ms while the
-   snapshot overlay hangs on for another 70ms, un-interactive and with nothing
-   drawn moving. Invisible while all three numbers matched, which is why it went
-   unnoticed until they stopped. The group's geometry never changes here — both
-   halves are the same rectangle, per `vt-page` — so this duration governs a
-   no-op and exists purely to end it on time. `root`'s group is killed outright
-   below, for the same reason and by the same argument. */
+/* `group` must be listed too: the UA animates it at a default 250ms, and a transition is not over
+   until its *longest* animation ends. */
 ::view-transition-group(page),
 ::view-transition-old(page),
 ::view-transition-new(page) {
@@ -1418,8 +796,6 @@
 	animation-timing-function: var(--ease-sheet);
 }
 
-/* The arriving pane crosses the whole width; the departing one gives up 30%,
-   which is the parallax. */
 html[data-nav='push']::view-transition-new(page) {
 	animation-name: vt-enter-right;
 }
@@ -1432,21 +808,13 @@ html[data-nav='pop']::view-transition-new(page) {
 	animation-name: vt-return-left;
 }
 
-/* Popping off a stack, the screen being dismissed has to travel *over* the one
-   it uncovers — the returning pane starts at -30%, so it still covers most of
-   the width, and painted on top it would hide the very thing sliding away.
-   Only this one case needs saying: everywhere else the arriving pane belongs
-   in front, which is the paint order the UA already gives. */
+/* The dismissed screen travels *over* the one it uncovers. */
 html[data-nav='pop']::view-transition-old(page) {
 	animation-name: vt-exit-right;
 	z-index: 1;
 }
 
-/* The phone's tab bar. Naming it lifts it out of the pane's snapshot even
-   though it sits inside the box, which is what lets the page slide underneath
-   a bar that does not move — the same bar on both sides of a navigation must
-   not travel, or the whole screen reads as tearing away. Unconditional,
-   because every screen the app navigates to now renders one. */
+/* Named out of the pane's snapshot, so the page slides under a bar that does not move. */
 .vt-tabbar {
 	view-transition-name: tabbar;
 }
@@ -1469,9 +837,6 @@ html[data-nav='pop']::view-transition-old(page) {
 	}
 }
 
-/* The parallax pair. 30% and not 50%: far enough that the eye reads two planes
-   rather than one sheet, near enough that the covered screen is still legibly
-   the place you came from while it goes. */
 @keyframes vt-recede-left {
 	to {
 		transform: translateX(-30%);
@@ -1484,9 +849,6 @@ html[data-nav='pop']::view-transition-old(page) {
 	}
 }
 
-/* The heading on a panel — a sheet, a confirm, an empty state. Same argument as
-   `label-caps` one step up the scale: the recipe was written out in six places
-   and the muted line under it had already drifted between two sizes. */
 @utility title-panel {
 	font-size: var(--text-lg);
 	line-height: var(--text-lg--line-height);
@@ -1494,14 +856,7 @@ html[data-nav='pop']::view-transition-old(page) {
 	letter-spacing: var(--tracking-tight);
 }
 
-/* The surround the active set wears, in the row and in the expanded editor it
-   becomes. Named because the two are the same card in two states and a user
-   scanning for "where am I" at arm's length has to read them as one thing.
-
-   `accent-text`, not `accent`: a lime-500 hairline on a light surface is
-   1.95:1, and this is the one border in the app that has to be found rather
-   than merely noticed. That reasoning is in `SetMark.svelte`; keeping the
-   recipe in two files is how it ends up applying to only one of them. */
+/* `accent-text`, not `accent`: a lime-500 hairline on a light surface is 1.95:1. */
 @utility card-active {
 	border-radius: var(--radius-2xl);
 	border-style: solid;
@@ -1510,36 +865,14 @@ html[data-nav='pop']::view-transition-old(page) {
 	background-color: var(--surface);
 }
 
-/* The card a list of rows sits in: History's workouts, Settings' tokens, a
-   muscle's exercises. Rows used to sit bare on `canvas` with nothing but a gap
-   between them, which on a phone reads as a list and on a 1400px monitor reads
-   as a wash of text with no edges.
-
-   A utility rather than a `<ListGroup>` component because the element differs
-   by screen — `<ul>` where the rows are a collection, `<section>` where they
-   are part of the page's outline — and a wrapper component would either force
-   a `<div>` around those or grow an `as` prop, which is a component earning
-   its keep by taking a parameter that says which component it should have been.
-
-   `overflow: hidden` is what rounds the ends: the first and last rows are
-   square and the card clips them, so no child has to know where it sits in the
-   list. The cost is that an outward focus ring on those rows would be clipped
-   too, hence the inset offset below — the same trade `focus-ring-inset` makes
-   for a key in the numpad, for the same reason.
-
-   The fill is `surface`, so on `canvas` this is a card and inside a Sheet —
-   whose panel is already `surface` — it is border and dividers only. That is
-   deliberate and is why nothing here is conditional on context: the picker is a
-   list you scan against a background you have already dismissed, and grouping
-   it a second step up would be the sheet arguing with itself. */
+/* The card a list of rows sits in. `overflow: hidden` is what rounds the end rows — and why their
+   focus rings go inset. */
 @utility list-group {
 	overflow: hidden;
 	border-radius: var(--radius-2xl);
 	border: 1px solid var(--line-soft);
 	background-color: var(--surface);
 
-	/* Direct children, so a row wrapped in an `<li>` is parted from its
-	   neighbour exactly like a bare one. */
 	& > * + * {
 		border-top: 1px solid var(--line-soft);
 	}
@@ -1552,30 +885,14 @@ html[data-nav='pop']::view-transition-old(page) {
 		outline-offset: -2px;
 	}
 
-	/* Mid-drag the card stops clipping, because what it clips is the gesture. A
-	   lifted row is translated, scaled 2% and carrying a shadow, and every one
-	   of those is drawn outside the box `overflow: hidden` keeps it in — at the
-	   ends of the list it was sheared off outright.
-
-	   The clip costs nothing to give up for the length of a lift: what it buys
-	   the rest of the time is corners on the first and last row's fill, and a
-	   row is only filled under a finger. During a lift that finger is on the
-	   airborne row, and the row it left behind is the sunken slot. */
+	/* A lifted row is translated, scaled and shadowed — all drawn outside the clip, so give it up for the lift. */
 	&:has([data-lifted]) {
 		overflow: visible;
 	}
 }
 
-/* The caret the ruler's band draws while a value is being typed.
-
-   It is a picture of a caret and not one: the real insertion point belongs to
-   the stepper's own input, which the ruler is covering. The band is the only
-   place the value shows once the panel is up, so it has to show the state the
-   field is in as well as the number, and a bar that blinks is the one mark
-   every user already reads as "keep typing".
-
-   `steps(1, end)` rather than a fade — a caret that dissolves is a caret that
-   looks like it is being deleted, and nothing in this app fades. */
+/* A picture of a caret — the real one is in the input the ruler covers. `steps(1)`: a fading caret
+   reads as deleting. */
 @utility caret-band {
 	display: inline-block;
 	width: 2px;
@@ -1595,9 +912,6 @@ html[data-nav='pop']::view-transition-old(page) {
 	}
 }
 
-/* Every small caps label in the app — section headings, field names, the
-   add-set row. Five utilities that had drifted to four in one place before
-   this became a single name. */
 @utility label-caps {
 	font-size: var(--text-xs);
 	line-height: var(--text-xs--line-height);
@@ -1614,30 +928,19 @@ html[data-nav='pop']::view-transition-old(page) {
 	}
 
 	body {
-		/* DESIGN.md: 600 and 700 are the workhorses; 400 is the exception. */
 		font-weight: 600;
-		/* Nunito's digits are already uniform-width, so this is insurance for the
-		   day the face is swapped — not the thing making the timer stop twitching. */
+		/* Insurance for a face swap — Nunito's digits are already uniform-width. */
 		font-variant-numeric: tabular-nums;
 	}
 
-	/* Anchors as well as buttons: half the tappable surfaces in the app are
-	   links — plan cards, exercise rows, history rows, every tab — and left out
-	   of this they flash Android's blue highlight over a press state that has
-	   already answered the finger. Two systems replying to one tap. */
+	/* Anchors too: half the tappable surfaces are links, and Android's blue flash is a second reply to one tap. */
 	button,
 	a,
 	[role='button'] {
 		-webkit-tap-highlight-color: transparent;
 		touch-action: manipulation;
 
-		/* Selection is disabled for fingers only. On touch it stops Android raising
-		   selection handles part-way through a long-press on a set row; on a mouse
-		   it would just prevent a user copying a weight, so it is not applied.
-
-		   The callout goes with it: the handles are only half of what a long press
-		   summons on Android, and the menu offering to copy or share the text under
-		   the finger arrives on top of the surface the gesture was actually for. */
+		/* Touch only: stops Android's selection handles and callout mid long-press; a mouse may still copy a weight. */
 		@media (pointer: coarse) {
 			user-select: none;
 			-webkit-user-select: none;

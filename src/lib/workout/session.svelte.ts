@@ -97,14 +97,6 @@ export class WorkoutSession {
 		rateSet(this.workout, setId, rpe);
 	}
 
-	/**
-	 * The id is the answer because the cursor has already left by the time this
-	 * returns, and what a commit earns in rest is a question about the set that
-	 * was just finished, not the one now in front of the user. Asked by the
-	 * screen rather than answered here: this class knows the tree and the
-	 * history, and nothing about the user's rest settings or the timer they
-	 * drive.
-	 */
 	public commit(weight: number, reps: number): string | null {
 		const id = this.activeSetId;
 
@@ -218,19 +210,6 @@ export class WorkoutSession {
 		relocateEntry(this.workout, entryId, index);
 	}
 
-	/**
-	 * Trade a superset leg with the one above it, mid-session.
-	 *
-	 * The cursor is deliberately left alone. It holds a *set* id, and no set
-	 * changes hands here — the same set stays open on the same exercise, and only
-	 * the order the pane interleaves them in moves. A lifter who reorders while
-	 * standing at the rack keeps the set they were about to log, which is the
-	 * in-gym rule's answer: the reorder is a change of plan, never a change of
-	 * where they are in it.
-	 *
-	 * Nothing is destroyed either, so nothing is confirmed — unlike swap and
-	 * remove, which take logged sets with them and ask first.
-	 */
 	public moveExercise(exerciseId: string): void {
 		relocateExercise(this.workout, exerciseId, -1);
 	}

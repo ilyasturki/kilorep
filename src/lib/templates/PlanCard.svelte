@@ -31,11 +31,6 @@
 
 	const shape = $derived(planShape(exercise));
 
-	/**
-	 * `Rest 3:00`, `No rest`, or nothing at all — see the markup below for why
-	 * the third case is most cards. Silent while rest is switched off in
-	 * Settings, where the whole subject is moot.
-	 */
 	const restNote = $derived.by(() => {
 		if (!restSettings.current.enabled || exercise.restSeconds === undefined) {
 			return null;
@@ -54,28 +49,6 @@
 		onreps(shape.reps === null ? PLANNED_REPS : shape.reps + 1);
 	}
 
-	/**
-	 * `−` lowers the target, and the bottom of the scale is Open.
-	 *
-	 * That last clause is the whole of what used to be a "Clear target" button on
-	 * a row of its own under this one. The row was there because a range or a
-	 * mixed plan had no way back to Open at all — both arms are dead on those,
-	 * since there is no single number to step from — so the only control that
-	 * could reach Open was one that stood outside the stepper and duplicated its
-	 * job.
-	 *
-	 * It is not the same journey from every kind, and it cannot be: from a fixed
-	 * target `−` counts down and Open is the step past 1, while from a range or a
-	 * mixed plan there is no number to count down *from*, so Open is the next step
-	 * immediately. Both are the same sentence — the arm moves toward Open and gets
-	 * there — and neither reading leaves a plan stuck with a target it cannot
-	 * take back.
-	 *
-	 * `+` stays dead on a range and a mixed plan. Lowering an unequal target has
-	 * an obvious floor to collapse to and raising it has no obvious ceiling, so
-	 * the way back up is through Open and the per-set panel below, which is where
-	 * an unequal target was written in the first place.
-	 */
 	function lowerShared() {
 		if (shape.reps === null) {
 			onreps(null);
@@ -105,9 +78,6 @@
 
 <section class="flex flex-col gap-2 rounded-2xl border border-line-soft bg-surface p-3">
 	<div class="flex items-center gap-1">
-		<!-- The hold lands on the title and not on the card, because the card also
-		     carries the steppers, and holding a + to add a set is not a request for
-		     this exercise's menu. The title is the row that *is* the exercise. -->
 		<h2 class="min-w-0 flex-1">
 			<a
 				href="/exercises/{meta.id}"
@@ -171,11 +141,6 @@
 		</button>
 	</div>
 
-	<!-- Only where the plan disagrees with what this exercise would rest anyway.
-	     A line under every card would print the default back at the user on all
-	     of them — this one is here to say *this card is different*, which is the
-	     only thing about a rest a plan can say that is worth a glance. It is not
-	     a control: the sheet behind ⋯ owns the value. -->
 	{#if restNote !== null}
 		<p class="px-1 text-sm font-bold text-ink-faint">{restNote}</p>
 	{/if}

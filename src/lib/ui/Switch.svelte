@@ -43,10 +43,6 @@
 		{/if}
 	</span>
 
-	<!-- No `overflow-hidden` on the well. The thumb grows past its housing by
-	     under a pixel at each edge while the finger is down, and clipping that
-	     would turn a thumb pressing against its track into a thumb losing its
-	     rim. See `switch-thumb` in app.css for the numbers. -->
 	<span
 		class="flex h-7 w-12 shrink-0 items-center rounded-full border border-line bg-line-soft
 			p-0.5 switch-track group-data-[state=checked]:bg-accent"

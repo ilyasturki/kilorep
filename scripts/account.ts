@@ -16,32 +16,6 @@ import { getDatabase } from '../src/lib/server/db/client.ts';
 import { databasePath } from '../src/lib/server/db/config.ts';
 import { runMigrations } from '../src/lib/server/db/migrate.ts';
 
-/**
- * How a real instance gets its first account.
- *
- * The alternative was a registration endpoint, and it does not survive the
- * bootstrap: a fresh database has no accounts, so the flag would have to be
- * turned on, used, turned off and the server restarted — and during that window
- * anyone who can reach the instance can claim it. This runs on the machine, so
- * the password never crosses a network, never enters the environment where
- * `docker inspect` can read it, and never appears in a log.
- *
- * The password is read from stdin and never from `process.argv`: an argument is
- * visible in `ps` to every user on the box, and it is written to shell history.
- *
- *   bun run account:create lifter@example.com
- *   bun run account:list
- *   bun run account:password lifter@example.com
- *   bun run account:delete lifter@example.com
- *
- * Piping works too, for automation: `printf '%s' "$PW" | bun run account:create …`
- *
- * `password` is also the recovery path, and the only one: nothing here sends
- * email, so a forgotten password is answered at the machine rather than in an
- * inbox. A Google-linked account has a second way — sign in with Google and set
- * a new password from Settings, which asks for no old one.
- */
-
 function fail(message: string): never {
 	console.error(message);
 	process.exit(1);
@@ -64,14 +38,7 @@ function usage(): never {
 	);
 }
 
-/**
- * Reads a line with the echo suppressed. `readline` writes the typed characters
- * back to its `output` stream, so the way to hide them is to give it one that
- * discards; the prompt is printed directly to stdout instead.
- */
 async function promptHidden(question: string): Promise<string> {
-	// Implementing `Writable` *is* the callback contract — Node calls `write` and
-	// waits for `callback()` — so there is no promise form for the rule to prefer.
 	/* oxlint-disable promise/prefer-await-to-callbacks */
 	const discard = new Writable({
 		write(_chunk, _encoding, callback): void {
@@ -92,8 +59,6 @@ async function promptHidden(question: string): Promise<string> {
 }
 
 async function readPassword(): Promise<string> {
-	// Not a terminal: stdin is a pipe or a file, so it *is* the password. One
-	// trailing newline is the shell's, not the user's.
 	if (!process.stdin.isTTY) {
 		return readFileSync(0, 'utf8').replace(/\r?\n$/u, '');
 	}
@@ -110,8 +75,6 @@ async function readPassword(): Promise<string> {
 
 const db = getDatabase();
 
-// A fresh instance may never have started the server, and creating an account
-// in a database with no tables is not a useful error message.
 runMigrations(db);
 
 const argv = process.argv.slice(2);
@@ -169,11 +132,6 @@ if (command === 'create') {
 
 	await setPassword(db, user.id, password);
 
-	// Every credential, with none spared: this command holds none of them, and
-	// reaching for it usually means the old password was lost or was somebody
-	// else's to use. A rotation that meant nothing of the kind says so with
-	// `--keep-tokens`, which is cheaper to type than the phone is to sign back
-	// in — but silence has to mean the safe thing.
 	if (keepTokens) {
 		console.log(`set a new password for ${user.email}; its credentials are untouched`);
 	} else {
@@ -191,13 +149,6 @@ if (command === 'create') {
 		fail(`no account for ${argument}`);
 	}
 
-	// Deleting cascades to every credential and the sync counter, and there is no
-	// undo. Retyping the address is cheap next to that.
-	//
-	// No terminal — a `docker exec` without `-t`, a CI step, a shell script, all
-	// ordinary ways to run this — means there is nobody to ask, and skipping the
-	// question there turned an irreversible cascade into one unconfirmed command.
-	// `--yes` is how a caller with no terminal says it meant it.
 	if (process.stdin.isTTY) {
 		const rl = createInterface({ input: process.stdin, output: process.stdout });
 		const confirmation = await rl.question(`retype ${user.email} to confirm deletion: `);
