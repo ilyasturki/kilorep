@@ -1,31 +1,30 @@
 <script lang="ts">
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
-	import { drawableMark, isArchived, startFrom } from '$lib/domain/template';
+	import { drawableMark, startFrom } from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
-	import { formatWhen, workoutMeta, workoutTitle } from '$lib/history/label';
-	import { launchRepeat } from '$lib/history/repeat';
-	import WorkoutRowMenu from '$lib/history/WorkoutRowMenu.svelte';
-	import { syncSoon } from '$lib/sync/client';
-	import { planLine, templateTitle } from '$lib/templates/plan';
+	import { formatSince, lastDoneLine } from '$lib/history/label';
+	import { planLine, planMeta, templateTitle } from '$lib/templates/plan';
+	import { lastDoneByTemplate, nextUp, startable } from '$lib/templates/rotation';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
-	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
+	import Plus from '$lib/ui/icons/Plus.svelte';
 
 	import type { Template } from '$lib/domain/template';
-	import type { Workout } from '$lib/domain/workout';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
+	// No goto after the invalidation: this address redirects itself the moment the holder says a
+	// session runs, and replaces its own entry doing it. A goto to where we already are would
+	// push a duplicate, and back out of the session would land on the session.
 	async function startEmpty() {
 		activeWorkout.begin(data.history);
 
 		await invalidate(SESSION_DEP);
-		await goto('/workout/live');
 	}
 
 	async function startTemplate(template: Template) {
@@ -38,44 +37,24 @@
 		});
 
 		await invalidate(SESSION_DEP);
-		await goto('/workout/live');
 	}
-
-	async function repeat(workout: Workout) {
-		await launchRepeat(data.store, workout);
-	}
-
-	const startable = $derived(data.templates.filter((template) => !isArchived(template)));
-
-	const idleTemplates = $derived(startable.slice(0, 4));
-
-	const recent = $derived(data.workouts.toReversed().slice(0, 4));
 
 	const now = Date.now();
 
-	let menuOpen = $state(false);
-	let menuAnchor = $state<HTMLElement | null>(null);
-	let held = $state<Workout | null>(null);
-	let deleteOpen = $state(false);
+	const plans = $derived(startable(data.templates));
 
-	function hold(anchor: HTMLElement, workout: Workout) {
-		held = workout;
-		menuAnchor = anchor;
-		menuOpen = true;
-	}
+	const lastDone = $derived(lastDoneByTemplate(data.workouts));
 
-	async function remove() {
-		if (held === null) {
-			return;
-		}
+	const next = $derived(nextUp(plans, lastDone));
 
-		await data.store.deleteWorkout(held.id, Date.now());
+	// List order, not rotation order: the rest of the screen answers "not that one, this one",
+	// and the answer is easiest to find where the lifter dragged it.
+	const REST = 4;
 
-		if (data.user) {
-			syncSoon(data.user.id);
-		}
+	const rest = $derived(plans.filter((plan) => plan.id !== next?.id).slice(0, REST));
 
-		await invalidateAll();
+	function doneAt(template: Template): number | null {
+		return lastDone[template.id] ?? null;
 	}
 </script>
 
@@ -85,17 +64,55 @@
 
 <main class="min-h-0 flex-1 overflow-y-auto">
 	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
-		{#if startable.length === 0 && recent.length === 0}
-			<p class="px-3 text-md font-bold text-ink-faint">Start empty and build as you go.</p>
-		{/if}
+		<section class="flex flex-col gap-2">
+			<h2 class="px-3 label-caps">Next up</h2>
 
-		{#if startable.length > 0}
+			<div class="flex flex-col gap-4 rounded-2xl border border-line-soft bg-surface p-3">
+				{#if next === null}
+					<div class="flex flex-col gap-0.5 px-1">
+						<span class="text-xl font-extrabold tracking-tight text-ink">Empty workout</span>
+						<span class="text-md font-bold text-ink-muted">Add exercises as you go.</span>
+					</div>
+
+					<Button variant="commit" caps class="w-full" onclick={() => void startEmpty()}>
+						START
+					</Button>
+				{:else}
+					{@const mark = drawableMark(next)}
+
+					<div class="flex items-start gap-3 px-1">
+						{#if mark !== null}
+							<TemplateMark {mark} />
+						{/if}
+
+						<div class="flex min-w-0 flex-1 flex-col gap-0.5">
+							<span class="truncate text-xl font-extrabold tracking-tight text-ink">
+								{templateTitle(next)}
+							</span>
+							<span class="truncate text-md font-bold text-ink-muted">
+								{planLine(next, catalogById)}
+							</span>
+							<span class="truncate text-sm font-bold text-ink-faint">
+								{planMeta(next)} · {lastDoneLine(doneAt(next), now)}
+							</span>
+						</div>
+					</div>
+
+					<Button variant="commit" caps class="w-full" onclick={() => void startTemplate(next)}>
+						START
+					</Button>
+				{/if}
+			</div>
+		</section>
+
+		{#if next !== null}
 			<section class="flex flex-col gap-2">
-				<h2 class="px-3 label-caps">Start from a template</h2>
+				<h2 class="px-3 label-caps">Or start</h2>
 
 				<div class="list-group">
-					{#each idleTemplates as template (template.id)}
+					{#each rest as template (template.id)}
 						{@const mark = drawableMark(template)}
+						{@const since = doneAt(template)}
 
 						{#snippet tile()}
 							{#if mark !== null}
@@ -110,66 +127,31 @@
 							chevron={false}
 							leading={mark === null ? undefined : tile}
 							onclick={() => void startTemplate(template)}
-						/>
-					{/each}
-				</div>
-
-				{#if startable.length > idleTemplates.length}
-					<ListRow title="See all templates" href="/templates" />
-				{/if}
-			</section>
-		{/if}
-
-		{#if recent.length > 0}
-			<section class="flex flex-col gap-2">
-				<h2 class="px-3 label-caps">Repeat a workout</h2>
-
-				<div class="list-group">
-					{#each recent as workout (workout.id)}
-						{@const when = formatWhen(workout.startedAt, now)}
-
-						<ListRow
-							title={workoutTitle(workout, data.templates)}
-							meta={workoutMeta(workout)}
-							chevron={false}
-							onclick={() => void repeat(workout)}
-							onhold={(anchor) => hold(anchor, workout)}
 						>
 							{#snippet trailing()}
-								<span class="lg:hidden">{when.short}</span>
-								<span class="hidden lg:inline">{when.long}</span>
+								{since === null ? 'New' : formatSince(since, now)}
 							{/snippet}
 						</ListRow>
 					{/each}
-				</div>
 
-				<ListRow title="See all workouts" href="/history" />
+					{#snippet plus()}
+						<Plus size={20} />
+					{/snippet}
+
+					<ListRow
+						title="Empty workout"
+						weight="bold"
+						chevron={false}
+						leading={plus}
+						onclick={() => void startEmpty()}
+					/>
+				</div>
 			</section>
 		{/if}
 
-		<div
-			class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3
-				lg:pb-[max(0.75rem,var(--spacing-safe-b))]"
-		>
-			<Button variant="commit" class="w-full" onclick={() => void startEmpty()}>
-				Start empty workout
-			</Button>
+		<div class="list-group">
+			<ListRow title="All templates" href="/templates" />
+			<ListRow title="History" href="/history" />
 		</div>
 	</div>
 </main>
-
-<WorkoutRowMenu
-	bind:open={menuOpen}
-	title={held === null ? '' : workoutTitle(held, data.templates)}
-	anchor={menuAnchor}
-	href={held === null ? undefined : `/history/${held.id}`}
-	ondelete={() => (deleteOpen = true)}
-/>
-
-<AlertDialog
-	bind:open={deleteOpen}
-	title="Delete this workout?"
-	description="Its sets leave history, hints and records for good, on every device."
-	confirmLabel="Delete"
-	onconfirm={() => void remove()}
-/>

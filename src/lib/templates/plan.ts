@@ -97,6 +97,16 @@ export function setsLabel(count: number): string {
 	return count === 1 ? '1 set' : `${count} sets`;
 }
 
+/** What the plan asks of you, in the shape History states what a session took. */
+export function planMeta(template: Template): string {
+	const exercises = template.entries.flatMap((entry) => entry.exercises);
+	const sets = exercises.reduce((count, exercise) => count + exercise.sets.length, 0);
+
+	const named = exercises.length === 1 ? '1 exercise' : `${exercises.length} exercises`;
+
+	return `${named} · ${setsLabel(sets)}`;
+}
+
 export function planSummary(exercise: TemplateExercise): string {
 	const shape = planShape(exercise);
 

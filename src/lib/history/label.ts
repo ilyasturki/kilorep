@@ -100,3 +100,21 @@ export function formatWhen(then: number, now: number): When {
 
 	return { short: date, long: `${weekday.format(then)}, ${date}` };
 }
+
+/**
+ * A plan's recency as a line of prose rather than a trailing column.
+ *
+ * `formatWhen` heads its phrases for a column of their own; the first two are the only ones
+ * that read wrong mid-sentence, and a date keeps its capitals wherever it sits.
+ */
+export function lastDoneLine(then: number | null, now: number): string {
+	if (then === null) {
+		return 'Never trained';
+	}
+
+	const { long } = formatWhen(then, now);
+
+	return long === 'Today' || long === 'Yesterday'
+		? `Trained ${long.toLowerCase()}`
+		: `Trained ${long}`;
+}
