@@ -119,8 +119,14 @@
 		editing = true;
 		selectPending = true;
 		typed = null;
-		open = scrubbable;
 		event.currentTarget.select();
+	}
+
+	// A deliberate tap, never focus: the keyboard's next key hands focus to the field beside this
+	// one, and it must not drag a ruler in behind it. A tap on an already-focused field still
+	// opens, which focus alone would miss.
+	function reveal() {
+		open = scrubbable;
 	}
 
 	function scrub(next: number) {
@@ -222,6 +228,7 @@
 			{oninput}
 			onfocus={start}
 			onblur={commit}
+			onclick={reveal}
 			onmouseup={(event) => {
 				if (selectPending) {
 					selectPending = false;
