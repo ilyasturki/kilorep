@@ -75,6 +75,9 @@ export function parentOf(pathname: string): string | null {
 
 export class AppBarSlot {
 	public title: string | null = $state(null);
+	// Sits where the panel it opens comes from. Only a screen with no parent may fill it:
+	// back already stands in that spot and nothing is allowed to crowd it.
+	public leading: Snippet | null = $state(null);
 	public action: Snippet | null = $state(null);
 }
 
@@ -91,7 +94,7 @@ export function appBarSlot(): AppBarSlot {
 	return getContext<AppBarSlot>(key);
 }
 
-const EMPTY = { title: null, action: null };
+const EMPTY = { title: null, leading: null, action: null };
 
 export function fillAppBar(carried: () => Partial<AppBarSlot>): void {
 	const slot = appBarSlot();

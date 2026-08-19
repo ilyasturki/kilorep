@@ -100,21 +100,22 @@
 	bind:this={card}
 	onfocusin={reveal}
 	onfocusout={settlePreviews}
-	class="relative scroll-mb-3 overflow-hidden card-active"
+	class="@container relative scroll-mb-3 overflow-hidden card-active"
 >
 	<div class="absolute inset-y-0 left-0 w-1.5 bg-accent-text" aria-hidden="true"></div>
 
 	<div class="flex flex-col gap-3 py-3 pr-3 pl-4">
 		<div class="flex items-center justify-between gap-2">
-			<div class="flex min-w-0 items-center gap-3">
+			<div class="flex shrink-0 items-center gap-3">
 				<SetMark {status} index={cursor.workingIndex + 1} />
 				<span class="label-caps">
 					{cursor.workingIndex < 0 ? 'Warmup' : `Set ${cursor.workingIndex + 1}`}
 				</span>
 			</div>
 
-			<div class="flex shrink-0 items-center gap-1">
-				<span class="text-sm font-bold text-ink-faint">
+			<!-- Which set this is always reads; last time's numbers are the half that gives. -->
+			<div class="flex min-w-0 items-center gap-1">
+				<span class="truncate text-sm font-bold text-ink-faint">
 					{hint === null ? 'First time' : `Last ${hint}`}
 				</span>
 
@@ -131,7 +132,10 @@
 			</div>
 		</div>
 
-		<div class="grid grid-cols-2 gap-2">
+		<!-- Side by side only while a field can hold five glyphs of `text-2xl` at full size:
+		     2 × (2 × w-11 arms + ~72px of number) + gap-2 + the card's own 28px of padding.
+		     Under that the pair stacks — a zoomed phone showed `102.5` as `02.`. -->
+		<div class="grid grid-cols-1 gap-2 @min-[22.25rem]:grid-cols-2">
 			<StepperField
 				label={unit}
 				value={weight}

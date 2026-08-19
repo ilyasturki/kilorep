@@ -1,3 +1,10 @@
+<script module lang="ts">
+	// Where the lifter left the pane. The page is remade on every arrival and a tab tap is a
+	// push rather than a popstate, so SvelteKit's own snapshot never fires on the way back in.
+	// Keyed by workout: a session that ends takes its position with it.
+	let resting: { workoutId: string; top: number } | null = null;
+</script>
+
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
@@ -27,7 +34,7 @@
 	import { playMorphs } from '$lib/ui/morph';
 	import { quickMs } from '$lib/ui/motion';
 	import { coarsePointer } from '$lib/ui/pointer';
-	import { fullyVisible, instantly, revealNearest, revealSpan, revealStart } from '$lib/ui/scroll';
+	import { fullyVisible, instantly, revealNearest, revealStart } from '$lib/ui/scroll';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import { press, SLOP } from '$lib/ui/press';
 
@@ -41,6 +48,26 @@
 	let scheduled = false;
 
 	let arriving = true;
+	let restored = false;
+
+	let pane: HTMLElement | null = null;
+
+	function remember() {
+		if (pane !== null && session !== null) {
+			resting = { workoutId: session.workout.id, top: pane.scrollTop };
+		}
+	}
+
+	function restoring(node: HTMLElement) {
+		pane = node;
+
+		if (resting === null || session === null || resting.workoutId !== session.workout.id) {
+			return;
+		}
+
+		node.scrollTop = resting.top;
+		restored = true;
+	}
 
 	function reveal() {
 		const mode = intent;
@@ -52,16 +79,19 @@
 			return;
 		}
 
-		const head = holder.closest('[data-exercise]')?.querySelector('[data-exercise-head]');
-
-		if (!(head instanceof HTMLElement)) {
+		// Logging a set is not a request to be moved. The pane travels only when the set taking
+		// over is out of sight, and only far enough to bring it in — the title stays where it is.
+		if (mode === 'advance') {
 			revealNearest(holder);
 
 			return;
 		}
 
-		if (mode === 'advance') {
-			revealSpan(head, holder);
+		// A jump was asked for by name, so it lands on the name: the exercise the set belongs to.
+		const head = holder.closest('[data-exercise]')?.querySelector('[data-exercise-head]');
+
+		if (!(head instanceof HTMLElement)) {
+			revealNearest(holder);
 
 			return;
 		}
@@ -84,7 +114,11 @@
 
 		if (arriving) {
 			arriving = false;
-			instantly(reveal);
+
+			// A restored pane is already where the lifter left it; nothing may pull it away.
+			if (!restored) {
+				instantly(reveal);
+			}
 		} else {
 			reveal();
 		}
@@ -93,6 +127,9 @@
 	}
 
 	function jumped() {
+		// A jump is an explicit act, never an arrival: a session reached with every set logged
+		// never runs `settle`, and `arriving` left standing would swallow this scroll whole.
+		arriving = false;
 		intent = 'jump';
 		void settle();
 	}
@@ -412,25 +449,21 @@
 		optionsSetId = null;
 	}
 
-	fillAppBar(() => ({ action: liveActions }));
+	fillAppBar(() => ({ leading: overviewButton, action: finish }));
 </script>
 
-{#snippet liveActions()}
-	<div class="flex items-center gap-2">
-		<button
-			type="button"
-			aria-label="Session overview"
-			onclick={() => (overview = true)}
-			class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-				border-line text-ink-muted focus-ring hover:bg-hover lg:hidden
-				press:bg-surface-2"
-			{@attach press()}
-		>
-			<Stack size={20} />
-		</button>
-
-		{@render finish()}
-	</div>
+{#snippet overviewButton()}
+	<button
+		type="button"
+		aria-label="Session overview"
+		onclick={() => (overview = true)}
+		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
+			border-line text-ink-muted focus-ring hover:bg-hover lg:hidden
+			press:bg-surface-2"
+		{@attach press()}
+	>
+		<Stack size={20} />
+	</button>
 {/snippet}
 
 {#snippet finish()}
@@ -474,7 +507,9 @@
 			<!-- `touch-pan-y` has to sit on the scroller: `touch-action` intersects from the touched
 			     element up to it only, so on the wrapper above it is never read and the swipe dies. -->
 			<main
+				onscroll={remember}
 				class="min-h-0 flex-1 touch-pan-y overflow-y-auto py-3 pb-[max(1.5rem,var(--spacing-safe-b))]"
+				{@attach restoring}
 			>
 				<div
 					class={['column-content flex flex-col gap-7 px-3', entries.length === 0 && 'min-h-full']}

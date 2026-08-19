@@ -105,13 +105,13 @@ export function firstUncompleted(workout: Workout): SetCursor | null {
 	return cursors(workout).find((c) => !c.set.completed) ?? null;
 }
 
+// Forward only. Coming back for the gaps left behind dragged the lifter to an exercise two
+// screens up on the set that should have ended the session; a skipped set is reached by tapping it.
 export function advanceFrom(workout: Workout, setId: string): SetCursor | null {
 	const all = cursors(workout);
 	const at = all.findIndex((c) => c.set.id === setId);
 
-	const ahead = all.slice(at + 1).find((c) => !c.set.completed);
-
-	return ahead ?? all.find((c) => !c.set.completed) ?? null;
+	return all.slice(at + 1).find((c) => !c.set.completed) ?? null;
 }
 
 export function hintFor(
@@ -169,9 +169,11 @@ export function prefillFor(cursor: SetCursor, history: History): Prefill {
 
 	const carried = carriedInto(cursor);
 
+	// One rule for both numbers: what this session already says outranks what was planned for it.
+	// The plan owned the reps here and read back a target heavier than the set just logged.
 	return {
 		weight: cursor.set.weight ?? carried.weight ?? recalled.weight,
-		reps: cursor.set.reps ?? cursor.set.plannedReps ?? carried.reps ?? recalled.reps
+		reps: cursor.set.reps ?? carried.reps ?? cursor.set.plannedReps ?? recalled.reps
 	};
 }
 

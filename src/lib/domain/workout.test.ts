@@ -181,11 +181,17 @@ describe('prefillFor', () => {
 		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: 25, reps: 12 });
 	});
 
-	test('the plan still owns the reps when it disagrees with the carry', () => {
+	test('the carry owns the reps when it disagrees with the plan', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'bench-1', 82.5, 6);
 
-		expect(prefillOf(workout, 'bench-2')).toEqual({ weight: 82.5, reps: 8 });
+		expect(prefillOf(workout, 'bench-2')).toEqual({ weight: 82.5, reps: 6 });
+	});
+
+	test('the plan still fills a set no set of this exercise has been logged above', () => {
+		const workout = freshWorkout(0);
+
+		expect(prefillOf(workout, 'bench-1')).toEqual({ weight: 80, reps: 8 });
 	});
 
 	test('an open target carries both numbers over the recall', () => {
@@ -872,14 +878,23 @@ describe('advanceFrom', () => {
 		expect(idOf(advanceFrom(workout, 'pecdeck-1'))).toBe('pecdeck-2');
 	});
 
-	test('once the tail is exhausted it comes back for the gaps left behind', () => {
+	test('the tail exhausted, it does not come back for the gaps left behind', () => {
 		const workout = freshWorkout(0);
 
 		for (const id of ['pecdeck-1', 'pecdeck-2', 'pecdeck-3']) {
 			commitSet(workout, id, 45, 10);
 		}
 
-		expect(idOf(advanceFrom(workout, 'pecdeck-3'))).toBe('bench-1');
+		expect(advanceFrom(workout, 'pecdeck-3')).toBeNull();
+		expect(idOf(firstUncompleted(workout))).toBe('bench-1');
+	});
+
+	test('a set skipped mid-session is stepped over, not doubled back to', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 80, 8);
+		commitSet(workout, 'bench-3', 80, 7);
+
+		expect(idOf(advanceFrom(workout, 'bench-3'))).toBe('bench-4');
 	});
 
 	test('null when every set is logged, which is the only finished signal', () => {

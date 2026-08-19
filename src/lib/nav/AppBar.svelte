@@ -21,6 +21,10 @@
 	>
 		{#if parent !== null}
 			<BackLink href={parent} label="Back" class="lg:col-start-1 lg:justify-self-start" />
+		{:else if slot.leading !== null}
+			<div class="shrink-0 lg:col-start-1 lg:justify-self-start">
+				{@render slot.leading()}
+			</div>
 		{/if}
 
 		<h1 class="min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight lg:hidden">
