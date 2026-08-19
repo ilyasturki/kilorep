@@ -92,6 +92,12 @@
 		// which `interface` cannot express. One spelling, not two.
 		"typescript/consistent-type-definitions": ["error", "type"],
 
+		// One binding per statement. The rule arrived on by category in the oxlint 1.79
+		// bump, defaulting to the opposite: consecutive `const`s merged into a single
+		// comma-separated declaration. That spelling makes adding or dropping a binding
+		// a multi-line diff, and prettier will not lay the result back out for you.
+		"one-var": ["error", "never"],
+
 		// --- Arbitrary numeric limits: taste, not defects. Splitting a function to
 		// --- satisfy a line count makes the code worse. `max-depth` stays on.
 		"max-lines": "off",
