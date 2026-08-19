@@ -175,14 +175,17 @@
 		}
 	}
 
-	// The tail order is load-bearing — snapshot, holder, invalidation, navigation:
+	// The tail order is load-bearing — snapshot, holder, then the way out:
 	// `/workout` bounces back here while any of them still says a workout runs.
 	async function finishSession() {
 		if (session === null) {
 			return;
 		}
 
-		if (session.hasLoggedSets) {
+		const logged = session.hasLoggedSets;
+		const { id } = session.workout;
+
+		if (logged) {
 			await data.store.finishWorkout($state.snapshot(session.workout), Date.now());
 		}
 
@@ -194,8 +197,20 @@
 
 		activeWorkout.finish();
 
-		await invalidate(SESSION_DEP);
-		await goto('/workout');
+		// A session with nothing in it leaves no record to land on, so it rides its own
+		// redirect out: this address bounces to the idle screen once the holder is empty.
+		if (!logged) {
+			await invalidate(SESSION_DEP);
+
+			return;
+		}
+
+		// Two steps rather than one, and no invalidation first — the bounce would draw the idle
+		// screen only to throw it away. History replaces the spent session's entry and the
+		// record pushes onto it, so the workout sits on the list exactly as it would had the
+		// lifter opened it there, and back walks up to the list rather than into a dead address.
+		await goto('/history', { replaceState: true });
+		await goto(`/history/${id}`);
 	}
 
 	const entries = $derived(session === null ? [] : entriesWithMeta(session.workout, catalogById));
