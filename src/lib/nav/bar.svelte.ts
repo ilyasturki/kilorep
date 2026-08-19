@@ -4,6 +4,8 @@ import Barbell from '$lib/ui/icons/Barbell.svelte';
 import BarbellFill from '$lib/ui/icons/BarbellFill.svelte';
 import ChartBar from '$lib/ui/icons/ChartBar.svelte';
 import ChartBarFill from '$lib/ui/icons/ChartBarFill.svelte';
+import Gauge from '$lib/ui/icons/Gauge.svelte';
+import GaugeFill from '$lib/ui/icons/GaugeFill.svelte';
 import Gear from '$lib/ui/icons/Gear.svelte';
 import Stack from '$lib/ui/icons/Stack.svelte';
 
@@ -34,6 +36,7 @@ export function navTabs(): NavTab[] {
 		},
 		{ href: '/templates', label: 'Plan', icon: Stack, owns: ['/exercises'] },
 		{ href: '/progress', label: 'Progress', icon: ChartBar, iconActive: ChartBarFill },
+		{ href: '/weight', label: 'Weight', icon: Gauge, iconActive: GaugeFill },
 		{ href: '/settings', label: 'Settings', icon: Gear }
 	];
 }
@@ -55,8 +58,7 @@ export function tabRoots(): string[] {
 }
 
 const PARENTS: Record<string, string> = {
-	'/history': '/progress',
-	'/weight': '/progress'
+	'/history': '/progress'
 };
 
 export function parentOf(pathname: string): string | null {

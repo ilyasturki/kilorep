@@ -2,7 +2,6 @@
 	import type { DateValue } from '@internationalized/date';
 	import { parseDate } from '@internationalized/date';
 
-	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import type { BodyweightEntry, ChartRange } from '$lib/domain/bodyweight';
 	import { inRange, localDateOf, rangeStart, rollingAverage } from '$lib/domain/bodyweight';
 	import { syncSoon } from '$lib/sync/client';
@@ -210,8 +209,6 @@
 		month: 'short',
 		timeZone: 'UTC'
 	});
-
-	fillAppBar(() => ({ title: 'Weight' }));
 </script>
 
 <svelte:head>

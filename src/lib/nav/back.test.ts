@@ -9,6 +9,8 @@ vi.mock('$lib/ui/icons/Barbell.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/BarbellFill.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/ChartBar.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/ChartBarFill.svelte', () => ({ default: {} }));
+vi.mock('$lib/ui/icons/Gauge.svelte', () => ({ default: {} }));
+vi.mock('$lib/ui/icons/GaugeFill.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/Gear.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/Stack.svelte', () => ({ default: {} }));
 vi.mock('$lib/workout/active.svelte', () => ({ activeWorkout: { session: null } }));
@@ -64,7 +66,10 @@ describe('decideBack', () => {
 	it('walks a child of Progress up to its list, and the list up to Progress', () => {
 		expect(decide('/history/abc', { depth: 0 })).toEqual({ kind: 'goto', path: '/history' });
 		expect(decide('/history', { depth: 0 })).toEqual({ kind: 'goto', path: '/progress' });
-		expect(decide('/weight', { depth: 0 })).toEqual({ kind: 'goto', path: '/progress' });
+	});
+
+	it('minimizes at Weight rather than walking to Progress, which no longer parents it', () => {
+		expect(decide('/weight', { depth: 0 })).toEqual({ kind: 'minimize' });
 	});
 
 	it('minimizes from the live session rather than popping it to the idle screen', () => {

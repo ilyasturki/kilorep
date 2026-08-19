@@ -4,7 +4,7 @@ import type { Direction } from './move';
 
 import { classifyMove } from './move';
 
-const tabRoots = ['/workout', '/templates', '/exercises', '/progress', '/settings'];
+const tabRoots = ['/workout', '/templates', '/exercises', '/progress', '/weight', '/settings'];
 
 function move(from: string, to: string, delta?: number): Direction | undefined {
 	return classifyMove({ from, to, delta, tabRoots });
@@ -15,6 +15,7 @@ describe('classifyMove — whether it travels', () => {
 		expect(move('/workout', '/progress')).toBeUndefined();
 		expect(move('/progress', '/workout')).toBeUndefined();
 		expect(move('/exercises', '/progress', -1)).toBeUndefined();
+		expect(move('/weight', '/progress', -1)).toBeUndefined();
 	});
 
 	it('travels to a detail screen under another tab, which is deeper and not a peer', () => {
@@ -30,7 +31,7 @@ describe('classifyMove — whether it travels', () => {
 	});
 
 	it('reads a backwards traversal as a pop even where no path prefix says so', () => {
-		expect(move('/weight', '/progress', -1)).toBe('pop');
+		expect(move('/history', '/progress', -1)).toBe('pop');
 	});
 
 	it('does not mistake a shared prefix for a tab', () => {

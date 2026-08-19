@@ -36,11 +36,11 @@ Every screen must justify its existence.
 - **Templates** — Plan's first half; the list; a template's editor is its one surface — planning, deleting and starting all live there; a template that still says nothing (no name, no exercises) is never saved.
 - **History** — a child of Progress, reached through its Training frequency card and from the idle Train screen, which glances at the last four and links to the rest; workout list + detail; repeat-this-workout; drift-vs-template on the detail.
 - **Exercises** — Plan's second half; catalog + customs; detail carries history, raw best set, est-1RM trend.
-- **Weight** — a child of Progress, reached through its Body weight card; log + trend.
+- **Weight** — a tab of its own; today's weigh-in first, then log + trend. Half of what v1 tracks, and touched every morning rather than on training days — the door that earns is the bar, not the foot of another screen. Progress keeps its Body weight card, now a summary pointing at the tab.
 - **Progress** — five cards, one subject each, no configuration: **Weekly work** (tonnage and working sets, twelve weeks) · **Strength** (recent raw PRs, est-1RM direction on main lifts) · **Training frequency** (sessions in the last seven days vs your own median — facts, never streaks) · **Sets per muscle** (working sets by muscle, split direct/indirect) · **Body weight** (trend). A card earns its place by stating one thing about your own training you could not work out in your head, and by pointing at where that thing is logged; anything else stays off, with no exceptions. Headings state rather than ask — the card is the answer, so the heading naming it as a question made the card say everything twice. Every window rolls back from now and none is anchored to a weekday: "this week" meaning "since Monday" drew a Tuesday morning as a collapse. Weekly work takes the full width, being the one card that is mostly chart; the rest are two columns from `lg` and one below, capped rather than uncapped, so a desk window holds the screen at once and a phone gets two subjects before it scrolls rather than a single card of personal bests.
 - **Settings** — a tab like any other. Reachable from every screen including a live session.
 
-The bar is **Train · Plan · Progress · Settings**, read left to right as the tense of what each tab holds. One bar serves both viewports: the tabs sit along the bottom on a phone and inside the top bar on a desk. No screen draws chrome of its own.
+The bar is **Train · Plan · Progress · Weight · Settings**. It read left to right as the tense of what each tab holds until Weight joined it — a daily act has no tense, and that reading was prose the bar got arranged for rather than anything the lifter was handed. Weight sits beside Progress, the two screens you open for a number rather than to lift. One bar serves both viewports: the tabs sit along the bottom on a phone and inside the top bar on a desk. No screen draws chrome of its own.
 
 ## Offline
 
@@ -58,5 +58,5 @@ The bar is **Train · Plan · Progress · Settings**, read left to right as the 
 
 ## Unresolved — settle on the phone
 
-- The bar is settled at four; what is not is the phone's top chrome — judged at arm's length, not from a specimen sheet. If Plan's segment turns out to want stickiness more than Exercises' search field does, that is the trade to reopen.
+- The bar is settled at five; what is not is the phone's top chrome — judged at arm's length, not from a specimen sheet. If Plan's segment turns out to want stickiness more than Exercises' search field does, that is the trade to reopen.
 - Set extras: type, note, and the per-set load-mode override. The row stays `weight | reps | check` and the long-press sheet that holds Remove is where they go; what they look like in it is open. RPE left this list — it is built, and the collapsed pill on the logging card is where it landed rather than in the sheet.
