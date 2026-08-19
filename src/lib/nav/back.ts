@@ -23,15 +23,18 @@ export function decideBack({
 		return { kind: 'close-overlay' };
 	}
 
-	if (tabRoots.includes(pathname)) {
+	const parent = parentOf(pathname);
+
+	// The parent is read before the root check, not after: a tab root is a peer rather than a
+	// step and back leaves the app there, but the live session is an address a tab owns while
+	// still answering to something above it — leaving it must not mean leaving the app.
+	if (parent === null && tabRoots.includes(pathname)) {
 		return { kind: 'minimize' };
 	}
 
 	if (depth > 0) {
 		return { kind: 'history-back' };
 	}
-
-	const parent = parentOf(pathname);
 
 	return parent === null ? { kind: 'minimize' } : { kind: 'goto', path: parent };
 }

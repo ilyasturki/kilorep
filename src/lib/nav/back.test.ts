@@ -17,6 +17,8 @@ vi.mock('$lib/workout/active.svelte', () => ({ activeWorkout: { session: null } 
 
 const tabRoots = navRoots();
 
+const LIVE = '/workout/live';
+
 function decide(
 	pathname: string,
 	overrides: { overlayOpen?: boolean; depth?: number } = {}
@@ -39,8 +41,8 @@ describe('decideBack', () => {
 		});
 	});
 
-	it('minimizes at every tab root — tabs are peers, there is no funnel through home', () => {
-		for (const root of tabRoots) {
+	it('minimizes at every tab root but the session — tabs are peers, no funnel through home', () => {
+		for (const root of tabRoots.filter((address) => address !== LIVE)) {
 			expect(decide(root)).toEqual({ kind: 'minimize' });
 		}
 	});
@@ -72,8 +74,12 @@ describe('decideBack', () => {
 		expect(decide('/weight', { depth: 0 })).toEqual({ kind: 'minimize' });
 	});
 
-	it('minimizes from the live session rather than popping it to the idle screen', () => {
-		expect(decide('/workout/live')).toEqual({ kind: 'minimize' });
+	it('walks out of the live session to where the lifter came from, not out of the app', () => {
+		expect(decide(LIVE)).toEqual({ kind: 'history-back' });
+	});
+
+	it('sends a cold-booted session to History, the one address that is not its own redirect', () => {
+		expect(decide(LIVE, { depth: 0 })).toEqual({ kind: 'goto', path: '/history' });
 	});
 
 	it('matches roots on segments, not prefixes, and minimizes where nothing claims the address', () => {
@@ -87,14 +93,14 @@ describe('decideBack', () => {
 
 describe('parentOf', () => {
 	it('gives a tab root no parent, so the bar draws no way up from one', () => {
-		for (const root of navRoots()) {
+		for (const root of navRoots().filter((address) => address !== LIVE)) {
 			expect(parentOf(root)).toBeNull();
 		}
 	});
 
-	it('gives the live session none either, rather than the address that redirects back to it', () => {
-		expect(navRoots()).toContain('/workout/live');
-		expect(parentOf('/workout/live')).toBeNull();
+	it('parents the live session on History, not the address that redirects back to it', () => {
+		expect(navRoots()).toContain(LIVE);
+		expect(parentOf(LIVE)).toBe('/history');
 	});
 
 	it('still walks a screen inside a tab up to the root that owns it', () => {

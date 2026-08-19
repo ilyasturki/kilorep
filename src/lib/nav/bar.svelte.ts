@@ -57,20 +57,30 @@ export function tabRoots(): string[] {
 	return navTabs().flatMap((tab) => rootsOf(tab));
 }
 
+// The live session names History rather than `/workout`, which redirects straight back to it,
+// and rather than nothing: Train owns the address, but leaving a running session is a step
+// inside the app, not the end of it. The session keeps running; the tab's dot is the way in.
 const PARENTS: Record<string, string> = {
-	'/history': '/progress'
+	'/history': '/progress',
+	'/workout/live': '/history'
 };
 
 export function parentOf(pathname: string): string | null {
+	const named = PARENTS[pathname];
+
+	if (named !== undefined) {
+		return named;
+	}
+
 	const roots = tabRoots();
 
 	if (roots.includes(pathname)) {
 		return null;
 	}
 
-	const above = [...roots, ...Object.keys(PARENTS)];
-
-	return PARENTS[pathname] ?? above.find((root) => pathname.startsWith(`${root}/`)) ?? null;
+	return (
+		[...roots, ...Object.keys(PARENTS)].find((root) => pathname.startsWith(`${root}/`)) ?? null
+	);
 }
 
 export class AppBarSlot {
