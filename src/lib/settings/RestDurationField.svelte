@@ -6,7 +6,7 @@
 		restLabel,
 		settleRestSeconds
 	} from '$lib/domain/rest';
-	import { tapLift } from '$lib/ui/haptics';
+	import { tapTick } from '$lib/ui/feedback';
 	import MiniStepper from '$lib/ui/MiniStepper.svelte';
 
 	type Props = {
@@ -31,7 +31,7 @@
 			return;
 		}
 
-		tapLift();
+		tapTick();
 		onchange(next);
 	}
 </script>

@@ -10,7 +10,7 @@ import type { RestStart } from '$lib/domain/rest';
 import { cancelRestEnd, scheduleRestEnd } from '$lib/notify/rest';
 import { getStore } from '$lib/store/store';
 import type { RestSnapshot } from '$lib/store/store';
-import { tapAlarm } from '$lib/ui/haptics';
+import { tapAlarm } from '$lib/ui/feedback';
 
 class RestTimer {
 	public endsAt: number | null = $state(null);

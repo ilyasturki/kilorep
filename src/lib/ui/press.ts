@@ -1,5 +1,5 @@
 import type { Attachment } from 'svelte/attachments';
-import { tapLift } from '$lib/ui/haptics';
+import { tapHold } from '$lib/ui/feedback';
 import { coarsePointer } from '$lib/ui/pointer';
 
 // Must match dragOrder.svelte.ts: one hold length and one slop across all gestures.
@@ -133,7 +133,7 @@ export function press(holds?: HoldSource): Attachment<HTMLElement> {
 				return false;
 			}
 
-			tapLift();
+			tapHold();
 			hold(element);
 
 			return true;

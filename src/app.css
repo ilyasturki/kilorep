@@ -940,11 +940,33 @@ html[data-nav='pop']::view-transition-old(page) {
 		-webkit-tap-highlight-color: transparent;
 		touch-action: manipulation;
 
-		/* Touch only: stops Android's selection handles and callout mid long-press; a mouse may still copy a weight. */
+		/* Touch only: keeps a long press on a control from turning into a selection in the phone
+		   browser, where the rest of the page stays copyable. `-webkit-touch-callout` earns its
+		   place on iOS Safari and nowhere else — Chromium has never implemented it, which is why
+		   the packaged Android app needs the `html.native` rules below and not this. */
 		@media (pointer: coarse) {
 			user-select: none;
 			-webkit-user-select: none;
 			-webkit-touch-callout: none;
 		}
+	}
+
+	/* Stamped on <html> by `wireNativeFeel`, so only the packaged app wears it — a browser tab
+	   keeps its selection, where grabbing a weight to paste it somewhere is the point. Not
+	   `@media (pointer: coarse)`: that is the phone browser too, and it is the phone browser's
+	   right. `user-select: none` is what stops Android's selection handles; the link menu and
+	   the drag are refused in JS, because no CSS property does it in a Chromium WebView. */
+	html.native,
+	html.native * {
+		user-select: none;
+		-webkit-user-select: none;
+		-webkit-user-drag: none;
+	}
+
+	/* Restated, not inherited: Chromium keeps a field unselectable under a `none` ancestor
+	   unless the field says otherwise, and a text box with no caret is not a text box. */
+	html.native :is(input, textarea, [contenteditable]) {
+		user-select: text;
+		-webkit-user-select: text;
 	}
 }

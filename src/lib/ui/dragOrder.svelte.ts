@@ -1,4 +1,4 @@
-import { tapLift } from '$lib/ui/haptics';
+import { tapHold } from '$lib/ui/feedback';
 import { scrollParent } from '$lib/ui/scroll';
 
 export type DragOrderOptions = {
@@ -148,12 +148,17 @@ export class DragOrder {
 		}
 	}
 
+	// Refuses the click outright rather than only reporting it, the way `press` and the
+	// swipe rail already do. A tap that did nothing but end a drag is not a tap, and one
+	// left to bubble reaches the document listener that answers taps with a click sound.
 	public swallowClick(event: MouseEvent): boolean {
 		if (!this.#lifted || event.detail === 0) {
 			return false;
 		}
 
 		this.#lifted = false;
+		event.preventDefault();
+		event.stopImmediatePropagation();
 
 		return true;
 	}
@@ -237,7 +242,7 @@ export class DragOrder {
 		clearTimeout(this.#settle);
 		this.settlingId = null;
 
-		tapLift();
+		tapHold();
 
 		document.documentElement.classList.add(IN_HAND);
 

@@ -4,7 +4,7 @@
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import ExertionPicker from '$lib/ui/ExertionPicker.svelte';
-	import { tapCommit } from '$lib/ui/haptics';
+	import { tapCommit } from '$lib/ui/feedback';
 	import { revealEnd } from '$lib/ui/scroll';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';

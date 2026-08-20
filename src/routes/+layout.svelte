@@ -6,10 +6,12 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { recordNavigation, startDepthTracking } from '$lib/nav/depth';
 	import { wireHardwareBack } from '$lib/nav/hardware-back';
+	import { wireNativeFeel } from '$lib/ui/native';
 
 	let { children } = $props();
 
 	$effect(() => wireHardwareBack());
+	$effect(() => wireNativeFeel());
 
 	if (browser) {
 		startDepthTracking();

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import { isEntryDraft, parseEntry, settle } from '$lib/domain/workout';
-	import { tapLift } from '$lib/ui/haptics';
+	import { tapHold } from '$lib/ui/feedback';
 	import { coarsePointer } from '$lib/ui/pointer';
 	import { press } from '$lib/ui/press';
 	import Ruler from '$lib/ui/Ruler.svelte';
@@ -79,7 +79,7 @@
 		let delay = REPEAT_FROM;
 		const tick = () => {
 			if (!repeating) {
-				tapLift();
+				tapHold();
 				repeating = true;
 			}
 

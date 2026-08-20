@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { parseEntry, settle } from '$lib/domain/workout';
+	import { tapTick } from '$lib/ui/feedback';
 	import { easeFling, landing, STALE_MS } from '$lib/ui/fling';
-	import { tapLift } from '$lib/ui/haptics';
 	import { keyboardUp, visiblePane, watchVisiblePane } from '$lib/ui/keyboard';
 
 	type Props = {
@@ -147,7 +147,7 @@
 
 			if (now - ticked >= TICK_GAP) {
 				ticked = now;
-				tapLift();
+				tapTick();
 			}
 
 			onscrub(chosen);
@@ -263,7 +263,7 @@
 		const i = clampIndex(Math.round(pos - (event.clientY - rect.top - rect.height / 2) / PITCH));
 
 		pos = i;
-		tapLift();
+		tapTick();
 		onpick(at(i));
 	}
 </script>
