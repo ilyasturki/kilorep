@@ -14,20 +14,30 @@
 		addLabel: string;
 		oninsert: () => void;
 		onselect: (event: MouseEvent, item: T) => void;
-		// Set inside a vaul drawer: vaul latches drag-to-dismiss on the first pixel of travel,
-		// long before a 500ms hold has lifted a row, so the sheet follows the finger instead.
-		noDrag?: boolean;
+		// Set inside a vaul drawer, where the body belongs to drag-to-dismiss. The two gestures
+		// cannot share a row: vaul latches on the first pixel of travel, long before a 500ms hold
+		// has lifted anything, so hold-anywhere would drag the drawer instead. The grip keeps
+		// reordering and is fenced off from vaul; every other pixel of the row closes the drawer.
+		gripOnly?: boolean;
 		row: Snippet<[T]>;
 	};
 
-	let { items, drag, addLabel, oninsert, onselect, noDrag = false, row }: Props = $props();
+	let { items, drag, addLabel, oninsert, onselect, gripOnly = false, row }: Props = $props();
+
+	function rowDown(event: PointerEvent, id: string) {
+		if (gripOnly) {
+			return;
+		}
+
+		drag.rowDown(event, id);
+	}
 
 	const slide = $derived(prefersReducedMotion.current ? 0 : 200);
 </script>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
-<div bind:this={drag.root} data-vaul-no-drag={noDrag ? '' : undefined} class="flex flex-col gap-1">
+<div bind:this={drag.root} class="flex flex-col gap-1">
 	{#each items as item (item.id)}
 		{@const lifted = drag.isLifted(item.id)}
 		{@const settling = drag.settlingId === item.id}
@@ -50,7 +60,7 @@
 				<button
 					type="button"
 					onclick={(event) => onselect(event, item)}
-					onpointerdown={(event) => drag.rowDown(event, item.id)}
+					onpointerdown={(event) => rowDown(event, item.id)}
 					onpointermove={(event) => drag.move(event)}
 					onpointerup={(event) => drag.up(event)}
 					onpointercancel={(event) => drag.up(event)}
@@ -62,6 +72,7 @@
 				<span
 					role="presentation"
 					aria-hidden="true"
+					data-vaul-no-drag={gripOnly ? '' : undefined}
 					onpointerdown={(event) => drag.handleDown(event, item.id)}
 					onpointermove={(event) => drag.move(event)}
 					onpointerup={(event) => drag.up(event)}

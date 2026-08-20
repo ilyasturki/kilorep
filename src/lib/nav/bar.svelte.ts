@@ -85,8 +85,9 @@ export function parentOf(pathname: string): string | null {
 
 export class AppBarSlot {
 	public title: string | null = $state(null);
-	// Sits where the panel it opens comes from. Only a screen with no parent may fill it:
-	// back already stands in that spot and nothing is allowed to crowd it.
+	// Sits where the panel it opens comes from, beside back rather than instead of it: a live
+	// session owes the lifter both the way out and the way into its own session list, and the
+	// list being one tap away on a phone is the only thing standing in for the desktop rail.
 	public leading: Snippet | null = $state(null);
 	public action: Snippet | null = $state(null);
 }

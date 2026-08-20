@@ -63,6 +63,7 @@
 				{activeSetId}
 				{onreorder}
 				{ondrop}
+				gripOnly
 				onjump={jump}
 				onfocus={onjump}
 				oninsert={insert}

@@ -12,9 +12,21 @@
 		oninsert: () => void;
 		onreorder: (entryId: string, index: number) => void;
 		ondrop?: (entryId: string) => void;
+		// True only inside the drawer, where the row body is owed to drag-to-dismiss. The rail has
+		// no drawer to close and keeps the whole row draggable.
+		gripOnly?: boolean;
 	};
 
-	let { entries, activeSetId, onjump, onfocus, oninsert, onreorder, ondrop }: Props = $props();
+	let {
+		entries,
+		activeSetId,
+		onjump,
+		onfocus,
+		oninsert,
+		onreorder,
+		ondrop,
+		gripOnly = false
+	}: Props = $props();
 
 	const entryIds = $derived(entries.map((entry) => entry.id));
 
@@ -54,7 +66,7 @@
 	}
 </script>
 
-<DragList items={entries} {drag} addLabel="Add exercise" {oninsert} onselect={select} noDrag>
+<DragList items={entries} {drag} addLabel="Add exercise" {oninsert} onselect={select} {gripOnly}>
 	{#snippet row(entry)}
 		{@const here = entry.cursors.some((c) => c.set.id === activeSetId)}
 		{@const done = entry.cursors.every((c) => c.set.completed)}

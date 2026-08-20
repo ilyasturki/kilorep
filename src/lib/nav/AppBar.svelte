@@ -19,11 +19,17 @@
 		class="flex min-h-bar items-center gap-2 px-3 py-2 lg:grid
 			lg:grid-cols-[1fr_auto_1fr] lg:gap-3"
 	>
-		{#if parent !== null}
-			<BackLink href={parent} label="Back" class="lg:col-start-1 lg:justify-self-start" />
-		{:else if slot.leading !== null}
-			<div class="shrink-0 lg:col-start-1 lg:justify-self-start">
-				{@render slot.leading()}
+		<!-- One group, not two children: on `lg` the bar is a three-column grid, and a second
+		     child claiming `col-start-1` would sit on top of the first. -->
+		{#if parent !== null || slot.leading !== null}
+			<div class="flex shrink-0 items-center gap-1 lg:col-start-1 lg:justify-self-start">
+				{#if parent !== null}
+					<BackLink href={parent} label="Back" />
+				{/if}
+
+				{#if slot.leading !== null}
+					{@render slot.leading()}
+				{/if}
 			</div>
 		{/if}
 
