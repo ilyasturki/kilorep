@@ -1,12 +1,5 @@
-import { isArchived } from '$lib/domain/template';
-
-import type { Template } from '$lib/domain/template';
-import type { Workout } from '$lib/domain/workout';
-
-/** The plans a tap can start, in the order the lifter dragged them into. */
-export function startable(templates: Template[]): Template[] {
-	return templates.filter((template) => !isArchived(template));
-}
+import type { Template } from './template.ts';
+import type { Workout } from './workout.ts';
 
 /** When each plan was last trained. Untrained plans are absent rather than zero. */
 export function lastDoneByTemplate(workouts: Workout[]): Record<string, number> {
@@ -42,12 +35,12 @@ export function nextUp(plans: Template[], lastDone: Record<string, number>): Tem
 	}
 
 	let anchor = -1;
-	let latest = 0;
+	let latest = Number.NEGATIVE_INFINITY;
 
 	for (const [index, plan] of plans.entries()) {
 		const at = lastDone[plan.id];
 
-		if (at !== undefined && (anchor === -1 || at > latest)) {
+		if (at !== undefined && at > latest) {
 			anchor = index;
 			latest = at;
 		}
