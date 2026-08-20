@@ -28,6 +28,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:studio": "drizzle-kit studio",
 		"db:seed": "node scripts/seed.ts",
+		"db:pull": "scripts/db-pull.sh",
 		"account:create": "node scripts/account.ts create",
 		"account:list": "node scripts/account.ts list",
 		"account:password": "node scripts/account.ts password",
