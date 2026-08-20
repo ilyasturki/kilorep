@@ -54,7 +54,7 @@ The bar is **Train · Plan · Progress · Weight · Settings**. It read left to 
 - **Export** is generated on-device, no server required. Two shapes: a lossless JSON dump (every entity, every field, sufficient to rebuild the database) and spreadsheet-shaped CSVs (one row per set: date, exercise, set number, type, weight, load mode, reps, RPE; body weight as date, kg).
 - **API:** token-authenticated REST on the server — everything the app can do, readable and writable.
 - **MCP:** the server speaks MCP.
-- **No v1 import.** v2 starts fresh; hints stay silent until history rebuilds.
+- **No v1 importer.** None ships and none is planned — but the operator's own v1 history was moved across once, on 2026-08-20, by a throwaway script pushing 153 records through `/api/sync`: 56 workouts and 91 weigh-ins from 2025-12-28 to 2026-08-01, plus v1's six plans imported archived so `workoutTitle` still resolves a name through `templateId` without the old plans crowding Plan or the idle Train screen. The two datasets are contiguous rather than overlapping — the switch happened on 2026-08-02 — so nothing merged and nothing was overwritten. One v1 session was dropped: a plan started that morning, never logged, and repeated in v2 fourteen minutes later. v1 exercises resolved to catalog slugs by hand; where a real movement had no entry, the catalog grew one (`decline-bench-press`, `incline-machine-chest-press`, `machine-curl`), and the rest folded into their nearest slug, which merges their history and PRs and is the one lossy thing here. v1 stays online at `v1.kilorep.com`, untouched, as the record of what was folded.
 
 ## Unresolved — settle on the phone
 

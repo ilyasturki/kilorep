@@ -28,6 +28,15 @@ export const catalog: Exercise[] = [
 		variantOf: 'bench-press'
 	},
 	{
+		id: 'decline-bench-press',
+		name: 'Decline Bench Press',
+		aliases: ['decline barbell bench press', 'decline bench', 'decline press'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Chest', secondary: ['Triceps'] },
+		variantOf: 'bench-press'
+	},
+	{
 		id: 'dumbbell-bench-press',
 		name: 'Dumbbell Bench Press',
 		aliases: [
@@ -69,6 +78,19 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
+		variantOf: 'bench-press'
+	},
+	{
+		id: 'incline-machine-chest-press',
+		name: 'Incline Machine Press',
+		aliases: [
+			'incline machine chest press',
+			'incline chest press machine',
+			'seated incline chest press'
+		],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Chest', secondary: ['Shoulders', 'Triceps'] },
 		variantOf: 'bench-press'
 	},
 	{
@@ -438,6 +460,14 @@ export const catalog: Exercise[] = [
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Biceps', secondary: ['Forearms'] }
+	},
+	{
+		id: 'machine-curl',
+		name: 'Machine Curl',
+		aliases: ['machine biceps curl', 'machine bicep curl', 'curl machine', 'seated machine curl'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Biceps', secondary: [] }
 	},
 
 	{
