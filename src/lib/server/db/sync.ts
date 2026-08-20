@@ -8,7 +8,7 @@ import { records } from './schema.ts';
 import type { Executor } from './seq.ts';
 import { claimSeq } from './seq.ts';
 
-function wireOf({ id, kind, updatedAt, deletedAt, payload }: RecordRow): WireRecord {
+export function wireOf({ id, kind, updatedAt, deletedAt, payload }: RecordRow): WireRecord {
 	return { id, kind, updatedAt, deletedAt, payload };
 }
 
@@ -33,23 +33,46 @@ function upsert(tx: Executor, userId: string, seq: number, pushed: WireRecord): 
 		.run();
 }
 
+export function rowFor(tx: Executor, userId: string, id: string): RecordRow | undefined {
+	return tx
+		.select()
+		.from(records)
+		.where(and(eq(records.userId, userId), eq(records.id, id)))
+		.get();
+}
+
+export type PushOutcome = { stored: boolean; existing: RecordRow | undefined };
+
+/**
+ * One record through the last-write-wins gate, stamped with a fresh seq when it takes.
+ *
+ * Every write into a user's records goes through here — a device push and an MCP call
+ * alike — so the rule that decides a conflict has one home rather than two that drift.
+ */
+export function applyPush(tx: Executor, userId: string, pushed: WireRecord): PushOutcome {
+	const existing = rowFor(tx, userId, pushed.id);
+
+	if (!wins(pushed, existing)) {
+		return { stored: false, existing };
+	}
+
+	upsert(tx, userId, claimSeq(tx, userId), pushed);
+
+	return { stored: true, existing };
+}
+
 export function syncExchange(db: Database, userId: string, request: SyncRequest): SyncResponse {
 	return db.transaction((tx) => {
 		const acks: SyncAck[] = [];
-		const accepted = new Set<string>();
+		const taken = new Set<string>();
 		const out = new Map<string, WireRecord>();
 
 		for (const pushed of request.push) {
-			const existing = tx
-				.select()
-				.from(records)
-				.where(and(eq(records.userId, userId), eq(records.id, pushed.id)))
-				.get();
+			const { stored, existing } = applyPush(tx, userId, pushed);
 
-			if (wins(pushed, existing)) {
-				upsert(tx, userId, claimSeq(tx, userId), pushed);
+			if (stored) {
 				acks.push({ id: pushed.id, updatedAt: pushed.updatedAt });
-				accepted.add(pushed.id);
+				taken.add(pushed.id);
 			} else if (existing !== undefined) {
 				out.set(existing.id, wireOf(existing));
 			}
@@ -67,7 +90,7 @@ export function syncExchange(db: Database, userId: string, request: SyncRequest)
 		for (const row of fresh) {
 			watermark = row.seq;
 
-			if (!accepted.has(row.id)) {
+			if (!taken.has(row.id)) {
 				out.set(row.id, wireOf(row));
 			}
 		}

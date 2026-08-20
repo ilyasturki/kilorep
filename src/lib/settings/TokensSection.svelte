@@ -2,7 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 
 	import { createToken, revokeToken } from '$lib/api/auth';
-	import { ApiError } from '$lib/api/client';
+	import { ApiError, apiBase } from '$lib/api/client';
 	import Section from '$lib/settings/Section.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
@@ -23,6 +23,15 @@
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 	let copied = $state(false);
+
+	// The token is shown once and the address is needed every time, so the address lives here
+	// rather than beside it. `apiBase` and not `location.origin`: on the phone the server is
+	// wherever it was configured, which is the host a client has to be pointed at.
+	const endpoint = $derived.by(() => {
+		const base = apiBase();
+
+		return base === null ? null : `${base}/api/mcp`;
+	});
 
 	let createOpen = $state(false);
 	let label = $state('');
@@ -142,6 +151,13 @@
 	{/each}
 
 	{#snippet footer()}
+		{#if endpoint !== null}
+			<p class="text-sm font-bold text-ink-faint">
+				MCP answers at <code class="text-ink-muted">{endpoint}</code> — point a client there and send
+				one of these as a bearer token.
+			</p>
+		{/if}
+
 		<div aria-live="polite">
 			{#if revokeError !== ''}
 				<p class="text-sm font-bold text-danger">{revokeError}</p>
