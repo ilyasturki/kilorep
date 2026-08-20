@@ -17,6 +17,7 @@ import {
 	removeSet,
 	reorder,
 	replaceExercise,
+	startable,
 	setExerciseReps,
 	setExerciseRest,
 	setPlannedReps,
@@ -676,6 +677,22 @@ describe('archive', () => {
 
 	test('archiving at epoch zero still counts as archived', () => {
 		expect(isArchived(archivedAt(0))).toBe(true);
+	});
+
+	test('startable drops an archived plan, which no tap may start', () => {
+		const plans = [blankTemplate('a', 100), archivedAt(500), blankTemplate('c', 300)];
+
+		expect(startable(plans).map((kept) => kept.id)).toEqual(['a', 'c']);
+	});
+
+	test('startable keeps the order it is given, which is the order the lifter dragged', () => {
+		const plans = [blankTemplate('c', 300), blankTemplate('a', 100)];
+
+		expect(startable(plans).map((kept) => kept.id)).toEqual(['c', 'a']);
+	});
+
+	test('startable keeps a plan whose archivedAt was cleared rather than removed', () => {
+		expect(startable([archivedAt(null)])).toHaveLength(1);
 	});
 });
 

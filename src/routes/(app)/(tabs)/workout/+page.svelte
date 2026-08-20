@@ -2,11 +2,11 @@
 	import { invalidate } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
-	import { drawableMark, startFrom } from '$lib/domain/template';
+	import { lastDoneByTemplate, nextUp } from '$lib/domain/rotation';
+	import { drawableMark, startable, startFrom } from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
 	import { formatSince, lastDoneLine } from '$lib/history/label';
 	import { planLine, planMeta, templateTitle } from '$lib/templates/plan';
-	import { lastDoneByTemplate, nextUp, startable } from '$lib/templates/rotation';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -47,8 +47,9 @@
 
 	const next = $derived(nextUp(plans, lastDone));
 
-	// List order, not rotation order: the rest of the screen answers "not that one, this one",
-	// and the answer is easiest to find where the lifter dragged it.
+	// Four, because All templates is a row away and a screen that lists everything twice is the
+	// screen this replaced. List order rather than rotation order: this half answers "not that
+	// one, this one", and the answer is easiest to find where the lifter dragged it.
 	const REST = 4;
 
 	const rest = $derived(plans.filter((plan) => plan.id !== next?.id).slice(0, REST));
@@ -73,10 +74,6 @@
 						<span class="text-xl font-extrabold tracking-tight text-ink">Empty workout</span>
 						<span class="text-md font-bold text-ink-muted">Add exercises as you go.</span>
 					</div>
-
-					<Button variant="commit" caps class="w-full" onclick={() => void startEmpty()}>
-						START
-					</Button>
 				{:else}
 					{@const mark = drawableMark(next)}
 
@@ -97,11 +94,16 @@
 							</span>
 						</div>
 					</div>
-
-					<Button variant="commit" caps class="w-full" onclick={() => void startTemplate(next)}>
-						START
-					</Button>
 				{/if}
+
+				<Button
+					variant="commit"
+					caps
+					class="w-full"
+					onclick={() => void (next === null ? startEmpty() : startTemplate(next))}
+				>
+					START
+				</Button>
 			</div>
 		</section>
 

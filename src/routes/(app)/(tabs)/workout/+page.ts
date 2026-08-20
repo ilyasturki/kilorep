@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 
-import { hintsOf } from '$lib/store/derive';
+import { hintsOf, lastPerformedFrom } from '$lib/store/derive';
 import { getStore } from '$lib/store/store';
 import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 
@@ -11,14 +11,15 @@ export const load: PageLoad = async ({ depends }) => {
 
 	const store = await getStore();
 
-	const [lastPerformed, resume, templates, workouts] = await Promise.all([
-		store.lastPerformed(),
+	// `lastPerformed()` is the same full history read as `listWorkouts()`, so the landing
+	// tab reads it once and derives the hints here rather than paying for it twice.
+	const [resume, templates, workouts] = await Promise.all([
 		store.loadSnapshot(),
 		store.listTemplates(),
 		store.listWorkouts()
 	]);
 
-	const history = hintsOf(lastPerformed);
+	const history = hintsOf(lastPerformedFrom(workouts));
 
 	if (activeWorkout.session === null && resume !== null) {
 		activeWorkout.begin(history, resume);
@@ -28,5 +29,5 @@ export const load: PageLoad = async ({ depends }) => {
 		redirect(307, '/workout/live');
 	}
 
-	return { store, history, templates, workouts };
+	return { history, templates, workouts };
 };

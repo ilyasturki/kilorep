@@ -23,8 +23,7 @@ export async function launchRepeat(store: Store, workout: Workout): Promise<void
 
 	await invalidate(SESSION_DEP);
 
-	// On /workout the invalidate already redirects; a goto would push a duplicate history entry.
-	if (location.pathname !== '/workout') {
-		await goto('/workout');
-	}
+	// `/workout` redirects itself to the session and replaces its own entry doing it, so this
+	// pushes one entry and back returns to the History screen the repeat was launched from.
+	await goto('/workout');
 }

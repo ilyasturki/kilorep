@@ -86,6 +86,11 @@ export function isArchived(template: Template): boolean {
 	return template.archivedAt !== undefined && template.archivedAt !== null;
 }
 
+/** The plans a tap can start, in the order they were given. */
+export function startable(templates: Template[]): Template[] {
+	return templates.filter((template) => !isArchived(template));
+}
+
 // 1000, not 1: ranks are epoch-ms scale and must survive repeated midpoint halving in `reorder`.
 const RANK_GAP = 1000;
 

@@ -3,7 +3,7 @@ import { countedDays } from '$lib/format/when';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template } from '$lib/domain/template';
 import type { Workout } from '$lib/domain/workout';
-import { templateTitle } from '$lib/templates/plan';
+import { exercisesLabel, setsLabel, templateTitle } from '$lib/templates/plan';
 
 export function workoutTitle(workout: Workout, templates: Template[]): string {
 	const template = templates.find((candidate) => candidate.id === workout.templateId);
@@ -42,10 +42,7 @@ export function workoutMeta(workout: Workout): string {
 	const exercises = exerciseCount(workout);
 	const sets = completedSetCount(workout);
 
-	return [
-		exercises === 1 ? '1 exercise' : `${exercises} exercises`,
-		sets === 1 ? '1 set' : `${sets} sets`
-	].join(' · ');
+	return `${exercisesLabel(exercises)} · ${setsLabel(sets)}`;
 }
 
 const DAY = 86_400_000;

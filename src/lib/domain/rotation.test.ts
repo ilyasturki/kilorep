@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'vitest';
 
-import { lastDoneByTemplate, nextUp, startable } from '$lib/templates/rotation';
+import { lastDoneByTemplate, nextUp } from '$lib/domain/rotation';
 
 import type { Template } from '$lib/domain/template';
 import type { Workout } from '$lib/domain/workout';
 
-function plan(id: string, archivedAt?: number | null): Template {
-	return { id, name: id, createdAt: 0, entries: [], archivedAt };
+function plan(id: string): Template {
+	return { id, name: id, createdAt: 0, entries: [] };
 }
 
 function session(templateId: string | null, startedAt: number): Workout {
@@ -24,23 +24,6 @@ function chosen(plans: Template[], done: Record<string, number>): string | null 
 
 	return up === null ? null : up.id;
 }
-
-describe('startable', () => {
-	test('keeps the order it is given, which is the order the lifter dragged', () => {
-		expect(startable(split).map((template) => template.id)).toEqual(['push', 'pull', 'legs']);
-	});
-
-	test('drops an archived plan, which no tap on this screen may start', () => {
-		expect(startable([push, plan('old', 500), legs]).map((template) => template.id)).toEqual([
-			'push',
-			'legs'
-		]);
-	});
-
-	test('keeps a plan whose archivedAt was cleared rather than removed', () => {
-		expect(startable([plan('back', null)])).toHaveLength(1);
-	});
-});
 
 describe('lastDoneByTemplate', () => {
 	test('takes the latest session per plan, not the first one it walks past', () => {

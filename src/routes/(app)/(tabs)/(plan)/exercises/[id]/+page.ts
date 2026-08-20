@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 
 import { catalogById } from '$lib/catalog';
 import type { Exercise } from '$lib/domain/exercise';
-import { isArchived } from '$lib/domain/template';
+import { startable } from '$lib/domain/template';
 import { getStore } from '$lib/store/store';
 
 import type { PageLoad } from './$types';
@@ -24,7 +24,7 @@ export const load: PageLoad = async ({ params }) => {
 	]);
 
 	const templates = past.length === 0 ? await store.listTemplates() : [];
-	const plans = templates.filter((plan) => !isArchived(plan));
+	const plans = startable(templates);
 
 	return { exercise, past, lastPerformed, note, plans };
 };
