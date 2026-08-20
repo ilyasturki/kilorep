@@ -7,6 +7,7 @@
 		"dev": "vite dev",
 		"dev:google": "node --env-file=.env.google node_modules/vite/bin/vite.js dev",
 		"dev:app": "BUILD_TARGET=app vite dev --port 5173 --strictPort",
+		"dev:prod": "DATABASE_PATH=.data/prod.db vite dev",
 		"build:server": "vite build",
 		"build:app": "BUILD_TARGET=app vite build",
 		"app:sync": "bun run build:app && cap sync android",
