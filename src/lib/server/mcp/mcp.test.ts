@@ -92,10 +92,12 @@ type ToolList = { tools: { name: string }[] };
 
 type Handshake = { serverInfo: { name: string; version: string }; instructions: string };
 
+type Best = { kg: number; reps: number; at: string; addedKg?: number };
+
 type ExerciseRow = {
 	id: string;
 	lastSets: string | null;
-	pr: { weight: number; reps: number; at: string } | null;
+	pr: Best | null;
 };
 
 type Found = { matched: number; returned: number; exercises: ExerciseRow[] };
@@ -105,6 +107,8 @@ type Detail = {
 	note: string | null;
 	restSeconds: number | null;
 	trainedSessions: number;
+	bodyweightShare?: number;
+	pr: Best | null;
 	sessions: { est1rm: number; sets: { weight: number; reps: number; rpe: number | null }[] }[];
 };
 
@@ -348,7 +352,7 @@ type Wrote = {
 type Progress = {
 	weeklyWork: { weeks: { start: string; kg: number; sets: number }[]; lastWeekKg: number };
 	strength: {
-		recentPrs: { exerciseId: string; weight: number; reps: number }[];
+		recentPrs: { exerciseId: string; kg: number; addedKg?: number; reps: number }[];
 		mainLifts: { exerciseId: string; est1rm: number | null; deltaKg: number; sessions: number }[];
 	};
 	frequency: { last7: number; median: number | null; weeks: number[] };
@@ -450,7 +454,7 @@ describe('search_exercises', () => {
 		const bench = found.exercises[0];
 
 		expect(bench.lastSets).toBe('82.5 × 7');
-		expect(bench.pr).toEqual({ weight: 90, reps: 3, at: new Date(NOW - 14 * DAY).toISOString() });
+		expect(bench.pr).toEqual({ kg: 90, reps: 3, at: new Date(NOW - 14 * DAY).toISOString() });
 	});
 
 	test('trainedOnly drops the catalogue down to what has been lifted', async () => {
@@ -652,6 +656,69 @@ describe('one lifter, one library', () => {
 		const listed = await callTool<Listed>(send, 'workouts');
 
 		expect(listed.workouts).toEqual([]);
+	});
+});
+
+describe('a movement that carries the body', () => {
+	// 20 Aug 2026 on the server's own clock, which is the clock a session is stamped by.
+	const today = localDateOf(new Date(NOW));
+
+	test('the personal best is what moved, with the belt named beside it', async () => {
+		seed(
+			weighIn(addDays(today, -30), 78),
+			workout('w1', NOW - DAY, 'pull-up', [{ weight: 10, reps: 8 }])
+		);
+
+		const detail = await once<Detail>('exercise', { id: 'pull-up' });
+
+		expect(detail.bodyweightShare).toBe(1);
+		expect(detail.pr).toMatchObject({ kg: 88, addedKg: 10, reps: 8 });
+	});
+
+	test('a barbell best names no added weight, which would be the same number twice', async () => {
+		seed(
+			weighIn(addDays(today, -30), 78),
+			workout('w1', NOW - DAY, 'bench-press', [{ weight: 90, reps: 3 }])
+		);
+
+		const detail = await once<Detail>('exercise', { id: 'bench-press' });
+
+		expect(detail.bodyweightShare).toBeUndefined();
+		expect(detail.pr).toEqual({ kg: 90, reps: 3, at: new Date(NOW - DAY).toISOString() });
+	});
+
+	test('volume counts the body the set carried', async () => {
+		seed(
+			weighIn(addDays(today, -30), 78),
+			workout('w1', NOW - DAY, 'pull-up', [{ weight: 10, reps: 8 }])
+		);
+
+		const detail = await once<WorkoutDetail>('workout', { id: 'w1' });
+
+		expect(detail.totals.volumeKg).toBe(88 * 8);
+	});
+
+	test('a session before the first weigh-in counts the added weight alone', async () => {
+		seed(weighIn(today, 78), workout('w1', NOW - 90 * DAY, 'pull-up', [{ weight: 10, reps: 8 }]));
+
+		const detail = await once<WorkoutDetail>('workout', { id: 'w1' });
+
+		expect(detail.totals.volumeKg).toBe(80);
+	});
+
+	test('the weigh-in in force is the one on or before the session, not the latest', async () => {
+		seed(
+			weighIn(addDays(today, -60), 78),
+			weighIn(addDays(today, -1), 82),
+			workout('old', NOW - 30 * DAY, 'pull-up', [{ weight: 0, reps: 8 }]),
+			workout('new', NOW - 2 * 3_600_000, 'pull-up', [{ weight: 0, reps: 8 }])
+		);
+
+		const older = await once<WorkoutDetail>('workout', { id: 'old' });
+		const newer = await once<WorkoutDetail>('workout', { id: 'new' });
+
+		expect(older.totals.volumeKg).toBe(78 * 8);
+		expect(newer.totals.volumeKg).toBe(82 * 8);
 	});
 });
 
@@ -1322,7 +1389,7 @@ describe('correcting a session', () => {
 
 		const before = await once<Found>('search_exercises', { query: 'bench press', limit: 1 });
 
-		expect(before.exercises[0].pr).toMatchObject({ weight: 95, reps: 3 });
+		expect(before.exercises[0].pr).toMatchObject({ kg: 95, reps: 3 });
 
 		const detail = await once<WorkoutDetail>('workout', { id: 'heavy' });
 		const gone = await once<Wrote>('delete_workout', { id: 'heavy', version: detail.version });
@@ -1331,7 +1398,7 @@ describe('correcting a session', () => {
 
 		const after = await once<Found>('search_exercises', { query: 'bench press', limit: 1 });
 
-		expect(after.exercises[0].pr).toMatchObject({ weight: 80, reps: 5 });
+		expect(after.exercises[0].pr).toMatchObject({ kg: 80, reps: 5 });
 
 		const missing = await once<WorkoutDetail>('workout', { id: 'heavy' });
 
@@ -1364,7 +1431,7 @@ describe('progress', () => {
 
 		expect(progress.strength.recentPrs[0]).toMatchObject({
 			exerciseId: 'bench-press',
-			weight: 90,
+			kg: 90,
 			reps: 5
 		});
 

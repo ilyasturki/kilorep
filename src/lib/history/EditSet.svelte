@@ -12,13 +12,14 @@
 	type Props = {
 		cursor: SetCursor;
 		step: number;
+		unit: string;
 		ondraft: (weight: number | null, reps: number | null) => void;
 		onrate: (rpe: number | null) => void;
 		ondone: () => void;
 		onoptions: (anchor: HTMLElement) => void;
 	};
 
-	let { cursor, step, ondraft, onrate, ondone, onoptions }: Props = $props();
+	let { cursor, step, unit, ondraft, onrate, ondone, onoptions }: Props = $props();
 
 	const weight = $derived(cursor.set.weight);
 	const reps = $derived(cursor.set.reps);
@@ -77,7 +78,7 @@
 
 		<div class="grid grid-cols-2 gap-2">
 			<StepperField
-				label="kg"
+				label={unit}
 				value={weight}
 				recalled={opened.weight}
 				{step}

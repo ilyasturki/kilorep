@@ -6,7 +6,7 @@
 	import type { SetCursor } from '$lib/domain/workout';
 	import { exertionLabel } from '$lib/domain/exertion';
 	import EditSet from '$lib/history/EditSet.svelte';
-	import { loadModeNote } from '$lib/exercises/label';
+	import { loadModeNote, loadUnitLabel } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import { quickMs } from '$lib/ui/motion';
@@ -118,6 +118,7 @@
 					<EditSet
 						{cursor}
 						step={weightStep(meta.equipment)}
+						unit={loadUnitLabel(meta)}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
 						onrate={(rpe) => onrate(cursor.set.id, rpe)}
 						ondone={onclose}

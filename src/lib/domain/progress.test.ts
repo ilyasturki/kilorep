@@ -10,6 +10,7 @@ import {
 	weeklyWork
 } from '$lib/domain/progress';
 import type { Exercise, LoadMode, Muscle } from '$lib/domain/exercise';
+import type { Carried } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import type { SetType, Workout, WorkoutSet } from '$lib/domain/workout';
 
@@ -23,6 +24,8 @@ const session = (date: number, sets: [number, number][]): PastSession => ({
 });
 
 const one = (): number => 1;
+
+const bare = (): number => 0;
 
 const monday = (weeksOn: number, day = 0, hour = 12): number =>
 	new Date(2024, 0, 1 + weeksOn * 7 + day, hour).getTime();
@@ -59,25 +62,44 @@ describe('recentPrs', () => {
 	test('a PR set inside the window makes the card', () => {
 		const prs = recentPrs(
 			{ 'bench-press': [session(10, [[100, 5]]), session(90, [[102.5, 5]])] },
-			50
+			50,
+			bare
 		);
 
 		expect(prs).toEqual([
-			{ exerciseId: 'bench-press', set: { weight: 102.5, reps: 5, rpe: null }, date: 90 }
+			{
+				exerciseId: 'bench-press',
+				set: { weight: 102.5, reps: 5, rpe: null },
+				date: 90,
+				load: 102.5
+			}
 		]);
 	});
 
 	test('a first-ever session sets a best, not news', () => {
-		expect(recentPrs({ 'pec-deck': [session(90, [[50, 10]])] }, 50)).toEqual([]);
+		expect(recentPrs({ 'pec-deck': [session(90, [[50, 10]])] }, 50, bare)).toEqual([]);
 	});
 
 	test('matching an old PR in the window is not a new one', () => {
 		const prs = recentPrs(
 			{ 'bench-press': [session(1, [[80, 5]]), session(10, [[100, 5]]), session(90, [[100, 5]])] },
-			50
+			50,
+			bare
 		);
 
 		expect(prs).toEqual([]);
+	});
+
+	test('a best on a bodyweight movement is ranked and reported on what moved', () => {
+		const prs = recentPrs(
+			{ 'pull-up': [session(10, [[5, 8]]), session(90, [[10, 8]])] },
+			50,
+			() => 78
+		);
+
+		expect(prs).toEqual([
+			{ exerciseId: 'pull-up', set: { weight: 10, reps: 8, rpe: null }, date: 90, load: 88 }
+		]);
 	});
 
 	test('newest first across exercises', () => {
@@ -86,7 +108,8 @@ describe('recentPrs', () => {
 				squat: [session(10, [[100, 5]]), session(60, [[110, 5]])],
 				deadlift: [session(10, [[140, 5]]), session(80, [[150, 5]])]
 			},
-			50
+			50,
+			bare
 		);
 
 		expect(prs.map((pr) => pr.exerciseId)).toEqual(['deadlift', 'squat']);
@@ -101,7 +124,8 @@ describe('mainLifts', () => {
 				curl: [session(60, [[20, 10]]), session(70, [[20, 10]])]
 			},
 			50,
-			one
+			one,
+			bare
 		);
 
 		expect(lifts).toEqual(['squat', 'curl']);
@@ -114,14 +138,15 @@ describe('mainLifts', () => {
 				curl: [session(60, [[20, 10]]), session(70, [[20, 10]])]
 			},
 			50,
-			one
+			one,
+			bare
 		);
 
 		expect(lifts).toEqual(['curl']);
 	});
 
 	test('one session in the window has no direction and does not qualify', () => {
-		expect(mainLifts({ squat: [session(60, [[100, 5]])] }, 50, one)).toEqual([]);
+		expect(mainLifts({ squat: [session(60, [[100, 5]])] }, 50, one, bare)).toEqual([]);
 	});
 
 	test('a session-count tie settles on volume, load factor included', () => {
@@ -131,7 +156,8 @@ describe('mainLifts', () => {
 				'db-press': [session(60, [[20, 10]]), session(70, [[20, 10]])]
 			},
 			50,
-			(exerciseId) => (exerciseId === 'db-press' ? 2 : 1)
+			(exerciseId) => (exerciseId === 'db-press' ? 2 : 1),
+			bare
 		);
 
 		expect(lifts).toEqual(['db-press', 'squat']);
@@ -143,7 +169,7 @@ describe('mainLifts', () => {
 			session(date + 1, [[50, 5]])
 		];
 
-		const lifts = mainLifts({ a: two(60), b: two(62), c: two(64), d: two(66) }, 50, one, 3);
+		const lifts = mainLifts({ a: two(60), b: two(62), c: two(64), d: two(66) }, 50, one, bare, 3);
 
 		expect(lifts).toHaveLength(3);
 	});
@@ -159,7 +185,8 @@ describe('estTrend', () => {
 				]),
 				session(70, [[102.5, 5]])
 			],
-			50
+			50,
+			bare
 		);
 
 		expect(points).toEqual([
@@ -169,11 +196,11 @@ describe('estTrend', () => {
 	});
 
 	test('sessions before the window contribute no point', () => {
-		expect(estTrend([session(10, [[100, 5]]), session(60, [[100, 5]])], 50)).toHaveLength(1);
+		expect(estTrend([session(10, [[100, 5]]), session(60, [[100, 5]])], 50, bare)).toHaveLength(1);
 	});
 
-	test('a bodyweight zero estimates nothing', () => {
-		expect(estTrend([session(60, [[0, 12]])], 50)).toEqual([]);
+	test('a set that moved nothing at all estimates nothing', () => {
+		expect(estTrend([session(60, [[0, 12]])], 50, bare)).toEqual([]);
 	});
 });
 
@@ -182,7 +209,7 @@ describe('weeklyWork', () => {
 	const ago = (days: number): number => NOW - days * DAY;
 
 	test('every bucket is a full week wide and the last one ends at now', () => {
-		const weeks = weeklyWork([], NOW, one, 12);
+		const weeks = weeklyWork([], NOW, one, bare, 12);
 
 		expect(weeks).toHaveLength(12);
 		expect(weeks[0].start).toBe(NOW - 12 * WEEK);
@@ -195,6 +222,7 @@ describe('weeklyWork', () => {
 			[workout(ago(6), 'bench-press', [set(100, 5)]), workout(ago(8), 'bench-press', [set(50, 5)])],
 			NOW,
 			one,
+			bare,
 			12
 		);
 
@@ -203,7 +231,7 @@ describe('weeklyWork', () => {
 	});
 
 	test('load factor multiplies tonnage and never the set count', () => {
-		const weeks = weeklyWork([workout(ago(2), 'db-press', [set(20, 10)])], NOW, () => 2, 12);
+		const weeks = weeklyWork([workout(ago(2), 'db-press', [set(20, 10)])], NOW, () => 2, bare, 12);
 
 		expect(weeks[11].kg).toBe(400);
 		expect(weeks[11].sets).toBe(1);
@@ -220,6 +248,7 @@ describe('weeklyWork', () => {
 			],
 			NOW,
 			one,
+			bare,
 			12
 		);
 
@@ -227,9 +256,24 @@ describe('weeklyWork', () => {
 	});
 
 	test('sessions older than the window fall outside it entirely', () => {
-		const weeks = weeklyWork([workout(ago(90), 'bench-press', [set(100, 5)])], NOW, one, 12);
+		const weeks = weeklyWork([workout(ago(90), 'bench-press', [set(100, 5)])], NOW, one, bare, 12);
 
 		expect(weeks.every((week) => week.sets === 0)).toBe(true);
+	});
+
+	test('the body carried is tonnage too, read at the day of the session and never the last', () => {
+		const carried: Carried = (_, at) => (at === ago(9) ? 78 : 82);
+
+		const weeks = weeklyWork(
+			[workout(ago(9), 'pull-up', [set(0, 8)]), workout(ago(2), 'pull-up', [set(10, 8)])],
+			NOW,
+			one,
+			carried,
+			12
+		);
+
+		expect(weeks[10].kg).toBe(78 * 8);
+		expect(weeks[11].kg).toBe(92 * 8);
 	});
 });
 

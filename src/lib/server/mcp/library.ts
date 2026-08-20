@@ -4,6 +4,8 @@ import { catalogById } from '$lib/catalog';
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
 import type { Exercise } from '$lib/domain/exercise';
 import { loadFactor } from '$lib/domain/exercise';
+import type { Carried } from '$lib/domain/load';
+import { carriedFrom } from '$lib/domain/load';
 import {
 	NOTE_PREFIX,
 	REST_DEFAULT_ID,
@@ -145,6 +147,14 @@ export class Library {
 				.map((row) => row.payload as BodyweightEntry)
 				.toSorted((a, b) => a.date.localeCompare(b.date))
 		);
+	}
+
+	/**
+	 * Memoised with everything else: the resolver caches its own lookups, so handing out a
+	 * fresh one per tool would throw that cache away between two numbers of the same answer.
+	 */
+	public carried(): Carried {
+		return this.once('carried', () => carriedFrom(this.bodyweight(), (id) => catalogById[id]));
 	}
 
 	private preferences(): Preference[] {

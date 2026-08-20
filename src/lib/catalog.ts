@@ -132,6 +132,7 @@ export const catalog: Exercise[] = [
 		aliases: ['pushup', 'press up'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 0.65,
 		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders', 'Core'] }
 	},
 
@@ -158,6 +159,7 @@ export const catalog: Exercise[] = [
 		aliases: ['pullup', 'overhand pull up', 'wide grip pull up'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 1,
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
 	},
 	{
@@ -166,6 +168,7 @@ export const catalog: Exercise[] = [
 		aliases: ['chinup', 'supinated pull up', 'underhand pull up', 'reverse grip pull up'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 1,
 		muscles: { primary: 'Back', secondary: ['Biceps'] },
 		variantOf: 'pull-up'
 	},
@@ -275,6 +278,7 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 0.45,
 		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings'] }
 	},
 
@@ -505,6 +509,7 @@ export const catalog: Exercise[] = [
 		aliases: ['dips', 'parallel bar dip', 'tricep dip', 'chest dip', 'bar dip'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 1,
 		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] }
 	},
 
@@ -545,6 +550,7 @@ export const catalog: Exercise[] = [
 		aliases: ['front plank', 'forearm plank', 'elbow plank'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 0,
 		muscles: { primary: 'Core', secondary: [] }
 	},
 	{
@@ -553,6 +559,7 @@ export const catalog: Exercise[] = [
 		aliases: ['side bridge', 'lateral plank', 'oblique plank'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 0,
 		muscles: { primary: 'Core', secondary: [] },
 		variantOf: 'plank'
 	},
@@ -562,6 +569,7 @@ export const catalog: Exercise[] = [
 		aliases: ['ab crunch', 'floor crunch', 'abdominal crunch'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 0,
 		muscles: { primary: 'Core', secondary: [] }
 	},
 	{
@@ -570,6 +578,7 @@ export const catalog: Exercise[] = [
 		aliases: ['ab wheel', 'ab rollout', 'ab roller', 'wheel rollout'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 0,
 		muscles: { primary: 'Core', secondary: ['Shoulders'] }
 	},
 	{
@@ -578,6 +587,7 @@ export const catalog: Exercise[] = [
 		aliases: ['seated twist', 'oblique twist', 'trunk twist'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 0,
 		muscles: { primary: 'Core', secondary: [] }
 	},
 	{
@@ -594,6 +604,7 @@ export const catalog: Exercise[] = [
 		aliases: ['leg raise', 'hanging knee raise', 'knee raise', 'hanging knee tuck'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
+		bodyweightShare: 1,
 		muscles: { primary: 'Core', secondary: ['Forearms'] }
 	},
 

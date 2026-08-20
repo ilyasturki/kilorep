@@ -45,4 +45,12 @@ export type Exercise = {
 	loadMode: LoadMode;
 	muscles: MuscleTargets;
 	variantOf?: string;
+	/**
+	 * The share of the lifter's own body weight this movement makes them carry.
+	 *
+	 * Absent is zero, which is every exercise loaded by a bar, a stack or a bell: those move
+	 * what was put on them and nothing else. Coarse on purpose — a share to two decimals
+	 * would claim a measurement nobody took.
+	 */
+	bodyweightShare?: number;
 };

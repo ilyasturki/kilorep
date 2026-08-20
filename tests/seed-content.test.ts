@@ -165,7 +165,7 @@ describe('the sets', () => {
 describe('the planted states', () => {
 	it('sets the bench PR before the last bench session', () => {
 		const sessions = pastSessionsFrom(content.workouts, 'bench-press');
-		const pr = rawPr(sessions)!;
+		const pr = rawPr(sessions, () => 0)!;
 		const last = sessions.at(-1)!;
 
 		expect(pr.set.weight).toBe(82.5);

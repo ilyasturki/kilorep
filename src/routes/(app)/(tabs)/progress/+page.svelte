@@ -2,6 +2,7 @@
 	import { catalogById } from '$lib/catalog';
 	import { rollingAverage, localDateOf, weeklyRate, windowed } from '$lib/domain/bodyweight';
 	import { loadFactor } from '$lib/domain/exercise';
+	import { carriedFrom, carriedOn } from '$lib/domain/load';
 	import {
 		estTrend,
 		mainLifts,
@@ -10,6 +11,7 @@
 		rollingConsistency,
 		weeklyWork
 	} from '$lib/domain/progress';
+	import { loadLabel } from '$lib/exercises/label';
 	import Sparkline from '$lib/progress/Sparkline.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -44,11 +46,13 @@
 	const factorOf = (exerciseId: string): number =>
 		loadFactor(catalogById[exerciseId]?.loadMode ?? 'total');
 
+	const carried = $derived(carriedFrom(data.bodyweight, (id) => catalogById[id]));
+
 	const kgFormat = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 });
 	const listFormat = new Intl.ListFormat('en-GB', { style: 'long', type: 'conjunction' });
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
 
-	const work = $derived(weeklyWork(data.workouts, now, factorOf));
+	const work = $derived(weeklyWork(data.workouts, now, factorOf, carried));
 	const workMax = $derived(Math.max(...work.map((week) => week.kg)));
 	const lastWeek = $derived(work.at(-1) ?? { start: now, kg: 0, sets: 0 });
 
@@ -62,7 +66,7 @@
 
 	const workHeight = (kg: number): number => (workMax === 0 ? 0 : (kg / workMax) * 100);
 
-	const prs = $derived(recentPrs(data.sessions, since4));
+	const prs = $derived(recentPrs(data.sessions, since4, carried));
 
 	const PR_ROWS = 3;
 
@@ -71,12 +75,16 @@
 
 	const hidden = $derived(Math.max(0, prs.length - PR_ROWS));
 
-	const lifts = $derived(mainLifts(data.sessions, since12, factorOf));
+	const lifts = $derived(mainLifts(data.sessions, since12, factorOf, carried));
 
 	const liftRows = $derived(
 		lifts
 			.map((exerciseId) => {
-				const trend = estTrend(data.sessions[exerciseId] ?? [], since12);
+				const trend = estTrend(
+					data.sessions[exerciseId] ?? [],
+					since12,
+					carriedOn(carried, exerciseId)
+				);
 				const first = trend.at(0);
 				const last = trend.at(-1);
 
@@ -235,7 +243,7 @@
 									{/snippet}
 									{#snippet trailing()}
 										<span class={WINDOW}>{day.format(pr.date)}</span>
-										<span class="tabular-nums">{pr.set.weight} × {pr.set.reps}</span>
+										<span class="tabular-nums">{loadLabel(pr.load)} × {pr.set.reps}</span>
 									{/snippet}
 								</ListRow>
 							{/each}
@@ -269,7 +277,7 @@
 												{/snippet}
 												{#snippet trailing()}
 													<span class={WINDOW}>{day.format(pr.date)}</span>
-													<span class="tabular-nums">{pr.set.weight} × {pr.set.reps}</span>
+													<span class="tabular-nums">{loadLabel(pr.load)} × {pr.set.reps}</span>
 												{/snippet}
 											</ListRow>
 										{/each}

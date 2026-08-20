@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 
 import { catalog } from '$lib/catalog';
+import { bodyweightShareOf, carriedOn } from '$lib/domain/load';
 import { REST_DEFAULT_ID, noteId, restOverrideId } from '$lib/domain/preference';
 import { MAX_REST_SECONDS, MIN_REST_SECONDS, restSecondsFor } from '$lib/domain/rest';
 import { searchExercises } from '$lib/domain/search';
@@ -63,6 +64,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 			}
 
 			const past = library.pastSessions(id);
+			const carried = carriedOn(library.carried(), id);
 			// slice(-0) is slice(0), which is the whole history — the one value meaning none.
 			const recent = wanted === 0 ? [] : past.slice(-wanted);
 
@@ -72,16 +74,19 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 				aliases: exercise.aliases,
 				equipment: exercise.equipment,
 				loadMode: exercise.loadMode,
+				bodyweightShare: bodyweightShareOf(exercise) === 0 ? undefined : exercise.bodyweightShare,
 				muscles: exercise.muscles,
 				variantOf: exercise.variantOf,
 				note: library.noteOf(id),
 				restSeconds: restSecondsFor(id, library.restSettings()),
 				trainedSessions: past.length,
-				pr: bestOf(past),
+				pr: bestOf(past, carried),
 				sessions: recent.map((session) => ({
 					date: iso(session.date),
 					workoutId: session.workoutId,
-					est1rm: round(Math.max(0, ...session.sets.map((set) => estimated1Rm(set)))),
+					est1rm: round(
+						Math.max(0, ...session.sets.map((set) => estimated1Rm(set, carried(session.date))))
+					),
 					sets: session.sets.map((set) => ({
 						weight: set.weight,
 						reps: set.reps,

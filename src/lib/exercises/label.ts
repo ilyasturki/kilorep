@@ -1,4 +1,5 @@
-import type { LoadMode } from '$lib/domain/exercise';
+import type { Exercise, LoadMode } from '$lib/domain/exercise';
+import { bodyweightShareOf } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import { bestSet } from '$lib/domain/stats';
 import { formatSince } from '$lib/history/label';
@@ -19,8 +20,21 @@ const LOAD_MODE_UNITS: Record<LoadMode, string> = {
 	unilateral: 'kg / side'
 };
 
-export function loadUnitLabel(mode: LoadMode): string {
-	return LOAD_MODE_UNITS[mode];
+const LOAD_MODE_UNITS_ADDED: Record<LoadMode, string> = {
+	total: 'kg added',
+	'per-hand': 'kg added / hand',
+	unilateral: 'kg added / side'
+};
+
+export function loadUnitLabel(exercise: Exercise): string {
+	const units = bodyweightShareOf(exercise) > 0 ? LOAD_MODE_UNITS_ADDED : LOAD_MODE_UNITS;
+
+	return units[exercise.loadMode];
+}
+
+/** One decimal: a share of a body weight lands on fractions no scale claims to resolve. */
+export function loadLabel(kg: number): string {
+	return String(Math.round(kg * 10) / 10);
 }
 
 export function lastSetLabel(session: PastSession | undefined): string | undefined {

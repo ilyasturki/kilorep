@@ -17,14 +17,15 @@ export const load: PageLoad = async ({ params }) => {
 
 	const store = await getStore();
 
-	const [past, lastPerformed, note] = await Promise.all([
+	const [past, lastPerformed, note, bodyweight] = await Promise.all([
 		store.pastSessions(exercise.id),
 		store.lastPerformed(),
-		store.exerciseNote(exercise.id)
+		store.exerciseNote(exercise.id),
+		store.listBodyweight()
 	]);
 
 	const templates = past.length === 0 ? await store.listTemplates() : [];
 	const plans = startable(templates);
 
-	return { exercise, past, lastPerformed, note, plans };
+	return { exercise, past, lastPerformed, note, plans, bodyweight };
 };

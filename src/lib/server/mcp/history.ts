@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 
 import { localDateOf } from '$lib/domain/bodyweight';
 import type { Drift } from '$lib/domain/drift';
+import type { Carried } from '$lib/domain/load';
 import { driftFrom, hasSetDrift } from '$lib/domain/drift';
 import type { Workout, WorkoutEntry } from '$lib/domain/workout';
 import { completedSetCount, exerciseCount, workoutTitle } from '$lib/history/label';
@@ -85,11 +86,11 @@ function exerciseIdsOf(entries: WorkoutEntry[], ids: string[]): string[] {
 	});
 }
 
-function totalsOf(workout: FinishedWorkout): Record<string, number> {
+function totalsOf(workout: FinishedWorkout, carried: Carried): Record<string, number> {
 	return {
 		exercises: exerciseCount(workout),
 		completedSets: completedSetCount(workout),
-		volumeKg: volumeOf(workout)
+		volumeKg: volumeOf(workout, carried)
 	};
 }
 
@@ -106,7 +107,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 			startedAt: iso(workout.startedAt),
 			finishedAt: iso(workout.finishedAt),
 			minutes: Math.round((workout.finishedAt - workout.startedAt) / 60_000),
-			totals: totalsOf(workout),
+			totals: totalsOf(workout, library.carried()),
 			drift:
 				drift === null
 					? null
@@ -152,7 +153,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 					finishedAt: iso(workout.finishedAt),
 					exercises: exerciseCount(workout),
 					sets: completedSetCount(workout),
-					volumeKg: volumeOf(workout)
+					volumeKg: volumeOf(workout, library.carried())
 				}))
 			});
 		}
@@ -232,7 +233,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				id: payload.id,
 				version: outcome.updatedAt,
 				startedAt: iso(payload.startedAt),
-				totals: totalsOf(payload)
+				totals: totalsOf(payload, library.carried())
 			});
 		}
 	);
@@ -317,7 +318,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				version: outcome.updatedAt,
 				startedAt: iso(payload.startedAt),
 				minutes: Math.round(lasted / 60_000),
-				totals: totalsOf(payload)
+				totals: totalsOf(payload, library.carried())
 			});
 		}
 	);
@@ -358,7 +359,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 					id,
 					title: workoutTitle(stored, library.templates()),
 					startedAt: iso(stored.startedAt),
-					totals: totalsOf(stored)
+					totals: totalsOf(stored, library.carried())
 				}
 			});
 		}

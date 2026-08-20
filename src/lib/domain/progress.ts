@@ -1,19 +1,25 @@
 import type { Exercise, Muscle } from '$lib/domain/exercise';
 import { MUSCLES } from '$lib/domain/exercise';
+import type { Carried, CarriedOn } from '$lib/domain/load';
+import { carriedOn } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import { estimated1Rm, rawPr } from '$lib/domain/stats';
 import type { PerformedSet, Workout, WorkoutSet } from '$lib/domain/workout';
 
-export type RecentPr = { exerciseId: string; set: PerformedSet; date: number };
+export type RecentPr = { exerciseId: string; set: PerformedSet; date: number; load: number };
 
-export function recentPrs(sessions: Record<string, PastSession[]>, since: number): RecentPr[] {
+export function recentPrs(
+	sessions: Record<string, PastSession[]>,
+	since: number,
+	carried: Carried
+): RecentPr[] {
 	const out: RecentPr[] = [];
 
 	for (const [exerciseId, past] of Object.entries(sessions)) {
-		const pr = rawPr(past);
+		const pr = rawPr(past, carriedOn(carried, exerciseId));
 
 		if (pr !== null && pr.date >= since && past[0].date < pr.date) {
-			out.push({ exerciseId, set: pr.set, date: pr.date });
+			out.push({ exerciseId, set: pr.set, date: pr.date, load: pr.load });
 		}
 	}
 
@@ -24,6 +30,7 @@ export function mainLifts(
 	sessions: Record<string, PastSession[]>,
 	since: number,
 	loadFactorOf: (exerciseId: string) => number,
+	carried: Carried,
 	count = 3
 ): string[] {
 	const ranked: { exerciseId: string; trained: number; volume: number }[] = [];
@@ -36,9 +43,13 @@ export function mainLifts(
 		}
 
 		const factor = loadFactorOf(exerciseId);
-		const volume = recent
-			.flatMap((session) => session.sets)
-			.reduce((sum, set) => sum + set.weight * set.reps * factor, 0);
+		const volume = recent.reduce((sum, session) => {
+			const body = carried(exerciseId, session.date);
+
+			return (
+				sum + session.sets.reduce((kg, set) => kg + (set.weight + body) * set.reps * factor, 0)
+			);
+		}, 0);
 
 		ranked.push({ exerciseId, trained: recent.length, volume });
 	}
@@ -51,12 +62,12 @@ export function mainLifts(
 
 export type TrendPoint = { date: number; est: number };
 
-export function estTrend(past: PastSession[], since: number): TrendPoint[] {
+export function estTrend(past: PastSession[], since: number, carried: CarriedOn): TrendPoint[] {
 	return past
 		.filter((session) => session.date >= since)
 		.map((session) => ({
 			date: session.date,
-			est: Math.max(0, ...session.sets.map((set) => estimated1Rm(set)))
+			est: Math.max(0, ...session.sets.map((set) => estimated1Rm(set, carried(session.date))))
 		}))
 		.filter((point) => point.est > 0);
 }
@@ -81,6 +92,7 @@ export function weeklyWork(
 	workouts: Workout[],
 	now: number,
 	loadFactorOf: (exerciseId: string) => number,
+	carried: Carried,
 	weeks = 12
 ): WorkWeek[] {
 	const oldest = now - weeks * WEEK;
@@ -101,9 +113,10 @@ export function weeklyWork(
 		for (const entry of workout.entries) {
 			for (const exercise of entry.exercises) {
 				const factor = loadFactorOf(exercise.exerciseId);
+				const body = carried(exercise.exerciseId, workout.startedAt);
 
 				for (const set of workingSets(exercise.sets)) {
-					out[bucket].kg += set.weight * set.reps * factor;
+					out[bucket].kg += (set.weight + body) * set.reps * factor;
 					out[bucket].sets += 1;
 				}
 			}

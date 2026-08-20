@@ -130,7 +130,9 @@ export const PERFORMED_SET = z
 			.min(0)
 			.max(1000)
 			.nullable()
-			.describe('kg on the bar, as loaded rather than as lifted; null on a set never performed'),
+			.describe(
+				'kg on the bar, as loaded rather than as lifted; on an exercise with a bodyweightShare it is what was *added* to the body — a pull-up with nothing hanging off it is 0, never the lifter’s weight; null on a set never performed'
+			),
 		reps: z.number().int().min(0).max(1000).nullable(),
 		type: z
 			.enum(['normal', 'warmup', 'drop', 'failure'])

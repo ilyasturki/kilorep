@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { localDateOf } from '$lib/domain/bodyweight';
 import type { Exercise } from '$lib/domain/exercise';
+import type { Carried, CarriedOn } from '$lib/domain/load';
+import { bodyweightShareOf, carriedOn } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import { rawPr } from '$lib/domain/stats';
 import type { Workout } from '$lib/domain/workout';
@@ -35,16 +37,17 @@ export function roundOrNull(value: number | null): number | null {
 	return value === null ? null : round(value);
 }
 
-export function volumeOf(workout: Workout): number {
+export function volumeOf(workout: Workout, carried: Carried): number {
 	let kg = 0;
 
 	for (const entry of workout.entries) {
 		for (const exercise of entry.exercises) {
 			const factor = loadFactorOf(exercise.exerciseId);
+			const body = carried(exercise.exerciseId, workout.startedAt);
 
 			for (const set of exercise.sets) {
 				if (set.completed && set.type !== 'warmup' && set.weight !== null && set.reps !== null) {
-					kg += set.weight * set.reps * factor;
+					kg += (set.weight + body) * set.reps * factor;
 				}
 			}
 		}
@@ -53,12 +56,26 @@ export function volumeOf(workout: Workout): number {
 	return round(kg);
 }
 
+/**
+ * The raw best, as `kg` moved.
+ *
+ * `addedKg` rides along only where the two differ — on a barbell it would be the same number
+ * under a second name, which invites a caller to believe one of them meant something else.
+ */
 export function bestOf(
-	sessions: PastSession[]
-): { weight: number; reps: number; at: string } | null {
-	const pr = rawPr(sessions);
+	sessions: PastSession[],
+	carried: CarriedOn
+): { kg: number; reps: number; at: string; addedKg?: number } | null {
+	const pr = rawPr(sessions, carried);
 
-	return pr === null ? null : { weight: pr.set.weight, reps: pr.set.reps, at: iso(pr.date) };
+	return pr === null
+		? null
+		: {
+				kg: round(pr.load),
+				reps: pr.set.reps,
+				at: iso(pr.date),
+				addedKg: pr.load === pr.set.weight ? undefined : pr.set.weight
+			};
 }
 
 export function summarise(exercise: Exercise, library: Library): Record<string, unknown> {
@@ -70,12 +87,14 @@ export function summarise(exercise: Exercise, library: Library): Record<string, 
 		name: exercise.name,
 		equipment: exercise.equipment,
 		loadMode: exercise.loadMode,
+		bodyweightShare: bodyweightShareOf(exercise) === 0 ? undefined : exercise.bodyweightShare,
 		primary: exercise.muscles.primary,
 		variantOf: exercise.variantOf,
 		lastTrained: last === undefined ? null : iso(last.date),
+		// The numbers as logged, which on a share-bearing exercise is what was added.
 		lastSets:
 			last === undefined ? null : last.sets.map((set) => `${set.weight} × ${set.reps}`).join(', '),
-		pr: bestOf(sessions)
+		pr: bestOf(sessions, carriedOn(library.carried(), exercise.id))
 	};
 }
 

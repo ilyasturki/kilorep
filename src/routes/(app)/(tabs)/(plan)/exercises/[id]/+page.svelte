@@ -4,6 +4,7 @@
 	import { catalog } from '$lib/catalog';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
+	import { carriedFrom, carriedOn } from '$lib/domain/load';
 	import { restLabel } from '$lib/domain/rest';
 	import { rawPr } from '$lib/domain/stats';
 	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
@@ -11,7 +12,13 @@
 	import AddToPlanSheet from '$lib/exercises/AddToPlanSheet.svelte';
 	import { kin } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
-	import { lastSetLabel, lastSinceLabel, loadModeNote, ordinal } from '$lib/exercises/label';
+	import {
+		lastSetLabel,
+		lastSinceLabel,
+		loadLabel,
+		loadModeNote,
+		ordinal
+	} from '$lib/exercises/label';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import RestDurationField from '$lib/settings/RestDurationField.svelte';
 	import { getStore } from '$lib/store/store';
@@ -41,7 +48,9 @@
 	const past = $derived(data.past);
 	const sessions = $derived(past.toReversed());
 
-	const pr = $derived(rawPr(past));
+	const carried = $derived(carriedFrom(data.bodyweight, () => exercise));
+
+	const pr = $derived(rawPr(past, carriedOn(carried, exercise.id)));
 
 	const loadNote = $derived(loadModeNote(exercise.loadMode));
 
@@ -230,8 +239,14 @@
 					>
 						<span class="label-caps">Raw best</span>
 						<span class="text-md font-extrabold tracking-tight">
-							{pr.set.weight} × {pr.set.reps}
+							{loadLabel(pr.load)} × {pr.set.reps}
 						</span>
+
+						{#if pr.load !== pr.set.weight}
+							<span class="text-sm font-bold text-ink-faint">
+								{pr.set.weight} added
+							</span>
+						{/if}
 					</div>
 				{/if}
 			</div>

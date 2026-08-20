@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 
 import { localDateOf, rollingAverage, weeklyRate, windowed } from '$lib/domain/bodyweight';
+import { carriedOn } from '$lib/domain/load';
 import {
 	WEEK,
 	estTrend,
@@ -36,16 +37,21 @@ export function registerProgress(server: McpServer, { library }: Tools): void {
 			const now = Date.now();
 			const workouts = library.workouts();
 			const sessions = library.sessions();
+			const carried = library.carried();
 
-			const work = weeklyWork(workouts, now, loadFactorOf);
+			const work = weeklyWork(workouts, now, loadFactorOf, carried);
 			const lastWeek = work.at(-1);
 			const habit = rollingConsistency(
 				workouts.map((workout) => workout.startedAt),
 				now
 			);
 
-			const lifts = mainLifts(sessions, now - TREND, loadFactorOf).map((exerciseId) => {
-				const trend = estTrend(sessions[exerciseId] ?? [], now - TREND);
+			const lifts = mainLifts(sessions, now - TREND, loadFactorOf, carried).map((exerciseId) => {
+				const trend = estTrend(
+					sessions[exerciseId] ?? [],
+					now - TREND,
+					carriedOn(carried, exerciseId)
+				);
 				const first = trend.at(0);
 				const last = trend.at(-1);
 				const moved = first === undefined || last === undefined ? 0 : last.est - first.est;
@@ -75,10 +81,11 @@ export function registerProgress(server: McpServer, { library }: Tools): void {
 					lastWeekKg: round(lastWeek === undefined ? 0 : lastWeek.kg)
 				},
 				strength: {
-					recentPrs: recentPrs(sessions, now - RECENT).map((pr) => ({
+					recentPrs: recentPrs(sessions, now - RECENT, carried).map((pr) => ({
 						exerciseId: pr.exerciseId,
 						name: nameOf(pr.exerciseId),
-						weight: pr.set.weight,
+						kg: round(pr.load),
+						addedKg: pr.load === pr.set.weight ? undefined : pr.set.weight,
 						reps: pr.set.reps,
 						at: iso(pr.date)
 					})),
