@@ -1,3 +1,12 @@
+<script lang="ts" module>
+	/**
+	 * How far one tap on an arm travels: a number where the ladder is uniform, a function
+	 * where it is not, asked for each jump — the rack it stands for decides how far the
+	 * next one goes.
+	 */
+	export type Step = number | ((from: number, direction: number) => number);
+</script>
+
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 	import { isEntryDraft, parseEntry, settle } from '$lib/domain/workout';
@@ -13,7 +22,7 @@
 		// than one step off the floor. Absent, the arms count from `min` as they always did.
 		seed?: number | null;
 		label: string;
-		step?: number;
+		step?: Step;
 		min?: number;
 		max?: number;
 		ruler?: boolean;
@@ -40,8 +49,13 @@
 		class: klass
 	}: Props = $props();
 
-	// Not a destructuring default: that would read `step` while it is still being bound.
-	const detent = $derived(rulerStep ?? step);
+	const jump = (from: number, direction: number): number =>
+		typeof step === 'function' ? step(from, direction) : step;
+
+	// Not a destructuring default: that would read `step` while it is still being bound. The
+	// ruler lays its rungs at one pitch, so an uneven ladder hands it the finest jump it has —
+	// the one off the floor — or every value between two coarse rungs becomes unscrubbable.
+	const detent = $derived(rulerStep ?? jump(min, 1));
 
 	const scrubbable = $derived(ruler && coarsePointer);
 
@@ -52,10 +66,11 @@
 	function nudge(direction: number) {
 		// Either arm wakes a seeded empty field onto the seed itself: an open rep target is
 		// where every planned exercise starts, and the first tap there means "the usual".
+		const from = value ?? min;
 		const next =
 			value === null && seed !== null
 				? settle(seed, min, max)
-				: settle((value ?? min) + direction * step, min, max);
+				: settle(from + direction * jump(from, direction), min, max);
 		if (next === value) {
 			return false;
 		}

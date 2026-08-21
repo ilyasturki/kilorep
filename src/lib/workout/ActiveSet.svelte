@@ -9,6 +9,7 @@
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
+	import type { Step } from '$lib/ui/StepperField.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import More from '$lib/ui/icons/More.svelte';
 	import { press } from '$lib/ui/press';
@@ -16,7 +17,7 @@
 	type Props = {
 		cursor: SetCursor;
 		history: History;
-		step: number;
+		step: Step;
 		unit: string;
 		oncommit: (weight: number, reps: number) => void;
 		ondraft: (weight: number | null, reps: number | null) => void;
@@ -27,6 +28,10 @@
 	let { cursor, history, step, unit, oncommit, ondraft, onrate, onoptions }: Props = $props();
 
 	const hint = $derived(hintLabel(history, cursor, exertionScale.current));
+
+	// The plan's own number, which the reps field cannot say for itself: what it holds is the
+	// prefill, and from the second set on that is the weight and reps carried from the first.
+	const planned = $derived(cursor.set.plannedReps);
 
 	const weight = $derived(cursor.set.weight);
 	const reps = $derived(cursor.set.reps);
@@ -113,9 +118,16 @@
 				</span>
 			</div>
 
-			<!-- Which set this is always reads; last time's numbers are the half that gives. -->
-			<div class="flex min-w-0 items-center gap-1">
-				<span class="truncate text-sm font-bold text-ink-faint">
+			<!-- Which set this is always reads; last time's numbers are the half that gives. The
+			     target holds its ground and the hint clips into it, because the target is one
+			     short number the field has no way of stating and the hint truncates legibly. -->
+			<div class="flex min-w-0 items-center gap-1 text-sm font-bold text-ink-faint">
+				{#if planned !== null}
+					<span class="shrink-0">Target {planned}</span>
+					<span aria-hidden="true">·</span>
+				{/if}
+
+				<span class="truncate">
 					{hint === null ? 'First time' : `Last ${hint}`}
 				</span>
 

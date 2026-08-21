@@ -599,6 +599,21 @@
 	background-color: var(--scrim);
 }
 
+/* Every overlay in the app is a bits-ui dialog underneath — the sheets and the session drawer through
+   vaul, the alerts directly — and each one locks the body while it is open, writing `overflow: hidden`
+   inline. There is nothing here for it to lock: the shell is a fixed `h-dvh` frame and every scroller
+   in the app is a pane inside it, so the page has never scrolled and the lock only ever costs.
+   On a phone it costs visibly. `overflow` on <body> propagates to the viewport, and a viewport that
+   stops being scrollable is re-laid-out around whatever was overflowing it — which is the page
+   twitching sideways as the drawer arrives. `!important` because the write is inline, and unlayered
+   because `!important` reads the layer order backwards. Only `overflow` is refused: `pointer-events`
+   is the lock's other half and can stay, the scrims being what actually hold the background off.
+   The three pages that stand outside the shell and do scroll the body — login, the marketing page and
+   the dev gallery — open no overlay between them, the gallery excepted, and it never ships. */
+body {
+	overflow: visible !important;
+}
+
 /* Stamped on <html> by DragOrder for the length of a lift. Unlayered on purpose — it has to win over
    the grip's own `cursor-grab`. */
 .drag-in-hand,

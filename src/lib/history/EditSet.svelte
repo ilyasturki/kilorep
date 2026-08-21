@@ -6,12 +6,13 @@
 	import { revealEnd } from '$lib/ui/scroll';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
+	import type { Step } from '$lib/ui/StepperField.svelte';
 	import More from '$lib/ui/icons/More.svelte';
 	import { press } from '$lib/ui/press';
 
 	type Props = {
 		cursor: SetCursor;
-		step: number;
+		step: Step;
 		unit: string;
 		ondraft: (weight: number | null, reps: number | null) => void;
 		onrate: (rpe: number | null) => void;

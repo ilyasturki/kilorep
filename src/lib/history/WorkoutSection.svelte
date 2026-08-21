@@ -117,7 +117,7 @@
 				{#key cursor.set.id}
 					<EditSet
 						{cursor}
-						step={weightStep(meta.equipment)}
+						step={(from, direction) => weightStep(meta.equipment, from, direction)}
 						unit={loadUnitLabel(meta)}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
 						onrate={(rpe) => onrate(cursor.set.id, rpe)}

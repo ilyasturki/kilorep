@@ -4,8 +4,30 @@ export function loadFactor(mode: LoadMode): number {
 	return mode === 'total' ? 1 : 2;
 }
 
-export function weightStep(equipment: Equipment): number {
-	return equipment === 'Dumbbell' || equipment === 'Kettlebell' ? 2 : 2.5;
+/** Under this, the rack's dumbbells come in single kilos rather than pairs. */
+const DUMBBELL_SINGLES = 10;
+
+/**
+ * How far an arm moves from `from`, going up (`direction` 1) or down (−1).
+ *
+ * A rack is not a uniform ladder. Under ten kilos the dumbbells step one at a time, and a
+ * 2 kg jump there is a fifth of the load — the light end of an accessory lift is where the
+ * step has to be finest, which is exactly where a constant is worst. The boundary belongs
+ * to the finer half in both directions: stepping down off 10 lands on 9, stepping up off 9
+ * lands on 10. Kettlebells keep their pairs — no rack sells them in single kilos.
+ */
+export function weightStep(equipment: Equipment, from: number, direction: number): number {
+	if (equipment === 'Kettlebell') {
+		return 2;
+	}
+
+	if (equipment !== 'Dumbbell') {
+		return 2.5;
+	}
+
+	const fine = direction < 0 ? from <= DUMBBELL_SINGLES : from < DUMBBELL_SINGLES;
+
+	return fine ? 1 : 2;
 }
 
 export type Equipment =

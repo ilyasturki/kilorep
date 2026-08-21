@@ -134,7 +134,7 @@
 					<ActiveSet
 						{cursor}
 						{history}
-						step={weightStep(meta.equipment)}
+						step={(from, direction) => weightStep(meta.equipment, from, direction)}
 						unit={loadUnitLabel(meta)}
 						{oncommit}
 						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
