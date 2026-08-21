@@ -9,8 +9,8 @@ import { searchExercises } from '$lib/domain/search';
 import { estimated1Rm } from '$lib/domain/stats';
 
 import type { Tools } from './context.ts';
-import { bestOf, failed, iso, refused, reply, round, summarise } from './format.ts';
-import { exerciseOf } from './library.ts';
+import { bestOf, failed, identify, iso, refused, reply, round, summarise } from './format.ts';
+import { exerciseOf, noSuchExercise } from './library.ts';
 
 const SECONDS = z.number().int().min(MIN_REST_SECONDS).max(MAX_REST_SECONDS);
 
@@ -20,26 +20,42 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 		{
 			title: 'Search exercises',
 			description:
-				'Find exercises in the catalogue by name or alias, each with when it was last trained and its raw personal best. Omit the query to list the whole catalogue. Use this to resolve a movement the lifter named in prose into the id every other tool takes.',
+				'Find exercises in the catalogue by name or alias. Omit the query to list the whole catalogue — which is fixed: it is the movements this app knows, it cannot be added to, and a movement absent from it is planned as the nearest one present. Use this to resolve a movement the lifter named in prose into the id every other tool takes. Rows carry identity only unless you ask for `detail`; one exercise’s history belongs to the `exercise` tool.',
 			inputSchema: z.object({
 				query: z.string().optional().describe('name or alias, fuzzy-matched; omit to list all'),
 				limit: z.number().int().min(1).max(100).default(20),
-				trainedOnly: z.boolean().default(false).describe('keep only exercises with logged history')
+				trainedOnly: z.boolean().default(false).describe('keep only exercises with logged history'),
+				detail: z
+					.boolean()
+					.default(false)
+					.describe(
+						'add last trained, the last sets and the personal best to every row — several times the payload, and worth it only when comparing history across a handful of movements'
+					)
 			}),
 			annotations: { readOnlyHint: true }
 		},
-		({ query, limit, trainedOnly }) => {
+		({ query, limit, trainedOnly, detail }) => {
 			const matched = searchExercises(catalog, query ?? '');
-			const sessions = library.sessions();
 
+			// Asked for per exercise rather than up front: the whole history is derived to answer
+			// this, and the lean row — the default, and the reason this tool is called at all —
+			// never looks at it. `pastSessions` shares the same memo, so `detail` still pays once.
 			const pool = trainedOnly
-				? matched.filter((exercise) => (sessions[exercise.id] ?? []).length > 0)
+				? matched.filter((exercise) => library.pastSessions(exercise.id).length > 0)
 				: matched;
+
+			const shown = pool
+				.slice(0, limit)
+				.map((exercise) => (detail ? summarise(exercise, library) : identify(exercise)));
 
 			return reply({
 				matched: pool.length,
-				returned: Math.min(pool.length, limit),
-				exercises: pool.slice(0, limit).map((exercise) => summarise(exercise, library))
+				returned: shown.length,
+				exercises: shown,
+				note:
+					pool.length === 0 && query !== undefined
+						? `nothing in the catalogue matches "${query}". The catalogue is fixed and cannot be added to — plan the nearest movement it does have.`
+						: undefined
 			});
 		}
 	);
@@ -60,7 +76,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 			const exercise = exerciseOf(id);
 
 			if (exercise === undefined) {
-				return reply({ error: `no exercise "${id}" in the catalogue` });
+				return reply({ error: noSuchExercise(id) });
 			}
 
 			const past = library.pastSessions(id);
@@ -111,7 +127,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 		},
 		({ id, text }) => {
 			if (exerciseOf(id) === undefined) {
-				return reply({ error: `no exercise "${id}" in the catalogue` });
+				return reply({ error: noSuchExercise(id) });
 			}
 
 			const trimmed = text.trim();
@@ -142,12 +158,14 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 		{
 			title: 'Set a rest duration',
 			description:
-				'The rest timer between working sets. With no exerciseId this is the default every exercise inherits; with one it is that exercise’s own override — a number of seconds, or null to never rest on it. Omit seconds alongside an exerciseId to drop the override and inherit again. A plan can also carry its own duration, which is written through save_plan and wins over both.',
+				'The rest timer between working sets. Called with no arguments at all it writes nothing and answers with the standing default — read it that way before overriding it, since the default is the number a plan or an exercise is then departing from. With no exerciseId it sets that default; with one it is that exercise’s own override — a number of seconds, or null to never rest on it. Careful: an exerciseId with no seconds is not a read, it drops the override and inherits again; the duration in force on one exercise is a field on `exercise`. A plan can also carry its own duration, written through save_plan, which wins over both.',
 			inputSchema: z.object({
 				exerciseId: z
 					.string()
 					.optional()
-					.describe('omit to set the default that every exercise inherits'),
+					.describe(
+						'omit to set the default that every exercise inherits, or omit everything to read it'
+					),
 				seconds: SECONDS.nullable()
 					.optional()
 					.describe('seconds; null means never rest here; omit alongside exerciseId to inherit'),
@@ -188,7 +206,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 			}
 
 			if (exerciseOf(exerciseId) === undefined) {
-				return reply({ error: `no exercise "${exerciseId}" in the catalogue` });
+				return reply({ error: noSuchExercise(exerciseId) });
 			}
 
 			if (enabled !== undefined) {

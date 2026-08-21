@@ -8,7 +8,7 @@ import type { Library } from './library.ts';
 import { registerPlans } from './plans.ts';
 import { registerProgress } from './progress.ts';
 import { registerWeight } from './weight.ts';
-import { writeRecord } from './write.ts';
+import { writeRecord, writeRecords } from './write.ts';
 
 /**
  * The whole surface, one subject at a time.
@@ -29,6 +29,17 @@ export function registerTools(
 			const outcome = writeRecord(db, userId, request);
 
 			if (outcome.ok) {
+				library.invalidate();
+			}
+
+			return outcome;
+		},
+		writeAll: (requests) => {
+			const outcome = writeRecords(db, userId, requests);
+
+			// An empty batch is the idempotent case — a rotation restated as it already stands.
+			// Nothing moved, so the memo is still true and flushing it only buys a cold re-read.
+			if (outcome.ok && requests.length > 0) {
 				library.invalidate();
 			}
 

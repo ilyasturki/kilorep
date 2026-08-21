@@ -23,7 +23,7 @@ import {
 	reply,
 	volumeOf
 } from './format.ts';
-import { nameOf, unknownIds } from './library.ts';
+import { nameOf, notInCatalogue, unknownIds } from './library.ts';
 import { PERFORMED_EXERCISE, flatRows, workoutEntriesOf } from './shapes.ts';
 
 const MINUTES = z
@@ -201,7 +201,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 			const unknown = unknownIds(exercises);
 
 			if (unknown.length > 0) {
-				return reply({ error: `not in the catalogue: ${unknown.join(', ')}` });
+				return reply({ error: notInCatalogue(unknown) });
 			}
 
 			if (templateId !== undefined && library.template(templateId) === null) {
@@ -270,7 +270,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				const unknown = unknownIds(exercises);
 
 				if (unknown.length > 0) {
-					return reply({ error: `not in the catalogue: ${unknown.join(', ')}` });
+					return reply({ error: notInCatalogue(unknown) });
 				}
 			}
 

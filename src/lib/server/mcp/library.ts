@@ -239,6 +239,16 @@ export function unknownIds(exercises: { exerciseId: string }[]): string[] {
 		.filter((id) => catalogById[id] === undefined);
 }
 
+/** The refusal every miss against the catalogue gives back — one wording, not five that drift. */
+export function noSuchExercise(id: string): string {
+	return `no exercise "${id}" in the catalogue, which is fixed and cannot be added to — search_exercises lists every id there is`;
+}
+
+/** The same, for a written tree naming ids the catalogue does not have. */
+export function notInCatalogue(ids: string[]): string {
+	return `not in the catalogue: ${ids.join(', ')}. The catalogue is fixed and cannot be added to — plan the nearest movement it does have, or search_exercises for one.`;
+}
+
 /**
  * Volume's multiplier for an exercise, defaulting to 1 for an id the catalog has never
  * heard of — a folded-away slug or a build older than the entry, neither worth a throw.

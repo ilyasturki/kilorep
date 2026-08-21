@@ -78,24 +78,40 @@ export function bestOf(
 			};
 }
 
-export function summarise(exercise: Exercise, library: Library): Record<string, unknown> {
-	const sessions = library.pastSessions(exercise.id);
-	const last = sessions.at(-1);
-
+/**
+ * An exercise as a name and the shape of it — what a caller resolving prose into ids needs.
+ *
+ * The whole catalogue comes back through `search_exercises`, and the history half of a row
+ * costs more than the identity half by some multiple: a caller matching twenty movements
+ * against it is reading eighty-five last-set strings it will never look at. `detail` asks
+ * for those, and `exercise` is where one movement's history properly lives.
+ */
+export function identify(exercise: Exercise): Record<string, unknown> {
 	return {
 		id: exercise.id,
 		name: exercise.name,
 		equipment: exercise.equipment,
+		primary: exercise.muscles.primary,
+		variantOf: exercise.variantOf
+	};
+}
+
+export function summarise(exercise: Exercise, library: Library): Record<string, unknown> {
+	const sessions = library.pastSessions(exercise.id);
+	const last = sessions.at(-1);
+	const pr = bestOf(sessions, carriedOn(library.carried(), exercise.id));
+
+	// The detail row is the lean one with history hung off it, rather than a second list of
+	// the same five identity fields that would drift the first time one of them was added to.
+	return Object.assign(identify(exercise), {
 		loadMode: exercise.loadMode,
 		bodyweightShare: bodyweightShareOf(exercise) === 0 ? undefined : exercise.bodyweightShare,
-		primary: exercise.muscles.primary,
-		variantOf: exercise.variantOf,
 		lastTrained: last === undefined ? null : iso(last.date),
 		// The numbers as logged, which on a share-bearing exercise is what was added.
 		lastSets:
 			last === undefined ? null : last.sets.map((set) => `${set.weight} × ${set.reps}`).join(', '),
-		pr: bestOf(sessions, carriedOn(library.carried(), exercise.id))
-	};
+		pr
+	});
 }
 
 /** Local midnight on the server clock — a self-hosted box the lifter owns, so near enough their day. */

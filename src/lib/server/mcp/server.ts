@@ -16,7 +16,9 @@ A session in progress never leaves the phone. Workouts reach this server when th
 
 Writing is guarded rather than free. A record you mean to change is read first, and the write quotes the \`version\` that read handed back; a refusal means the record moved underneath you, so read it again rather than retrying with the same stamp. A write that replaces a tree — a plan's exercises, a session's sets — replaces all of it, so send back everything you meant to keep. Deleting is real and has no undo. Nothing here needs confirming twice, but nothing here should be guessed at either: resolve the record you mean before you change it.
 
-Exercises are identified by catalogue ids like "bench-press". Resolve any movement the lifter names in prose through search_exercises before passing it anywhere else. A variation with its own load or emphasis is its own exercise linked by variantOf, and history never crosses between them.`;
+Exercises are identified by catalogue ids like "bench-press". Resolve any movement the lifter names in prose through search_exercises before passing it anywhere else. A variation with its own load or emphasis is its own exercise linked by variantOf, and history never crosses between them. The catalogue is closed: it ships with the app, nothing here adds to it, and a movement it does not have is planned as the nearest one it does — say which substitution you made rather than searching for it a third way.
+
+Ask for what you will read. Rows come back lean and name a fuller tool for the rest.`;
 
 export function buildServer(db: Database, userId: string): McpServer {
 	const server = new McpServer(

@@ -10,6 +10,7 @@ import { createDatabase } from '../db/client.ts';
 import { runMigrations } from '../db/migrate.ts';
 import { syncExchange } from '../db/sync.ts';
 import { buildServer } from './server.ts';
+import { writeRecords } from './write.ts';
 
 let db: Database;
 let userId: string;
@@ -96,11 +97,16 @@ type Best = { kg: number; reps: number; at: string; addedKg?: number };
 
 type ExerciseRow = {
 	id: string;
-	lastSets: string | null;
-	pr: Best | null;
+	lastSets?: string | null;
+	pr?: Best | null;
 };
 
-type Found = { matched: number; returned: number; exercises: ExerciseRow[] };
+type Found = {
+	matched: number;
+	returned: number;
+	exercises: ExerciseRow[];
+	note?: string;
+};
 
 type Detail = {
 	error?: string;
@@ -290,15 +296,24 @@ type PlanRow = {
 	version: number;
 	name: string;
 	archived: boolean;
-	position: number | null;
+	position?: number | null;
 	lastTrained: string | null;
-	exercises: { exerciseId: string; group?: number; sets: (number | null)[] }[];
+	exercises: PlanTree | null;
 };
+
+type PlanTree = { exerciseId: string; group?: number; sets: (number | null)[] }[];
 
 type Plans = {
 	plans: PlanRow[];
 	nextUp: { id: string; name: string } | null;
 	archived: number;
+};
+
+type Reordered = {
+	moved?: number;
+	plans: { id: string; version: number; name: string; position: number }[];
+	nextUp?: { id: string; name: string } | null;
+	error?: string;
 };
 
 type Saved = {
@@ -386,6 +401,7 @@ describe('the surface', () => {
 			'log_workout',
 			'plans',
 			'progress',
+			'reorder_plans',
 			'save_plan',
 			'search_exercises',
 			'set_exercise_note',
@@ -449,7 +465,8 @@ describe('search_exercises', () => {
 		const send = await connect();
 		const found = await callTool<Found>(send, 'search_exercises', {
 			query: 'bench press',
-			limit: 1
+			limit: 1,
+			detail: true
 		});
 		const bench = found.exercises[0];
 
@@ -464,6 +481,30 @@ describe('search_exercises', () => {
 		const found = await callTool<Found>(send, 'search_exercises', { trainedOnly: true, limit: 50 });
 
 		expect(found.exercises.map((exercise) => exercise.id)).toEqual(['bench-press']);
+	});
+
+	test('names the movement and nothing else until detail is asked for', async () => {
+		seed(workout('w1', NOW - 3 * DAY, 'bench-press', [{ weight: 82.5, reps: 7 }]));
+
+		const lean = await once<Found>('search_exercises', { query: 'bench press', limit: 1 });
+		const [row] = lean.exercises;
+
+		// Resolving twenty movements into ids is the common read, and it never wanted history:
+		// over JSON an absent key cannot come back undefined, so this pins the whole row.
+		expect(row).toEqual({
+			id: 'bench-press',
+			name: 'Bench Press',
+			equipment: 'Barbell',
+			primary: 'Chest',
+			variantOf: undefined
+		});
+	});
+
+	test('tells a caller the catalogue is closed rather than letting it search again', async () => {
+		const missed = await once<Found>('search_exercises', { query: 'jefferson curl' });
+
+		expect(missed.matched).toBe(0);
+		expect(missed.note).toContain('cannot be added to');
 	});
 });
 
@@ -820,6 +861,29 @@ describe('a write that can be observed', () => {
 		expect(logged.logged).toEqual({ date: '2026-08-20', kg: 78.4 });
 		expect(logged.replaced).toEqual({ date: '2026-08-20', kg: 80.1 });
 	});
+
+	test('a batch refused halfway leaves nothing of itself behind', () => {
+		seed(
+			plan({ id: 'a', name: 'Upper A', exercises: ['bench-press'], order: 1000 }),
+			plan({ id: 'b', name: 'Lower B', exercises: ['back-squat'], order: 2000 })
+		);
+
+		const before = syncExchange(db, userId, { watermark: 0, push: [] }).records;
+		const [first, second] = before;
+
+		// The first write would take; the second states a version that is not there. The whole
+		// thing is thrown away, which is the guarantee a rotation written as one change rests on.
+		const outcome = writeRecords(db, userId, [
+			{ id: first.id, kind: 'template', payload: { moved: true }, expect: first.updatedAt },
+			{ id: second.id, kind: 'template', payload: { moved: true }, expect: second.updatedAt + 1 }
+		]);
+
+		expect(outcome.ok).toBe(false);
+
+		const after = syncExchange(db, userId, { watermark: 0, push: [] }).records;
+
+		expect(after).toEqual(before);
+	});
 });
 
 describe('plans', () => {
@@ -859,15 +923,19 @@ describe('plans', () => {
 		const all = await once<Plans>('plans', { includeArchived: true });
 
 		expect(all.plans.map((row) => row.id)).toEqual(['old', 'p1']);
-		// Archived plans hold no position: nothing can start them.
-		expect(all.plans[0].position).toBeNull();
+		// Archived plans hold no position: nothing can start them, and no tree either — the
+		// name they lend old sessions is all that is still being asked of them.
+		expect(all.plans[0].position).toBeUndefined();
+		expect(all.plans[0].exercises).toBeNull();
+		expect(all.plans[0].version).toEqual(expect.any(Number));
+		expect(all.plans[1].exercises).toHaveLength(1);
 	});
 
 	test('prescribes reps and never a weight', async () => {
 		seed(plan({ id: 'p1', name: 'Push', exercises: ['bench-press'] }));
 
 		const listed = await once<Plans>('plans');
-		const [exercise] = listed.plans[0].exercises;
+		const [exercise] = listed.plans[0].exercises ?? [];
 
 		expect(exercise.sets).toEqual([8, 8, 8]);
 		expect(JSON.stringify(exercise)).not.toContain('weight');
@@ -892,7 +960,7 @@ describe('writing a plan', () => {
 		const listed = await once<Plans>('plans');
 
 		expect(listed.plans.map((row) => row.name)).toEqual(['Push', 'Legs']);
-		expect(listed.plans[1].exercises.map((row) => row.sets)).toEqual([
+		expect((listed.plans[1].exercises ?? []).map((row) => row.sets)).toEqual([
 			[5, 5, 5],
 			[10, 10]
 		]);
@@ -934,7 +1002,7 @@ describe('writing a plan', () => {
 		const after = await once<Plans>('plans');
 
 		expect(after.plans[0].name).toBe('Push A');
-		expect(after.plans[0].exercises.map((row) => row.exerciseId)).toEqual([
+		expect((after.plans[0].exercises ?? []).map((row) => row.exerciseId)).toEqual([
 			'bench-press',
 			'overhead-press'
 		]);
@@ -951,7 +1019,7 @@ describe('writing a plan', () => {
 		});
 
 		const listed = await once<Plans>('plans');
-		const rows = listed.plans[0].exercises;
+		const rows = listed.plans[0].exercises ?? [];
 
 		expect(rows.map((row) => row.group)).toEqual([1, 1, undefined]);
 	});
@@ -985,38 +1053,9 @@ describe('writing a plan', () => {
 		expect(plans.nextUp).toBeNull();
 	});
 
-	test('a position moves what trains next', async () => {
+	test('unarchiving puts the plan back in the rotation at the rank it kept', async () => {
 		seed(
 			plan({ id: 'p1', name: 'Push', exercises: ['bench-press'], order: 1000 }),
-			plan({ id: 'p2', name: 'Pull', exercises: ['barbell-row'], order: 2000 }),
-			plan({ id: 'p3', name: 'Legs', exercises: ['squat'], order: 3000 }),
-			session({
-				id: 'w1',
-				startedAt: NOW - DAY,
-				templateId: 'p1',
-				exercises: [{ exerciseId: 'bench-press', sets: [{ weight: 80, reps: 5 }] }]
-			})
-		);
-
-		const before = await once<Plans>('plans');
-
-		expect(before.nextUp).toEqual({ id: 'p2', name: 'Pull' });
-
-		const pull = before.plans[1];
-
-		await once<Saved>('save_plan', { id: 'p2', version: pull.version, position: 2 });
-
-		const after = await once<Plans>('plans');
-
-		expect(after.plans.map((row) => row.id)).toEqual(['p1', 'p3', 'p2']);
-		// Push is still the anchor; the plan after it is Legs now.
-		expect(after.nextUp).toEqual({ id: 'p3', name: 'Legs' });
-	});
-
-	test('unarchiving and repositioning in one save puts the plan back where it was asked for', async () => {
-		seed(
-			plan({ id: 'p1', name: 'Push', exercises: ['bench-press'], order: 1000 }),
-			plan({ id: 'p2', name: 'Pull', exercises: ['barbell-row'], order: 2000 }),
 			plan({ id: 'old', name: 'Legs', exercises: ['squat'], order: 500, archivedAt: NOW })
 		);
 
@@ -1024,22 +1063,18 @@ describe('writing a plan', () => {
 		// Rank 500 puts the archived plan first in the list that includes it.
 		const [archived] = before.plans;
 
-		expect(archived.id).toBe('old');
-
-		// The move is only possible because the same call unarchives it, so reordering has to
-		// read the rotation this save leaves rather than the one it found.
 		const saved = await once<Saved>('save_plan', {
 			id: 'old',
 			version: archived.version,
-			archived: false,
-			position: 2
+			archived: false
 		});
 
 		expect(saved.error).toBeUndefined();
 
 		const after = await once<Plans>('plans');
 
-		expect(after.plans.map((row) => row.id)).toEqual(['p1', 'p2', 'old']);
+		// The rank was never lost while it was out, so it lands ahead of Push rather than last.
+		expect(after.plans.map((row) => row.id)).toEqual(['old', 'p1']);
 	});
 
 	test('refuses an exercise the catalogue has never heard of', async () => {
@@ -1074,6 +1109,108 @@ describe('writing a plan', () => {
 		const listed = await once<Listed>('workouts');
 
 		expect(listed.workouts[0].title).not.toBe('Push A');
+	});
+});
+
+describe('reordering the rotation', () => {
+	function rotation(...names: string[]): void {
+		seed(
+			...names.map((name, index) =>
+				plan({
+					id: name.toLowerCase(),
+					name,
+					exercises: ['bench-press'],
+					order: 1000 * (index + 1)
+				})
+			)
+		);
+	}
+
+	test('states the whole order once and writes it as one change', async () => {
+		rotation('A', 'B', 'C', 'D', 'E');
+
+		const moved = await once<Reordered>('reorder_plans', {
+			orderedIds: ['c', 'e', 'a', 'b', 'd']
+		});
+
+		expect(moved.error).toBeUndefined();
+		expect(moved.plans.map((row) => row.id)).toEqual(['c', 'e', 'a', 'b', 'd']);
+		expect(moved.plans.map((row) => row.position)).toEqual([0, 1, 2, 3, 4]);
+
+		const after = await once<Plans>('plans');
+
+		expect(after.plans.map((row) => row.id)).toEqual(['c', 'e', 'a', 'b', 'd']);
+	});
+
+	test('restating the order it is already in writes nothing at all', async () => {
+		rotation('A', 'B', 'C');
+
+		const before = await once<Plans>('plans');
+		const again = await once<Reordered>('reorder_plans', { orderedIds: ['a', 'b', 'c'] });
+
+		expect(again.error).toBeUndefined();
+		expect(again.moved).toBe(0);
+		// Untouched records keep their stamps: a no-op reorder is not a sync event.
+		expect(again.plans.map((row) => row.version)).toEqual(before.plans.map((row) => row.version));
+	});
+
+	test('refuses a rotation stated in part, and names what was left out', async () => {
+		rotation('A', 'B', 'C');
+
+		const partial = await once<Reordered>('reorder_plans', { orderedIds: ['c', 'a'] });
+
+		expect(partial.error).toContain('left out');
+		expect(partial.error).toContain('b (B)');
+
+		const after = await once<Plans>('plans');
+
+		expect(after.plans.map((row) => row.id)).toEqual(['a', 'b', 'c']);
+	});
+
+	test('refuses a plan named twice, and one that is not in the rotation', async () => {
+		rotation('A', 'B');
+		seed(plan({ id: 'z', name: 'Old', exercises: ['bench-press'], archivedAt: NOW }));
+
+		const twice = await once<Reordered>('reorder_plans', { orderedIds: ['a', 'a', 'b'] });
+
+		expect(twice.error).toContain('more than once');
+
+		const dead = await once<Reordered>('reorder_plans', { orderedIds: ['a', 'b', 'z'] });
+
+		expect(dead.error).toContain('not plans in the rotation');
+	});
+
+	test('quotes no version, and leaves a rename written in the same breath standing', async () => {
+		rotation('A', 'B', 'C');
+
+		const send = await connect();
+		const read = await callTool<Plans>(send, 'plans', {});
+		const [first] = read.plans;
+
+		// The order is read here, the rename lands after it, and the reorder still goes through:
+		// nothing but the rank is this call's business, so a stale stamp is not its problem.
+		await callTool<Saved>(send, 'save_plan', {
+			id: first.id,
+			version: first.version,
+			name: 'A renamed'
+		});
+
+		const moved = await callTool<Reordered>(send, 'reorder_plans', {
+			orderedIds: ['c', 'b', 'a']
+		});
+
+		expect(moved.error).toBeUndefined();
+		expect(moved.plans.map((row) => row.name)).toEqual(['C', 'B', 'A renamed']);
+	});
+
+	test('moves what the rotation says trains next', async () => {
+		rotation('A', 'B', 'C');
+		seed(session({ id: 'w1', startedAt: NOW - DAY, templateId: 'a', exercises: [] }));
+
+		// A is the anchor, so B was next; putting C after it is what moves that.
+		const moved = await once<Reordered>('reorder_plans', { orderedIds: ['a', 'c', 'b'] });
+
+		expect(moved.nextUp).toEqual({ id: 'c', name: 'C' });
 	});
 });
 
@@ -1387,7 +1524,11 @@ describe('correcting a session', () => {
 			})
 		);
 
-		const before = await once<Found>('search_exercises', { query: 'bench press', limit: 1 });
+		const before = await once<Found>('search_exercises', {
+			query: 'bench press',
+			limit: 1,
+			detail: true
+		});
 
 		expect(before.exercises[0].pr).toMatchObject({ kg: 95, reps: 3 });
 
@@ -1396,7 +1537,11 @@ describe('correcting a session', () => {
 
 		expect(gone.deleted).toMatchObject({ id: 'heavy' });
 
-		const after = await once<Found>('search_exercises', { query: 'bench press', limit: 1 });
+		const after = await once<Found>('search_exercises', {
+			query: 'bench press',
+			limit: 1,
+			detail: true
+		});
 
 		expect(after.exercises[0].pr).toMatchObject({ kg: 80, reps: 5 });
 
@@ -1534,5 +1679,19 @@ describe('notes and rest', () => {
 		const refused = await once<Rested>('set_rest', { seconds: null });
 
 		expect(refused.error).toContain('enabled: false');
+	});
+
+	test('called with nothing at all it reads the default rather than writing one', async () => {
+		const send = await connect();
+
+		await callTool<Rested>(send, 'set_rest', { seconds: 150 });
+
+		const written = syncExchange(db, userId, { watermark: 0, push: [] }).records;
+		const read = await callTool<Rested>(send, 'set_rest', {});
+
+		expect(read.default).toEqual({ enabled: true, seconds: 150 });
+
+		// A read is a read: nothing stamped and nothing added, so nothing syncs behind it.
+		expect(syncExchange(db, userId, { watermark: 0, push: [] }).records).toEqual(written);
 	});
 });

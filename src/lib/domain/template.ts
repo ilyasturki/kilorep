@@ -117,6 +117,20 @@ export function reorder(templates: Template[], id: string, index: number): numbe
 	return (templateRank(before) + templateRank(after)) / 2;
 }
 
+/**
+ * Ranks for a rotation stated in full, one per plan, in the order given.
+ *
+ * Anchored on the lowest rank already in the rotation rather than on zero: archived plans
+ * keep the ranks they had, and a rotation renumbered from zero would drop underneath all of
+ * them, so a plan unarchived later would surface at the head instead of where it sat. The
+ * gap is `reorder`'s, so a whole order restated still leaves room to halve between two of it.
+ */
+export function ranksFor(ordered: Template[]): number[] {
+	const base = Math.min(...ordered.map((template) => templateRank(template)));
+
+	return ordered.map((_, index) => base + index * RANK_GAP);
+}
+
 // Synced records can carry mark keys from newer builds; unknown halves render as absent
 // but the stored payload is never rewritten.
 export function drawableMark(template: Template): TemplateMark | null {

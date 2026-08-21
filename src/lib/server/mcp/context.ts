@@ -1,5 +1,5 @@
 import type { Library } from './library.ts';
-import type { WriteOutcome, WriteRequest } from './write.ts';
+import type { BatchOutcome, WriteOutcome, WriteRequest } from './write.ts';
 
 /** What every tool needs: the domain view of the records, and the one way to change them. */
 export type Tools = {
@@ -11,4 +11,6 @@ export type Tools = {
 	 * read later in the same request cannot answer from before the write.
 	 */
 	write: (request: WriteRequest) => WriteOutcome;
+	/** The same, for a change that is one fact spread over several records — all or none. */
+	writeAll: (requests: WriteRequest[]) => BatchOutcome;
 };
