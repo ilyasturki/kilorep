@@ -228,6 +228,21 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
 	},
 	{
+		id: 'chest-supported-row',
+		name: 'Chest-Supported Row',
+		aliases: [
+			'incline bench row',
+			'incline dumbbell row',
+			'incline db row',
+			'chest supported dumbbell row',
+			'prone incline row'
+		],
+		equipment: 'Dumbbell',
+		loadMode: 'per-hand',
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		variantOf: 'dumbbell-row'
+	},
+	{
 		id: 'pendlay-row',
 		name: 'Pendlay Row',
 		aliases: ['pendlay', 'dead stop row'],
@@ -247,13 +262,7 @@ export const catalog: Exercise[] = [
 	{
 		id: 'machine-row',
 		name: 'Machine Row',
-		aliases: [
-			'chest supported row',
-			'seated machine row',
-			'hammer row',
-			'hammer strength row',
-			'plate loaded row'
-		],
+		aliases: ['seated machine row', 'hammer row', 'hammer strength row', 'plate loaded row'],
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
@@ -364,6 +373,21 @@ export const catalog: Exercise[] = [
 		variantOf: 'lateral-raise'
 	},
 	{
+		id: 'machine-lateral-raise',
+		name: 'Machine Lateral Raise',
+		aliases: [
+			'lateral raise machine',
+			'machine lateral raises',
+			'machine side raise',
+			'lat raise machine',
+			'seated lateral raise machine'
+		],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: [] },
+		variantOf: 'lateral-raise'
+	},
+	{
 		id: 'rear-delt-fly',
 		name: 'Rear Delt Fly',
 		aliases: [
@@ -389,6 +413,21 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Machine',
 		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		variantOf: 'rear-delt-fly'
+	},
+	{
+		id: 'cable-reverse-fly',
+		name: 'Cable Reverse Fly',
+		aliases: [
+			'unilateral cable reverse fly',
+			'single arm cable reverse fly',
+			'cable rear delt fly',
+			'one arm cable rear delt fly',
+			'cable rear delt raise'
+		],
+		equipment: 'Cable',
+		loadMode: 'unilateral',
 		muscles: { primary: 'Shoulders', secondary: ['Back'] },
 		variantOf: 'rear-delt-fly'
 	},
