@@ -89,8 +89,22 @@ export function planShape(exercise: TemplateExercise): PlanShape {
 	return { sets, kind: 'range', target: `${low}–${high}`, reps: null };
 }
 
-export function repsLabel(shape: PlanShape): string {
-	return shape.kind === 'fixed' || shape.kind === 'range' ? `${shape.target} reps` : shape.target;
+/**
+ * What the shared rep field cannot say for itself.
+ *
+ * The field holds one number or none, so every shape but a settled target draws as empty —
+ * this is the line beneath it, naming which emptiness that is.
+ */
+export function targetNote(shape: PlanShape): string | null {
+	if (shape.kind === 'fixed') {
+		return null;
+	}
+
+	if (shape.kind === 'range') {
+		return `${shape.target} per set`;
+	}
+
+	return shape.kind === 'open' ? 'Open target' : 'Targets differ per set';
 }
 
 export function setsLabel(count: number): string {

@@ -45,6 +45,7 @@
 	import TipButton from '$lib/ui/TipButton.svelte';
 	import Archive from '$lib/ui/icons/Archive.svelte';
 	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
+	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Plus from '$lib/ui/icons/Plus.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
@@ -273,6 +274,16 @@
 	</TipButton>
 {/snippet}
 
+{#snippet history(size: number)}
+	<TipButton
+		label="Sessions from this template"
+		onclick={() => void goto(`/templates/${template.id}/history`)}
+		class="{CHROME_BUTTON} text-ink-muted"
+	>
+		<ClockCounterClockwise {size} />
+	</TipButton>
+{/snippet}
+
 {#snippet archive(size: number)}
 	{@const Glyph = archived ? ArrowCounterClockwise : Archive}
 
@@ -292,6 +303,7 @@
 {#snippet deskActions()}
 	<div class="hidden items-center gap-2 lg:flex">
 		{#if persisted}
+			{@render history(20)}
 			{@render archive(20)}
 			{@render trash(20)}
 		{/if}
@@ -425,6 +437,7 @@
 
 				{#if persisted}
 					<div class="flex justify-center gap-2 pt-2 pb-1 lg:hidden">
+						{@render history(18)}
 						{@render archive(18)}
 						{@render trash(18)}
 					</div>

@@ -9,7 +9,6 @@
 	import { rawPr } from '$lib/domain/stats';
 	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
-	import AddToPlanSheet from '$lib/exercises/AddToPlanSheet.svelte';
 	import { kin } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import {
@@ -24,6 +23,7 @@
 	import { getStore } from '$lib/store/store';
 	import { syncSoon } from '$lib/sync/client';
 	import { templateTitle } from '$lib/templates/plan';
+	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -353,8 +353,9 @@
 				{/if}
 			</div>
 
-			<AddToPlanSheet
+			<PlanPickerSheet
 				bind:open={planOpen}
+				title="Add to a plan"
 				templates={data.plans}
 				onpick={(template) => void addToPlan(template)}
 			/>

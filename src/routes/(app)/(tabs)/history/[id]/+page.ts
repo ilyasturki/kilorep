@@ -12,14 +12,12 @@ export const load: PageLoad = async ({ params }) => {
 		error(404, 'No such workout');
 	}
 
-	// `??`, not `=== null`: records written before `templateId` existed lack the
-	// key, and `undefined` reaches `getTemplate` as a DataError-throwing key.
-	const templateId = workout.templateId ?? null;
-
-	const [template, { lastPerformed, frequent }] = await Promise.all([
-		templateId === null ? null : store.getTemplate(templateId),
+	// Every plan, not the one it names: the link is editable here, and the plan it moves to
+	// has to be in the sheet before it can be picked.
+	const [templates, { lastPerformed, frequent }] = await Promise.all([
+		store.listTemplates(),
 		store.pickerData()
 	]);
 
-	return { store, workout, template, lastPerformed, frequent };
+	return { store, workout, templates, lastPerformed, frequent };
 };

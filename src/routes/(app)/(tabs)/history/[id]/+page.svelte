@@ -6,6 +6,8 @@
 	import { catalogById } from '$lib/catalog';
 	import { driftFrom, hasDrift, hasSetDrift } from '$lib/domain/drift';
 	import type { SetDrift } from '$lib/domain/drift';
+	import { isArchived, startable } from '$lib/domain/template';
+	import type { Template } from '$lib/domain/template';
 	import {
 		addExercise,
 		addSet,
@@ -22,6 +24,7 @@
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
 	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
+	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
 	import { syncSoon } from '$lib/sync/client';
@@ -49,7 +52,16 @@
 	// svelte-ignore state_referenced_locally
 	const workout = $state(data.workout);
 
-	const template = $derived(data.template);
+	// Derived from the workout rather than handed down by the load: linking it to a plan is a
+	// write to `templateId`, and the title, the drift and the sheet's own mark read it back.
+	// `??`, not `=== null`: records written before `templateId` existed lack the key.
+	const template = $derived(
+		data.templates.find((candidate) => candidate.id === (workout.templateId ?? null)) ?? null
+	);
+
+	// Archived plans last rather than absent: a session imported from a retired plan is
+	// exactly the one that needs naming.
+	const plans = $derived([...startable(data.templates), ...data.templates.filter(isArchived)]);
 
 	const title = $derived(workoutTitle(workout, template === null ? [] : [template]));
 	const drift = $derived(template === null ? null : driftFrom(workout, template));
@@ -277,6 +289,16 @@
 	let menuOpen = $state(false);
 	let menuAnchor = $state<HTMLElement | null>(null);
 
+	let linkOpen = $state(false);
+
+	function link(picked: Template) {
+		workout.templateId = picked.id;
+	}
+
+	function unlink() {
+		workout.templateId = null;
+	}
+
 	let deleteOpen = $state(false);
 
 	async function deleteWorkout() {
@@ -463,8 +485,19 @@
 	bind:open={menuOpen}
 	{title}
 	anchor={menuAnchor}
+	linked={template !== null}
 	onedit={startEditing}
+	onlink={() => (linkOpen = true)}
 	ondelete={() => (deleteOpen = true)}
+/>
+
+<PlanPickerSheet
+	bind:open={linkOpen}
+	title={template === null ? 'Link to a plan' : 'Change plan'}
+	templates={plans}
+	currentId={template === null ? null : template.id}
+	onpick={link}
+	onclear={template === null ? undefined : unlink}
 />
 
 <SetOptionsMenu

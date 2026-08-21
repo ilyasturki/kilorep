@@ -5,7 +5,7 @@ import {
 	planLine,
 	planShape,
 	planSummary,
-	repsLabel,
+	targetNote,
 	templateTitle
 } from '$lib/templates/plan';
 import type { Exercise } from '$lib/domain/exercise';
@@ -24,21 +24,21 @@ describe('what an exercise prescribes', () => {
 		const shape = planShape(planned([null, null, null]));
 
 		expect(shape).toEqual({ sets: 3, kind: 'open', target: 'Open', reps: null });
-		expect(repsLabel(shape)).toBe('Open');
+		expect(targetNote(shape)).toBe('Open target');
 	});
 
 	test('one number on every set is the shared target', () => {
 		const shape = planShape(planned([8, 8, 8]));
 
 		expect(shape).toEqual({ sets: 3, kind: 'fixed', target: '8', reps: 8 });
-		expect(repsLabel(shape)).toBe('8 reps');
+		expect(targetNote(shape)).toBeNull();
 	});
 
 	test('numbers that disagree are spelled as their ends', () => {
 		const shape = planShape(planned([12, 10, 8]));
 
 		expect(shape).toEqual({ sets: 3, kind: 'range', target: '8–12', reps: null });
-		expect(repsLabel(shape)).toBe('8–12 reps');
+		expect(targetNote(shape)).toBe('8–12 per set');
 	});
 
 	test('numbers beside an open set are mixed, never a range', () => {
@@ -46,7 +46,7 @@ describe('what an exercise prescribes', () => {
 
 		expect(shape.kind).toBe('mixed');
 		expect(shape.target).toBe('Mixed');
-		expect(repsLabel(shape)).toBe('Mixed');
+		expect(targetNote(shape)).toBe('Targets differ per set');
 	});
 
 	test('only a settled target hands the shared stepper a number to step from', () => {

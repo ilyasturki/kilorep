@@ -9,6 +9,9 @@
 	type Props = {
 		value: number | null;
 		recalled?: number | null;
+		// Where an empty field lands when an arm is tapped — a default worth waking to, rather
+		// than one step off the floor. Absent, the arms count from `min` as they always did.
+		seed?: number | null;
 		label: string;
 		step?: number;
 		min?: number;
@@ -24,6 +27,7 @@
 	let {
 		value = $bindable(null),
 		recalled = null,
+		seed = null,
 		label,
 		step = 2.5,
 		min = 0,
@@ -46,7 +50,12 @@
 	const display = $derived(value === null ? '–' : String(settle(value, min, max)));
 
 	function nudge(direction: number) {
-		const next = settle((value ?? min) + direction * step, min, max);
+		// Either arm wakes a seeded empty field onto the seed itself: an open rep target is
+		// where every planned exercise starts, and the first tap there means "the usual".
+		const next =
+			value === null && seed !== null
+				? settle(seed, min, max)
+				: settle((value ?? min) + direction * step, min, max);
 		if (next === value) {
 			return false;
 		}
@@ -253,7 +262,7 @@
 
 {#if open}
 	<Ruler
-		value={value ?? recalled ?? min}
+		value={value ?? recalled ?? seed ?? min}
 		{typed}
 		{label}
 		step={detent}

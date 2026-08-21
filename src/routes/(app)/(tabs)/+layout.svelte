@@ -12,8 +12,11 @@
 
 	let { children }: LayoutProps = $props();
 
+	// The plan editor scrolls a pane of its own — its sidebar and start bar dock to it — but the
+	// pages under it, a plan's history among them, are ordinary scrollers: handed the pane, they
+	// grow past the viewport and push the tab bar off the bottom of it.
 	const ownsPane = $derived(
-		covers(page.url.pathname, '/workout') || page.url.pathname.startsWith('/templates/')
+		covers(page.url.pathname, '/workout') || /^\/templates\/[^/]+$/u.test(page.url.pathname)
 	);
 
 	let pane = $state<HTMLElement | null>(null);

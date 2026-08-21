@@ -5,12 +5,13 @@
 
 	import { restLabel } from '$lib/domain/rest';
 	import { PLANNED_REPS } from '$lib/domain/template';
-	import type { TemplateExercise, TemplateSet } from '$lib/domain/template';
+	import type { TemplateExercise } from '$lib/domain/template';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { loadModeNote } from '$lib/exercises/label';
 	import { restSettings } from '$lib/settings/rest.svelte';
-	import { planShape, repsLabel, setsLabel } from '$lib/templates/plan';
+	import { planShape, setsLabel, targetNote } from '$lib/templates/plan';
 	import MiniStepper from '$lib/ui/MiniStepper.svelte';
+	import StepperField from '$lib/ui/StepperField.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import More from '$lib/ui/icons/More.svelte';
 	import { press } from '$lib/ui/press';
@@ -43,33 +44,7 @@
 
 	const grow = $derived(prefersReducedMotion.current ? 0 : 200);
 
-	const shared = $derived(shape.kind === 'open' || shape.kind === 'fixed');
-
-	function raiseShared() {
-		onreps(shape.reps === null ? PLANNED_REPS : shape.reps + 1);
-	}
-
-	function lowerShared() {
-		if (shape.reps === null) {
-			onreps(null);
-
-			return;
-		}
-
-		onreps(shape.reps === 1 ? null : shape.reps - 1);
-	}
-
-	function raiseSet(set: TemplateSet) {
-		onsetreps(set.id, set.plannedReps === null ? PLANNED_REPS : set.plannedReps + 1);
-	}
-
-	function lowerSet(set: TemplateSet) {
-		if (set.plannedReps === null) {
-			return;
-		}
-
-		onsetreps(set.id, set.plannedReps === 1 ? null : set.plannedReps - 1);
-	}
+	const notes = $derived([targetNote(shape), restNote].filter((note) => note !== null).join(' · '));
 
 	let expanded = $state(false);
 
@@ -109,7 +84,10 @@
 		{@render grip?.()}
 	</div>
 
-	<div class="flex items-center gap-2">
+	<!-- Every rep field is handed its own number as `recalled`: a plan has no hint to differ
+	     from — what is on screen is what is stored — so the accent that means "you moved this
+	     off last time" stays out of the planning surface. -->
+	<div class="flex items-stretch gap-2">
 		<MiniStepper
 			label="Sets"
 			value={setsLabel(shape.sets)}
@@ -118,12 +96,15 @@
 			class="flex-1"
 		/>
 
-		<MiniStepper
-			label="Rep target"
-			value={repsLabel(shape)}
-			dim={shape.kind === 'open'}
-			ondec={shape.kind === 'open' ? null : lowerShared}
-			oninc={shared ? raiseShared : null}
+		<StepperField
+			label="reps"
+			value={shape.reps}
+			recalled={shape.reps}
+			seed={PLANNED_REPS}
+			step={1}
+			min={1}
+			ruler
+			onchange={onreps}
 			class="flex-1"
 		/>
 
@@ -133,16 +114,16 @@
 			aria-controls={panelId}
 			aria-label="Per-set rep targets for {meta.name}"
 			onclick={() => (expanded = !expanded)}
-			class="grid size-11 shrink-0 place-items-center rounded-xl text-ink-faint focus-ring
-				hover:bg-hover press:bg-surface-2"
+			class="grid size-11 shrink-0 place-items-center self-center rounded-xl text-ink-faint
+				focus-ring hover:bg-hover press:bg-surface-2"
 			{@attach press()}
 		>
 			<CaretDown size={16} class={expanded ? 'rotate-180' : ''} />
 		</button>
 	</div>
 
-	{#if restNote !== null}
-		<p class="px-1 text-sm font-bold text-ink-faint">{restNote}</p>
+	{#if notes !== ''}
+		<p class="px-1 text-sm font-bold text-ink-faint">{notes}</p>
 	{/if}
 
 	{#if expanded}
@@ -155,12 +136,15 @@
 				<div class="flex items-center gap-2">
 					<span class="w-11 shrink-0 label-caps">Set {index + 1}</span>
 
-					<MiniStepper
-						label="Set {index + 1} reps"
-						value={set.plannedReps === null ? 'Open' : String(set.plannedReps)}
-						dim={set.plannedReps === null}
-						ondec={set.plannedReps === null ? null : () => lowerSet(set)}
-						oninc={() => raiseSet(set)}
+					<StepperField
+						label="reps"
+						value={set.plannedReps}
+						recalled={set.plannedReps}
+						seed={PLANNED_REPS}
+						step={1}
+						min={1}
+						ruler
+						onchange={(reps) => onsetreps(set.id, reps)}
 						class="flex-1"
 					/>
 				</div>
