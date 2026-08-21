@@ -5,7 +5,7 @@ import { ApiError, NO_SERVER, deviceToken } from '$lib/api/client';
 import { exertionScale } from '$lib/settings/exertion.svelte';
 import { restSettings } from '$lib/settings/rest.svelte';
 import { getStore } from '$lib/store/store';
-import { syncNow } from '$lib/sync/client';
+import { syncPromptly } from '$lib/sync/client';
 import { activeWorkout } from '$lib/workout/active.svelte';
 import { restTimer } from '$lib/workout/rest.svelte';
 
@@ -41,7 +41,7 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
 	try {
 		const { user } = await session(fetch);
 
-		void syncNow(user.id);
+		syncPromptly(user.id);
 
 		return { user };
 	} catch (error) {

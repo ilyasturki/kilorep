@@ -48,7 +48,8 @@ The bar is **Train · Plan · Progress · Weight · Settings**. It read left to 
 
 - **On the device: everything** — templates, catalog + customs, full history, body weight.
 - **The server is optional.** The phone is complete standalone: install, lift, export, forever. Connecting a self-hosted server adds sync, the web surface, and the API/MCP.
-- **Sync** is opportunistic push/pull. Conflicts are last-write-wins per record; no merge UI. A finished, synced workout is never clobbered.
+- **Sync** is opportunistic push/pull. Conflicts are last-write-wins per record; no merge UI. A finished, synced workout is never clobbered. It runs on launch, three seconds after a write, when the network returns, when the app comes back to the foreground, and on a tap; a server that does not answer is tried again on a short ladder rather than left until the next of those, which is what the launch used to be alone in doing.
+- **Sync failing stays silent, sync being stuck does not.** A phone in a gym loses its network constantly and a message about each attempt would be noise, so a failed exchange still says nothing. What Settings does say is durable: how many changes are still only on this phone, when sync last reached the server, and — the distinction the row exists for — whether the wait heals itself or needs a person. Offline heals. No server named, a credential dropped under a 401, or a store belonging to another account do not, and until they were named a phone that had quietly stopped syncing looked exactly like one that had not.
 - First install works immediately, empty and serverless. New device with a server: sign in → full pull → identical.
 
 ## Data-out

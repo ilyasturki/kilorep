@@ -53,6 +53,7 @@ export type Snapshot = {
 const WATERMARK_KEY = 'watermark';
 const SNAPSHOT_KEY = 'active-session';
 const OWNER_KEY = 'owner';
+const SYNCED_KEY = 'syncedAt';
 
 type LegacySnapshot = Omit<Snapshot, 'rest' | 'muted'> & Partial<Pick<Snapshot, 'rest' | 'muted'>>;
 
@@ -432,6 +433,14 @@ export class Store {
 			}));
 	}
 
+	// A count rather than the records: the Settings row asks after every write and
+	// needs the number, not four kinds of payload.
+	public async pendingCount(): Promise<number> {
+		const records = await this.db.getAll('records');
+
+		return records.filter((record) => record.dirty).length;
+	}
+
 	public async acknowledge(acks: SyncAck[]): Promise<void> {
 		const tx = this.db.transaction('records', 'readwrite');
 
@@ -478,6 +487,16 @@ export class Store {
 		await this.db.put('meta', seq, WATERMARK_KEY);
 	}
 
+	public async syncedAt(): Promise<number | null> {
+		const value = await this.db.get('meta', SYNCED_KEY);
+
+		return typeof value === 'number' ? value : null;
+	}
+
+	public async setSyncedAt(at: number): Promise<void> {
+		await this.db.put('meta', at, SYNCED_KEY);
+	}
+
 	public async claimOwner(userId: string): Promise<boolean> {
 		const value = await this.db.get('meta', OWNER_KEY);
 
@@ -496,8 +515,17 @@ export class Store {
 		return typeof value === 'string' ? value : null;
 	}
 
-	// `dirty` and the watermark are facts about one account's server; when the account
-	// changes, every record is unpushed again and the seq count starts over.
+	// The watermark and the last-synced stamp are facts about one account's server: the
+	// seq count starts over, and this phone has never synced with the arriving account.
+	// Held here so the two paths that change hands cannot drift on what to forget.
+	private async forgetServerFacts(): Promise<void> {
+		await this.setWatermark(0);
+		await this.db.delete('meta', SYNCED_KEY);
+	}
+
+	// `dirty` is the third such fact, and the one only this path can restore: every
+	// record kept across the change is unpushed again, because the arriving account's
+	// server has never seen any of them.
 	private async freshenAll(): Promise<void> {
 		const tx = this.db.transaction('records', 'readwrite');
 
@@ -515,7 +543,7 @@ export class Store {
 
 		await tx.done;
 
-		await this.setWatermark(0);
+		await this.forgetServerFacts();
 	}
 
 	public async adopt(userId: string): Promise<void> {
@@ -535,7 +563,7 @@ export class Store {
 	public async wipe(userId: string | null): Promise<void> {
 		await this.db.clear('records');
 		await this.clearSnapshot();
-		await this.setWatermark(0);
+		await this.forgetServerFacts();
 
 		if (userId === null) {
 			await this.db.delete('meta', OWNER_KEY);

@@ -13,6 +13,7 @@
 	} from '$lib/api/client';
 	import { signInWithGoogle } from '$lib/api/google-device';
 	import Section from '$lib/settings/Section.svelte';
+	import SyncRow from '$lib/settings/SyncRow.svelte';
 	import { getStore } from '$lib/store/store';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -235,10 +236,14 @@
 		<li>
 			<ListRow title={server} meta={user === null ? 'Unreachable' : 'Signed in'} />
 		</li>
+
+		<SyncRow userId={user?.id ?? null} credentialled />
 	{:else if server !== null}
 		<li>
 			<ListRow title={server} meta="Not signed in" />
 		</li>
+
+		<SyncRow userId={null} credentialled={false} />
 
 		<li>
 			<ListRow title="Sign in" onclick={openSignIn} chevron />

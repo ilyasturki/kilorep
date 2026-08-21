@@ -12,6 +12,10 @@ import { Store } from './store.ts';
 
 let counter = 0;
 
+// A fixed moment to hand `setSyncedAt`; nothing reads it but the assertion that it came
+// back, so its only job is being the same number in every test that checks the stamp.
+const SYNCED = 1_700_000_000_000;
+
 async function freshStore(): Promise<Store> {
 	counter += 1;
 
@@ -818,6 +822,37 @@ describe('sync bookkeeping', () => {
 		expect(await store.watermark()).toBe(42);
 	});
 
+	it('counts what is waiting, and stops counting once it is acknowledged', async () => {
+		expect(await store.pendingCount()).toBe(0);
+
+		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
+		await store.finishWorkout(workout('w2', 300, 'squat', []), 400);
+
+		expect(await store.pendingCount()).toBe(2);
+
+		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
+
+		expect(await store.pendingCount()).toBe(1);
+	});
+
+	it('counts a deletion as something still to send', async () => {
+		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);
+		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
+
+		expect(await store.pendingCount()).toBe(0);
+
+		await store.deleteWorkout('w1', 500);
+
+		expect(await store.pendingCount()).toBe(1);
+	});
+
+	it('the last-synced stamp starts empty and round-trips', async () => {
+		expect(await store.syncedAt()).toBeNull();
+
+		await store.setSyncedAt(SYNCED);
+		expect(await store.syncedAt()).toBe(SYNCED);
+	});
+
 	it('claimOwner claims once and refuses a different account', async () => {
 		expect(await store.claimOwner('user-a')).toBe(true);
 		expect(await store.claimOwner('user-a')).toBe(true);
@@ -838,6 +873,7 @@ describe('changing hands', () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
 		await store.acknowledge([{ id: 'w1', updatedAt: 200 }]);
 		await store.setWatermark(42);
+		await store.setSyncedAt(SYNCED);
 		await store.claimOwner('user-a');
 	});
 
@@ -856,6 +892,21 @@ describe('changing hands', () => {
 		expect(await store.watermark()).toBe(0);
 		expect(await store.claimOwner('user-b')).toBe(true);
 		expect(await store.claimOwner('user-a')).toBe(false);
+	});
+
+	// The stamp answers "when did this phone last reach the server", and the arriving
+	// account's server has never seen it. Keeping it would date somebody else's sync.
+	it('adopt, disown and wipe all drop the last-synced stamp', async () => {
+		await store.adopt('user-b');
+		expect(await store.syncedAt()).toBeNull();
+
+		await store.setSyncedAt(SYNCED);
+		await store.disown();
+		expect(await store.syncedAt()).toBeNull();
+
+		await store.setSyncedAt(SYNCED);
+		await store.wipe('user-c');
+		expect(await store.syncedAt()).toBeNull();
 	});
 
 	it('wipe empties the device, snapshot included', async () => {

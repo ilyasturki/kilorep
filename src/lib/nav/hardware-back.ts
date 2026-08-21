@@ -1,6 +1,7 @@
 import { App } from '@capacitor/app';
 import { goto } from '$app/navigation';
 
+import { remove } from '$lib/app/capacitor';
 import { decideBack } from '$lib/nav/back';
 import { parentOf, tabRoots } from '$lib/nav/bar.svelte';
 import { backDepth } from '$lib/nav/depth';
@@ -9,15 +10,6 @@ import { closeTopOverlay, hasOpenOverlay } from '$lib/ui/overlays';
 async function minimize(): Promise<void> {
 	try {
 		await App.minimizeApp();
-	} catch {
-		/* empty */
-	}
-}
-
-async function remove(listener: Promise<{ remove: () => Promise<void> }>): Promise<void> {
-	try {
-		const handle = await listener;
-		await handle.remove();
 	} catch {
 		/* empty */
 	}

@@ -15,6 +15,49 @@ DATABASE_PATH=$SCRATCH/verify.db bun run dev -- --port 4599 --strictPort   # bac
 curl -s http://localhost:4599/api/health   # 200 = up; migrations ran on boot
 ```
 
+## The dev server does not reload in a worktree
+
+`vite.config.ts` sets `server.watch.ignored: ['**/.claude/**']`, and Claude Code's
+worktrees live at `<repo>/.claude/worktrees/<name>` — so **every** file in the tree
+you are editing is ignored by the watcher. Nothing hot-reloads, and nothing warns
+you: the browser keeps serving the bundle from whenever the server started.
+
+An edit verified against a stale bundle looks exactly like a fix that did not work.
+Restart the server after every source change:
+
+```sh
+# kill the vite process, then
+BUILD_TARGET=app bunx vite dev --port 5188 --strictPort --force
+```
+
+## Settings, and anything else the phone owns, needs the app build
+
+`ServerSection` — server address, sign-in, the sync row — renders only under
+`import.meta.env.APP_BUILD`, so it is absent from `bun run dev`. Drive it the way the
+phone does, with two servers: the API on one port and the app bundle on another,
+pointed at it.
+
+```sh
+DATABASE_PATH=$SCRATCH/verify.db bunx vite dev --port 4611 --strictPort            # API
+BUILD_TARGET=app DEFAULT_SERVER=http://localhost:4611 \
+  bunx vite dev --port 5188 --strictPort                                           # app
+```
+
+CORS is already handled (`src/lib/server/http/cors.ts`), so the cross-origin pair
+works. In the app build `apiBase()` is null until a server is named, so the browser
+starts signed out and unconfigured — exactly the state a fresh install is in. Sign in
+through Settings; `DEFAULT_SERVER` puts the address behind the "Sign in to …" row.
+
+Two profiles under separate `launchPersistentContext` directories are two phones on
+one account, which is how sync convergence gets tested.
+
+## Simulating a network without touching the servers
+
+`page.route('**/api/sync', r => r.abort('connectionrefused'))` is a server that stopped
+answering; `route.fulfill({ status: 401 })` is a credential that stopped working.
+`page.unroute` puts it back, and the client heals on its own from there. Faster and
+more precise than stopping a process, and it leaves the other server's traffic alone.
+
 ## API surface
 
 Login needs `client`: `POST /api/auth/login {email, password, client: "web"}` → 204 + cookie

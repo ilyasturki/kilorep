@@ -1,5 +1,5 @@
 import { catalogById } from '$lib/catalog';
-import { countedDays } from '$lib/format/when';
+import { DAY_MS, countedDays, midnightsBetween } from '$lib/format/when';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template } from '$lib/domain/template';
 import type { Workout } from '$lib/domain/workout';
@@ -45,10 +45,8 @@ export function workoutMeta(workout: Workout): string {
 	return `${exercisesLabel(exercises)} · ${setsLabel(sets)}`;
 }
 
-const DAY = 86_400_000;
-
 export function formatSince(then: number, now: number): string {
-	const days = Math.floor((now - then) / DAY);
+	const days = Math.floor((now - then) / DAY_MS);
 
 	if (days < 1) {
 		return 'today';
@@ -75,17 +73,8 @@ const dayMonthYear = new Intl.DateTimeFormat('en-GB', {
 });
 const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
 
-function startOfDay(ms: number): number {
-	const date = new Date(ms);
-
-	date.setHours(0, 0, 0, 0);
-
-	return date.getTime();
-}
-
 export function formatWhen(then: number, now: number): When {
-	// Math.round, not floor: across a DST boundary the gap between two midnights is 23 or 25 hours.
-	const days = Math.round((startOfDay(now) - startOfDay(then)) / DAY);
+	const days = midnightsBetween(then, now);
 	const counted = countedDays(days);
 
 	if (counted !== null) {
