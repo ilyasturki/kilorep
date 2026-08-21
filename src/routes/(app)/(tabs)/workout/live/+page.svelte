@@ -182,10 +182,10 @@
 			return;
 		}
 
-		const logged = session.hasLoggedSets;
+		const keeping = session.hasLoggedSets;
 		const { id } = session.workout;
 
-		if (logged) {
+		if (keeping) {
 			await data.store.finishWorkout($state.snapshot(session.workout), Date.now());
 		}
 
@@ -199,7 +199,7 @@
 
 		// A session with nothing in it leaves no record to land on, so it rides its own
 		// redirect out: this address bounces to the idle screen once the holder is empty.
-		if (!logged) {
+		if (!keeping) {
 			await invalidate(SESSION_DEP);
 
 			return;
@@ -211,6 +211,20 @@
 		// lifter opened it there, and back walks up to the list rather than into a dead address.
 		await goto('/history', { replaceState: true });
 		await goto(`/history/${id}`);
+	}
+
+	// Same tail order as finishing, minus the record: `/workout/live` bounces to the idle screen
+	// the moment the holder says no session runs, so no `goto` — there is nothing to land on.
+	async function discardSession() {
+		if (session === null) {
+			return;
+		}
+
+		await data.store.clearSnapshot();
+
+		activeWorkout.finish();
+
+		await invalidate(SESSION_DEP);
 	}
 
 	const entries = $derived(session === null ? [] : entriesWithMeta(session.workout, catalogById));
@@ -413,15 +427,30 @@
 	}
 
 	let finishing = $state(false);
+	let discarding = $state(false);
 
 	const owed = $derived(
 		entries.flatMap((entry) => entry.cursors).filter((cursor) => !cursor.set.completed).length
 	);
 
-	const owedLabel = $derived(
+	const logged = $derived(
+		entries.flatMap((entry) => entry.cursors).filter((cursor) => cursor.set.completed).length
+	);
+
+	// FINISH keeps a workout and discards one, and which it does is `hasLoggedSets` — a predicate
+	// the screen never mentions. So the prompt names the act rather than the button: a session
+	// with nothing logged leaves no record, and saying "the session ends as it stands" of one
+	// that is about to evaporate was the screen lying about the tap it was asking for.
+	const finishLabel = $derived(
 		owed === 0
 			? 'Every set is logged.'
 			: `${owed} set${owed === 1 ? '' : 's'} still owed. The session ends as it stands.`
+	);
+
+	const emptyLabel = 'Nothing was logged, so this leaves no record.';
+
+	const discardLabel = $derived(
+		logged === 0 ? emptyLabel : `${logged} set${logged === 1 ? '' : 's'} logged. Gone for good.`
 	);
 
 	let optionsOpen = $state(false);
@@ -515,6 +544,7 @@
 						oninsert={() => insertFrom(null)}
 						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 						ondrop={jumped}
+						ondiscard={() => (discarding = true)}
 					/>
 				</div>
 			</aside>
@@ -591,6 +621,7 @@
 		oninsert={() => insertFrom(null)}
 		onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 		ondrop={jumped}
+		ondiscard={() => (discarding = true)}
 	/>
 
 	{#if peek !== null}
@@ -653,9 +684,17 @@
 
 	<AlertDialog
 		bind:open={finishing}
-		title="Finish workout?"
-		description={owedLabel}
-		confirmLabel="Finish"
+		title={logged === 0 ? 'Discard workout?' : 'Finish workout?'}
+		description={logged === 0 ? emptyLabel : finishLabel}
+		confirmLabel={logged === 0 ? 'Discard' : 'Finish'}
 		onconfirm={() => void finishSession()}
+	/>
+
+	<AlertDialog
+		bind:open={discarding}
+		title="Discard workout?"
+		description={discardLabel}
+		confirmLabel="Discard"
+		onconfirm={() => void discardSession()}
 	/>
 {/if}

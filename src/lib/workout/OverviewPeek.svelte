@@ -57,6 +57,7 @@
 		onfocus={() => {}}
 		oninsert={() => {}}
 		onreorder={() => {}}
+		ondiscard={() => {}}
 	>
 		{#snippet heading()}
 			<h2 class="title-panel">Session</h2>

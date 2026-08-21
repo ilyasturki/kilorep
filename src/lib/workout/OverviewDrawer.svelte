@@ -14,6 +14,7 @@
 		oninsert: () => void;
 		onreorder: (entryId: string, index: number) => void;
 		ondrop?: (entryId: string) => void;
+		ondiscard: () => void;
 	};
 
 	let {
@@ -24,7 +25,8 @@
 		onjump,
 		oninsert,
 		onreorder,
-		ondrop
+		ondrop,
+		ondiscard
 	}: Props = $props();
 
 	$effect(() => {
@@ -42,6 +44,13 @@
 	function insert() {
 		open = false;
 		oninsert();
+	}
+
+	// Shut first, like insert: what follows is a dialog, and two overlays deep is a scrim
+	// over a scrim with the session list still listed behind both.
+	function discard() {
+		open = false;
+		ondiscard();
 	}
 
 	// Strings, not class arrays: vaul's prop merge joins classes as text.
@@ -64,6 +73,7 @@
 				{onreorder}
 				{ondrop}
 				gripOnly
+				ondiscard={discard}
 				onjump={jump}
 				onfocus={onjump}
 				oninsert={insert}

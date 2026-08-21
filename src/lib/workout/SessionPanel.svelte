@@ -13,6 +13,7 @@
 		oninsert: () => void;
 		onreorder: (entryId: string, index: number) => void;
 		ondrop?: (entryId: string) => void;
+		ondiscard?: () => void;
 		gripOnly?: boolean;
 	};
 
@@ -25,6 +26,7 @@
 		oninsert,
 		onreorder,
 		ondrop,
+		ondiscard,
 		gripOnly = false
 	}: Props = $props();
 </script>
@@ -46,6 +48,7 @@
 		{oninsert}
 		{onreorder}
 		{ondrop}
+		{ondiscard}
 		{gripOnly}
 	/>
 </div>
