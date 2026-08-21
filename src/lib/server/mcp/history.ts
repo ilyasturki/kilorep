@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 
+import { catalogById } from '$lib/catalog';
 import { localDateOf } from '$lib/domain/bodyweight';
 import type { Drift } from '$lib/domain/drift';
 import type { Carried } from '$lib/domain/load';
 import { driftFrom, hasSetDrift } from '$lib/domain/drift';
+import { gripLabel } from '$lib/domain/grip';
 import type { Workout, WorkoutEntry } from '$lib/domain/workout';
 import { completedSetCount, exerciseCount, workoutTitle } from '$lib/history/label';
 import type { FinishedWorkout } from '$lib/store/derive';
@@ -53,23 +55,34 @@ function timeOf(at: number): string {
  */
 function performedRows(workout: Workout, drift: Drift | null): Record<string, unknown>[] {
 	return flatRows(workout.entries, (exercise) => {
+		const meta = catalogById[exercise.exerciseId];
+
 		const row: Record<string, unknown> = {
 			exerciseId: exercise.exerciseId,
 			name: nameOf(exercise.exerciseId),
+			// Said only where it says something: most exercises have no grip axis at all, and
+			// two arms is what an unannotated set was. An undefined value leaves no key behind.
 			sets: exercise.sets.map((set) => ({
 				weight: set.weight,
 				reps: set.reps,
 				type: set.type,
 				rpe: set.rpe,
 				completed: set.completed,
-				plannedReps: set.plannedReps
+				plannedReps: set.plannedReps,
+				grip: gripLabel(meta, set.grip),
+				arms: set.arms === 'one' ? 'one' : undefined
 			}))
 		};
 
 		const moved = drift === null ? undefined : drift.matched[exercise.id];
 
 		if (moved !== undefined && hasSetDrift(moved)) {
-			row.drift = moved;
+			row.drift = {
+				added: moved.added,
+				removed: moved.removed,
+				retargeted: moved.retargeted,
+				grip: moved.grip === null ? undefined : (gripLabel(meta, moved.grip) ?? moved.grip)
+			};
 		}
 
 		return row;
@@ -97,7 +110,7 @@ function totalsOf(workout: FinishedWorkout, carried: Carried): Record<string, nu
 export function registerHistory(server: McpServer, { library, write }: Tools): void {
 	const detail = (workout: FinishedWorkout): Record<string, unknown> => {
 		const template = workout.templateId === null ? null : library.template(workout.templateId);
-		const drift = template === null ? null : driftFrom(workout, template);
+		const drift = template === null ? null : driftFrom(workout, template, (id) => catalogById[id]);
 
 		return {
 			id: workout.id,

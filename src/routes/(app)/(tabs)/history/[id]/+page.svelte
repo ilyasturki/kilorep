@@ -4,6 +4,8 @@
 	import { goto } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
+	import type { Exercise } from '$lib/domain/exercise';
+	import { gripLabel } from '$lib/domain/grip';
 	import { driftFrom, hasDrift, hasSetDrift } from '$lib/domain/drift';
 	import type { SetDrift } from '$lib/domain/drift';
 	import { isArchived, startable } from '$lib/domain/template';
@@ -18,8 +20,12 @@
 		rateSet,
 		removeExercise,
 		removeSet,
-		replaceExercise
+		replaceExercise,
+		setExerciseGrip,
+		setSetArms,
+		setSetGrip
 	} from '$lib/domain/workout';
+	import type { Arms } from '$lib/domain/workout';
 	import { workoutTitle } from '$lib/history/label';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
@@ -64,7 +70,9 @@
 	const plans = $derived([...startable(data.templates), ...data.templates.filter(isArchived)]);
 
 	const title = $derived(workoutTitle(workout, template === null ? [] : [template]));
-	const drift = $derived(template === null ? null : driftFrom(workout, template));
+	const drift = $derived(
+		template === null ? null : driftFrom(workout, template, (id) => catalogById[id])
+	);
 
 	const entries = $derived(entriesWithMeta(workout, catalogById));
 
@@ -192,6 +200,14 @@
 		openSetId = exercise === null ? null : exercise.sets[0].id;
 	}
 
+	function gripExercise(grip: string) {
+		if (actingLeg !== null) {
+			setExerciseGrip(workout, actingLeg.id, actingLeg.meta, grip);
+		}
+
+		acting = null;
+	}
+
 	function dropExercise() {
 		if (acting === null) {
 			return;
@@ -224,6 +240,18 @@
 		optionsOpen = true;
 	}
 
+	function gripSet(grip: string) {
+		if (optionsSetId !== null && optionsGroup !== null) {
+			setSetGrip(workout, optionsSetId, optionsGroup.meta, grip);
+		}
+	}
+
+	function armSet(arms: Arms) {
+		if (optionsSetId !== null) {
+			setSetArms(workout, optionsSetId, arms);
+		}
+	}
+
 	function dropSet() {
 		if (optionsSetId === null) {
 			return;
@@ -254,8 +282,12 @@
 		year: 'numeric'
 	});
 
-	function driftMarks(setDrift: SetDrift): string[] {
+	function driftMarks(setDrift: SetDrift, meta: Exercise | undefined): string[] {
 		const marks: string[] = [];
+
+		if (setDrift.grip !== null) {
+			marks.push(gripLabel(meta, setDrift.grip) ?? setDrift.grip);
+		}
 
 		if (setDrift.added > 0) {
 			marks.push(setDrift.added === 1 ? '+1 set' : `+${setDrift.added} sets`);
@@ -272,7 +304,7 @@
 		return marks;
 	}
 
-	function badgesFor(exerciseNodeId: string): string[] {
+	function badgesFor(exerciseNodeId: string, meta: Exercise | undefined): string[] {
 		if (drift === null) {
 			return [];
 		}
@@ -283,7 +315,7 @@
 			return ['Unplanned'];
 		}
 
-		return hasSetDrift(setDrift) ? driftMarks(setDrift) : [];
+		return hasSetDrift(setDrift) ? driftMarks(setDrift, meta) : [];
 	}
 
 	let menuOpen = $state(false);
@@ -401,9 +433,10 @@
 							{#snippet leg(leg, at)}
 								<WorkoutSection
 									meta={leg.meta}
+									setup={leg.grip}
 									entryId={entry.id}
 									cursors={leg.cursors}
-									badges={badgesFor(leg.id)}
+									badges={badgesFor(leg.id, leg.meta)}
 									{editing}
 									{openSetId}
 									onopen={(setId) => (openSetId = setId)}
@@ -479,6 +512,7 @@
 	anchor={exerciseAnchor}
 	onswap={() => (swapOpen = true)}
 	onremove={dropExercise}
+	ongrip={editing ? gripExercise : undefined}
 />
 
 <WorkoutOptionsMenu
@@ -503,9 +537,12 @@
 <SetOptionsMenu
 	bind:open={optionsOpen}
 	cursor={optionsCursor}
+	meta={optionsGroup?.meta}
 	anchor={optionsAnchor}
 	removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
 	onremove={dropSet}
+	ongrip={editing ? gripSet : undefined}
+	onarms={editing ? armSet : undefined}
 />
 
 <AlertDialog

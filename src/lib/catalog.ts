@@ -4,19 +4,31 @@ export const catalog: Exercise[] = [
 	{
 		id: 'bench-press',
 		name: 'Bench Press',
-		aliases: ['bp', 'flat bench', 'flat bench press', 'barbell bench press'],
+		aliases: [
+			'bp',
+			'flat bench',
+			'flat bench press',
+			'barbell bench press',
+			'cgbp',
+			'close grip bench',
+			'narrow grip bench press',
+			'cg bench press'
+		],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] }
-	},
-	{
-		id: 'close-grip-bench-press',
-		name: 'Close-Grip Bench Press',
-		aliases: ['cgbp', 'close grip bench', 'narrow grip bench press', 'cg bench press'],
-		equipment: 'Barbell',
-		loadMode: 'total',
-		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] },
-		variantOf: 'bench-press'
+		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
+		grips: {
+			label: 'Grip',
+			default: 'standard',
+			values: [
+				{ id: 'standard', label: 'Standard' },
+				{
+					id: 'close',
+					label: 'Close',
+					muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] }
+				}
+			]
+		}
 	},
 	{
 		id: 'incline-bench-press',
@@ -175,33 +187,31 @@ export const catalog: Exercise[] = [
 	{
 		id: 'lat-pulldown',
 		name: 'Lat Pulldown',
-		aliases: ['pulldown', 'lat pull down', 'front pulldown', 'cable pulldown'],
-		equipment: 'Cable',
-		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Biceps'] }
-	},
-	{
-		id: 'close-grip-lat-pulldown',
-		name: 'Close-Grip Lat Pulldown',
 		aliases: [
+			'pulldown',
+			'lat pull down',
+			'front pulldown',
+			'cable pulldown',
+			'wide grip pulldown',
+			'wide pulldown',
+			'wide grip pull down',
 			'close grip pulldown',
-			'neutral grip pulldown',
 			'narrow grip pulldown',
+			'neutral grip pulldown',
 			'v bar pulldown'
 		],
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps'] },
-		variantOf: 'lat-pulldown'
-	},
-	{
-		id: 'wide-grip-lat-pulldown',
-		name: 'Wide-Grip Lat Pulldown',
-		aliases: ['wide grip pulldown', 'wide pulldown', 'wide grip pull down'],
-		equipment: 'Cable',
-		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Biceps'] },
-		variantOf: 'lat-pulldown'
+		grips: {
+			label: 'Grip',
+			default: 'wide',
+			values: [
+				{ id: 'wide', label: 'Wide' },
+				{ id: 'close', label: 'Close' },
+				{ id: 'neutral', label: 'Neutral' }
+			]
+		}
 	},
 	{
 		id: 'barbell-row',
@@ -214,10 +224,19 @@ export const catalog: Exercise[] = [
 	{
 		id: 'seated-cable-row',
 		name: 'Seated Cable Row',
-		aliases: ['cable row', 'low row', 'seated row'],
+		aliases: ['cable row', 'seated row'],
 		equipment: 'Cable',
 		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Biceps'] }
+		muscles: { primary: 'Back', secondary: ['Biceps'] },
+		grips: {
+			label: 'Handle',
+			default: 'v-bar',
+			values: [
+				{ id: 'v-bar', label: 'V-Bar' },
+				{ id: 'wide', label: 'Wide Bar' },
+				{ id: 'rope', label: 'Rope' }
+			]
+		}
 	},
 	{
 		id: 'dumbbell-row',
@@ -266,6 +285,24 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
+	},
+	{
+		id: 'high-row',
+		name: 'High Row',
+		aliases: ['machine high row', 'hammer high row', 'plate loaded high row', 'high row machine'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		variantOf: 'machine-row'
+	},
+	{
+		id: 'low-row',
+		name: 'Low Row',
+		aliases: ['machine low row', 'hammer low row', 'plate loaded low row', 'low row machine'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		variantOf: 'machine-row'
 	},
 	{
 		id: 'barbell-shrug',
@@ -516,10 +553,27 @@ export const catalog: Exercise[] = [
 	{
 		id: 'triceps-pushdown',
 		name: 'Triceps Pushdown',
-		aliases: ['pushdown', 'rope pushdown', 'cable pushdown', 'pressdown', 'rope pressdown'],
+		aliases: [
+			'pushdown',
+			'rope pushdown',
+			'cable pushdown',
+			'pressdown',
+			'rope pressdown',
+			'bar pushdown',
+			'v bar pushdown'
+		],
 		equipment: 'Cable',
 		loadMode: 'total',
-		muscles: { primary: 'Triceps', secondary: [] }
+		muscles: { primary: 'Triceps', secondary: [] },
+		grips: {
+			label: 'Attachment',
+			default: 'rope',
+			values: [
+				{ id: 'rope', label: 'Rope' },
+				{ id: 'bar', label: 'Straight Bar' },
+				{ id: 'v-bar', label: 'V-Bar' }
+			]
+		}
 	},
 	{
 		id: 'overhead-triceps-extension',
@@ -873,3 +927,18 @@ export const catalog: Exercise[] = [
 export const catalogById: Record<string, Exercise> = Object.fromEntries(
 	catalog.map((exercise) => [exercise.id, exercise])
 );
+
+/**
+ * Entries that became a grip on their parent, and what they now read as.
+ *
+ * A slug is never deleted and never reused, so these keep pointing somewhere forever: an old
+ * session, an old plan, a bookmarked URL all still resolve. They are folded on the way out of
+ * the store, so nothing downstream ever sees a retired slug — the sets land in the parent's
+ * history under the grip they were really performed with, which is the whole point of folding
+ * rather than leaving them stranded as entries nobody can reach.
+ */
+export const FOLDED: Record<string, { id: string; grip: string }> = {
+	'close-grip-bench-press': { id: 'bench-press', grip: 'close' },
+	'close-grip-lat-pulldown': { id: 'lat-pulldown', grip: 'close' },
+	'wide-grip-lat-pulldown': { id: 'lat-pulldown', grip: 'wide' }
+};

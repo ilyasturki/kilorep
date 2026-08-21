@@ -1,5 +1,7 @@
+import type { Exercise } from './exercise.ts';
 import { exertionSuffix, isExertion, settleExertion } from './exertion.ts';
 import type { ExertionScale } from './exertion.ts';
+import { historyKey, settleGrip } from './grip.ts';
 import {
 	addExerciseTo as addToTree,
 	exerciseIn,
@@ -19,6 +21,14 @@ export type { ExerciseIds, NewExerciseIds } from './tree.ts';
 
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
 
+/**
+ * How many arms did the work.
+ *
+ * Recorded and nothing else: it splits no history, factors no volume and claims no PR. Absent
+ * is `both`, because that is what a set nobody annotated was.
+ */
+export type Arms = 'both' | 'one';
+
 export type PerformedSet = { weight: number; reps: number; rpe: number | null };
 
 export type History = Record<string, PerformedSet[] | undefined>;
@@ -35,6 +45,11 @@ export type WorkoutSet = {
 	// holds is then the whole of it, blanks included, and nothing is ever proposed into it.
 	// Absent on every set nobody has reached yet, and on records written before it existed.
 	entered?: boolean;
+	// Stamped when the set is made, never resolved late: changing the exercise's grip mid-session
+	// must not rewrite what an already-logged set says it was performed with. Absent is the
+	// catalog default, which is what every set logged before the axis existed was.
+	grip?: string;
+	arms?: Arms;
 };
 
 export type WorkoutExercise = {
@@ -43,6 +58,8 @@ export type WorkoutExercise = {
 	sets: WorkoutSet[];
 	// Copied from the plan at start; tri-state as in TemplateExercise.restSeconds.
 	restSeconds?: number | null;
+	// The grip new sets here inherit. What was performed is on the sets themselves.
+	grip?: string;
 };
 
 export type WorkoutEntry = {
@@ -62,17 +79,35 @@ export type SetCursor = {
 	exercise: WorkoutExercise;
 	entry: WorkoutEntry;
 	workingIndex: number;
+	/**
+	 * Which set this is *of its own grip*, and so which set of last time's it recalls.
+	 *
+	 * Apart from `workingIndex` because the two answer different questions: three rope sets
+	 * followed by two bar sets are sets 1–5 of the exercise, and sets 1–3 of the rope and 1–2
+	 * of the bar. The label counts the exercise; the hint counts the grip, or the fourth set
+	 * would ask the bar's two-set history for a third entry and go quiet.
+	 */
+	hintIndex: number;
 };
 
 export function legCursors(entry: WorkoutEntry, exercise: WorkoutExercise): SetCursor[] {
 	let working = 0;
 
-	return exercise.sets.map((set) => ({
-		set,
-		exercise,
-		entry,
-		workingIndex: set.type === 'warmup' ? -1 : working++
-	}));
+	// Keyed on the raw value, not the settled one: sets are stamped when they are made, so
+	// within one leg the grips that mean the same thing are spelled the same way.
+	const perGrip = new Map<string | undefined, number>();
+
+	return exercise.sets.map((set) => {
+		if (set.type === 'warmup') {
+			return { set, exercise, entry, workingIndex: -1, hintIndex: -1 };
+		}
+
+		const seen = perGrip.get(set.grip) ?? 0;
+
+		perGrip.set(set.grip, seen + 1);
+
+		return { set, exercise, entry, workingIndex: working++, hintIndex: seen };
+	});
 }
 
 export function interleave(legs: SetCursor[][]): SetCursor[] {
@@ -118,24 +153,25 @@ export function advanceFrom(workout: Workout, setId: string): SetCursor | null {
 	return all.slice(at + 1).find((c) => !c.set.completed) ?? null;
 }
 
-export function hintFor(
-	history: History,
-	exerciseId: string,
-	workingIndex: number
-): PerformedSet | null {
-	if (workingIndex < 0) {
+export function hintFor(history: History, key: string, hintIndex: number): PerformedSet | null {
+	if (hintIndex < 0) {
 		return null;
 	}
 
-	return (history[exerciseId] ?? [])[workingIndex] ?? null;
+	return (history[key] ?? [])[hintIndex] ?? null;
+}
+
+export function cursorKey(cursor: SetCursor, meta: Exercise | undefined): string {
+	return historyKey(cursor.exercise.exerciseId, meta, cursor.set.grip);
 }
 
 export function hintLabel(
 	history: History,
 	cursor: SetCursor,
+	meta: Exercise | undefined,
 	scale: ExertionScale | null = null
 ): string | null {
-	const hint = hintFor(history, cursor.exercise.exerciseId, cursor.workingIndex);
+	const hint = hintFor(history, cursorKey(cursor, meta), cursor.hintIndex);
 
 	if (hint === null) {
 		return null;
@@ -155,7 +191,14 @@ function carriedInto(cursor: SetCursor): Prefill {
 	for (let i = at - 1; i >= 0; i--) {
 		const set = sets[i];
 
-		if (set.type === 'warmup' || set.weight === null || set.reps === null) {
+		// Same grip only: the stack the rope moved is not the stack the bar moves, and carrying
+		// one into the other would open the first bar set on a number nobody lifted with a bar.
+		if (
+			set.type === 'warmup' ||
+			set.weight === null ||
+			set.reps === null ||
+			set.grip !== cursor.set.grip
+		) {
 			continue;
 		}
 
@@ -169,13 +212,17 @@ function carriedInto(cursor: SetCursor): Prefill {
 // the set behind the lifter's back: a set reached and left again holds nothing, so the offer
 // cannot go stale — the older version stored it on the way in, and a set visited before the one
 // above it was logged read its plan's target back over the reps just performed.
-export function prefillFor(cursor: SetCursor, history: History): Prefill {
+export function prefillFor(
+	cursor: SetCursor,
+	history: History,
+	meta: Exercise | undefined
+): Prefill {
 	// Once the lifter has spoken there is nothing to offer, and a blank they made is a blank.
 	if (cursor.set.entered === true) {
 		return { weight: cursor.set.weight, reps: cursor.set.reps };
 	}
 
-	const recalled = hintFor(history, cursor.exercise.exerciseId, cursor.workingIndex) ?? {
+	const recalled = hintFor(history, cursorKey(cursor, meta), cursor.hintIndex) ?? {
 		weight: null,
 		reps: null
 	};
@@ -280,40 +327,58 @@ export function markSet(workout: Workout, setId: string, completed: boolean): bo
 	return true;
 }
 
-const blankSet = (id: string): WorkoutSet => ({
-	id,
-	type: 'normal',
-	plannedReps: null,
-	weight: null,
-	reps: null,
-	rpe: null,
-	completed: false
-});
+const blankSet = (id: string, grip?: string): WorkoutSet => {
+	const set: WorkoutSet = {
+		id,
+		type: 'normal',
+		plannedReps: null,
+		weight: null,
+		reps: null,
+		rpe: null,
+		completed: false
+	};
+
+	if (grip !== undefined) {
+		set.grip = grip;
+	}
+
+	return set;
+};
 
 const blankExercise =
-	(catalogId: string) =>
-	(ids: ExerciseIds): WorkoutExercise => ({
-		id: ids.exercise,
-		exerciseId: catalogId,
-		sets: ids.sets.map((id) => blankSet(id))
-	});
+	(catalogId: string, grip?: string) =>
+	(ids: ExerciseIds): WorkoutExercise => {
+		const exercise: WorkoutExercise = {
+			id: ids.exercise,
+			exerciseId: catalogId,
+			sets: ids.sets.map((id) => blankSet(id, grip))
+		};
+
+		if (grip !== undefined) {
+			exercise.grip = grip;
+		}
+
+		return exercise;
+	};
 
 export function addExerciseTo(
 	workout: Workout,
 	entryId: string,
 	catalogId: string,
-	ids: ExerciseIds
+	ids: ExerciseIds,
+	grip?: string
 ): WorkoutExercise | null {
-	return addToTree(workout, entryId, ids, blankExercise(catalogId));
+	return addToTree(workout, entryId, ids, blankExercise(catalogId, grip));
 }
 
 export function supersetWith(
 	workout: Workout,
 	entryId: string,
 	catalogId: string,
-	ids: ExerciseIds
+	ids: ExerciseIds,
+	grip?: string
 ): boolean {
-	return supersetWithTree(workout, entryId, catalogId, ids, blankExercise(catalogId));
+	return supersetWithTree(workout, entryId, catalogId, ids, blankExercise(catalogId, grip));
 }
 
 export function addSet(workout: Workout, exerciseId: string, id: string): WorkoutSet | null {
@@ -323,15 +388,85 @@ export function addSet(workout: Workout, exerciseId: string, id: string): Workou
 		return null;
 	}
 
-	const set = blankSet(id);
+	const set = blankSet(id, exercise.grip);
 
 	exercise.sets.push(set);
 
 	return set;
 }
 
-export function insertedSetCount(history: History, exerciseId: string): number {
-	const performed = history[exerciseId];
+/**
+ * The grip this exercise is being worked with from here on.
+ *
+ * Only sets still to come move. A logged set is a record of what happened and reaching back to
+ * relabel it would put weight the rope lifted into the bar's history — the two would then be
+ * one number again, which is the thing the axis exists to stop.
+ */
+export function setExerciseGrip(
+	workout: Workout,
+	exerciseId: string,
+	meta: Exercise | undefined,
+	grip: string
+): boolean {
+	const exercise = exerciseIn(workout, exerciseId);
+	const settled = settleGrip(meta, grip);
+
+	if (exercise === null || settled === undefined) {
+		return false;
+	}
+
+	// Stamped before the leg moves, so what a logged set means never depends on the leg again.
+	const before = settleGrip(meta, exercise.grip) ?? settled;
+
+	for (const set of exercise.sets) {
+		set.grip = set.completed ? (set.grip ?? before) : settled;
+	}
+
+	exercise.grip = settled;
+
+	return true;
+}
+
+export function setSetGrip(
+	workout: Workout,
+	setId: string,
+	meta: Exercise | undefined,
+	grip: string
+): boolean {
+	const cursor = cursorFor(workout, setId);
+	const settled = settleGrip(meta, grip);
+
+	if (cursor === null || settled === undefined) {
+		return false;
+	}
+
+	cursor.set.grip = settled;
+
+	return true;
+}
+
+export function setSetArms(workout: Workout, setId: string, arms: Arms): boolean {
+	const cursor = cursorFor(workout, setId);
+
+	if (cursor === null) {
+		return false;
+	}
+
+	if (arms === 'both') {
+		delete cursor.set.arms;
+	} else {
+		cursor.set.arms = arms;
+	}
+
+	return true;
+}
+
+export function armsOf(set: WorkoutSet): Arms {
+	return set.arms ?? 'both';
+}
+
+export function insertedSetCount(history: History, key: string): number {
+	const performed = history[key];
 
 	return performed === undefined ? 3 : performed.length;
 }
@@ -340,13 +475,14 @@ export function addExercise(
 	workout: Workout,
 	exerciseId: string,
 	ids: NewExerciseIds,
-	after?: string
+	after?: string,
+	grip?: string
 ): WorkoutEntry | null {
 	if (ids.sets.length === 0) {
 		return null;
 	}
 
-	const entry: WorkoutEntry = { id: ids.entry, exercises: [blankExercise(exerciseId)(ids)] };
+	const entry: WorkoutEntry = { id: ids.entry, exercises: [blankExercise(exerciseId, grip)(ids)] };
 
 	const at = after === undefined ? -1 : workout.entries.findIndex((e) => e.id === after);
 
@@ -363,7 +499,8 @@ export function replaceExercise(
 	workout: Workout,
 	exerciseId: string,
 	catalogId: string,
-	ids: ExerciseIds
+	ids: ExerciseIds,
+	grip?: string
 ): WorkoutExercise | null {
 	if (ids.sets.length === 0) {
 		return null;
@@ -376,11 +513,7 @@ export function replaceExercise(
 			continue;
 		}
 
-		const exercise: WorkoutExercise = {
-			id: ids.exercise,
-			exerciseId: catalogId,
-			sets: ids.sets.map((id) => blankSet(id))
-		};
+		const exercise = blankExercise(catalogId, grip)(ids);
 
 		entry.exercises[at] = exercise;
 
@@ -406,19 +539,21 @@ export function repeatFrom(past: Workout, startedAt: number, mint: () => string)
 			const repeated: WorkoutExercise = {
 				id: mint(),
 				exerciseId: exercise.exerciseId,
-				sets: working.map((set) => ({
-					id: mint(),
-					type: 'normal' as const,
-					plannedReps: set.plannedReps,
-					weight: null,
-					reps: null,
-					rpe: null,
-					completed: false
-				}))
+				// The grip carries and the arms do not: one is how the lift is set up, the other
+				// is what happened on the day, and only the setup is worth repeating in advance.
+				sets: working.map((set) => blankSet(mint(), set.grip))
 			};
+
+			for (const [index, set] of working.entries()) {
+				repeated.sets[index].plannedReps = set.plannedReps;
+			}
 
 			if (exercise.restSeconds !== undefined) {
 				repeated.restSeconds = exercise.restSeconds;
+			}
+
+			if (exercise.grip !== undefined) {
+				repeated.grip = exercise.grip;
 			}
 
 			exercises.push(repeated);

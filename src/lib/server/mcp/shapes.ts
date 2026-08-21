@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
 import { MAX_REST_SECONDS, MIN_REST_SECONDS } from '$lib/domain/rest';
+import { catalogById } from '$lib/catalog';
+import { settleGrip } from '$lib/domain/grip';
 import { MARK_COLOURS, MARK_ICONS } from '$lib/domain/template';
 import type { TemplateEntry, TemplateExercise } from '$lib/domain/template';
-import type { WorkoutEntry, WorkoutExercise } from '$lib/domain/workout';
+import type { WorkoutEntry, WorkoutExercise, WorkoutSet } from '$lib/domain/workout';
 
 function mint(): string {
 	return crypto.randomUUID();
@@ -74,6 +76,19 @@ function entriesOf<T extends Grouped, E>(
 	return entries;
 }
 
+const GRIP = z
+	.string()
+	.max(40)
+	.describe(
+		'which grip, attachment or handle — one of the ids the exercise’s `grips` axis lists; omit for its default. History, hints and bests are kept per grip'
+	);
+
+const ARMS = z
+	.enum(['both', 'one'])
+	.describe(
+		'how many arms did the work; recorded only — it splits no history and factors no volume'
+	);
+
 type Restable = { restSeconds?: number | null };
 
 /**
@@ -143,7 +158,9 @@ export const PERFORMED_SET = z
 			.boolean()
 			.default(true)
 			.describe('an uncompleted set stays in the record and counts towards nothing'),
-		plannedReps: z.number().int().min(1).max(100).nullable().default(null)
+		plannedReps: z.number().int().min(1).max(100).nullable().default(null),
+		grip: GRIP.optional(),
+		arms: ARMS.optional()
 	})
 	.refine(
 		(set) => !set.completed || (set.weight !== null && set.reps !== null),
@@ -154,6 +171,7 @@ export const PERFORMED_EXERCISE = z.object({
 	exerciseId: z.string().describe('catalogue id — resolve prose through search_exercises first'),
 	group: GROUP,
 	restSeconds: REST.optional(),
+	grip: GRIP.optional(),
 	sets: z.array(PERFORMED_SET).min(1).max(30)
 });
 
@@ -161,22 +179,46 @@ export type PerformedInput = z.infer<typeof PERFORMED_EXERCISE>;
 
 export function workoutEntriesOf(items: PerformedInput[]): WorkoutEntry[] {
 	return entriesOf(items, (item) => {
+		const meta = catalogById[item.exerciseId];
+
 		const exercise: WorkoutExercise = {
 			id: mint(),
 			exerciseId: item.exerciseId,
-			sets: item.sets.map((set) => ({
-				id: mint(),
-				type: set.type,
-				plannedReps: set.plannedReps,
-				weight: set.weight,
-				reps: set.reps,
-				rpe: set.rpe,
-				completed: set.completed
-			}))
+			sets: item.sets.map((set) => {
+				const performed: WorkoutSet = {
+					id: mint(),
+					type: set.type,
+					plannedReps: set.plannedReps,
+					weight: set.weight,
+					reps: set.reps,
+					rpe: set.rpe,
+					completed: set.completed
+				};
+
+				// Settled, not trusted: a grip the catalogue does not list would file the set under
+				// a key no screen can reach again.
+				const grip = settleGrip(meta, set.grip ?? item.grip);
+
+				if (grip !== undefined) {
+					performed.grip = grip;
+				}
+
+				if (set.arms === 'one') {
+					performed.arms = 'one';
+				}
+
+				return performed;
+			})
 		};
 
 		if (item.restSeconds !== undefined) {
 			exercise.restSeconds = item.restSeconds;
+		}
+
+		const grip = settleGrip(meta, item.grip);
+
+		if (grip !== undefined) {
+			exercise.grip = grip;
 		}
 
 		return exercise;
@@ -187,6 +229,7 @@ export const PLANNED_EXERCISE = z.object({
 	exerciseId: z.string().describe('catalogue id — resolve prose through search_exercises first'),
 	group: GROUP,
 	restSeconds: REST.optional(),
+	grip: GRIP.optional(),
 	sets: z
 		.array(z.number().int().min(1).max(100).nullable())
 		.min(1)
@@ -206,6 +249,12 @@ export function templateEntriesOf(items: PlannedInput[]): TemplateEntry[] {
 
 		if (item.restSeconds !== undefined) {
 			exercise.restSeconds = item.restSeconds;
+		}
+
+		const grip = settleGrip(catalogById[item.exerciseId], item.grip);
+
+		if (grip !== undefined) {
+			exercise.grip = grip;
 		}
 
 		return exercise;

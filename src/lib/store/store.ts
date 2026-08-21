@@ -33,7 +33,14 @@ import type { RecordKind, SyncAck, WireRecord } from '$lib/sync/protocol';
 import type { KilorepDatabase } from './db.ts';
 import { openDatabase } from './db.ts';
 import type { FinishedWorkout, LastPerformed } from './derive.ts';
-import { frequentFrom, hintsOf, lastPerformedFrom, pastSessionsFrom } from './derive.ts';
+import {
+	frequentFrom,
+	gripSessionsFrom,
+	historyFrom,
+	lastPerformedFrom,
+	pastSessionsFrom
+} from './derive.ts';
+import { foldTemplate, foldWorkout } from './fold.ts';
 
 // Absolute `endsAt`, never a remaining countdown: the WebView is suspended while the
 // screen is dark, and a countdown would resume as if no time had passed.
@@ -85,7 +92,9 @@ function isRestSnapshot(value: unknown): value is RestSnapshot {
 // upgrade mid-session keeps the half-logged workout.
 function settleSnapshot(value: LegacySnapshot): Snapshot {
 	return {
-		workout: value.workout,
+		// Folded like every other read: a session in flight when the app upgraded is the one
+		// place a retired slug can reach the screen, and the screen has no entry for it.
+		workout: foldWorkout(value.workout),
 		activeSetId: value.activeSetId,
 		rest: isRestSnapshot(value.rest) ? value.rest : null,
 		muted: value.muted === true
@@ -163,13 +172,13 @@ export class Store {
 			(a, b) => a.startedAt - b.startedAt
 		);
 
-		return workouts;
+		return workouts.map((workout) => foldWorkout(workout));
 	}
 
 	public async getWorkout(id: string): Promise<FinishedWorkout | null> {
 		const workout = await this.liveOne<FinishedWorkout>(id, 'workout');
 
-		return workout;
+		return workout === null ? null : foldWorkout(workout);
 	}
 
 	// Read-modify-write: a blind put would set `deletedAt: null` over a tombstone that
@@ -201,24 +210,33 @@ export class Store {
 	}
 
 	public async history(): Promise<History> {
-		return hintsOf(lastPerformedFrom(await this.listWorkouts()));
+		return historyFrom(await this.listWorkouts());
 	}
 
 	public async lastPerformed(): Promise<LastPerformed> {
 		return lastPerformedFrom(await this.listWorkouts());
 	}
 
-	public async pickerData(): Promise<{ lastPerformed: LastPerformed; frequent: string[] }> {
+	public async pickerData(): Promise<{
+		lastPerformed: LastPerformed;
+		frequent: string[];
+		history: History;
+	}> {
 		const workouts = await this.listWorkouts();
 
 		return {
 			lastPerformed: lastPerformedFrom(workouts),
-			frequent: frequentFrom(workouts)
+			frequent: frequentFrom(workouts),
+			history: historyFrom(workouts)
 		};
 	}
 
 	public async pastSessions(exerciseId: string): Promise<PastSession[]> {
 		return pastSessionsFrom(await this.listWorkouts(), exerciseId);
+	}
+
+	public async gripSessions(exerciseId: string): Promise<Record<string, PastSession[]>> {
+		return gripSessionsFrom(await this.listWorkouts(), exerciseId);
 	}
 
 	public async saveTemplate(template: Template, updatedAt: number): Promise<void> {
@@ -238,13 +256,13 @@ export class Store {
 	public async listTemplates(): Promise<Template[]> {
 		const templates = await this.live<Template>('template', byRank);
 
-		return templates;
+		return templates.map((template) => foldTemplate(template));
 	}
 
 	public async getTemplate(id: string): Promise<Template | null> {
 		const template = await this.liveOne<Template>(id, 'template');
 
-		return template;
+		return template === null ? null : foldTemplate(template);
 	}
 
 	public async deleteTemplate(id: string, deletedAt: number): Promise<void> {

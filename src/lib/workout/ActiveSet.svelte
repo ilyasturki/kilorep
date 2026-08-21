@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Exercise } from '$lib/domain/exercise';
 	import { canCommit, hintLabel, prefillFor } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
@@ -17,6 +18,8 @@
 	type Props = {
 		cursor: SetCursor;
 		history: History;
+		meta: Exercise;
+		note: string | null;
 		step: Step;
 		unit: string;
 		oncommit: (weight: number, reps: number) => void;
@@ -25,9 +28,10 @@
 		onoptions: (anchor: HTMLElement) => void;
 	};
 
-	let { cursor, history, step, unit, oncommit, ondraft, onrate, onoptions }: Props = $props();
+	let { cursor, history, meta, note, step, unit, oncommit, ondraft, onrate, onoptions }: Props =
+		$props();
 
-	const hint = $derived(hintLabel(history, cursor, exertionScale.current));
+	const hint = $derived(hintLabel(history, cursor, meta, exertionScale.current));
 
 	// The plan's own number, which the reps field cannot say for itself: what it holds is the
 	// prefill, and from the second set on that is the weight and reps carried from the first.
@@ -36,7 +40,7 @@
 	// What the card shows before a finger lands on it: the set's own numbers where it has any,
 	// and where it has none the offer worked out afresh — the carry, the target, last time.
 	// Nothing here is written back, so leaving the set is not the same as filling it in.
-	const offer = $derived(prefillFor(cursor, history));
+	const offer = $derived(prefillFor(cursor, history, meta));
 
 	const weight = $derived(offer.weight);
 	const reps = $derived(offer.reps);
@@ -116,11 +120,15 @@
 
 	<div class="flex flex-col gap-3 py-3 pr-3 pl-4">
 		<div class="flex items-center justify-between gap-2">
-			<div class="flex shrink-0 items-center gap-3">
+			<div class="flex min-w-0 items-center gap-3">
 				<SetMark {status} index={cursor.workingIndex + 1} />
-				<span class="label-caps">
+				<span class="shrink-0 label-caps">
 					{cursor.workingIndex < 0 ? 'Warmup' : `Set ${cursor.workingIndex + 1}`}
 				</span>
+
+				{#if note !== null}
+					<span class="truncate text-sm font-bold text-ink-faint">{note}</span>
+				{/if}
 			</div>
 
 			<!-- Which set this is always reads; last time's numbers are the half that gives. The

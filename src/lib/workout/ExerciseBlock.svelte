@@ -4,6 +4,7 @@
 	import { exertionLabel } from '$lib/domain/exertion';
 	import { hintLabel } from '$lib/domain/workout';
 	import { weightStep } from '$lib/domain/exercise';
+	import { gripLabel } from '$lib/domain/grip';
 	import { loadUnitLabel } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
@@ -13,7 +14,7 @@
 	import { quickMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
 	import SetRow from '$lib/ui/SetRow.svelte';
-	import { statusOf } from '$lib/workout/groups';
+	import { setNote, statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
 	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
@@ -21,6 +22,7 @@
 
 	type Props = {
 		meta: Exercise;
+		grip?: string;
 		cursors: SetCursor[];
 		history: History;
 		activeSetId: string | null;
@@ -36,6 +38,7 @@
 
 	let {
 		meta,
+		grip,
 		cursors,
 		history,
 		activeSetId,
@@ -49,16 +52,23 @@
 		onexercise
 	}: Props = $props();
 
+	// The equipment line already carries a word about the setup, so the grip joins it there
+	// rather than taking a row of its own: it is read on the way past, and changed by a press
+	// on the same heading, which is where the options for this exercise already live.
+	const setup = $derived([meta.equipment, gripLabel(meta, grip)].filter(Boolean).join(' · '));
+
 	function rowHint(cursor: SetCursor): string | null {
 		if (cursor.set.weight !== null || cursor.set.reps !== null || cursor.set.type === 'warmup') {
 			return null;
 		}
 
-		return hintLabel(history, cursor, exertionScale.current);
+		return hintLabel(history, cursor, meta, exertionScale.current);
 	}
 
 	function rowRight(cursor: SetCursor): string {
-		return rowHint(cursor) ?? exertionLabel(cursor.set.rpe, exertionScale.current) ?? '';
+		const recall = rowHint(cursor) ?? exertionLabel(cursor.set.rpe, exertionScale.current);
+
+		return [setNote(meta, grip, cursor.set), recall].filter(Boolean).join(' · ');
 	}
 
 	let mounted = $state(false);
@@ -111,7 +121,7 @@
 			{@attach press(() => onexercise)}
 		>
 			<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
-			<p class="truncate text-sm font-bold text-ink-faint">{meta.equipment}</p>
+			<p class="truncate text-sm font-bold text-ink-faint">{setup}</p>
 		</a>
 
 		<button
@@ -134,6 +144,8 @@
 					<ActiveSet
 						{cursor}
 						{history}
+						{meta}
+						note={setNote(meta, grip, cursor.set)}
 						step={(from, direction) => weightStep(meta.equipment, from, direction)}
 						unit={loadUnitLabel(meta)}
 						{oncommit}

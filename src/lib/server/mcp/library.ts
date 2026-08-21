@@ -22,6 +22,7 @@ import type { Template } from '$lib/domain/template';
 import { byRank } from '$lib/domain/template';
 import type { FinishedWorkout, LastPerformed } from '$lib/store/derive';
 import { lastPerformedFrom, sessionsByExercise } from '$lib/store/derive';
+import { foldTemplate, foldWorkout } from '$lib/store/fold';
 import type { RecordKind } from '$lib/sync/protocol';
 
 import type { Database } from '../db/client.ts';
@@ -117,7 +118,7 @@ export class Library {
 		return this.once('workouts', () =>
 			this.live('workout')
 				// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-				.map((row) => row.payload as FinishedWorkout)
+				.map((row) => foldWorkout(row.payload as FinishedWorkout))
 				.toSorted((a, b) => a.startedAt - b.startedAt)
 		);
 	}
@@ -131,7 +132,7 @@ export class Library {
 		return this.once('templates', () =>
 			this.live('template')
 				// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-				.map((row) => row.payload as Template)
+				.map((row) => foldTemplate(row.payload as Template))
 				.toSorted(byRank)
 		);
 	}

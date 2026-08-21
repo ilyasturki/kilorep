@@ -7,6 +7,7 @@
 	import { PLANNED_REPS } from '$lib/domain/template';
 	import type { TemplateExercise } from '$lib/domain/template';
 	import type { Exercise } from '$lib/domain/exercise';
+	import { gripLabel } from '$lib/domain/grip';
 	import { loadModeNote } from '$lib/exercises/label';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { planShape, setsLabel, targetNote } from '$lib/templates/plan';
@@ -31,6 +32,12 @@
 		$props();
 
 	const shape = $derived(planShape(exercise));
+
+	// The prescribed grip reads under the name, where the load-mode note already sits: what a
+	// plan asks for has to be visible without opening the menu that sets it.
+	const setup = $derived(
+		[loadModeNote(meta.loadMode), gripLabel(meta, exercise.grip)].filter(Boolean).join(' · ')
+	);
 
 	const restNote = $derived.by(() => {
 		if (!restSettings.current.enabled || exercise.restSeconds === undefined) {
@@ -62,10 +69,8 @@
 				{@attach press(() => onoptions)}
 			>
 				<span class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</span>
-				{#if loadModeNote(meta.loadMode)}
-					<span class="truncate text-sm font-bold text-ink-faint">
-						{loadModeNote(meta.loadMode)}
-					</span>
+				{#if setup}
+					<span class="truncate text-sm font-bold text-ink-faint">{setup}</span>
 				{/if}
 			</a>
 		</h2>

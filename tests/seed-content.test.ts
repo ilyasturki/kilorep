@@ -177,7 +177,7 @@ describe('the planted states', () => {
 		const sessions = sessionsOf(legs.id);
 		const last = sessions.at(-1)!;
 
-		const drift = driftFrom(last, legs);
+		const drift = driftFrom(last, legs, (id) => catalogById[id]);
 		const setDrift = Object.values(drift.matched);
 
 		expect(drift.missing).toStrictEqual(['standing-calf-raise']);
@@ -186,7 +186,7 @@ describe('the planted states', () => {
 		expect(setDrift.some((entry) => entry.retargeted > 0)).toBe(true);
 
 		for (const session of sessions.slice(0, -1)) {
-			expect(hasDrift(driftFrom(session, legs)), session.id).toBe(false);
+			expect(hasDrift(driftFrom(session, legs, (id) => catalogById[id])), session.id).toBe(false);
 		}
 	});
 

@@ -16,6 +16,7 @@
 		removeExercise,
 		removeSet,
 		replaceExercise,
+		setExerciseGrip,
 		setExerciseReps,
 		setExerciseRest,
 		setPlannedReps,
@@ -162,6 +163,12 @@
 	function swapPick(exerciseId: string) {
 		if (acting !== null) {
 			replaceExercise(template, acting, exerciseId);
+		}
+	}
+
+	function gripPick(grip: string) {
+		if (actingGroup !== null) {
+			setExerciseGrip(template, actingGroup.id, actingGroup.meta, grip);
 		}
 	}
 
@@ -502,6 +509,7 @@
 	onrest={() => (restOpen = true)}
 	onbreak={breakSuperset}
 	onremove={removePlanned}
+	ongrip={gripPick}
 />
 
 <PlanRestSheet bind:open={restOpen} group={actingGroup} onchange={restPick} />

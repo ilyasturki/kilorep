@@ -4,6 +4,7 @@ import { session } from '$lib/api/auth';
 import { ApiError, NO_SERVER, deviceToken } from '$lib/api/client';
 import { exertionScale } from '$lib/settings/exertion.svelte';
 import { restSettings } from '$lib/settings/rest.svelte';
+import { historyFrom, lastGripsFrom } from '$lib/store/derive';
 import { getStore } from '$lib/store/store';
 import { syncPromptly } from '$lib/sync/client';
 import { activeWorkout } from '$lib/workout/active.svelte';
@@ -23,7 +24,9 @@ async function restoreSession(): Promise<void> {
 	const snapshot = await store.loadSnapshot();
 
 	if (snapshot !== null) {
-		activeWorkout.begin(await store.history(), snapshot);
+		const workouts = await store.listWorkouts();
+
+		activeWorkout.begin(historyFrom(workouts), snapshot, lastGripsFrom(workouts));
 
 		restTimer.resume(snapshot.rest, snapshot.muted);
 	}

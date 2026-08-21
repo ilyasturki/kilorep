@@ -1,5 +1,6 @@
 import type { Exercise, Muscle } from '$lib/domain/exercise';
 import { MUSCLES } from '$lib/domain/exercise';
+import { musclesOf } from '$lib/domain/grip';
 import type { Carried, CarriedOn } from '$lib/domain/load';
 import { carriedOn } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
@@ -74,16 +75,14 @@ export function estTrend(past: PastSession[], since: number, carried: CarriedOn)
 
 export const WEEK = 7 * 86_400_000;
 
+function isWorking(set: WorkoutSet): set is WorkoutSet & { weight: number; reps: number } {
+	return set.completed && set.type !== 'warmup' && set.weight !== null && set.reps !== null;
+}
+
 function workingSets(sets: WorkoutSet[]): { weight: number; reps: number }[] {
-	const out: { weight: number; reps: number }[] = [];
-
-	for (const set of sets) {
-		if (set.completed && set.type !== 'warmup' && set.weight !== null && set.reps !== null) {
-			out.push({ weight: set.weight, reps: set.reps });
-		}
-	}
-
-	return out;
+	return sets
+		.filter((set) => isWorking(set))
+		.map((set) => ({ weight: set.weight, reps: set.reps }));
 }
 
 export type WorkWeek = { start: number; kg: number; sets: number };
@@ -159,6 +158,23 @@ export function rollingConsistency(startedAts: number[], now: number, weeks = 8)
 	return { last7: within(now - WEEK, now), median, weeks: trailing.toReversed() };
 }
 
+/**
+ * How many working sets each grip of one exercise took.
+ *
+ * Per grip, not per exercise: a close-grip bench press is a triceps lift where the standard one
+ * is a chest lift, and adding both to the chest would be the count saying a session trained
+ * something it did not.
+ */
+function setsPerGrip(sets: WorkoutSet[]): Map<string | undefined, number> {
+	const out = new Map<string | undefined, number>();
+
+	for (const set of sets.filter((candidate) => isWorking(candidate))) {
+		out.set(set.grip, (out.get(set.grip) ?? 0) + 1);
+	}
+
+	return out;
+}
+
 export type MuscleSets = { muscle: Muscle; direct: number; indirect: number };
 
 export function muscleSets(
@@ -169,6 +185,18 @@ export function muscleSets(
 	const direct = new Map<Muscle, number>();
 	const indirect = new Map<Muscle, number>();
 
+	function count(known: Exercise, sets: WorkoutSet[]): void {
+		for (const [grip, taken] of setsPerGrip(sets)) {
+			const muscles = musclesOf(known, grip);
+
+			direct.set(muscles.primary, (direct.get(muscles.primary) ?? 0) + taken);
+
+			for (const muscle of muscles.secondary) {
+				indirect.set(muscle, (indirect.get(muscle) ?? 0) + taken);
+			}
+		}
+	}
+
 	for (const workout of workouts) {
 		if (workout.startedAt < since) {
 			continue;
@@ -178,21 +206,8 @@ export function muscleSets(
 			for (const exercise of entry.exercises) {
 				const known = exerciseOf(exercise.exerciseId);
 
-				if (known === undefined) {
-					continue;
-				}
-
-				const count = workingSets(exercise.sets).length;
-
-				if (count === 0) {
-					continue;
-				}
-
-				const primary = known.muscles.primary;
-				direct.set(primary, (direct.get(primary) ?? 0) + count);
-
-				for (const muscle of known.muscles.secondary) {
-					indirect.set(muscle, (indirect.get(muscle) ?? 0) + count);
+				if (known !== undefined) {
+					count(known, exercise.sets);
 				}
 			}
 		}

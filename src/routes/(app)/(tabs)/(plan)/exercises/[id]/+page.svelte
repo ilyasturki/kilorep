@@ -9,6 +9,7 @@
 	import { rawPr } from '$lib/domain/stats';
 	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
+	import { historyKey, settleGrip } from '$lib/domain/grip';
 	import { kin } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import {
@@ -27,6 +28,8 @@
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import Chip from '$lib/ui/Chip.svelte';
+	import ChipGroup from '$lib/ui/ChipGroup.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Switch from '$lib/ui/Switch.svelte';
 	import Textarea from '$lib/ui/Textarea.svelte';
@@ -45,7 +48,17 @@
 
 	const family = $derived(kin(catalog, exercise));
 
-	const past = $derived(data.past);
+	// The whole screen answers for one grip at a time. A raw best that mixed the rope's numbers
+	// into the bar's would be a record nobody set, and a history list that interleaved them would
+	// read as one lift getting stronger and weaker by turns.
+	const axis = $derived(exercise.grips);
+
+	let chip = $state<string | null>(null);
+
+	const grip = $derived(settleGrip(exercise, chip));
+
+	const past = $derived(data.gripped[historyKey(exercise.id, exercise, grip)] ?? []);
+
 	const sessions = $derived(past.toReversed());
 
 	const carried = $derived(carriedFrom(data.bodyweight, () => exercise));
@@ -231,28 +244,54 @@
 						<Badge>{muscle}</Badge>
 					{/each}
 				</div>
-
-				{#if pr !== null}
-					<div
-						class="flex w-fit flex-wrap items-baseline gap-x-2 rounded-xl border
-							border-line-soft bg-surface px-3 py-2"
-					>
-						<span class="label-caps">Raw best</span>
-						<span class="text-md font-extrabold tracking-tight">
-							{loadLabel(pr.load)} × {pr.set.reps}
-						</span>
-
-						{#if pr.load !== pr.set.weight}
-							<span class="text-sm font-bold text-ink-faint">
-								{pr.set.weight} added
-							</span>
-						{/if}
-					</div>
-				{/if}
 			</div>
 
 			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-36 shrink-0" />
 		</div>
+
+		{#if axis !== undefined}
+			<!-- Everything below answers for the chip that is on: the best, and the sessions. A
+			     grip nothing has been logged on yet still gets a chip — an empty history is an
+			     answer, and hiding it would say the gym has no bar. -->
+			<div class="flex flex-col gap-2 px-1">
+				<span class="label-caps">{axis.label}</span>
+
+				<ChipGroup
+					layout="row"
+					label={axis.label}
+					bind:value={
+						() => grip ?? '',
+						(next) => {
+							if (typeof next === 'string' && next !== '') {
+								chip = next;
+							}
+						}
+					}
+				>
+					{#each axis.values as value (value.id)}
+						<Chip value={value.id}>{value.label}</Chip>
+					{/each}
+				</ChipGroup>
+			</div>
+		{/if}
+
+		{#if pr !== null}
+			<div
+				class="flex w-fit flex-wrap items-baseline gap-x-2 rounded-xl border
+					border-line-soft bg-surface px-3 py-2"
+			>
+				<span class="label-caps">Raw best</span>
+				<span class="text-md font-extrabold tracking-tight">
+					{loadLabel(pr.load)} × {pr.set.reps}
+				</span>
+
+				{#if pr.load !== pr.set.weight}
+					<span class="text-sm font-bold text-ink-faint">
+						{pr.set.weight} added
+					</span>
+				{/if}
+			</div>
+		{/if}
 	</header>
 
 	{#if restSettings.current.enabled}

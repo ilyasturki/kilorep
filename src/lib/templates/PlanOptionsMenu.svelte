@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { hasGrips } from '$lib/domain/grip';
 	import { restSettings } from '$lib/settings/rest.svelte';
+	import GripField from '$lib/workout/GripField.svelte';
 	import type { Planned } from '$lib/templates/plan';
 	import Menu from '$lib/ui/Menu.svelte';
 	import MenuItem from '$lib/ui/MenuItem.svelte';
@@ -20,6 +22,7 @@
 		onrest: () => void;
 		onbreak: () => void;
 		onremove: () => void;
+		ongrip: (grip: string) => void;
 	};
 
 	let {
@@ -31,15 +34,30 @@
 		onsuperset,
 		onrest,
 		onbreak,
-		onremove
+		onremove,
+		ongrip
 	}: Props = $props();
 
 	const name = $derived(group === null ? 'Exercise' : group.meta.name);
+
+	const meta = $derived(group?.meta);
 
 	const pairing = $derived(superset ? onbreak : onsuperset);
 </script>
 
 <Menu bind:open title={name} {anchor}>
+	{#if hasGrips(meta) && group !== null}
+		<GripField
+			{meta}
+			value={group.exercise.grip}
+			note="Prescribed"
+			onpick={(grip) => {
+				open = false;
+				ongrip(grip);
+			}}
+		/>
+	{/if}
+
 	<MenuItem
 		href={group === null ? undefined : `/exercises/${group.meta.id}`}
 		onselect={() => (open = false)}

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
 import { MAX_REST_SECONDS, MIN_REST_SECONDS } from '$lib/domain/rest';
 import {
 	addExercise,
@@ -23,6 +24,7 @@ import {
 	setPlannedReps,
 	splitEntry,
 	templateRank,
+	setExerciseGrip,
 	startFrom,
 	supersetWith
 } from '$lib/domain/template';
@@ -552,6 +554,24 @@ describe('copy-on-start', () => {
 		const workout = startFrom(pushDay(), 5000, mint('w'));
 
 		expect('restSeconds' in workout.entries[0].exercises[0]).toBe(false);
+	});
+
+	// Onto the sets as well as the leg: what a set means must not depend on the leg it sits in,
+	// or changing the grip mid-session would rewrite the ones already logged.
+	test("the plan's grip rides in, stamped on every set it starts", () => {
+		const template = pushDay();
+
+		expect(setExerciseGrip(template, 'bench-press-node', catalogById['bench-press'], 'close')).toBe(
+			true
+		);
+
+		const workout = startFrom(template, 5000, mint('w'));
+		const [benched, flown] = workout.entries.flatMap((e) => e.exercises);
+
+		expect(benched.grip).toBe('close');
+		expect(benched.sets.every((set) => set.grip === 'close')).toBe(true);
+		expect('grip' in flown).toBe(false);
+		expect(flown.sets.every((set) => !('grip' in set))).toBe(true);
 	});
 
 	test('an empty template starts an empty workout', () => {

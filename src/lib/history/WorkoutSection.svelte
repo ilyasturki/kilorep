@@ -4,6 +4,7 @@
 	import { weightStep } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { SetCursor } from '$lib/domain/workout';
+	import { gripLabel } from '$lib/domain/grip';
 	import { exertionLabel } from '$lib/domain/exertion';
 	import EditSet from '$lib/history/EditSet.svelte';
 	import { loadModeNote, loadUnitLabel } from '$lib/exercises/label';
@@ -12,11 +13,13 @@
 	import { quickMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
 	import SetMark from '$lib/ui/SetMark.svelte';
-	import { statusOf } from '$lib/workout/groups';
+	import { setNote, statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
 
 	type Props = {
 		meta: Exercise;
+		/** The exercise's own grip, joining the load-mode note under the name. */
+		setup?: string;
 		entryId: string;
 		cursors: SetCursor[];
 		badges: string[];
@@ -35,6 +38,7 @@
 
 	let {
 		meta,
+		setup,
 		entryId,
 		cursors,
 		badges,
@@ -51,11 +55,14 @@
 		grip
 	}: Props = $props();
 
-	const note = $derived(loadModeNote(meta.loadMode));
+	const note = $derived(
+		[loadModeNote(meta.loadMode), gripLabel(meta, setup)].filter(Boolean).join(' · ')
+	);
 </script>
 
 {#snippet numbers(cursor: SetCursor)}
 	{@const felt = exertionLabel(cursor.set.rpe, exertionScale.current)}
+	{@const said = setNote(meta, setup, cursor.set)}
 
 	<span
 		class={[
@@ -67,6 +74,10 @@
 			{cursor.set.weight} × {cursor.set.reps}
 		{/if}
 	</span>
+
+	{#if said !== null}
+		<span class="shrink-0 text-sm font-bold text-ink-faint">{said}</span>
+	{/if}
 
 	{#if felt !== null}
 		<span class="shrink-0 text-sm font-bold text-ink-faint">{felt}</span>

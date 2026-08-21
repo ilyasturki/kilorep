@@ -22,7 +22,7 @@
 	// session runs, and replaces its own entry doing it. A goto to where we already are would
 	// push a duplicate, and back out of the session would land on the session.
 	async function startEmpty() {
-		activeWorkout.begin(data.history);
+		activeWorkout.begin(data.history, null, data.grips);
 
 		await invalidate(SESSION_DEP);
 	}
@@ -31,10 +31,11 @@
 		const workout = startFrom(template, Date.now(), () => crypto.randomUUID());
 		const first = firstUncompleted(workout);
 
-		activeWorkout.begin(data.history, {
-			workout,
-			activeSetId: first === null ? null : first.set.id
-		});
+		activeWorkout.begin(
+			data.history,
+			{ workout, activeSetId: first === null ? null : first.set.id },
+			data.grips
+		);
 
 		await invalidate(SESSION_DEP);
 	}

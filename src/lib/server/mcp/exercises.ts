@@ -93,6 +93,9 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 				bodyweightShare: bodyweightShareOf(exercise) === 0 ? undefined : exercise.bodyweightShare,
 				muscles: exercise.muscles,
 				variantOf: exercise.variantOf,
+				// The one axis this movement varies on, if any: history, hints and bests are kept
+				// per value, so a caller writing sets has to know which ids it may name.
+				grips: exercise.grips,
 				note: library.noteOf(id),
 				restSeconds: restSecondsFor(id, library.restSettings()),
 				trainedSessions: past.length,

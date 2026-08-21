@@ -1,6 +1,5 @@
 import { redirect } from '@sveltejs/kit';
 
-import { hintsOf } from '$lib/store/derive';
 import { getStore } from '$lib/store/store';
 import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 
@@ -16,7 +15,7 @@ export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 	}
 
 	const store = await getStore();
-	const { lastPerformed, frequent } = await store.pickerData();
+	const { lastPerformed, frequent, history } = await store.pickerData();
 
-	return { store, lastPerformed, frequent, history: hintsOf(lastPerformed) };
+	return { store, lastPerformed, frequent, history };
 };

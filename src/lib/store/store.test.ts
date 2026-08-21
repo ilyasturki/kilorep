@@ -7,7 +7,7 @@ import type { Workout, WorkoutSet } from '$lib/domain/workout';
 import type { WireRecord } from '$lib/sync/protocol';
 
 import { openDatabase } from './db.ts';
-import { frequentFrom, hintsOf } from './derive.ts';
+import { frequentFrom } from './derive.ts';
 import { Store } from './store.ts';
 
 let counter = 0;
@@ -593,22 +593,6 @@ describe('last performed', () => {
 		);
 
 		expect(await store.lastPerformed()).toEqual({});
-	});
-
-	it('agrees with the hint map it projects', async () => {
-		await store.finishWorkout(
-			workout('w1', 100, 'bench-press', [
-				{ weight: 40, reps: 10, type: 'warmup' },
-				{ weight: 80, reps: 8 }
-			]),
-			150
-		);
-		await store.finishWorkout(workout('w2', 200, 'cable-fly', [{ weight: 20, reps: 12 }]), 250);
-
-		const history = await store.history();
-
-		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
-		expect(hintsOf(await store.lastPerformed())).toEqual(history);
 	});
 });
 

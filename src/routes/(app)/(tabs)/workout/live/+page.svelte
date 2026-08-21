@@ -13,6 +13,7 @@
 
 	import { catalogById } from '$lib/catalog';
 	import { restAfter } from '$lib/domain/rest';
+	import type { Arms } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
@@ -390,6 +391,15 @@
 		exerciseOpen = true;
 	}
 
+	function gripExercise(grip: string) {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.setExerciseGrip(acting, grip);
+		acting = null;
+	}
+
 	function swapPick(catalogId: string) {
 		if (session === null || acting === null) {
 			return;
@@ -473,6 +483,18 @@
 		optionsSetId = setId;
 		optionsAnchor = anchor;
 		optionsOpen = true;
+	}
+
+	function gripSet(grip: string) {
+		if (session !== null && optionsSetId !== null) {
+			session.setSetGrip(optionsSetId, grip);
+		}
+	}
+
+	function armSet(arms: Arms) {
+		if (session !== null && optionsSetId !== null) {
+			session.setSetArms(optionsSetId, arms);
+		}
 	}
 
 	function unlogSet() {
@@ -579,6 +601,7 @@
 								{#snippet leg(leg)}
 									<ExerciseBlock
 										meta={leg.meta}
+										grip={leg.grip}
 										cursors={leg.cursors}
 										history={data.history}
 										activeSetId={session.activeSetId}
@@ -680,16 +703,20 @@
 		onsuperset={() => (supersetOpen = true)}
 		onbreak={breakSuperset}
 		onremove={removeExercise}
+		ongrip={gripExercise}
 	/>
 
 	<SetOptionsMenu
 		bind:open={optionsOpen}
 		cursor={optionsCursor}
+		meta={optionsGroup?.meta}
 		anchor={optionsAnchor}
 		removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
 		onunlog={unlogSet}
 		onclear={clearSet}
 		onremove={removeSet}
+		ongrip={gripSet}
+		onarms={armSet}
 	/>
 
 	<AlertDialog

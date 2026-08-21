@@ -17,7 +17,8 @@ function plannedRows(template: Template): Record<string, unknown>[] {
 	return flatRows(template.entries, (exercise) => ({
 		exerciseId: exercise.exerciseId,
 		name: nameOf(exercise.exerciseId),
-		sets: exercise.sets.map((set) => set.plannedReps)
+		sets: exercise.sets.map((set) => set.plannedReps),
+		grip: exercise.grip
 	}));
 }
 

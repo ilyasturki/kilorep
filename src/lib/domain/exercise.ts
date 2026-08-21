@@ -59,6 +59,28 @@ export type Muscle = (typeof MUSCLES)[number];
 
 export type MuscleTargets = { primary: Muscle; secondary: Muscle[] };
 
+/**
+ * One value of an exercise's grip axis — a rope, a close grip, a neutral handle.
+ *
+ * It carries its own muscle targets when the grip really moves them: a close-grip bench press
+ * is a triceps lift where the wide one is a chest lift, and a chip that could not say so would
+ * file every close-grip set under the chest.
+ */
+export type Grip = {
+	id: string;
+	label: string;
+	muscles?: MuscleTargets;
+};
+
+/** The one way an exercise can be varied without becoming another exercise. */
+export type GripAxis = {
+	/** What the axis is called where it is chosen: "Grip", "Attachment", "Handle". */
+	label: string;
+	/** The value every set carries until one is picked, and the one filed under the bare slug. */
+	default: string;
+	values: Grip[];
+};
+
 export type Exercise = {
 	id: string;
 	name: string;
@@ -67,6 +89,7 @@ export type Exercise = {
 	loadMode: LoadMode;
 	muscles: MuscleTargets;
 	variantOf?: string;
+	grips?: GripAxis;
 	/**
 	 * The share of the lifter's own body weight this movement makes them carry.
 	 *

@@ -1,3 +1,5 @@
+import { catalogById } from '$lib/catalog';
+import { historyKey, settleGrip } from '$lib/domain/grip';
 import {
 	addExercise as insertExercise,
 	addSet as appendSet,
@@ -16,10 +18,14 @@ import {
 	removeExercise as dropExercise,
 	removeSet as dropSet,
 	replaceExercise,
+	setExerciseGrip as gripExercise,
+	setSetArms as armSet,
+	setSetGrip as gripSet,
 	splitEntry,
 	supersetWith
 } from '$lib/domain/workout';
-import type { History, Workout } from '$lib/domain/workout';
+import type { Arms, History, Workout } from '$lib/domain/workout';
+import type { LastGrips } from '$lib/store/derive';
 
 export type Resume = {
 	workout: Workout;
@@ -40,13 +46,32 @@ export class WorkoutSession {
 
 	private readonly history: History;
 
-	public constructor(history: History, resume: Resume | null = null) {
+	private readonly grips: LastGrips;
+
+	public constructor(history: History, resume: Resume | null = null, grips: LastGrips = {}) {
 		this.history = history;
+		this.grips = grips;
 
 		if (resume !== null) {
 			this.workout = resume.workout;
 			this.#focus(resume.activeSetId);
 		}
+	}
+
+	/**
+	 * The grip an exercise opens on here: the one it was last worked with, else the default.
+	 *
+	 * `undefined` for an exercise with no axis, which is most of them, and the sets it makes
+	 * then carry no grip at all.
+	 */
+	#opening(catalogId: string): string | undefined {
+		return settleGrip(catalogById[catalogId], this.grips[catalogId]);
+	}
+
+	#setCount(catalogId: string): number {
+		const meta = catalogById[catalogId];
+
+		return insertedSetCount(this.history, historyKey(catalogId, meta, this.#opening(catalogId)));
 	}
 
 	public get finished(): boolean {
@@ -120,7 +145,7 @@ export class WorkoutSession {
 		let anchor = after;
 
 		for (const exerciseId of exerciseIds) {
-			const count = insertedSetCount(this.history, exerciseId);
+			const count = this.#setCount(exerciseId);
 
 			const entry = insertExercise(
 				this.workout,
@@ -130,7 +155,8 @@ export class WorkoutSession {
 					exercise: crypto.randomUUID(),
 					sets: Array.from({ length: count }, () => crypto.randomUUID())
 				},
-				anchor
+				anchor,
+				this.#opening(exerciseId)
 			);
 
 			if (entry === null) {
@@ -148,12 +174,18 @@ export class WorkoutSession {
 
 	public superset(entryId: string, exerciseIds: string[]): void {
 		for (const exerciseId of exerciseIds) {
-			const count = insertedSetCount(this.history, exerciseId);
+			const count = this.#setCount(exerciseId);
 
-			supersetWith(this.workout, entryId, exerciseId, {
-				exercise: crypto.randomUUID(),
-				sets: Array.from({ length: count }, () => crypto.randomUUID())
-			});
+			supersetWith(
+				this.workout,
+				entryId,
+				exerciseId,
+				{
+					exercise: crypto.randomUUID(),
+					sets: Array.from({ length: count }, () => crypto.randomUUID())
+				},
+				this.#opening(exerciseId)
+			);
 		}
 
 		if (this.activeSetId === null) {
@@ -165,16 +197,48 @@ export class WorkoutSession {
 		splitEntry(this.workout, entryId, () => crypto.randomUUID());
 	}
 
+	// Nothing to re-offer afterwards: the card works out what it shows where it is shown, so a
+	// grip change reaches the fields on the next read.
+	public setExerciseGrip(exerciseId: string, grip: string): void {
+		const exercise = cursors(this.workout).find((c) => c.exercise.id === exerciseId)?.exercise;
+
+		if (exercise === undefined) {
+			return;
+		}
+
+		gripExercise(this.workout, exerciseId, catalogById[exercise.exerciseId], grip);
+	}
+
+	public setSetGrip(setId: string, grip: string): void {
+		const cursor = cursorFor(this.workout, setId);
+
+		if (cursor === null) {
+			return;
+		}
+
+		gripSet(this.workout, setId, catalogById[cursor.exercise.exerciseId], grip);
+	}
+
+	public setSetArms(setId: string, arms: Arms): void {
+		armSet(this.workout, setId, arms);
+	}
+
 	public swapExercise(exerciseId: string, catalogId: string): void {
 		const active = this.activeSetId === null ? null : cursorFor(this.workout, this.activeSetId);
 		const held = active === null || active.exercise.id === exerciseId;
 
-		const count = insertedSetCount(this.history, catalogId);
+		const count = this.#setCount(catalogId);
 
-		const exercise = replaceExercise(this.workout, exerciseId, catalogId, {
-			exercise: crypto.randomUUID(),
-			sets: Array.from({ length: count }, () => crypto.randomUUID())
-		});
+		const exercise = replaceExercise(
+			this.workout,
+			exerciseId,
+			catalogId,
+			{
+				exercise: crypto.randomUUID(),
+				sets: Array.from({ length: count }, () => crypto.randomUUID())
+			},
+			this.#opening(catalogId)
+		);
 
 		if (exercise !== null && held) {
 			this.#focus(exercise.sets[0].id);

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 
-import { hintsOf, lastPerformedFrom } from '$lib/store/derive';
+import { historyFrom, lastGripsFrom } from '$lib/store/derive';
 import { getStore } from '$lib/store/store';
 import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 
@@ -19,15 +19,16 @@ export const load: PageLoad = async ({ depends }) => {
 		store.listWorkouts()
 	]);
 
-	const history = hintsOf(lastPerformedFrom(workouts));
+	const history = historyFrom(workouts);
+	const grips = lastGripsFrom(workouts);
 
 	if (activeWorkout.session === null && resume !== null) {
-		activeWorkout.begin(history, resume);
+		activeWorkout.begin(history, resume, grips);
 	}
 
 	if (activeWorkout.session !== null) {
 		redirect(307, '/workout/live');
 	}
 
-	return { history, templates, workouts };
+	return { history, grips, templates, workouts };
 };

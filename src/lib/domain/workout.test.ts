@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
 import { freshWorkout, history } from '$lib/domain/fixture';
 import {
 	addExercise,
@@ -33,6 +34,12 @@ import {
 	supersetWith
 } from '$lib/domain/workout';
 import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workout';
+import type { Exercise } from '$lib/domain/exercise';
+
+// The real entries, so the grip axis a hint is keyed by is the one the app would read.
+function metaOf(cursor: SetCursor): Exercise | undefined {
+	return catalogById[cursor.exercise.exerciseId];
+}
 
 function idsOf(workout: Workout): string[] {
 	return cursors(workout).map((c) => c.set.id);
@@ -90,7 +97,9 @@ function idOf(cursor: SetCursor | null): string | null {
 }
 
 function prefillOf(workout: Workout, setId: string): Prefill {
-	return prefillFor(at(workout, setId), history);
+	const cursor = at(workout, setId);
+
+	return prefillFor(cursor, history, metaOf(cursor));
 }
 
 function completeAll(workout: Workout): void {
@@ -497,7 +506,7 @@ describe('addSet', () => {
 		addSet(workout, 'we-bench', 'bench-5');
 
 		const cursor = cursorFor(workout, 'bench-5')!;
-		const prefill = prefillFor(cursor, history);
+		const prefill = prefillFor(cursor, history, metaOf(cursor));
 
 		expect(cursor.workingIndex).toBe(4);
 		expect(prefill).toEqual({ weight: null, reps: null });
@@ -526,7 +535,8 @@ describe('addExercise', () => {
 		const workout = freshWorkout(0);
 		addExercise(workout, 'cable-fly', { entry: 'entry-5', exercise: 'we-fly2', sets: ['fly2-1'] });
 
-		const prefill = prefillFor(at(workout, 'fly2-1'), history);
+		const fly = at(workout, 'fly2-1');
+		const prefill = prefillFor(fly, history, metaOf(fly));
 
 		expect(prefill).toEqual({ weight: 20, reps: 12 });
 	});
@@ -600,7 +610,7 @@ describe('removeSet', () => {
 		const cursor = cursorFor(workout, 'bench-2')!;
 
 		expect(cursor.workingIndex).toBe(0);
-		expect(hintLabel(history, cursor)).toBe('80 × 8');
+		expect(hintLabel(history, cursor, metaOf(cursor))).toBe('80 × 8');
 	});
 
 	test('the last set of an exercise stays: that would be removing the exercise', () => {
@@ -1111,27 +1121,27 @@ describe('hintLabel', () => {
 	test('spells last time the way both the row and the editor show it', () => {
 		const cursor = at(freshWorkout(0), 'bench-4');
 
-		expect(hintLabel(history, cursor)).toBe('77.5 × 7');
+		expect(hintLabel(history, cursor, metaOf(cursor))).toBe('77.5 × 7');
 	});
 
 	test('null with nothing to recall, so the caller can say "First time"', () => {
 		const cursor = at(freshWorkout(0), 'pecdeck-1');
 
-		expect(hintLabel(history, cursor)).toBeNull();
+		expect(hintLabel(history, cursor, metaOf(cursor))).toBeNull();
 	});
 
 	test('grows how last time felt, in whichever scale it is asked for', () => {
 		const cursor = at(freshWorkout(0), 'bench-1');
 		const rated = { 'bench-press': [{ weight: 80, reps: 8, rpe: 8 }] };
 
-		expect(hintLabel(rated, cursor, 'rpe')).toBe('80 × 8 · RPE 8');
-		expect(hintLabel(rated, cursor, 'rir')).toBe('80 × 8 · RIR 2');
+		expect(hintLabel(rated, cursor, metaOf(cursor), 'rpe')).toBe('80 × 8 · RPE 8');
+		expect(hintLabel(rated, cursor, metaOf(cursor), 'rir')).toBe('80 × 8 · RIR 2');
 	});
 
 	test('an unrated recall is the bare numbers, scale or no scale', () => {
 		const cursor = at(freshWorkout(0), 'bench-4');
 
-		expect(hintLabel(history, cursor, 'rpe')).toBe('77.5 × 7');
+		expect(hintLabel(history, cursor, metaOf(cursor), 'rpe')).toBe('77.5 × 7');
 	});
 });
 

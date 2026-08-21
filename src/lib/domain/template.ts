@@ -1,3 +1,5 @@
+import type { Exercise } from './exercise.ts';
+import { settleGrip } from './grip.ts';
 import { settleRestSeconds } from './rest.ts';
 import {
 	addExerciseTo as addToTree,
@@ -5,7 +7,7 @@ import {
 	supersetWith as supersetWithTree
 } from './tree.ts';
 import type { ExerciseIds, NewExerciseIds } from './tree.ts';
-import type { Workout, WorkoutEntry, WorkoutExercise } from './workout.ts';
+import type { Workout, WorkoutEntry, WorkoutExercise, WorkoutSet } from './workout.ts';
 
 export {
 	joinEntry,
@@ -28,6 +30,9 @@ export type TemplateExercise = {
 	sets: TemplateSet[];
 	// Tri-state: absent key = inherit exercise/default, number = override, null = never rest here.
 	restSeconds?: number | null;
+	// Prescribed, not remembered: a plan that says rope means rope, and reaching for the bar
+	// instead is a deviation the drift prompt has a right to mention. Absent = the default.
+	grip?: string;
 };
 
 export type TemplateEntry = {
@@ -276,6 +281,24 @@ export function setExerciseReps(
 	return true;
 }
 
+export function setExerciseGrip(
+	template: Template,
+	exerciseId: string,
+	meta: Exercise | undefined,
+	grip: string
+): boolean {
+	const exercise = exerciseIn(template, exerciseId);
+	const settled = settleGrip(meta, grip);
+
+	if (exercise === null || settled === undefined) {
+		return false;
+	}
+
+	exercise.grip = settled;
+
+	return true;
+}
+
 // `undefined` means "inherit again" and deletes the key — `restSecondsOf` reads an absence,
 // never a present-but-undefined key.
 export function setExerciseRest(
@@ -305,19 +328,31 @@ export function startFrom(template: Template, startedAt: number, mint: () => str
 			const copy: WorkoutExercise = {
 				id: mint(),
 				exerciseId: exercise.exerciseId,
-				sets: exercise.sets.map((set) => ({
-					id: mint(),
-					type: 'normal' as const,
-					plannedReps: set.plannedReps,
-					rpe: null,
-					weight: null,
-					reps: null,
-					completed: false
-				}))
+				sets: exercise.sets.map((set) => {
+					const started: WorkoutSet = {
+						id: mint(),
+						type: 'normal' as const,
+						plannedReps: set.plannedReps,
+						rpe: null,
+						weight: null,
+						reps: null,
+						completed: false
+					};
+
+					if (exercise.grip !== undefined) {
+						started.grip = exercise.grip;
+					}
+
+					return started;
+				})
 			};
 
 			if (exercise.restSeconds !== undefined) {
 				copy.restSeconds = exercise.restSeconds;
+			}
+
+			if (exercise.grip !== undefined) {
+				copy.grip = exercise.grip;
 			}
 
 			return copy;

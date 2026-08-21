@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { hasGrips } from '$lib/domain/grip';
 	import type { Group } from '$lib/workout/groups';
+	import GripField from '$lib/workout/GripField.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import MenuItem from '$lib/ui/MenuItem.svelte';
@@ -17,6 +19,7 @@
 		onsuperset?: () => void;
 		onbreak?: () => void;
 		onremove: () => void;
+		ongrip?: (grip: string) => void;
 	};
 
 	let {
@@ -27,13 +30,18 @@
 		onswap,
 		onsuperset,
 		onbreak,
-		onremove
+		onremove,
+		ongrip
 	}: Props = $props();
 
 	let confirmingSwap = $state(false);
 	let confirmingRemove = $state(false);
 
 	const name = $derived(group === null ? 'Exercise' : group.meta.name);
+
+	const meta = $derived(group?.meta);
+
+	const gripped = $derived(hasGrips(meta) && ongrip !== undefined);
 
 	const logged = $derived(
 		group === null ? 0 : group.cursors.filter((cursor) => cursor.set.completed).length
@@ -76,6 +84,18 @@
 </script>
 
 <Menu bind:open title={name} {anchor}>
+	{#if gripped && group !== null}
+		<GripField
+			{meta}
+			value={group.grip}
+			note="Sets still to come"
+			onpick={(grip) => {
+				open = false;
+				ongrip?.(grip);
+			}}
+		/>
+	{/if}
+
 	<MenuItem onselect={swap}>
 		<ArrowsLeftRight size={18} />
 		Swap exercise

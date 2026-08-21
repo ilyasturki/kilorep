@@ -1,5 +1,10 @@
 <script lang="ts">
-	import type { SetCursor } from '$lib/domain/workout';
+	import { armsOf } from '$lib/domain/workout';
+	import type { Arms, SetCursor } from '$lib/domain/workout';
+	import type { Exercise } from '$lib/domain/exercise';
+	import { hasGrips } from '$lib/domain/grip';
+	import ArmsField from '$lib/workout/ArmsField.svelte';
+	import GripField from '$lib/workout/GripField.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import MenuItem from '$lib/ui/MenuItem.svelte';
@@ -10,21 +15,27 @@
 	type Props = {
 		open?: boolean;
 		cursor: SetCursor | null;
+		meta?: Exercise;
 		anchor?: HTMLElement | null;
 		removable: boolean;
 		onunlog?: () => void;
 		onclear?: () => void;
 		onremove: () => void;
+		ongrip?: (grip: string) => void;
+		onarms?: (arms: Arms) => void;
 	};
 
 	let {
 		open = $bindable(false),
 		cursor,
+		meta,
 		anchor = null,
 		removable,
 		onunlog,
 		onclear,
-		onremove
+		onremove,
+		ongrip,
+		onarms
 	}: Props = $props();
 
 	let confirming = $state(false);
@@ -43,6 +54,10 @@
 	const holds = $derived(
 		cursor !== null && (cursor.set.weight !== null || cursor.set.reps !== null)
 	);
+
+	const gripped = $derived(hasGrips(meta) && ongrip !== undefined);
+
+	const arms = $derived(cursor === null ? 'both' : armsOf(cursor.set));
 
 	function remove() {
 		open = false;
@@ -75,6 +90,14 @@
 </script>
 
 <Menu bind:open {title} {anchor}>
+	{#if cursor !== null && onarms !== undefined}
+		<ArmsField value={arms} onpick={(next) => onarms(next)} />
+	{/if}
+
+	{#if gripped && cursor !== null}
+		<GripField {meta} value={cursor.set.grip} note="This set only" onpick={(g) => ongrip?.(g)} />
+	{/if}
+
 	{#if logged && onunlog !== undefined}
 		<MenuItem onselect={unlog}>
 			<ArrowCounterClockwise size={18} />
