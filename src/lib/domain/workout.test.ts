@@ -7,6 +7,7 @@ import {
 	addSet,
 	advanceFrom,
 	canCommit,
+	clearSet,
 	commitSet,
 	cursorFor,
 	cursors,
@@ -209,6 +210,67 @@ describe('prefillFor', () => {
 		addSet(bench, 'we-bench', 'bench-5');
 
 		expect(prefillOf(bench, 'bench-5')).toEqual({ weight: null, reps: null });
+	});
+
+	// Asking is not answering: the offer was read off a set nobody had lifted yet, and the set
+	// held on to it. Twelve was the plan's target, ten was the set actually performed above it.
+	test('a set only looked at is not a set that holds numbers', () => {
+		const workout = freshWorkout(0);
+		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: 20, reps: 12 });
+
+		commitSet(workout, 'fly-1', 20, 10);
+
+		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: 20, reps: 10 });
+	});
+
+	test('what the lifter typed outranks the carry, and the carry never overwrites it', () => {
+		const workout = freshWorkout(0);
+		draftSet(workout, 'fly-2', { weight: 17.5, reps: 15 });
+		commitSet(workout, 'fly-1', 20, 10);
+
+		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: 17.5, reps: 15 });
+	});
+
+	test('a blank the lifter made is a blank, and nothing fills it back in', () => {
+		const workout = freshWorkout(0);
+		clearSet(workout, 'fly-2');
+		commitSet(workout, 'fly-1', 20, 10);
+
+		expect(prefillOf(workout, 'fly-2')).toEqual({ weight: null, reps: null });
+	});
+
+	test('one field cleared keeps the other, and neither is offered again', () => {
+		const workout = freshWorkout(0);
+		draftSet(workout, 'bench-1', { weight: 80, reps: null });
+
+		expect(prefillOf(workout, 'bench-1')).toEqual({ weight: 80, reps: null });
+	});
+});
+
+describe('clearSet', () => {
+	test('takes both numbers back and unmakes the claim', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 82.5, 6);
+
+		expect(clearSet(workout, 'bench-1')).toBe(true);
+		expect(at(workout, 'bench-1').set).toMatchObject({
+			weight: null,
+			reps: null,
+			completed: false
+		});
+	});
+
+	test('a set nobody can find is not cleared', () => {
+		expect(clearSet(freshWorkout(0), 'nope')).toBe(false);
+	});
+
+	test('the set above it carries on carrying', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'fly-1', 20, 10);
+		commitSet(workout, 'fly-2', 20, 9);
+		clearSet(workout, 'fly-2');
+
+		expect(prefillOf(workout, 'fly-3')).toEqual({ weight: 20, reps: 10 });
 	});
 });
 

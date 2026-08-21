@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { canCommit, hintLabel } from '$lib/domain/workout';
+	import { canCommit, hintLabel, prefillFor } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -33,11 +33,16 @@
 	// prefill, and from the second set on that is the weight and reps carried from the first.
 	const planned = $derived(cursor.set.plannedReps);
 
-	const weight = $derived(cursor.set.weight);
-	const reps = $derived(cursor.set.reps);
+	// What the card shows before a finger lands on it: the set's own numbers where it has any,
+	// and where it has none the offer worked out afresh — the carry, the target, last time.
+	// Nothing here is written back, so leaving the set is not the same as filling it in.
+	const offer = $derived(prefillFor(cursor, history));
+
+	const weight = $derived(offer.weight);
+	const reps = $derived(offer.reps);
 
 	// svelte-ignore state_referenced_locally
-	const opened = { weight: cursor.set.weight, reps: cursor.set.reps };
+	const opened = { weight: offer.weight, reps: offer.reps };
 
 	let previewWeight = $state<number | null | undefined>();
 	let previewReps = $state<number | null | undefined>();

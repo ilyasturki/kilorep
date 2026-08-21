@@ -31,6 +31,10 @@ export type WorkoutSet = {
 	reps: number | null;
 	rpe: number | null;
 	completed: boolean;
+	// The lifter has stated these numbers — typed, stepped, logged or cleared. What the set
+	// holds is then the whole of it, blanks included, and nothing is ever proposed into it.
+	// Absent on every set nobody has reached yet, and on records written before it existed.
+	entered?: boolean;
 };
 
 export type WorkoutExercise = {
@@ -161,7 +165,16 @@ function carriedInto(cursor: SetCursor): Prefill {
 	return { weight: null, reps: null };
 }
 
+// What the active card offers, recomputed every time it is asked for. It is never written into
+// the set behind the lifter's back: a set reached and left again holds nothing, so the offer
+// cannot go stale — the older version stored it on the way in, and a set visited before the one
+// above it was logged read its plan's target back over the reps just performed.
 export function prefillFor(cursor: SetCursor, history: History): Prefill {
+	// Once the lifter has spoken there is nothing to offer, and a blank they made is a blank.
+	if (cursor.set.entered === true) {
+		return { weight: cursor.set.weight, reps: cursor.set.reps };
+	}
+
 	const recalled = hintFor(history, cursor.exercise.exerciseId, cursor.workingIndex) ?? {
 		weight: null,
 		reps: null
@@ -172,8 +185,8 @@ export function prefillFor(cursor: SetCursor, history: History): Prefill {
 	// One rule for both numbers: what this session already says outranks what was planned for it.
 	// The plan owned the reps here and read back a target heavier than the set just logged.
 	return {
-		weight: cursor.set.weight ?? carried.weight ?? recalled.weight,
-		reps: cursor.set.reps ?? carried.reps ?? cursor.set.plannedReps ?? recalled.reps
+		weight: carried.weight ?? recalled.weight,
+		reps: carried.reps ?? cursor.set.plannedReps ?? recalled.reps
 	};
 }
 
@@ -210,12 +223,18 @@ export function draftSet(workout: Workout, setId: string, values: Prefill): bool
 
 	cursor.set.weight = values.weight;
 	cursor.set.reps = values.reps;
+	cursor.set.entered = true;
 
 	if (!canCommit(values.weight, values.reps)) {
 		cursor.set.completed = false;
 	}
 
 	return true;
+}
+
+// Back to blank, and blank on purpose: the offer stays away until the lifter says otherwise.
+export function clearSet(workout: Workout, setId: string): boolean {
+	return draftSet(workout, setId, { weight: null, reps: null });
 }
 
 export function commitSet(workout: Workout, setId: string, weight: number, reps: number): boolean {
@@ -228,6 +247,7 @@ export function commitSet(workout: Workout, setId: string, weight: number, reps:
 	cursor.set.weight = weight;
 	cursor.set.reps = reps;
 	cursor.set.completed = true;
+	cursor.set.entered = true;
 
 	return true;
 }

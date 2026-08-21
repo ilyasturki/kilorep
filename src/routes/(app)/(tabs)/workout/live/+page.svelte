@@ -484,6 +484,15 @@
 		optionsSetId = null;
 	}
 
+	function clearSet() {
+		if (session === null || optionsSetId === null) {
+			return;
+		}
+
+		session.clear(optionsSetId);
+		optionsSetId = null;
+	}
+
 	function removeSet() {
 		if (session === null || optionsSetId === null) {
 			return;
@@ -679,6 +688,7 @@
 		anchor={optionsAnchor}
 		removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
 		onunlog={unlogSet}
+		onclear={clearSet}
 		onremove={removeSet}
 	/>
 

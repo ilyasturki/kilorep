@@ -2,6 +2,7 @@ import {
 	addExercise as insertExercise,
 	addSet as appendSet,
 	advanceFrom,
+	clearSet,
 	commitSet,
 	cursorFor,
 	cursors,
@@ -11,7 +12,6 @@ import {
 	markSet,
 	moveEntry as relocateEntry,
 	moveExercise as relocateExercise,
-	prefillFor,
 	rateSet,
 	removeExercise as dropExercise,
 	removeSet as dropSet,
@@ -40,8 +40,6 @@ export class WorkoutSession {
 
 	private readonly history: History;
 
-	readonly #cleared = new Set<string>();
-
 	public constructor(history: History, resume: Resume | null = null) {
 		this.history = history;
 
@@ -63,34 +61,26 @@ export class WorkoutSession {
 		this.#focus(setId);
 	}
 
+	// Moving the cursor is the whole of it. What the card offers is worked out where it is
+	// shown, so a set the lifter passes through carries nothing away from the visit.
 	#focus(setId: string | null): void {
 		this.activeSetId = setId;
-
-		if (setId === null || this.#cleared.has(setId)) {
-			return;
-		}
-
-		const cursor = cursorFor(this.workout, setId);
-
-		if (cursor === null) {
-			return;
-		}
-
-		draftSet(this.workout, setId, prefillFor(cursor, this.history));
 	}
 
 	public draft(setId: string, weight: number | null, reps: number | null): void {
-		const cursor = cursorFor(this.workout, setId);
+		draftSet(this.workout, setId, { weight, reps });
+	}
 
-		if (
-			cursor !== null &&
-			((weight === null && cursor.set.weight !== null) ||
-				(reps === null && cursor.set.reps !== null))
-		) {
-			this.#cleared.add(setId);
+	// Where the cursor stands is where lifting resumes, so a cleared set only takes it when
+	// nothing else holds it — the session had ended, and clearing a logged set reopens it.
+	public clear(setId: string): void {
+		if (!clearSet(this.workout, setId)) {
+			return;
 		}
 
-		draftSet(this.workout, setId, { weight, reps });
+		if (this.activeSetId === null) {
+			this.#focus(setId);
+		}
 	}
 
 	public rate(setId: string, rpe: number | null): void {
