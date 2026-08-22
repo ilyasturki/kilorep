@@ -1,20 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The rest ring: a lime ring, its gap pushed off-axis to 1:30 so it is not
+    The rest ring: a cobalt ring, its gap pushed off-axis to 1:30 so it is not
     the power symbol, with the dot seated in the gap. The between-sets moment,
     which is exactly when the phone is in the lifter's hand; it also reads as a
     plate outline. Chosen over plate and letterform marks after a 23-app audit:
-    every lifting-app icon is angular, none uses circle geometry, and none owns
-    lime on near-black.
+    every lifting-app icon is angular, none uses circle geometry.
 
     Same two paths, same numbers, as `src/lib/assets/favicon.svg`: one mark,
     two renderers, no chance of them drifting. Centre (54,54); ring radius
     24.76 with stroke 8.49, so the outer edge sits 29dp from centre, inside the
     33dp radius Android guarantees is visible under every launcher mask. The
     arc spans from minus 10deg to minus 80deg (a 70deg gap centred at 1:30);
-    the dot rides the ring's centreline at the gap's midpoint. Lime is the
-    sRGB of oklch(76.8% 0.233 130.85), Tailwind's lime-500, written out because
-    Android resources cannot read app.css. The monochrome themed-icon layer in
+    the dot rides the ring's centreline at the gap's midpoint. Cobalt is the
+    sRGB of oklch(62.3% 0.214 259.815), Tailwind's blue-500 — app.css's *dark*
+    accent, not its light one, because the field this mark sits on is a dark
+    ground and the token system's rule for those is blue-500. blue-600 is only
+    3.77:1 there against blue-500's 5.26:1. Written out because Android
+    resources cannot read app.css. The monochrome themed-icon layer in
     mipmap-anydpi-v26 reuses this drawable as an alpha mask, which is why the
     mark must stay a single-colour silhouette.
 -->
@@ -25,10 +27,10 @@
     android:viewportHeight="108">
     <path
         android:pathData="M78.38,49.7 A24.76,24.76 0 1 1 58.3,29.62"
-        android:strokeColor="#7ccf00"
+        android:strokeColor="#2b7fff"
         android:strokeWidth="8.49"
         android:strokeLineCap="round" />
     <path
         android:pathData="M65.85,36.49 a5.66,5.66 0 1 0 11.32,0 a5.66,5.66 0 1 0 -11.32,0"
-        android:fillColor="#7ccf00" />
+        android:fillColor="#2b7fff" />
 </vector>

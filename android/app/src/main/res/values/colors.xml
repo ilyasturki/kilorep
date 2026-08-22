@@ -7,7 +7,7 @@
     be changed together.
 
     Values are the sRGB of the oklch swatches in app.css: canvas is neutral-50,
-    accent is lime-500. Android resources cannot read the stylesheet.
+    accent is blue-600. Android resources cannot read the stylesheet.
 -->
 <resources>
     <color name="kilorep_canvas">#fafafa</color>
@@ -17,5 +17,5 @@
          draws them today: the app has no action bar and paints its own chrome. -->
     <color name="colorPrimary">#fafafa</color>
     <color name="colorPrimaryDark">#fafafa</color>
-    <color name="colorAccent">#7ccf00</color>
+    <color name="colorAccent">#155dfc</color>
 </resources>

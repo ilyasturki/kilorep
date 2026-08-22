@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The dark half. See values/colors.xml. The accent is deliberately the same
-     swatch in both themes, per DESIGN.md.
+<!-- The dark half. See values/colors.xml. The accent is *not* the same swatch
+     in both themes any more: cobalt needs blue-600 on light grounds and
+     blue-500 on dark ones, which is the whole reason these two files carry
+     different accents where lime let them share one.
 
      Canvas is the one value here with no swatch name to give: dark's depth ramp
      leaves the Tailwind neutral scale, for the reason app.css sets out. This is
@@ -12,5 +14,5 @@
 
     <color name="colorPrimary">#1a1a1a</color>
     <color name="colorPrimaryDark">#1a1a1a</color>
-    <color name="colorAccent">#7ccf00</color>
+    <color name="colorAccent">#2b7fff</color>
 </resources>

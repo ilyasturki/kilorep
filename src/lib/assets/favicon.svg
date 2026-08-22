@@ -3,9 +3,9 @@
 	<path
 		d="M78.38,49.7 A24.76,24.76 0 1 1 58.3,29.62"
 		fill="none"
-		stroke="#7ccf00"
+		stroke="#2b7fff"
 		stroke-width="8.49"
 		stroke-linecap="round"
 	/>
-	<path d="M65.85,36.49 a5.66,5.66 0 1 0 11.32,0 a5.66,5.66 0 1 0 -11.32,0" fill="#7ccf00" />
+	<path d="M65.85,36.49 a5.66,5.66 0 1 0 11.32,0 a5.66,5.66 0 1 0 -11.32,0" fill="#2b7fff" />
 </svg>
