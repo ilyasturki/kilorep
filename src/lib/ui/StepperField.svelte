@@ -126,24 +126,25 @@
 	let draft = $state('');
 	let editing = $state(false);
 
-	let selectPending = false;
-
 	let box = $state<HTMLInputElement | null>(null);
 
 	// The ruler renders inside the card: opening it must not be a `focusout` of the card,
 	// and nothing in it takes focus, so the field keeps the keyboard.
 	let open = $state(false);
 
-	// `null` until the first keystroke: focus seeds `draft` too, so `draft` alone cannot
-	// tell a typed value apart.
+	// `null` until the first keystroke, and what stands between a field left alone and a field
+	// cleared on purpose: an empty `draft` is the state focus itself puts the input in.
 	let typed = $state<string | null>(null);
 
-	function start(event: FocusEvent & { currentTarget: HTMLInputElement }) {
-		draft = value === null ? '' : display;
+	// The number steps aside rather than being selected. Selecting it was the honest way to say
+	// "type and this goes", but on Android a selection is an action mode: handles under the
+	// glyphs and a Cut / Copy / Select all / Read aloud bar thrown over the ruler, none of which
+	// belongs on a weight. An empty field with the number behind it as a placeholder says the
+	// same thing — the first keystroke replaces it — and gives the OS nothing to decorate.
+	function start() {
+		draft = '';
 		editing = true;
-		selectPending = true;
 		typed = null;
-		event.currentTarget.select();
 	}
 
 	// A deliberate tap, never focus: the keyboard's next key hands focus to the field beside this
@@ -171,9 +172,18 @@
 	}
 
 	function commit() {
+		// Nothing was typed, so there is nothing to land: the field held a ghost the whole time,
+		// and reading an empty draft as a cleared number would wipe the value on a stray tap.
+		// An arm tapped or a rung scrubbed while focused has already written what it meant.
+		const untouched = typed === null;
+
 		editing = false;
 		open = false;
 		typed = null;
+
+		if (untouched) {
+			return;
+		}
 
 		const next = landing();
 		if (next !== value) {
@@ -216,6 +226,10 @@
 	}
 </script>
 
+<!-- The arm is `44px` and not `w-11`: a thumb is the same width whoever's phone this is, and OS
+     text scaling growing it is the one thing the pair cannot afford — every pixel an arm takes is
+     one the number beside it loses, and there are four arms across the card. Height still follows
+     the scale (`min-h-19` on the row), because down the page there is room. -->
 {#snippet arm(direction: number, verb: string, corner: string)}
 	<button
 		type="button"
@@ -226,7 +240,7 @@
 		onpointerleave={holdEnd}
 		onpointercancel={holdEnd}
 		class={[
-			'grid w-11 shrink-0 place-items-center text-2xl font-semibold focus-ring-inset',
+			'grid w-[44px] shrink-0 place-items-center text-2xl font-semibold focus-ring-inset',
 			'touch-manipulation select-none',
 			'text-ink-muted hover:bg-hover press:bg-surface-2 press:text-ink',
 			corner
@@ -244,28 +258,26 @@
 >
 	{@render arm(-1, 'decrease', 'rounded-l-2xl')}
 
-	<div class="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5">
+	<div class="@container flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5">
 		<input
 			bind:this={box}
 			value={editing ? draft : display}
+			placeholder={display}
 			onbeforeinput={aim}
 			{oninput}
 			onfocus={start}
 			onblur={commit}
 			onclick={reveal}
-			onmouseup={(event) => {
-				if (selectPending) {
-					selectPending = false;
-					event.preventDefault();
-				}
-			}}
 			{onkeydown}
 			inputmode="decimal"
 			autocomplete="off"
 			aria-label={label}
 			class={[
-				'w-full scroll-mb-32 bg-transparent p-0 text-center text-2xl leading-none',
+				'w-full scroll-mb-32 bg-transparent p-0 text-center numeral-fit',
 				'font-extrabold tracking-numeral outline-hidden',
+				// The ghost is the number the field is holding, so it must not read as a hint about
+				// what to type: same weight and size, one step back in ink.
+				'placeholder:text-ink-faint',
 				touched ? 'text-accent-text' : 'text-ink'
 			]}
 		/>

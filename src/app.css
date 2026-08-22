@@ -1000,6 +1000,38 @@ html[data-nav='pop']::view-transition-old(page) {
 	color: var(--ink-faint);
 }
 
+/* Weight and reps, side by side while there is room for two and stacked when there is not. The
+   pair measures itself: a rem breakpoint asked the wrong question on a zoomed phone, growing with
+   the text while the screen stayed the width it was, so the card stacked at exactly the scale
+   where the lifter had least patience for it. `auto-fit` asks the only question there is — does a
+   second column fit — and the floor is in pixels because what it is made of is: two 44px arms and
+   a box wide enough for the number to stay the loudest thing on the card. `min(…, 100%)` is what
+   keeps the floor from overflowing a grid narrower than one field. */
+@utility stepper-pair {
+	display: grid;
+	gap: 0.5rem;
+	grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+
+	/* Both numbers answer to the widest of them. `102.5` measures 2.5em in Nunito at
+	   `tracking-numeral`, so `36cqi` is that with the margin that keeps it off the arms — and it
+	   is set here, on the pair, rather than per field, because the two columns are the same width
+	   and reps sizing itself off its own two glyphs would tower over the weight beside it. */
+	--numeral-fit: 36cqi;
+}
+
+/* The stepper's number, sized against the box it sits in rather than the root font. `text-2xl` is
+   what it wants and what it reaches on any ordinary phone; where the box is narrower than the
+   value it has to hold — a zoomed phone, two fields side by side — it steps down instead of
+   clipping, which is what `102.5` reading `02.` was. The cap follows OS text scaling up, so
+   turning the system font up still makes this bigger wherever the room is there. A field standing
+   on its own holds a rep count or an RPE and needs no fitting, so the default gives way to
+   `text-2xl`; `--numeral-fit` is where a caller that knows better says so. Wants an inline-size
+   container on the parent — the middle column of the field — for `cqi` to mean the box. */
+@utility numeral-fit {
+	font-size: min(var(--text-2xl), var(--numeral-fit, 100cqi));
+	line-height: 1;
+}
+
 @layer base {
 	html {
 		background-color: var(--color-canvas);

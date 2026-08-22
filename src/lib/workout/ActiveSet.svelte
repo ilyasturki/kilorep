@@ -114,7 +114,7 @@
 	bind:this={card}
 	onfocusin={reveal}
 	onfocusout={settlePreviews}
-	class="@container relative scroll-mb-3 overflow-hidden rounded-2xl bg-surface"
+	class="relative scroll-mb-3 overflow-hidden rounded-2xl bg-surface"
 >
 	<div class="flex flex-col gap-3 py-3 pr-3 pl-4">
 		<div class="flex items-center justify-between gap-2">
@@ -155,10 +155,7 @@
 			</div>
 		</div>
 
-		<!-- Side by side only while a field can hold five glyphs of `text-2xl` at full size:
-		     2 × (2 × w-11 arms + ~72px of number) + gap-2 + the card's own 28px of padding.
-		     Under that the pair stacks — a zoomed phone showed `102.5` as `02.`. -->
-		<div class="grid grid-cols-1 gap-2 @min-[22.25rem]:grid-cols-2">
+		<div class="stepper-pair">
 			<StepperField
 				label={unit}
 				value={weight}
