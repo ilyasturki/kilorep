@@ -6,11 +6,12 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import { carriedFrom, carriedOn } from '$lib/domain/load';
 	import { restLabel } from '$lib/domain/rest';
-	import { rawPr } from '$lib/domain/stats';
+	import { bestEstimate, rawPr } from '$lib/domain/stats';
 	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
 	import { historyKey, settleGrip } from '$lib/domain/grip';
 	import { kin } from '$lib/exercises/browse';
+	import EstimatedMax from '$lib/exercises/EstimatedMax.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import {
 		lastSetLabel,
@@ -33,6 +34,7 @@
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Switch from '$lib/ui/Switch.svelte';
 	import Textarea from '$lib/ui/Textarea.svelte';
+	import Tooltip from '$lib/ui/Tooltip.svelte';
 	import { press } from '$lib/ui/press';
 	import Pencil from '$lib/ui/icons/Pencil.svelte';
 	import { activeWorkout } from '$lib/workout/active.svelte';
@@ -63,7 +65,12 @@
 
 	const carried = $derived(carriedFrom(data.bodyweight, () => exercise));
 
-	const pr = $derived(rawPr(past, carriedOn(carried, exercise.id)));
+	const on = $derived(carriedOn(carried, exercise.id));
+
+	const pr = $derived(rawPr(past, on));
+
+	// The heaviest day and the strongest day are two questions, and the same list answers both.
+	const best = $derived(bestEstimate(past, on));
 
 	const loadNote = $derived(loadModeNote(exercise.loadMode));
 
@@ -277,7 +284,12 @@
 
 		{#if pr !== null}
 			<div class="flex w-fit flex-wrap items-baseline gap-x-2 rounded-xl bg-surface px-3 py-2">
-				<span class="label-caps">Raw best</span>
+				<Tooltip
+					text="The heaviest you have ever moved on this grip, body weight included. What you
+						lifted, not a formula."
+				>
+					<span class="label-caps">Heaviest ever</span>
+				</Tooltip>
 				<span class="text-md font-extrabold tracking-tight">
 					{loadLabel(pr.load)} × {pr.set.reps}
 				</span>
@@ -290,6 +302,8 @@
 			</div>
 		{/if}
 	</header>
+
+	<EstimatedMax {exercise} {past} carried={on} {now} />
 
 	{#if restSettings.current.enabled}
 		<section class="flex flex-col gap-3">
@@ -398,20 +412,37 @@
 		{:else}
 			<div class="list-group">
 				{#each sessions as session (session.workoutId)}
+					<!-- Both marks are the winning set found in this row rather than a date matched
+					     against it: two sessions can share a day, and only one of them set it. -->
+					{@const heaviest = pr !== null && session.sets.includes(pr.set)}
+					{@const strongest = best !== null && session.sets.includes(best.set)}
+
 					<a
 						href="/history/{session.workoutId}"
 						data-list-row
-						class="flex press-sink flex-col gap-2 px-3 py-2.5 focus-ring
-							hover:bg-hover pointer-fine:transition-[background-color]
-							pointer-fine:duration-100 press:bg-surface-2"
+						class={[
+							'flex press-sink flex-col gap-2 border-l-2 px-3 py-2.5 focus-ring',
+							'hover:bg-hover pointer-fine:transition-[background-color]',
+							'pointer-fine:duration-100 press:bg-surface-2',
+							// Side-scoped: `border-accent` would repaint the hairline `list-group` rules
+							// the rows above and below draw with, and the mark would leak into them.
+							heaviest
+								? 'border-l-accent'
+								: strongest
+									? 'border-l-ink-faint'
+									: 'border-l-transparent'
+						]}
 						{@attach press()}
 					>
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-bold text-ink-faint">
 								{day.format(session.date)} · {ordinal(session.position)} exercise
 							</span>
-							{#if session.date === pr?.date}
+							{#if heaviest}
 								<Badge tone="accent">PR</Badge>
+							{/if}
+							{#if strongest}
+								<Badge>Best</Badge>
 							{/if}
 							<span aria-hidden="true" class="ml-auto text-xl leading-none text-ink-faint">
 								›
@@ -420,9 +451,33 @@
 
 						<div class="flex flex-wrap gap-1.5">
 							{#each session.sets as set, index (index)}
-								<span class="inline-flex items-baseline gap-1 rounded-lg bg-sunken px-2.5 py-1.5">
+								<!-- The badge names the day and the chip names the set that earned it: on a
+								     day whose heaviest single is not its best estimate, the two land apart. -->
+								{@const claimed = set === pr?.set ? 'pr' : set === best?.set ? 'best' : null}
+
+								<!-- The heavier claim is filled and the other is ringed. `surface-2` was the
+								     first try and it inverts by theme: lighter than `sunken` on a white card,
+								     which drew the marked chip as the quiet one. -->
+								<span
+									class={[
+										'inline-flex items-baseline gap-1 rounded-lg bg-sunken px-2.5 py-1.5',
+										claimed === 'pr' && 'bg-accent-soft text-accent-text',
+										claimed === 'best' && 'ring-2 ring-ink-faint ring-inset'
+									]}
+								>
 									<span class="text-md font-extrabold tracking-tight">{set.weight}</span>
-									<span class="text-sm font-bold text-ink-faint">×{set.reps}</span>
+									<span
+										class={[
+											'text-sm font-bold',
+											claimed === 'pr'
+												? 'text-accent-text'
+												: claimed === 'best'
+													? 'text-ink-muted'
+													: 'text-ink-faint'
+										]}
+									>
+										×{set.reps}
+									</span>
 								</span>
 							{/each}
 						</div>

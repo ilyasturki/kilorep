@@ -63,3 +63,42 @@ export function rawPr(sessions: PastSession[], carried: CarriedOn): Best | null 
 
 	return best;
 }
+
+/**
+ * The session that estimates highest, and the set inside it that does.
+ *
+ * A different question from `rawPr`, and sometimes a different day: ten reps at ninety
+ * estimate above three at a hundred, so the heaviest thing ever lifted and the best the
+ * lifter has ever looked are two facts, and a history that marked only the first would
+ * leave the harder session unremarked. Strict, like the best above it, and the sessions
+ * arrive oldest first: matching an estimate later never moves it.
+ */
+export type Estimate = { set: PerformedSet; date: number; est: number };
+
+export function bestEstimate(sessions: PastSession[], carried: CarriedOn): Estimate | null {
+	let best: Estimate | null = null;
+
+	for (const session of sessions) {
+		const body = carried(session.date);
+
+		for (const set of session.sets) {
+			const est = estimated1Rm(set, body);
+
+			if (best === null || est > best.est) {
+				best = { set, date: session.date, est };
+			}
+		}
+	}
+
+	return best;
+}
+
+/**
+ * Epley read backwards: what one set of `reps` has to move to estimate `est`.
+ *
+ * The load, body included — what has to go on the belt is this minus what the body already
+ * carries, and the caller holding the weigh-in is the one that can subtract it.
+ */
+export function loadForReps(est: number, reps: number): number {
+	return reps <= 1 ? est : est / (1 + reps / 30);
+}

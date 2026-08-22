@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { CarriedOn } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
-import { bestSet, estimated1Rm, rawPr } from '$lib/domain/stats';
+import { bestEstimate, bestSet, estimated1Rm, loadForReps, rawPr } from '$lib/domain/stats';
 import type { PerformedSet } from '$lib/domain/workout';
 
 const session = (date: number, sets: PerformedSet[]): PastSession => ({
@@ -81,5 +81,52 @@ describe('rawPr', () => {
 		const pr = rawPr([session(1, [set(10, 8)]), session(2, [set(10, 8)])], gaining);
 
 		expect(pr).toMatchObject({ date: 2, load: 92 });
+	});
+});
+
+describe('bestEstimate', () => {
+	test('no sessions is null, not a zero', () => {
+		expect(bestEstimate([], () => 0)).toBeNull();
+	});
+
+	test('the day that estimates highest wins, not the day that lifted heaviest', () => {
+		const past = [session(1, [set(100, 3)]), session(2, [set(90, 10)])];
+
+		expect(rawPr(past, () => 0)!.date).toBe(1);
+		expect(bestEstimate(past, () => 0)!.date).toBe(2);
+	});
+
+	test('names the set inside the session, not just the day', () => {
+		const best = bestEstimate([session(1, [set(60, 5), set(90, 10), set(80, 6)])], () => 0);
+
+		expect(best).toMatchObject({ set: set(90, 10), date: 1 });
+	});
+
+	test('matching an estimate later does not move its date', () => {
+		const past = [session(1, [set(100, 5)]), session(2, [set(100, 5)])];
+
+		expect(bestEstimate(past, () => 0)!.date).toBe(1);
+	});
+
+	test('the body carried counts toward the estimate', () => {
+		const best = bestEstimate([session(1, [set(0, 8)])], () => 78);
+
+		expect(best!.est).toBeCloseTo(78 * (1 + 8 / 30), 5);
+	});
+});
+
+describe('loadForReps', () => {
+	test('inverts Epley: what five reps have to move to estimate the same', () => {
+		const est = estimated1Rm(set(100, 5), 0);
+
+		expect(loadForReps(est, 5)).toBeCloseTo(100, 5);
+	});
+
+	test('a single moves the estimate itself', () => {
+		expect(loadForReps(140, 1)).toBe(140);
+	});
+
+	test('more reps ask for less on the bar', () => {
+		expect(loadForReps(120, 8)).toBeLessThan(loadForReps(120, 3));
 	});
 });
