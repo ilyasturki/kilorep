@@ -164,6 +164,10 @@ export function isBlank(template: Template): boolean {
 
 export const PLANNED_SET_COUNT = 3;
 
+// Typing a count puts a number of sets one keystroke away, and every one of them is a record
+// and a row in the per-set panel: past a dozen the number is a typo, not a plan.
+export const MAX_PLANNED_SETS = 12;
+
 export const PLANNED_REPS = 8;
 
 const blankExercise =
@@ -237,6 +241,38 @@ export function addSet(template: Template, exerciseId: string, id: string): Temp
 	exercise.sets.push(set);
 
 	return set;
+}
+
+/**
+ * The set count stated outright rather than one tap at a time.
+ *
+ * Growing repeats the last set's target, the way an added set always has, and shrinking drops
+ * from the end. A count off either end is clamped rather than refused: the field settles the
+ * number and hands back what it settled on, so nothing types its way to zero sets.
+ */
+export function setSetCount(
+	template: Template,
+	exerciseId: string,
+	count: number,
+	mint: () => string
+): number | null {
+	const exercise = exerciseIn(template, exerciseId);
+
+	if (exercise === null || !Number.isFinite(count)) {
+		return null;
+	}
+
+	const target = Math.min(MAX_PLANNED_SETS, Math.max(1, Math.round(count)));
+
+	exercise.sets.length = Math.min(exercise.sets.length, target);
+
+	while (exercise.sets.length < target) {
+		const last = exercise.sets.at(-1);
+
+		exercise.sets.push({ id: mint(), plannedReps: last === undefined ? null : last.plannedReps });
+	}
+
+	return target;
 }
 
 export function setPlannedReps(template: Template, setId: string, reps: number | null): boolean {

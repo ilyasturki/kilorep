@@ -4,14 +4,13 @@
 	import { slide } from 'svelte/transition';
 
 	import { restLabel } from '$lib/domain/rest';
-	import { PLANNED_REPS } from '$lib/domain/template';
+	import { MAX_PLANNED_SETS, PLANNED_REPS } from '$lib/domain/template';
 	import type { TemplateExercise } from '$lib/domain/template';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
 	import { loadModeNote } from '$lib/exercises/label';
 	import { restSettings } from '$lib/settings/rest.svelte';
-	import { planShape, setsLabel, targetNote } from '$lib/templates/plan';
-	import MiniStepper from '$lib/ui/MiniStepper.svelte';
+	import { planShape, targetNote } from '$lib/templates/plan';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import More from '$lib/ui/icons/More.svelte';
@@ -22,14 +21,12 @@
 		exercise: TemplateExercise;
 		grip?: Snippet;
 		onoptions: (anchor: HTMLElement) => void;
-		onaddset: () => void;
-		onremoveset: () => void;
+		onsets: (count: number) => void;
 		onreps: (reps: number | null) => void;
 		onsetreps: (setId: string, reps: number | null) => void;
 	};
 
-	let { meta, exercise, grip, onoptions, onaddset, onremoveset, onreps, onsetreps }: Props =
-		$props();
+	let { meta, exercise, grip, onoptions, onsets, onreps, onsetreps }: Props = $props();
 
 	const shape = $derived(planShape(exercise));
 
@@ -89,15 +86,27 @@
 		{@render grip?.()}
 	</div>
 
-	<!-- Every rep field is handed its own number as `recalled`: a plan has no hint to differ
-	     from — what is on screen is what is stored — so the accent that means "you moved this
-	     off last time" stays out of the planning surface. -->
+	<!-- Every field is handed its own number as `recalled`: a plan has no hint to differ from —
+	     what is on screen is what is stored — so the accent that means "you moved this off last
+	     time" stays out of the planning surface. The count is bound through the plan rather than
+	     held in the field, so a cleared box lands back on the sets there are: a planned exercise
+	     with no sets is not a state, and there is no seed to wake it onto. -->
 	<div class="flex items-stretch gap-2">
-		<MiniStepper
-			label="Sets"
-			value={setsLabel(shape.sets)}
-			ondec={shape.sets > 1 ? onremoveset : null}
-			oninc={onaddset}
+		<StepperField
+			bind:value={
+				() => shape.sets,
+				(count) => {
+					if (count !== null) {
+						onsets(count);
+					}
+				}
+			}
+			recalled={shape.sets}
+			label="sets"
+			step={1}
+			min={1}
+			max={MAX_PLANNED_SETS}
+			ruler
 			class="flex-1"
 		/>
 

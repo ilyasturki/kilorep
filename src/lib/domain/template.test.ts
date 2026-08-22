@@ -12,6 +12,7 @@ import {
 	isArchived,
 	isBlank,
 	joinEntry,
+	MAX_PLANNED_SETS,
 	moveEntry,
 	moveExercise,
 	removeExercise,
@@ -22,6 +23,7 @@ import {
 	setExerciseReps,
 	setExerciseRest,
 	setPlannedReps,
+	setSetCount,
 	splitEntry,
 	templateRank,
 	setExerciseGrip,
@@ -193,6 +195,36 @@ describe('planning sets', () => {
 		const set = addSet(template, 'bench-press-node', 'bench-press-set-2');
 
 		expect(set).toEqual({ id: 'bench-press-set-2', plannedReps: null });
+	});
+
+	test('a stated count grows by repeating the last target and shrinks off the end', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 2);
+		setPlannedReps(template, 'bench-press-set-1', 12);
+		setPlannedReps(template, 'bench-press-set-2', 8);
+
+		expect(setSetCount(template, 'bench-press-node', 4, mint('grown'))).toBe(4);
+		expect(targetsOf(template, 'bench-press-node')).toEqual([12, 8, 8, 8]);
+
+		expect(setSetCount(template, 'bench-press-node', 1, mint('cut'))).toBe(1);
+		expect(targetsOf(template, 'bench-press-node')).toEqual([12]);
+	});
+
+	test('a stated count is clamped to one set and to the ceiling', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 3);
+
+		expect(setSetCount(template, 'bench-press-node', 0, mint('floor'))).toBe(1);
+		expect(setSetCount(template, 'bench-press-node', 99, mint('ceiling'))).toBe(MAX_PLANNED_SETS);
+		expect(template.entries[0].exercises[0].sets).toHaveLength(MAX_PLANNED_SETS);
+	});
+
+	test('a count for an exercise that is not there changes nothing', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'bench-press', 3);
+
+		expect(setSetCount(template, 'cable-fly-node', 5, mint('missing'))).toBeNull();
+		expect(template.entries[0].exercises[0].sets).toHaveLength(3);
 	});
 
 	test('the last set cannot be removed', () => {

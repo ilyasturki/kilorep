@@ -6,7 +6,6 @@
 	import { catalogById } from '$lib/catalog';
 	import {
 		addExercise,
-		addSet,
 		drawableMark,
 		isArchived,
 		isBlank,
@@ -14,12 +13,12 @@
 		moveExercise,
 		PLANNED_SET_COUNT,
 		removeExercise,
-		removeSet,
 		replaceExercise,
 		setExerciseGrip,
 		setExerciseReps,
 		setExerciseRest,
 		setPlannedReps,
+		setSetCount,
 		splitEntry,
 		startFrom,
 		supersetWith
@@ -120,15 +119,6 @@
 				exercise: crypto.randomUUID(),
 				sets: setIds()
 			});
-		}
-	}
-
-	function shrink(exerciseId: string) {
-		const group = legOf(entries, exerciseId);
-		const last = group?.exercise.sets.at(-1);
-
-		if (last !== undefined) {
-			removeSet(template, last.id);
 		}
 	}
 
@@ -415,8 +405,8 @@
 										meta={leg.meta}
 										exercise={leg.exercise}
 										onoptions={(anchor) => options(leg.id, anchor)}
-										onaddset={() => addSet(template, leg.id, crypto.randomUUID())}
-										onremoveset={() => shrink(leg.id)}
+										onsets={(count) =>
+											setSetCount(template, leg.id, count, () => crypto.randomUUID())}
 										onreps={(reps) => setExerciseReps(template, leg.id, reps)}
 										onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
 										grip={at === 0 ? handle : undefined}
