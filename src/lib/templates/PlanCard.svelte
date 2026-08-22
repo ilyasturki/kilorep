@@ -58,7 +58,7 @@
 	const panelId = $props.id();
 </script>
 
-<section class="flex flex-col gap-2 rounded-2xl border border-line-soft bg-surface p-3">
+<section class="flex flex-col gap-2 rounded-2xl bg-surface p-3">
 	<div class="flex items-center gap-1">
 		<h2 class="min-w-0 flex-1">
 			<a

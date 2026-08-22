@@ -33,7 +33,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import { playMorphs } from '$lib/ui/morph';
-	import { quickMs } from '$lib/ui/motion';
+	import { mediumMs, smallMs } from '$lib/ui/motion';
 	import { coarsePointer } from '$lib/ui/pointer';
 	import { fullyVisible, instantly, revealNearest, revealStart } from '$lib/ui/scroll';
 	import Stack from '$lib/ui/icons/Stack.svelte';
@@ -230,7 +230,7 @@
 
 	const entries = $derived(session === null ? [] : entriesWithMeta(session.workout, catalogById));
 
-	const slide = $derived(quickMs());
+	const slide = $derived(smallMs());
 
 	let overview = $state(false);
 	let instant = $state(false);
@@ -330,7 +330,7 @@
 		swallow = true;
 
 		// A transition with nothing to do never fires `transitionend`, so settle here instead.
-		if (target === peek || quickMs() === 0) {
+		if (target === peek || mediumMs() === 0) {
 			peek = target;
 			settled();
 			return;
@@ -566,7 +566,7 @@
 				class="absolute inset-y-0 right-[calc(50%+19rem)] hidden
 					w-[clamp(13rem,50%_-_19.75rem,20rem)] py-3 lg:block"
 			>
-				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
+				<div class="max-h-full overflow-y-auto rounded-xl bg-surface p-2">
 					<SessionList
 						{entries}
 						activeSetId={session.activeSetId}

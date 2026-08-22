@@ -332,7 +332,7 @@
 				lg:block xl:left-[calc(50%-37rem)] xl:w-72"
 		>
 			{#if entries.length > 0}
-				<div class="max-h-full overflow-y-auto rounded-xl border border-line-soft bg-surface p-2">
+				<div class="max-h-full overflow-y-auto rounded-xl bg-surface p-2">
 					<PlanList
 						{entries}
 						onjump={jumpTo}

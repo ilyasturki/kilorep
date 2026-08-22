@@ -114,10 +114,8 @@
 	bind:this={card}
 	onfocusin={reveal}
 	onfocusout={settlePreviews}
-	class="@container relative scroll-mb-3 overflow-hidden card-active"
+	class="@container relative scroll-mb-3 overflow-hidden rounded-2xl bg-surface"
 >
-	<div class="absolute inset-y-0 left-0 w-1.5 bg-accent-text" aria-hidden="true"></div>
-
 	<div class="flex flex-col gap-3 py-3 pr-3 pl-4">
 		<div class="flex items-center justify-between gap-2">
 			<div class="flex min-w-0 items-center gap-3">

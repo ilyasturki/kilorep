@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Entry } from '$lib/workout/groups';
 	import SessionPanel from '$lib/workout/SessionPanel.svelte';
-	import { QUICK_EASE, quickMs } from '$lib/ui/motion';
+	import { EASE_MEDIUM, mediumMs } from '$lib/ui/motion';
 
 	// vaul only drags from a pointerdown on its own content; this stand-in covers a
 	// swipe starting outside it, and the drawer takes over on release.
@@ -26,7 +26,7 @@
 
 	const progress = $derived(width > 0 ? Math.min(offset / width, 1) : 0);
 
-	const travel = $derived(settling ? `${quickMs()}ms ${QUICK_EASE}` : '0s');
+	const travel = $derived(settling ? `${mediumMs()}ms ${EASE_MEDIUM}` : '0s');
 
 	function settled(event: TransitionEvent) {
 		if (event.propertyName === 'translate') {

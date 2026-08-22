@@ -1,4 +1,4 @@
-import { easeQuick, quickMs } from '$lib/ui/motion';
+import { easeMedium, mediumMs } from '$lib/ui/motion';
 
 export function scrollParent(node: HTMLElement): HTMLElement {
 	let current: HTMLElement | null = node;
@@ -67,7 +67,7 @@ function glide(scroller: HTMLElement, delta: number): void {
 		return;
 	}
 
-	const ms = arriving ? 0 : quickMs();
+	const ms = arriving ? 0 : mediumMs();
 	const from = scroller.scrollTop;
 	const to = from + delta;
 
@@ -82,7 +82,7 @@ function glide(scroller: HTMLElement, delta: number): void {
 	function frame(now: number): void {
 		const t = Math.min(1, (now - start) / ms);
 
-		scroller.scrollTop = from + delta * easeQuick(t);
+		scroller.scrollTop = from + delta * easeMedium(t);
 
 		if (t < 1) {
 			gliding = requestAnimationFrame(frame);

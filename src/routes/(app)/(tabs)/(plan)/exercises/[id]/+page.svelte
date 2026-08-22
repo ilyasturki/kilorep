@@ -276,10 +276,7 @@
 		{/if}
 
 		{#if pr !== null}
-			<div
-				class="flex w-fit flex-wrap items-baseline gap-x-2 rounded-xl border
-					border-line-soft bg-surface px-3 py-2"
-			>
+			<div class="flex w-fit flex-wrap items-baseline gap-x-2 rounded-xl bg-surface px-3 py-2">
 				<span class="label-caps">Raw best</span>
 				<span class="text-md font-extrabold tracking-tight">
 					{loadLabel(pr.load)} × {pr.set.reps}

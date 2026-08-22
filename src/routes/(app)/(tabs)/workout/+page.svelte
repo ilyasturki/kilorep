@@ -69,7 +69,7 @@
 		<section class="flex flex-col gap-2">
 			<h2 class="px-3 label-caps">Next up</h2>
 
-			<div class="flex flex-col gap-4 rounded-2xl border border-line-soft bg-surface p-3">
+			<div class="flex flex-col gap-4 rounded-2xl bg-surface p-3">
 				{#if next === null}
 					<div class="flex flex-col gap-0.5 px-1">
 						<span class="text-xl font-extrabold tracking-tight text-ink">Empty workout</span>

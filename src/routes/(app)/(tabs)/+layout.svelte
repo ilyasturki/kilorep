@@ -19,6 +19,10 @@
 		covers(page.url.pathname, '/workout') || /^\/templates\/[^/]+$/u.test(page.url.pathname)
 	);
 
+	const tabs = $derived(navTabs());
+
+	const selected = $derived(tabs.findIndex((tab) => isActive(page.url.pathname, tab)));
+
 	let pane = $state<HTMLElement | null>(null);
 
 	// SvelteKit's own scroll restoration reads `pageYOffset`, but the window here never
@@ -60,8 +64,19 @@
 		aria-label="Main"
 		class="vt-tabbar shrink-0 border-t border-line-soft bg-surface pb-safe-b lg:hidden"
 	>
-		<div class="mx-auto flex max-w-sm">
-			{#each navTabs() as tab (tab.href)}
+		<div
+			class="relative mx-auto flex max-w-sm"
+			style="--seg-count: {tabs.length}; --seg-index: {selected}"
+		>
+			<!-- `aria-hidden`: `aria-current` on the link is what states the selection. Absent while
+			     no tab owns the route, so it never parks under the wrong one. -->
+			{#if selected >= 0}
+				<span aria-hidden="true" class="tab-pill">
+					<span class="h-8 w-16 rounded-full bg-nav-selected pointer-coarse:h-9"></span>
+				</span>
+			{/if}
+
+			{#each tabs as tab (tab.href)}
 				{@const active = isActive(page.url.pathname, tab)}
 				{@const Icon = (active && tab.iconActive) || tab.icon}
 
@@ -69,7 +84,7 @@
 					href={tab.href}
 					aria-current={active ? 'page' : undefined}
 					class={[
-						'group flex flex-1 flex-col items-center gap-1 rounded-xl py-1',
+						'group relative flex flex-1 flex-col items-center gap-1 rounded-xl py-1',
 						'focus-ring transition-colors',
 						active ? 'text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
 					]}
@@ -79,9 +94,7 @@
 						class={[
 							'flex h-8 w-16 items-center justify-center rounded-full transition-colors',
 							'pointer-coarse:h-9',
-							active
-								? 'bg-nav-selected'
-								: 'group-[.is-pressed]:bg-nav-hover pointer-fine:group-hover:bg-nav-hover'
+							!active && 'group-[.is-pressed]:bg-nav-hover pointer-fine:group-hover:bg-nav-hover'
 						]}
 					>
 						<span class="relative flex">
@@ -92,7 +105,7 @@
 						</span>
 					</span>
 
-					<span class="text-xs font-bold">{tab.label}</span>
+					<span class="text-xs font-medium">{tab.label}</span>
 				</a>
 			{/each}
 		</div>

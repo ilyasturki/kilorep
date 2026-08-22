@@ -14,7 +14,7 @@
 	import SheetHeader from '$lib/ui/SheetHeader.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
-	import { travelMs } from '$lib/ui/motion';
+	import { mediumMs } from '$lib/ui/motion';
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
@@ -104,7 +104,7 @@
 	{:else}
 		<Select.Portal>
 			{#if open}
-				<div class="overlay-scrim" transition:fade={{ duration: travelMs() }}></div>
+				<div class="overlay-scrim" transition:fade={{ duration: mediumMs() }}></div>
 			{/if}
 
 			<Select.ContentStatic class="overlay-panel overlay-sheet">

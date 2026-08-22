@@ -31,7 +31,7 @@
 	const since4 = now - 28 * DAY;
 	const since12 = now - 84 * DAY;
 
-	const CARD = 'flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-3';
+	const CARD = 'flex flex-col gap-3 rounded-2xl bg-surface p-3';
 	const DOOR = `${CARD} focus-ring pointer-fine:transition-colors pointer-fine:hover:bg-hover`;
 
 	const HEADLINE = 'text-2xl font-extrabold tracking-numeral tabular-nums text-accent-text';

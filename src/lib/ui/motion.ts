@@ -1,55 +1,53 @@
 import { prefersReducedMotion } from 'svelte/motion';
 
-// Mirrors `--dur-quick` / `--dur-travel` / `--ease-sheet` in app.css — keep each pair in
-// sync; a JS animation cannot read the custom property.
-export const QUICK_MS = 160;
+// The motion ladder, twinned with `--dur-*` / `--ease-*` in app.css — a JS animation cannot read a
+// custom property, so both halves state it. Change a number here, change it there. The micro and
+// large rungs live only in the stylesheet; nothing in JS drives a press or a page transition.
+const DAMPING = 0.84;
+const SMALL_RESPONSE = 0.3;
+const MEDIUM_RESPONSE = 0.46;
+const SMALL_MS = 225;
+const MEDIUM_MS = 335;
 
-export const TRAVEL_MS = 180;
+// SwiftUI's spring as a 0 → 1 displacement. Underdamped throughout: at 0.84 the overshoot is 0.77%,
+// under the 1% that would read as a bounce, which is why the ladder settles rather than springs.
+function springAt(response: number, seconds: number): number {
+	const w0 = (2 * Math.PI) / response;
+	const wd = w0 * Math.sqrt(1 - DAMPING * DAMPING);
+	const decay = Math.exp(-DAMPING * w0 * seconds);
 
-export const QUICK_EASE = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
-
-export function quickMs(): number {
-	return prefersReducedMotion.current ? 0 : QUICK_MS;
+	return 1 - decay * (Math.cos(wd * seconds) + ((DAMPING * w0) / wd) * Math.sin(wd * seconds));
 }
 
-export function travelMs(): number {
-	return prefersReducedMotion.current ? 0 : TRAVEL_MS;
-}
+// A spring is not expressible as a `cubic-bezier`; it is expressible as `linear()`.
+function linearOf(response: number, ms: number, steps = 24): string {
+	// The ends are written, not sampled: the spring is still 0.04% short of its target at `ms`, and a
+	// `linear()` that does not reach 1 leaves the thing it moved a fraction of a pixel out of place.
+	const points = [0];
 
-const X1 = 0.2;
-const Y1 = 0.8;
-const X2 = 0.3;
-const Y2 = 1;
-
-function bezier(p1: number, p2: number, t: number): number {
-	const c = 3 * p1;
-	const b = 3 * (p2 - p1) - c;
-	const a = 1 - c - b;
-
-	return ((a * t + b) * t + c) * t;
-}
-
-function slope(p1: number, p2: number, t: number): number {
-	const c = 3 * p1;
-	const b = 3 * (p2 - p1) - c;
-	const a = 1 - c - b;
-
-	return (3 * a * t + 2 * b) * t + c;
-}
-
-// `QUICK_EASE` as a function: x(t)=x inverted by Newton–Raphson, four passes from t=x.
-export function easeQuick(x: number): number {
-	let t = x;
-
-	for (let pass = 0; pass < 4; pass += 1) {
-		const derivative = slope(X1, X2, t);
-
-		if (Math.abs(derivative) < 1e-6) {
-			break;
-		}
-
-		t -= (bezier(X1, X2, t) - x) / derivative;
+	for (let i = 1; i < steps; i += 1) {
+		points.push(Math.round(springAt(response, ((i / steps) * ms) / 1000) * 1e4) / 1e4);
 	}
 
-	return bezier(Y1, Y2, t);
+	points.push(1);
+
+	return `linear(${points.join(', ')})`;
+}
+
+export const EASE_SMALL = linearOf(SMALL_RESPONSE, SMALL_MS);
+
+export const EASE_MEDIUM = linearOf(MEDIUM_RESPONSE, MEDIUM_MS);
+
+export function smallMs(): number {
+	return prefersReducedMotion.current ? 0 : SMALL_MS;
+}
+
+export function mediumMs(): number {
+	return prefersReducedMotion.current ? 0 : MEDIUM_MS;
+}
+
+// The spring as a plain function, for the animation that runs its own frame loop and cannot be
+// handed a `linear()` string: `x` is progress through Medium's duration, not seconds.
+export function easeMedium(x: number): number {
+	return x >= 1 ? 1 : springAt(MEDIUM_RESPONSE, (x * MEDIUM_MS) / 1000);
 }

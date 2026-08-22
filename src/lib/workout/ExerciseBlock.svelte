@@ -11,7 +11,7 @@
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import { captureMorph } from '$lib/ui/morph';
-	import { quickMs } from '$lib/ui/motion';
+	import { smallMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import { setNote, statusOf } from '$lib/workout/groups';
@@ -77,7 +77,7 @@
 		mounted = true;
 	});
 
-	const grow = $derived(mounted ? quickMs() : 0);
+	const grow = $derived(mounted ? smallMs() : 0);
 
 	const wrappers = new Map<string, HTMLElement>();
 

@@ -10,7 +10,8 @@
 		'focus-ring mx-auto grid size-10 place-items-center rounded-xl text-base font-bold ' +
 		'not-data-selected:hover:bg-hover ' +
 		'not-data-selected:data-today:text-accent-text ' +
-		'data-selected:bg-accent data-selected:text-on-accent ' +
+		// Border-box keeps `size-10` under the border.
+		'data-selected:border-2 data-selected:border-accent-text data-selected:text-accent-text ' +
 		'data-outside-month:opacity-30 ' +
 		'data-disabled:pointer-events-none data-disabled:opacity-30 ' +
 		'data-unavailable:pointer-events-none data-unavailable:line-through';

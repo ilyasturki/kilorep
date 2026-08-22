@@ -1,4 +1,4 @@
-import { QUICK_EASE, quickMs } from '$lib/ui/motion';
+import { EASE_SMALL, smallMs } from '$lib/ui/motion';
 
 type Pending = {
 	node: HTMLElement;
@@ -34,7 +34,7 @@ export function playMorphs(): void {
 
 	pending = [];
 
-	const ms = quickMs();
+	const ms = smallMs();
 
 	if (ms === 0) {
 		return;
@@ -57,7 +57,7 @@ export function playMorphs(): void {
 
 		const animation = node.animate([{ height: `${from}px` }, { height: `${to}px` }], {
 			duration: ms,
-			easing: QUICK_EASE
+			easing: EASE_SMALL
 		});
 
 		owners.set(node, animation);

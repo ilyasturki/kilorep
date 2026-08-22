@@ -217,7 +217,7 @@
 
 <main class="column-board flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
 	<section
-		class="flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-3
+		class="flex flex-col gap-3 rounded-2xl bg-surface p-3
 			lg:flex-row lg:items-center lg:gap-4 lg:py-2.5 lg:pr-2.5 lg:pl-4"
 	>
 		<div
@@ -274,7 +274,7 @@
 	{:else}
 		<div class="flex flex-col gap-4 lg:grid lg:grid-cols-[2fr_minmax(0,1fr)] lg:items-start">
 			<section
-				class="flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-3
+				class="flex flex-col gap-3 rounded-2xl bg-surface p-3
 					lg:sticky lg:top-0"
 			>
 				<Segmented

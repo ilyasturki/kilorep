@@ -51,7 +51,7 @@
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	// Tailwind scans source text: a class composed at runtime is never emitted.
-	const card = 'flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-4';
+	const card = 'flex flex-col gap-3 rounded-2xl bg-surface p-4';
 	const caption = 'text-xs font-extrabold text-ink-faint';
 	const tile = 'grid size-8 place-items-center text-ink-muted';
 	const specimen = 'flex flex-col items-start gap-1.5';

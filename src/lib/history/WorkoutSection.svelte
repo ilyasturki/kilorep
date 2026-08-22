@@ -10,7 +10,7 @@
 	import { loadModeNote, loadUnitLabel } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
-	import { quickMs } from '$lib/ui/motion';
+	import { smallMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import { setNote, statusOf } from '$lib/workout/groups';
@@ -97,7 +97,7 @@
 	{/if}
 {/snippet}
 
-<section class="flex flex-col gap-2 rounded-2xl border border-line-soft bg-surface p-3">
+<section class="flex flex-col gap-2 rounded-2xl bg-surface p-3">
 	<div class="flex items-center gap-2">
 		{#if editing}
 			<button
@@ -124,7 +124,7 @@
 
 	{#each cursors as cursor (cursor.set.id)}
 		{#if editing && cursor.set.id === openSetId}
-			<div transition:slide={{ duration: quickMs() }}>
+			<div transition:slide={{ duration: smallMs() }}>
 				{#key cursor.set.id}
 					<EditSet
 						{cursor}

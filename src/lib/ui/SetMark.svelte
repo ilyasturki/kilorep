@@ -6,8 +6,9 @@
 		warmup: 'warmup set'
 	};
 
+	// `done` is a tint, not a fill: a workout draws twenty of them, and one filled control per screen.
 	const shells: Record<SetStatus, string> = {
-		done: 'bg-accent text-on-accent',
+		done: 'bg-accent-soft text-accent-text',
 		active: 'border-2 border-accent-text text-accent-text',
 		pending: 'border-[1.5px] border-line text-ink-faint',
 		warmup: 'border-[1.5px] border-line text-ink-muted'

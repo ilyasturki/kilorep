@@ -34,16 +34,20 @@
 	--nav-hover: var(--color-neutral-100);
 	--nav-selected: var(--color-neutral-200);
 
-	/* The accent is a fill, never text — 1.95:1 on white. `accent-text` is the accent-coloured *string*
-	   and must stay a per-theme pair: no single colour clears 4.5:1 against both themes' grounds. */
-	--accent: var(--color-lime-500);
-	--on-accent: var(--color-neutral-950);
-	--accent-text: var(--color-lime-700);
-	--accent-soft: var(--color-lime-200);
+	/* Cobalt. Unlike lime the fill is dark enough to carry white, so `--on-accent` is white in *both*
+	   themes — the inversion that made this a token change rather than a hue swap. Light is the one
+	   theme where a single value serves both roles: blue-600 is 5.26:1 on `surface` and 4.70:1 on
+	   `canvas` as text, and white on it is the same 5.26:1 as a fill. Dark still needs the pair. */
+	--accent: var(--color-blue-600);
+	--on-accent: var(--color-white);
+	--accent-text: var(--color-blue-600);
+	/* 4.31:1 under `--accent-text` — a hair over the lime pair it replaces (4.25:1) and still under
+	   AA for a badge's small type. blue-50 would clear it and then vanish against a white card. */
+	--accent-soft: var(--color-blue-100);
 
 	/* `--accent-press` is a filter, not a colour: it lands on the hover fill under a mouse and on the
 	   accent itself under a thumb, where `hover:` never fires. */
-	--accent-hover: var(--color-lime-600);
+	--accent-hover: var(--color-blue-700);
 	--accent-press: brightness(0.94);
 
 	--danger: var(--color-red-600);
@@ -51,14 +55,17 @@
 	--danger-soft: var(--color-red-100);
 	--scrim: rgb(0 0 0 / 0.4);
 
-	/* The six template marks. The hues step around lime's 130°, never through it — the accent is not a
-	   mark. Glyph-on-tile clears 4.5:1 in both themes. */
+	/* The six template marks. The hues step around the accent's 263°, never through it — a mark is not
+	   the accent. Glyph-on-tile clears 4.5:1 in both themes. */
 	--tpl-amber: var(--color-amber-700);
 	--tpl-amber-soft: var(--color-amber-100);
 	--tpl-teal: var(--color-teal-700);
 	--tpl-teal-soft: var(--color-teal-100);
-	--tpl-blue: var(--color-blue-700);
-	--tpl-blue-soft: var(--color-blue-100);
+	/* `blue` is the persisted `MarkColour` key and the label the picker prints; the *hue* is cyan, so a
+	   marked template can never be mistaken for the accent. 223° sits 40° off cobalt and 37° off teal —
+	   both wider than the 31° violet/fuchsia step this palette already ships. */
+	--tpl-blue: var(--color-cyan-700);
+	--tpl-blue-soft: var(--color-cyan-100);
 	--tpl-violet: var(--color-violet-700);
 	--tpl-violet-soft: var(--color-violet-100);
 	--tpl-fuchsia: var(--color-fuchsia-700);
@@ -92,13 +99,16 @@
 		--nav-hover: oklch(30.3% 0 0);
 		--nav-selected: oklch(34.6% 0 0);
 
-		--accent: var(--color-lime-500);
-		--on-accent: var(--color-neutral-950);
-		--accent-text: var(--color-lime-500);
+		/* The fill drops a swatch so white still clears the 3:1 floor a large label answers to (3.76:1,
+		   against Alpha Progression's own 3.65:1); the text lifts two, because blue-500 is 4.22:1 on
+		   `surface` and misses AA by a quarter point. 5.89:1 on `surface`, 6.60:1 on `canvas`. */
+		--accent: var(--color-blue-500);
+		--on-accent: var(--color-white);
+		--accent-text: var(--color-blue-400);
 		/* Lifted above `surface`: at the 950 swatches a badge reads as a hole in the card. */
-		--accent-soft: oklch(31.5% 0.078 132.109);
+		--accent-soft: oklch(31.5% 0.09 262.881);
 		/* Midway 500 → 400: a full swatch step read as a flash. */
-		--accent-hover: oklch(80.5% 0.235 129.9);
+		--accent-hover: oklch(66% 0.21 262.881);
 		--accent-press: brightness(1.06);
 
 		--danger: var(--color-red-400);
@@ -111,8 +121,8 @@
 		--tpl-amber-soft: oklch(30.5% 0.064 95.746);
 		--tpl-teal: var(--color-teal-300);
 		--tpl-teal-soft: oklch(30.5% 0.056 180.426);
-		--tpl-blue: var(--color-blue-300);
-		--tpl-blue-soft: oklch(30.5% 0.075 254.128);
+		--tpl-blue: var(--color-cyan-300);
+		--tpl-blue-soft: oklch(30.5% 0.075 207.078);
 		--tpl-violet: var(--color-violet-300);
 		--tpl-violet-soft: oklch(30.5% 0.085 293.283);
 		--tpl-fuchsia: var(--color-fuchsia-300);
@@ -129,13 +139,14 @@
    `(pointer: fine)`, the predicate behind Tailwind's `pointer-fine:`, or the two disagree on hybrids. */
 :root {
 	--target-chrome: 2.5rem; /* 40 */
-	--target-chip: 3.25rem; /* 52 */
-	--target-row: 3.875rem; /* 62 */
+	--target-chip: 2.75rem; /* 44 */
+	--target-row: 3.25rem; /* 52 */
 	--target-row-dense: 2.75rem; /* 44 */
-	--target-commit: 4.875rem; /* 78 */
+	/* 60 is where Alpha Progression's own Save button sits, measured off its screens. */
+	--target-commit: 3.75rem; /* 60 */
 
-	/* Not a target — the top bar's one height (a chrome control plus its `py-2`), derived so it follows `--target-chrome`. */
-	--target-bar: calc(var(--target-chrome) + 1rem);
+	/* Not a target — the top bar's one height (a chrome control plus its `py-1.5`), derived so it follows `--target-chrome`. */
+	--target-bar: calc(var(--target-chrome) + 0.75rem); /* 52 */
 }
 
 @media (pointer: fine) {
@@ -198,7 +209,7 @@
 }
 
 /* ~2% sink with a springy release. `scale`, never `transform` — drag offsets own `transform`.
-   The 160ms coincides with `--dur-quick` but is deliberately not the token. */
+   Deliberately off the ladder: a press is the one place a visible bounce is the feedback. */
 @utility press-sink {
 	@media (pointer: coarse) {
 		transition: scale 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -232,28 +243,42 @@
 		(100% - 2 * var(--seg-pad) - (var(--seg-count) - 1) * var(--seg-gap)) / var(--seg-count)
 	);
 	translate: calc(var(--seg-index) * (100% + var(--seg-gap)));
-	transition: translate var(--dur-quick) var(--ease-sheet);
+	transition: translate var(--dur-small) var(--ease-small);
 }
 
 @utility segmented-item {
-	transition: color var(--dur-quick) var(--ease-sheet);
+	transition: color var(--dur-micro) var(--ease-micro);
+}
+
+/* The active tab's fill, as one element that travels rather than one per tab switching on.
+   `translate` in %, because a percentage resolves against the element's own width — one tab. */
+@utility tab-pill {
+	position: absolute;
+	top: 0.25rem;
+	left: 0;
+	display: grid;
+	place-items: center;
+	width: calc(100% / var(--seg-count));
+	translate: calc(var(--seg-index) * 100%);
+	pointer-events: none;
+	transition: translate var(--dur-small) var(--ease-small);
 }
 
 /* The switch's two halves are one act — same duration and curve; the thumb grows under the press (press-sink inverted). */
 @utility switch-track {
-	transition: background-color var(--dur-quick) var(--ease-sheet);
+	transition: background-color var(--dur-micro) var(--ease-micro);
 }
 
 @utility switch-thumb {
 	transition:
-		translate var(--dur-quick) var(--ease-sheet),
+		translate var(--dur-small) var(--ease-small),
 		scale 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
 	@media (pointer: coarse) {
 		.group.is-pressed & {
 			scale: 1.15;
 			transition:
-				translate var(--dur-quick) var(--ease-sheet),
+				translate var(--dur-small) var(--ease-small),
 				scale 90ms ease-out;
 		}
 	}
@@ -262,7 +287,7 @@
 		.group:active & {
 			scale: 1.15;
 			transition:
-				translate var(--dur-quick) var(--ease-sheet),
+				translate var(--dur-small) var(--ease-small),
 				scale 90ms ease-out;
 		}
 	}
@@ -325,37 +350,73 @@
 
 	/* Replaces Tailwind's scale — `initial` clears the namespace so an unchosen step cannot be reached. */
 	--text-*: initial;
+	/* Tracking is part of the scale, not a decision at the call site. Tailwind reads these through
+	   `var(--tw-tracking, …)`, so an explicit `tracking-*` still wins on the element that carries it,
+	   and `--tw-tracking` does not inherit. */
 	--text-xs: 0.6875rem; /* 11 */
 	--text-xs--line-height: 1.35;
+	--text-xs--letter-spacing: 0.01em;
 	--text-sm: 0.8125rem; /* 13 */
 	--text-sm--line-height: 1.4;
+	--text-sm--letter-spacing: 0em;
 	--text-md: 0.875rem; /* 14 */
 	--text-md--line-height: 1.4;
+	--text-md--letter-spacing: -0.006em;
 	--text-base: 1rem; /* 16 */
 	--text-base--line-height: 1.45;
+	--text-base--letter-spacing: -0.017em;
 	--text-lg: 1.125rem; /* 18 */
 	--text-lg--line-height: 1.3;
+	--text-lg--letter-spacing: -0.021em;
 	--text-xl: 1.375rem; /* 22 */
 	--text-xl--line-height: 1.2;
+	--text-xl--letter-spacing: -0.026em;
 	--text-2xl: 1.75rem; /* 28 */
 	--text-2xl--line-height: 1.1;
+	--text-2xl--letter-spacing: -0.03em;
 	--text-3xl: 2rem; /* 32 */
 	--text-3xl--line-height: 1;
+	--text-3xl--letter-spacing: -0.034em;
 	--text-4xl: 2.5rem; /* 40 */
 	--text-4xl--line-height: 1;
+	--text-4xl--letter-spacing: -0.038em;
 
-	/* Two caps steps: 0.12em is right at 11px and far too loose inside a 13px button. */
-	--tracking-numeral: -0.035em;
-	--tracking-label: 0.12em;
-	--tracking-caps: 0.06em;
+	/* The numeral step is the ramp's own bottom rung restated, so an explicit `tracking-numeral`
+	   agrees with the size it lands on instead of contradicting it. */
+	--tracking-numeral: -0.038em;
+	--tracking-label: 0.05em;
+	--tracking-caps: 0.04em;
+
+	/* The weight register. Nunito's axis is `200 1000` and the woff2 already carries all of it, but
+	   nothing in the app has ever gone above 800. Redefining Tailwind's own steps re-dresses every
+	   `font-bold` / `font-extrabold` call site without touching one. */
+	--font-weight-medium: 650;
+	--font-weight-semibold: 700;
+	--font-weight-bold: 750;
+	--font-weight-extrabold: 900;
 
 	--radius-sheet: 1.375rem;
 
-	--ease-sheet: cubic-bezier(0.2, 0.8, 0.3, 1);
+	/* The motion ladder: four families keyed to how far the thing travels, replacing one curve and two
+	   durations serving everything. Damping is fixed at 0.84 across all three springs and only
+	   SwiftUI's `response` moves, so the rungs read as one system rather than three separately-tuned
+	   springs; 0.84 is where the overshoot falls to 0.77%, under the 1% that would show as a bounce.
+	   Every duration is *derived* — it is where that spring settles inside 1% of its target — and each
+	   `linear()` is the same spring sampled across the same duration, because a spring is not
+	   expressible as a cubic-bezier. Twinned with the ladder in `lib/ui/motion.ts`, which JS reads;
+	   a custom property is invisible to it. Change one, change its twin. */
+	--dur-micro: 120ms; /* press, toggle, colour, a stepping number — nothing travels */
+	--dur-small: 225ms; /* chip, pill, segment, tab indicator, list row — under 120px */
+	--dur-medium: 335ms; /* sheet, drawer, menu — a screen fraction */
+	--dur-large: 430ms; /* page travel — full width */
 
-	/* Twinned with `QUICK_MS` / `TRAVEL_MS` in `lib/ui/motion.ts` — JS cannot read a build-time property. Change one, change its twin. */
-	--dur-quick: 160ms;
-	--dur-travel: 180ms;
+	--ease-micro: ease-out;
+	/* prettier-ignore */
+	--ease-small: linear(0, 0.0173, 0.0619, 0.1246, 0.1984, 0.2777, 0.3584, 0.4374, 0.5126, 0.5826, 0.6466, 0.7042, 0.7553, 0.8001, 0.8388, 0.8719, 0.8999, 0.9233, 0.9427, 0.9585, 0.9712, 0.9813, 0.9891, 0.9951, 1); /* response 0.30 */
+	/* prettier-ignore */
+	--ease-medium: linear(0, 0.0163, 0.0587, 0.1186, 0.1895, 0.266, 0.3444, 0.4216, 0.4955, 0.5649, 0.6287, 0.6866, 0.7383, 0.7839, 0.8238, 0.8582, 0.8875, 0.9123, 0.9331, 0.9502, 0.9642, 0.9754, 0.9843, 0.9913, 1); /* response 0.46 */
+	/* prettier-ignore */
+	--ease-large: linear(0, 0.0158, 0.057, 0.1155, 0.1847, 0.2598, 0.3369, 0.4131, 0.4864, 0.5553, 0.619, 0.6769, 0.7289, 0.775, 0.8154, 0.8504, 0.8805, 0.906, 0.9275, 0.9454, 0.96, 0.9719, 0.9815, 0.989, 1); /* response 0.60 */
 
 	/* Safe-area insets; dead without `viewport-fit=cover` in app.html. The shell-injected
 	   `--safe-area-inset-*` outranks `env()` (Android WebViews before 140 misreport it); the 0px floor
@@ -364,6 +425,18 @@
 	--spacing-safe-b: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
 	--spacing-safe-l: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
 	--spacing-safe-r: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+}
+
+/* The tokens are plain custom properties, so one unlayered `:root` retires the lot — unlayered beats
+   `@theme`'s own `layer(theme)` output whatever the source order. `lib/ui/motion.ts` does the same
+   for the animations JS drives, which no stylesheet can reach. */
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--dur-micro: 0ms;
+		--dur-small: 0ms;
+		--dur-medium: 0ms;
+		--dur-large: 0ms;
+	}
 }
 
 /* The three content widths. `column-content` steps *down* at lg so the workout rail fits the gutter:
@@ -431,7 +504,8 @@
 	padding-inline: 1rem;
 	font-size: var(--text-base);
 	line-height: var(--text-base--line-height);
-	font-weight: 700;
+	font-weight: 750;
+	letter-spacing: var(--text-base--letter-spacing);
 	color: var(--ink);
 
 	&::placeholder {
@@ -459,7 +533,7 @@
 	inset: 0;
 	z-index: 40;
 	background-color: var(--scrim);
-	transition: opacity var(--dur-travel) var(--ease-sheet);
+	transition: opacity var(--dur-medium) var(--ease-medium);
 
 	&[data-starting-style],
 	&[data-ending-style] {
@@ -494,8 +568,8 @@
 	padding-bottom: max(1.25rem, var(--spacing-safe-b));
 
 	transition:
-		translate var(--dur-travel) var(--ease-sheet),
-		opacity var(--dur-travel) var(--ease-sheet);
+		translate var(--dur-medium) var(--ease-medium),
+		opacity var(--dur-medium) var(--ease-medium);
 
 	&[data-starting-style],
 	&[data-ending-style] {
@@ -536,7 +610,7 @@
 	color: var(--ink);
 	@apply shadow-lg;
 
-	transition: translate var(--dur-quick) var(--ease-sheet);
+	transition: translate var(--dur-medium) var(--ease-medium);
 
 	&[data-starting-style],
 	&[data-ending-style] {
@@ -554,8 +628,8 @@
 	border-radius: var(--radius-sheet);
 
 	transition:
-		opacity var(--dur-travel) var(--ease-sheet),
-		scale var(--dur-travel) var(--ease-sheet);
+		opacity var(--dur-medium) var(--ease-medium),
+		scale var(--dur-medium) var(--ease-medium);
 
 	&[data-starting-style],
 	&[data-ending-style] {
@@ -633,8 +707,8 @@ body {
 /* The extra class is load-bearing: upstream's bare `[data-vaul-drawer]` loads later and wins ties.
    Only `animation-*` is ours — vaul rewrites `transition: transform` inline from a module constant. */
 [data-vaul-drawer].overlay-panel {
-	animation-duration: var(--dur-travel);
-	animation-timing-function: var(--ease-sheet);
+	animation-duration: var(--dur-medium);
+	animation-timing-function: var(--ease-medium);
 }
 
 /* Keyboard-up geometry. `--sheet-keys` / `--sheet-pane` are written by Sheet.svelte and absent when no
@@ -650,8 +724,8 @@ body {
 
 	transition:
 		transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
-		bottom var(--dur-travel) var(--ease-sheet),
-		max-height var(--dur-travel) var(--ease-sheet);
+		bottom var(--dur-medium) var(--ease-medium),
+		max-height var(--dur-medium) var(--ease-medium);
 }
 
 [data-vaul-drawer][data-vaul-snap-points='false'][data-vaul-drawer-direction='bottom'][data-state='open'] {
@@ -673,8 +747,8 @@ body {
 /* Both attributes plus the class on purpose: upstream's two-part rule loads later, and a two-part
    selector here would tie and lose on order. */
 [data-vaul-overlay][data-vaul-snap-points='false'].overlay-scrim-drawer {
-	animation-duration: var(--dur-travel);
-	animation-timing-function: var(--ease-sheet);
+	animation-duration: var(--dur-medium);
+	animation-timing-function: var(--ease-medium);
 }
 
 [data-vaul-overlay][data-vaul-snap-points='false'][data-state='open'] {
@@ -807,8 +881,8 @@ body {
 ::view-transition-group(page),
 ::view-transition-old(page),
 ::view-transition-new(page) {
-	animation-duration: var(--dur-travel);
-	animation-timing-function: var(--ease-sheet);
+	animation-duration: var(--dur-large);
+	animation-timing-function: var(--ease-large);
 }
 
 html[data-nav='push']::view-transition-new(page) {
@@ -867,17 +941,8 @@ html[data-nav='pop']::view-transition-old(page) {
 @utility title-panel {
 	font-size: var(--text-lg);
 	line-height: var(--text-lg--line-height);
-	font-weight: 800;
-	letter-spacing: var(--tracking-tight);
-}
-
-/* `accent-text`, not `accent`: a lime-500 hairline on a light surface is 1.95:1. */
-@utility card-active {
-	border-radius: var(--radius-2xl);
-	border-style: solid;
-	border-width: 2px;
-	border-color: var(--accent-text);
-	background-color: var(--surface);
+	font-weight: 900;
+	letter-spacing: var(--text-lg--letter-spacing);
 }
 
 /* The card a list of rows sits in. `overflow: hidden` is what rounds the end rows — and why their
@@ -885,7 +950,6 @@ html[data-nav='pop']::view-transition-old(page) {
 @utility list-group {
 	overflow: hidden;
 	border-radius: var(--radius-2xl);
-	border: 1px solid var(--line-soft);
 	background-color: var(--surface);
 
 	& > * + * {
@@ -930,7 +994,7 @@ html[data-nav='pop']::view-transition-old(page) {
 @utility label-caps {
 	font-size: var(--text-xs);
 	line-height: var(--text-xs--line-height);
-	font-weight: 800;
+	font-weight: 750;
 	letter-spacing: var(--tracking-label);
 	text-transform: uppercase;
 	color: var(--ink-faint);
@@ -943,7 +1007,7 @@ html[data-nav='pop']::view-transition-old(page) {
 	}
 
 	body {
-		font-weight: 600;
+		font-weight: 700;
 		/* Insurance for a face swap — Nunito's digits are already uniform-width. */
 		font-variant-numeric: tabular-nums;
 	}

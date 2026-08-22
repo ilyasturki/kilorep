@@ -8,12 +8,12 @@
 			times: 'text-md'
 		},
 		done: {
-			shell: 'min-h-row rounded-xl bg-surface border border-line-soft',
+			shell: 'min-h-row rounded-xl bg-surface',
 			numerals: 'text-xl text-ink',
 			times: 'text-base'
 		},
 		active: {
-			shell: 'card-active min-h-24',
+			shell: 'min-h-24 rounded-2xl bg-surface',
 			numerals: 'text-3xl tracking-numeral text-ink',
 			times: 'text-lg'
 		},
@@ -63,10 +63,6 @@
 	]}
 	{@attach press(() => onoptions)}
 >
-	{#if status === 'active'}
-		<div class="absolute inset-y-0 left-0 w-1.5 bg-accent-text" aria-hidden="true"></div>
-	{/if}
-
 	<button
 		type="button"
 		onclick={onselect}

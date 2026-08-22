@@ -9,7 +9,7 @@
 		'disabled:pointer-events-none';
 
 	const outlined =
-		'min-h-14 rounded-xl px-5 border border-line hover:bg-hover press:bg-surface-2 press-sink';
+		'min-h-row-dense rounded-xl px-5 border border-line hover:bg-hover press:bg-surface-2 press-sink';
 
 	const filled =
 		'bg-accent text-on-accent press-sink ' +
@@ -22,8 +22,8 @@
 	const looks: Record<Look, Dress> = {
 		commit: {
 			shape: `min-h-commit rounded-2xl px-6 ${filled}`,
-			text: 'text-2xl font-extrabold tracking-tight',
-			caps: 'text-xl font-extrabold tracking-caps'
+			text: 'text-xl font-[800]',
+			caps: 'text-lg font-[800] tracking-caps'
 		},
 		secondary: {
 			shape: `${outlined} text-ink-muted`,
@@ -44,7 +44,7 @@
 		},
 		raised: {
 			shape:
-				'min-h-row rounded-xl px-5 border border-line-soft bg-surface text-ink-muted ' +
+				'min-h-row rounded-xl px-5 bg-surface text-ink-muted ' +
 				'hover:bg-hover press:bg-surface-2 press-sink',
 			text: 'text-md font-bold',
 			caps: 'text-sm font-extrabold tracking-caps'
@@ -59,8 +59,8 @@
 	const compacts: Partial<Record<Look, Dress>> = {
 		commit: {
 			shape: `min-h-row rounded-xl px-5 ${filled}`,
-			text: 'text-lg font-extrabold tracking-tight',
-			caps: 'text-md font-extrabold tracking-caps'
+			text: 'text-lg font-[800]',
+			caps: 'text-md font-[800] tracking-caps'
 		},
 		inert: {
 			shape: `min-h-row rounded-xl px-5 ${well}`,

@@ -5,7 +5,9 @@
 	const chip =
 		'relative inline-flex min-h-chip items-center rounded-xl bg-sunken px-3 text-sm font-bold ' +
 		'text-ink-muted select-none focus-ring hover:bg-hover press:bg-surface-2 press-sink ' +
-		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
+		'pointer-fine:transition-[background-color] pointer-fine:duration-100 ' +
+		'aria-pressed:bg-surface aria-pressed:text-accent-text ' +
+		'aria-pressed:ring-[1.5px] aria-pressed:ring-accent-text';
 
 	const backdrop = 'absolute inset-0 focus-ring';
 
@@ -68,7 +70,7 @@
 				aria-hidden="true"
 				class={[
 					'grid size-6 place-items-center rounded-full',
-					picked ? 'bg-accent text-on-accent' : 'border-[1.5px] border-line text-transparent'
+					picked ? 'bg-accent-soft text-accent-text' : 'border-[1.5px] border-line text-transparent'
 				]}
 			>
 				<Check size={14} />
@@ -142,7 +144,7 @@
 							onclick={() => onpick?.(variant)}
 							aria-label={variant.name}
 							aria-pressed={selected === undefined ? undefined : selected.has(variant.id)}
-							class={[chip, 'aria-pressed:bg-accent aria-pressed:text-on-accent']}
+							class={chip}
 							{@attach press()}
 						>
 							{label}
