@@ -12,10 +12,10 @@
 		setLastServer
 	} from '$lib/api/client';
 	import { signInWithGoogle } from '$lib/api/google-device';
+	import HandoverSheet from '$lib/app/HandoverSheet.svelte';
 	import Section from '$lib/settings/Section.svelte';
 	import SyncRow from '$lib/settings/SyncRow.svelte';
 	import { getStore } from '$lib/store/store';
-	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -119,7 +119,6 @@
 
 	let arriving = $state<Account | null>(null);
 	let mismatchOpen = $state(false);
-	let wipeOpen = $state(false);
 
 	async function settle(account: Account) {
 		credentialled = true;
@@ -188,10 +187,7 @@
 
 		const { id } = arriving;
 
-		// Cleared before the sheet closes, so the dismissal effect below does not
-		// read this as a cancellation.
 		arriving = null;
-		mismatchOpen = false;
 
 		const store = await getStore();
 
@@ -210,7 +206,6 @@
 
 	async function abandon() {
 		arriving = null;
-		mismatchOpen = false;
 		credentialled = false;
 
 		try {
@@ -223,12 +218,6 @@
 
 		await invalidateAll();
 	}
-
-	$effect(() => {
-		if (!mismatchOpen && arriving !== null) {
-			void abandon();
-		}
-	});
 </script>
 
 <Section title="Server">
@@ -343,38 +332,11 @@
 	</div>
 </Sheet>
 
-<Sheet
+<HandoverSheet
 	bind:open={mismatchOpen}
-	title="This phone belongs to another account"
-	description="Everything logged here was synced as somebody else. Choose what happens to it before {arriving?.email ??
-		'the new account'} takes over."
->
-	<div class="flex flex-col gap-5 pt-2">
-		<div class="flex flex-col gap-2">
-			<Button variant="secondary" onclick={() => void handOver('adopt')}>
-				Move it to this account
-			</Button>
-			<p class="px-1 text-sm text-pretty text-ink-muted">
-				Every workout, template and weight on this phone is copied across. The other account keeps
-				its own.
-			</p>
-		</div>
-
-		<div class="flex flex-col gap-2">
-			<Button variant="destructive" onclick={() => (wipeOpen = true)}>Erase this phone</Button>
-			<p class="px-1 text-sm text-pretty text-ink-muted">
-				Local data is deleted and replaced with whatever the new account has on the server.
-			</p>
-		</div>
-
-		<Button variant="chrome" caps onclick={() => void abandon()}>CANCEL</Button>
-	</div>
-</Sheet>
-
-<AlertDialog
-	bind:open={wipeOpen}
-	title="Erase everything on this phone?"
-	description="Every workout, template and body weight held here is deleted, including any that never reached a server. There is no undo."
-	confirmLabel="Erase"
-	onconfirm={() => void handOver('wipe')}
+	place="phone"
+	email={arriving?.email ?? null}
+	onadopt={() => void handOver('adopt')}
+	onwipe={() => void handOver('wipe')}
+	oncancel={() => void abandon()}
 />
