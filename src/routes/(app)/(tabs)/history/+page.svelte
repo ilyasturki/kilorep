@@ -80,7 +80,7 @@
 			<ListRow
 				title={workoutTitle(live.workout, data.templates)}
 				meta={workoutMeta(live.workout)}
-				href="/workout/live"
+				href="/train/live"
 			>
 				{#snippet leading()}
 					<span class="size-1.5 rounded-full bg-accent"></span>
@@ -98,7 +98,7 @@
 				<ClockCounterClockwise size={24} />
 			{/snippet}
 			{#snippet action()}
-				<Button href="/workout">Start a workout</Button>
+				<Button href="/train">Start a workout</Button>
 			{/snippet}
 		</EmptyState>
 	{:else}

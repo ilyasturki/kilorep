@@ -120,7 +120,7 @@
 		session.addExercises([exercise.id]);
 		persistSession(store, session);
 
-		await goto('/workout/live');
+		await goto('/train/live');
 	}
 
 	async function addToPlan(template: Template) {
@@ -229,7 +229,7 @@
 		meta={lastSetLabel(last)}
 		leading={thumb}
 		trailing={since === undefined ? undefined : recency}
-		href="/exercises/{entry.id}"
+		href="/plan/exercises/{entry.id}"
 	/>
 {/snippet}
 
@@ -393,7 +393,7 @@
 						Add to this workout
 					</Button>
 				{:else if planned !== null}
-					<Button variant="secondary" class="w-full" href="/templates/{planned.id}">
+					<Button variant="secondary" class="w-full" href="/plan/templates/{planned.id}">
 						Added to {templateTitle(planned)}
 					</Button>
 				{:else if data.plans.length > 0}

@@ -6,12 +6,16 @@
 	import { drawableMark, startable, startFrom } from '$lib/domain/template';
 	import { firstUncompleted } from '$lib/domain/workout';
 	import { formatSince, lastDoneLine } from '$lib/history/label';
-	import { planLine, planMeta, templateTitle } from '$lib/templates/plan';
+	import { planLine, planMeta, rotationLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
+	import Cards from '$lib/ui/icons/Cards.svelte';
+	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import Plus from '$lib/ui/icons/Plus.svelte';
+	import Stack from '$lib/ui/icons/Stack.svelte';
 
 	import type { Template } from '$lib/domain/template';
 	import type { PageProps } from './$types';
@@ -53,7 +57,11 @@
 	// one, this one", and the answer is easiest to find where the lifter dragged it.
 	const REST = 4;
 
-	const rest = $derived(plans.filter((plan) => plan.id !== next?.id).slice(0, REST));
+	const rest = $derived(plans.filter((plan) => plan.id !== next?.plan.id).slice(0, REST));
+
+	// The same address Templates offers its own empty state, so the way out of "no plans" is one
+	// tap from either screen rather than a list on the way to the editor.
+	const blank = `/plan/templates/${crypto.randomUUID()}`;
 
 	function doneAt(template: Template): number | null {
 		return lastDone[template.id] ?? null;
@@ -61,54 +69,73 @@
 </script>
 
 <svelte:head>
-	<title>Workout | Kilorep</title>
+	<title>Train | Kilorep</title>
 </svelte:head>
 
 <main class="min-h-0 flex-1 overflow-y-auto">
 	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
-		<section class="flex flex-col gap-2">
-			<h2 class="px-3 label-caps">Next up</h2>
-
-			<div class="flex flex-col gap-4 rounded-2xl bg-surface p-3">
-				{#if next === null}
-					<div class="flex flex-col gap-0.5 px-1">
-						<span class="text-xl font-extrabold tracking-tight text-ink">Empty workout</span>
-						<span class="text-md font-bold text-ink-muted">Add exercises as you go.</span>
+		{#if next === null}
+			<!-- No plan is next, because there is no rotation to be next in. The card that used to
+			     stand here said "Next up: Empty workout", which is not a rotation reporting a
+			     position but a screen keeping its shape after its subject left. -->
+			<EmptyState
+				title="No plans yet"
+				description="Build one in Plan and the rotation puts it here, under your thumb."
+			>
+				{#snippet icon()}
+					<Stack size={24} />
+				{/snippet}
+				{#snippet action()}
+					<div class="mx-auto flex w-full max-w-xs flex-col gap-2">
+						<Button variant="commit" compact href={blank}>New plan</Button>
+						<Button variant="secondary" compact onclick={() => void startEmpty()}>
+							Start an empty workout
+						</Button>
 					</div>
-				{:else}
-					{@const mark = drawableMark(next)}
+				{/snippet}
+			</EmptyState>
+		{:else}
+			{@const nextMark = drawableMark(next.plan)}
 
+			<section class="flex flex-col gap-2">
+				<!-- The rotation's arithmetic rides up here rather than in the card: the card is
+				     already three lines about the plan, and a fourth about why it was picked would
+				     compete with them for a width a phone does not have. Clamped rather than
+				     truncated, because a long plan name loses its whole tail to one line and the
+				     name is the half of this that says anything; two lines is where it stops
+				     pushing the card down the screen. -->
+				<h2 class="line-clamp-2 px-3 label-caps">Next up · {rotationLine(next)}</h2>
+
+				<div class="flex flex-col gap-4 rounded-2xl bg-surface p-3">
 					<div class="flex items-start gap-3 px-1">
-						{#if mark !== null}
-							<TemplateMark {mark} />
+						{#if nextMark !== null}
+							<TemplateMark mark={nextMark} />
 						{/if}
 
 						<div class="flex min-w-0 flex-1 flex-col gap-0.5">
 							<span class="truncate text-xl font-extrabold tracking-tight text-ink">
-								{templateTitle(next)}
+								{templateTitle(next.plan)}
 							</span>
 							<span class="truncate text-md font-bold text-ink-muted">
-								{planLine(next, catalogById)}
+								{planLine(next.plan, catalogById)}
 							</span>
 							<span class="truncate text-sm font-bold text-ink-faint">
-								{planMeta(next)} · {lastDoneLine(doneAt(next), now)}
+								{planMeta(next.plan)} · {lastDoneLine(doneAt(next.plan), now)}
 							</span>
 						</div>
 					</div>
-				{/if}
 
-				<Button
-					variant="commit"
-					caps
-					class="w-full"
-					onclick={() => void (next === null ? startEmpty() : startTemplate(next))}
-				>
-					START
-				</Button>
-			</div>
-		</section>
+					<Button
+						variant="commit"
+						caps
+						class="w-full"
+						onclick={() => void startTemplate(next.plan)}
+					>
+						START
+					</Button>
+				</div>
+			</section>
 
-		{#if next !== null}
 			<section class="flex flex-col gap-2">
 				<h2 class="px-3 label-caps">Or start</h2>
 
@@ -153,8 +180,22 @@
 		{/if}
 
 		<div class="list-group">
-			<ListRow title="All templates" href="/templates" />
-			<ListRow title="History" href="/history" />
+			<!-- All templates is dropped while the rotation is empty: the empty state above is
+			     already this screen's door to Plan, and a row leading to a list of nothing is the
+			     second glance saying what the first one said. -->
+			{#if next !== null}
+				{#snippet cards()}
+					<Cards size={20} />
+				{/snippet}
+
+				<ListRow title="All templates" href="/plan/templates" leading={cards} />
+			{/if}
+
+			{#snippet clock()}
+				<ClockCounterClockwise size={20} />
+			{/snippet}
+
+			<ListRow title="History" href="/history" leading={clock} />
 		</div>
 	</div>
 </main>

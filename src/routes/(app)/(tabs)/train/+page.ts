@@ -27,7 +27,7 @@ export const load: PageLoad = async ({ depends }) => {
 	}
 
 	if (activeWorkout.session !== null) {
-		redirect(307, '/workout/live');
+		redirect(307, '/train/live');
 	}
 
 	return { history, grips, templates, workouts };

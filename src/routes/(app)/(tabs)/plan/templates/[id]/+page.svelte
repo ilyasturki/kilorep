@@ -210,7 +210,7 @@
 			syncSoon(data.user.id);
 		}
 
-		await goto('/templates');
+		await goto('/plan/templates');
 	}
 
 	async function launch() {
@@ -227,7 +227,7 @@
 		});
 
 		await invalidate(SESSION_DEP);
-		await goto('/workout');
+		await goto('/train');
 	}
 
 	let markOpen = $state(false);
@@ -274,7 +274,7 @@
 {#snippet history(size: number)}
 	<TipButton
 		label="Sessions from this template"
-		onclick={() => void goto(`/templates/${template.id}/history`)}
+		onclick={() => void goto(`/plan/templates/${template.id}/history`)}
 		class="{CHROME_BUTTON} text-ink-muted"
 	>
 		<ClockCounterClockwise {size} />

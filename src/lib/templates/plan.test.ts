@@ -5,6 +5,7 @@ import {
 	planLine,
 	planShape,
 	planSummary,
+	rotationLine,
 	targetNote,
 	templateTitle
 } from '$lib/templates/plan';
@@ -17,6 +18,10 @@ function planned(targets: (number | null)[]): TemplateExercise {
 		exerciseId: 'bench-press',
 		sets: targets.map((plannedReps, i) => ({ id: `set-${i + 1}`, plannedReps }))
 	};
+}
+
+function namedPlan(id: string, name: string): Template {
+	return { id, name, createdAt: 0, entries: [] };
 }
 
 describe('what an exercise prescribes', () => {
@@ -153,5 +158,26 @@ describe('what a template says about itself in a list', () => {
 		const template = shaped([['gone'], ['bench-press'], ['cable-fly']]);
 
 		expect(planLine(template, catalog)).toBe('Bench Press · Cable Fly');
+	});
+});
+
+describe('rotationLine', () => {
+	const push = namedPlan('push', 'Push A');
+	const pull = namedPlan('pull', 'Pull A');
+
+	test('names the plan the rotation stepped off', () => {
+		expect(rotationLine({ plan: pull, after: push })).toBe('after Push A');
+	});
+
+	test('calls an untrained rotation a start rather than a step off nothing', () => {
+		expect(rotationLine({ plan: push, after: null })).toBe('first in your rotation');
+	});
+
+	test('a rotation of one says again — after itself is true and reads as a bug', () => {
+		expect(rotationLine({ plan: push, after: push })).toBe('again');
+	});
+
+	test('a nameless anchor is named the way every other screen names it', () => {
+		expect(rotationLine({ plan: pull, after: namedPlan('blank', '  ') })).toBe('after Untitled');
 	});
 });

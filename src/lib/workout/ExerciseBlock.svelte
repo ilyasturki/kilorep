@@ -115,7 +115,7 @@
 <section data-exercise class="flex flex-col gap-2">
 	<div data-exercise-head class="flex scroll-mt-3 items-center gap-1">
 		<a
-			href="/exercises/{meta.id}"
+			href="/plan/exercises/{meta.id}"
 			class="min-w-0 flex-1 press-sink rounded-xl px-1 py-1 text-left focus-ring
 				hover:bg-hover press:bg-surface-2"
 			{@attach press(() => onexercise)}

@@ -16,7 +16,7 @@
 	// pages under it, a plan's history among them, are ordinary scrollers: handed the pane, they
 	// grow past the viewport and push the tab bar off the bottom of it.
 	const ownsPane = $derived(
-		covers(page.url.pathname, '/workout') || /^\/templates\/[^/]+$/u.test(page.url.pathname)
+		covers(page.url.pathname, '/train') || /^\/plan\/templates\/[^/]+$/u.test(page.url.pathname)
 	);
 
 	const tabs = $derived(navTabs());

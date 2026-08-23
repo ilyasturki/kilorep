@@ -177,7 +177,7 @@
 	}
 
 	// The tail order is load-bearing — snapshot, holder, then the way out:
-	// `/workout` bounces back here while any of them still says a workout runs.
+	// `/train` bounces back here while any of them still says a workout runs.
 	async function finishSession() {
 		if (session === null) {
 			return;
@@ -214,7 +214,7 @@
 		await goto(`/history/${id}`);
 	}
 
-	// Same tail order as finishing, minus the record: `/workout/live` bounces to the idle screen
+	// Same tail order as finishing, minus the record: `/train/live` bounces to the idle screen
 	// the moment the holder says no session runs, so no `goto` — there is nothing to land on.
 	async function discardSession() {
 		if (session === null) {

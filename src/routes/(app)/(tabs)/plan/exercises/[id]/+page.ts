@@ -14,7 +14,7 @@ export const load: PageLoad = async ({ params }) => {
 	const folded = foldedTo(params.id);
 
 	if (folded !== null) {
-		redirect(307, `/exercises/${folded}`);
+		redirect(307, `/plan/exercises/${folded}`);
 	}
 
 	// Widened by hand: a route param is any string, so the index can miss.

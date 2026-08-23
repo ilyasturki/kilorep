@@ -1,4 +1,5 @@
 import type { Exercise } from '$lib/domain/exercise';
+import type { NextUp } from '$lib/domain/rotation';
 import type { Template, TemplateExercise } from '$lib/domain/template';
 import { entryTitle } from '$lib/workout/groups';
 
@@ -57,6 +58,24 @@ export function planLine(template: Template, catalog: Record<string, Exercise>):
 
 export function templateTitle(template: Template): string {
 	return template.name.trim() === '' ? 'Untitled' : template.name;
+}
+
+/**
+ * Why this plan and not another, in the few words a caps header holds.
+ *
+ * It rides the header rather than the card because the card is already three lines of what
+ * the plan *is*, and a fourth line of why it was picked competes with them for a width a
+ * phone does not have. Up there it has a row to itself and nothing to truncate against.
+ *
+ * A rotation of one has to say something other than "after itself", which is true and reads
+ * as a bug; a rotation nobody has trained yet has no step to report at all.
+ */
+export function rotationLine(next: NextUp): string {
+	if (next.after === null) {
+		return 'first in your rotation';
+	}
+
+	return next.after.id === next.plan.id ? 'again' : `after ${templateTitle(next.after)}`;
 }
 
 export type PlanShape = {

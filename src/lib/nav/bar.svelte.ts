@@ -27,16 +27,16 @@ export type NavTab = {
 export function navTabs(): NavTab[] {
 	return [
 		{
-			href: '/workout',
+			href: '/train',
 			label: 'Train',
 			icon: Barbell,
 			iconActive: BarbellFill,
 			live: activeWorkout.session !== null,
-			owns: ['/workout/live']
+			owns: ['/train/live']
 		},
-		{ href: '/templates', label: 'Plan', icon: Stack, owns: ['/exercises'] },
+		{ href: '/plan/templates', label: 'Plan', icon: Stack, owns: ['/plan/exercises'] },
 		{ href: '/progress', label: 'Progress', icon: ChartBar, iconActive: ChartBarFill },
-		{ href: '/weight', label: 'Weight', icon: Gauge, iconActive: GaugeFill },
+		{ href: '/bodyweight', label: 'Weight', icon: Gauge, iconActive: GaugeFill },
 		{ href: '/settings', label: 'Settings', icon: Gear }
 	];
 }
@@ -57,12 +57,12 @@ export function tabRoots(): string[] {
 	return navTabs().flatMap((tab) => rootsOf(tab));
 }
 
-// The live session names History rather than `/workout`, which redirects straight back to it,
+// The live session names History rather than `/train`, which redirects straight back to it,
 // and rather than nothing: Train owns the address, but leaving a running session is a step
 // inside the app, not the end of it. The session keeps running; the tab's dot is the way in.
 const PARENTS: Record<string, string> = {
 	'/history': '/progress',
-	'/workout/live': '/history'
+	'/train/live': '/history'
 };
 
 export function parentOf(pathname: string): string | null {

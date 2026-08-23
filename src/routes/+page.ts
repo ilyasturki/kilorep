@@ -7,6 +7,6 @@ export const prerender = !import.meta.env.APP_BUILD;
 
 export const load: PageLoad = () => {
 	if (import.meta.env.APP_BUILD) {
-		redirect(307, '/workout');
+		redirect(307, '/train');
 	}
 };

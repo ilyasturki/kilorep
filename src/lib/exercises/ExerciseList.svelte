@@ -92,7 +92,7 @@
 		trailing={since === undefined && selected === undefined ? undefined : recency}
 		chevron={onpick === undefined}
 		pressed={selected === undefined || merged ? undefined : picked}
-		href={merged || onpick !== undefined ? undefined : `/exercises/${exercise.id}`}
+		href={merged || onpick !== undefined ? undefined : `/plan/exercises/${exercise.id}`}
 		onclick={merged || onpick === undefined ? undefined : () => onpick(exercise)}
 		class={merged ? 'pointer-events-none' : undefined}
 	/>
@@ -104,7 +104,7 @@
 	<div class={cell}>
 		{#if onpick === undefined}
 			<a
-				href="/exercises/{parent.id}"
+				href="/plan/exercises/{parent.id}"
 				aria-label={parent.name}
 				data-list-row
 				class={backdrop}
@@ -131,7 +131,7 @@
 
 					{#if onpick === undefined}
 						<a
-							href="/exercises/{variant.id}"
+							href="/plan/exercises/{variant.id}"
 							aria-label={variant.name}
 							class={chip}
 							{@attach press()}

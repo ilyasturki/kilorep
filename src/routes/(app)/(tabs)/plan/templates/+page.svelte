@@ -53,7 +53,7 @@
 		}
 	});
 
-	const blank = `/templates/${crypto.randomUUID()}`;
+	const blank = `/plan/templates/${crypto.randomUUID()}`;
 
 	let showArchived = $state(false);
 </script>
@@ -94,7 +94,7 @@
 		stacked
 		leading={mark === null ? undefined : tile}
 		trailing={draggable ? grip : undefined}
-		href="/templates/{template.id}"
+		href="/plan/templates/{template.id}"
 		class={klass}
 	/>
 {/snippet}

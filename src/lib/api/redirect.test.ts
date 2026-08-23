@@ -17,7 +17,9 @@ describe('resolveRedirect', () => {
 	});
 
 	test('accepts an absolute URL on this origin, reduced to a path', () => {
-		expect(resolveRedirect(`${ORIGIN}/exercises?q=press`, ORIGIN)).toBe('/exercises?q=press');
+		expect(resolveRedirect(`${ORIGIN}/plan/exercises?q=press`, ORIGIN)).toBe(
+			'/plan/exercises?q=press'
+		);
 	});
 
 	test('refuses every spelling of somewhere else', () => {

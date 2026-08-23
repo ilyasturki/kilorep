@@ -17,7 +17,7 @@ vi.mock('$lib/workout/active.svelte', () => ({ activeWorkout: { session: null } 
 
 const tabRoots = navRoots();
 
-const LIVE = '/workout/live';
+const LIVE = '/train/live';
 
 function decide(
 	pathname: string,
@@ -34,7 +34,7 @@ function decide(
 
 describe('decideBack', () => {
 	it('closes an open overlay before anything else, wherever back is pressed', () => {
-		expect(decide('/workout', { overlayOpen: true })).toEqual({ kind: 'close-overlay' });
+		expect(decide('/train', { overlayOpen: true })).toEqual({ kind: 'close-overlay' });
 		expect(decide('/history/abc', { overlayOpen: true })).toEqual({ kind: 'close-overlay' });
 		expect(decide('/settings', { overlayOpen: true, depth: 0 })).toEqual({
 			kind: 'close-overlay'
@@ -48,20 +48,23 @@ describe('decideBack', () => {
 	});
 
 	it('minimizes at a tab root even with history behind it, so back never replays tab taps', () => {
-		expect(decide('/workout', { depth: 9 })).toEqual({ kind: 'minimize' });
+		expect(decide('/train', { depth: 9 })).toEqual({ kind: 'minimize' });
 	});
 
 	it('walks real history from a screen inside a tab, so back is where the user was', () => {
 		expect(decide('/history/abc')).toEqual({ kind: 'history-back' });
-		expect(decide('/templates/t1')).toEqual({ kind: 'history-back' });
-		expect(decide('/exercises/bench-press')).toEqual({ kind: 'history-back' });
+		expect(decide('/plan/templates/t1')).toEqual({ kind: 'history-back' });
+		expect(decide('/plan/exercises/bench-press')).toEqual({ kind: 'history-back' });
 	});
 
 	it('falls back to the tab root when nothing of ours is behind — a deep link, a cold boot', () => {
-		expect(decide('/templates/t1', { depth: 0 })).toEqual({ kind: 'goto', path: '/templates' });
-		expect(decide('/exercises/bench-press', { depth: 0 })).toEqual({
+		expect(decide('/plan/templates/t1', { depth: 0 })).toEqual({
 			kind: 'goto',
-			path: '/exercises'
+			path: '/plan/templates'
+		});
+		expect(decide('/plan/exercises/bench-press', { depth: 0 })).toEqual({
+			kind: 'goto',
+			path: '/plan/exercises'
 		});
 	});
 
@@ -71,7 +74,7 @@ describe('decideBack', () => {
 	});
 
 	it('minimizes at Weight rather than walking to Progress, which no longer parents it', () => {
-		expect(decide('/weight', { depth: 0 })).toEqual({ kind: 'minimize' });
+		expect(decide('/bodyweight', { depth: 0 })).toEqual({ kind: 'minimize' });
 	});
 
 	it('walks out of the live session to where the lifter came from, not out of the app', () => {
@@ -104,8 +107,8 @@ describe('parentOf', () => {
 	});
 
 	it('still walks a screen inside a tab up to the root that owns it', () => {
-		expect(parentOf('/exercises/bench-press')).toBe('/exercises');
-		expect(parentOf('/templates/t1')).toBe('/templates');
+		expect(parentOf('/plan/exercises/bench-press')).toBe('/plan/exercises');
+		expect(parentOf('/plan/templates/t1')).toBe('/plan/templates');
 		expect(parentOf('/history/abc')).toBe('/history');
 		expect(parentOf('/history')).toBe('/progress');
 	});

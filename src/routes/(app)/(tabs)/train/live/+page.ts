@@ -11,7 +11,7 @@ export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 	depends(SESSION_DEP);
 
 	if (activeWorkout.session === null) {
-		redirect(307, '/workout');
+		redirect(307, '/train');
 	}
 
 	const store = await getStore();

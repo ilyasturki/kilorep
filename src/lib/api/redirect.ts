@@ -1,4 +1,4 @@
-export const AFTER_LOGIN = '/workout';
+export const AFTER_LOGIN = '/train';
 
 const LOGIN = '/login';
 

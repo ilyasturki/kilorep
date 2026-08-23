@@ -59,7 +59,7 @@
 	{/if}
 
 	<MenuItem
-		href={group === null ? undefined : `/exercises/${group.meta.id}`}
+		href={group === null ? undefined : `/plan/exercises/${group.meta.id}`}
 		onselect={() => (open = false)}
 	>
 		<Eye size={18} />

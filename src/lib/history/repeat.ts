@@ -23,7 +23,7 @@ export async function launchRepeat(store: Store, workout: Workout): Promise<void
 
 	await invalidate(SESSION_DEP);
 
-	// `/workout` redirects itself to the session and replaces its own entry doing it, so this
+	// `/train` redirects itself to the session and replaces its own entry doing it, so this
 	// pushes one entry and back returns to the History screen the repeat was launched from.
-	await goto('/workout');
+	await goto('/train');
 }

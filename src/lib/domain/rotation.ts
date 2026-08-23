@@ -23,13 +23,26 @@ export function lastDoneByTemplate(workouts: Workout[]): Record<string, number> 
 }
 
 /**
+ * What the rotation offers, and the session it stepped off to get there.
+ *
+ * `after` is the whole reason this is a pair rather than a plan: a screen holding both can
+ * state the arithmetic it just did — *after Push A* — instead of presenting the result as a
+ * fact from nowhere. It is absent when no plan has been trained at all, which is a different
+ * sentence and not a missing one.
+ */
+export type NextUp = {
+	plan: Template;
+	after: Template | null;
+};
+
+/**
  * The plan after the one last trained, wrapping at the end — Push, Pull, Legs, Push.
  *
  * The anchor is the last session that ran a plan, not the last session: an empty workout
  * built on the gym floor is a detour, and a rotation that answered it with "start over"
  * would be reading its own absence as a position.
  */
-export function nextUp(plans: Template[], lastDone: Record<string, number>): Template | null {
+export function nextUp(plans: Template[], lastDone: Record<string, number>): NextUp | null {
 	if (plans.length === 0) {
 		return null;
 	}
@@ -46,6 +59,10 @@ export function nextUp(plans: Template[], lastDone: Record<string, number>): Tem
 		}
 	}
 
-	// An untrained rotation leaves the anchor at -1, which steps to its own head.
-	return plans[(anchor + 1) % plans.length];
+	// An untrained rotation leaves the anchor at -1, which steps to its own head — and names
+	// nothing behind it, because there is no session back there to have stepped off.
+	return {
+		plan: plans[(anchor + 1) % plans.length],
+		after: anchor === -1 ? null : plans[anchor]
+	};
 }

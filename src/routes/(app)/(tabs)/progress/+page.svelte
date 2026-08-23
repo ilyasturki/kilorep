@@ -234,7 +234,7 @@
 							{#each prs.slice(0, PR_ROWS) as pr (pr.exerciseId)}
 								<ListRow
 									title={nameOf(pr.exerciseId)}
-									href="/exercises/{pr.exerciseId}"
+									href="/plan/exercises/{pr.exerciseId}"
 									chevron={false}
 									dense
 								>
@@ -268,7 +268,7 @@
 										{#each prs.slice(PR_ROWS) as pr (pr.exerciseId)}
 											<ListRow
 												title={nameOf(pr.exerciseId)}
-												href="/exercises/{pr.exerciseId}"
+												href="/plan/exercises/{pr.exerciseId}"
 												chevron={false}
 												dense
 											>
@@ -297,7 +297,7 @@
 							{#each liftRows as row (row.exerciseId)}
 								<ListRow
 									title={nameOf(row.exerciseId)}
-									href="/exercises/{row.exerciseId}"
+									href="/plan/exercises/{row.exerciseId}"
 									chevron={false}
 									dense
 								>
@@ -417,7 +417,7 @@
 					{/if}
 				</section>
 
-				<a href="/weight" class={DOOR}>
+				<a href="/bodyweight" class={DOOR}>
 					<span class="flex items-center justify-between px-1">
 						<h2 class="label-caps">Body weight</h2>
 						<span aria-hidden="true" class="text-xl leading-none text-ink-faint">›</span>

@@ -22,7 +22,17 @@ const split = [push, pull, legs];
 function chosen(plans: Template[], done: Record<string, number>): string | null {
 	const up = nextUp(plans, done);
 
-	return up === null ? null : up.id;
+	return up === null ? null : up.plan.id;
+}
+
+function after(plans: Template[], done: Record<string, number>): string | null | undefined {
+	const up = nextUp(plans, done);
+
+	if (up === null) {
+		return undefined;
+	}
+
+	return up.after === null ? null : up.after.id;
 }
 
 describe('lastDoneByTemplate', () => {
@@ -92,5 +102,39 @@ describe('nextUp', () => {
 
 	test('has nothing to offer without a plan to offer', () => {
 		expect(chosen([], {})).toBeNull();
+	});
+});
+
+describe('nextUp anchor', () => {
+	test('names the plan it stepped off', () => {
+		const done = lastDoneByTemplate([session('push', 100)]);
+
+		expect(after(split, done)).toBe('push');
+	});
+
+	test('names the anchor across the wrap, not the head it landed on', () => {
+		const done = lastDoneByTemplate([session('legs', 100)]);
+
+		expect(after(split, done)).toBe('legs');
+	});
+
+	test('names nothing when no plan has been trained — the head is a start, not a step', () => {
+		expect(after(split, {})).toBeNull();
+	});
+
+	test('names nothing when the only session ran no plan', () => {
+		const done = lastDoneByTemplate([session(null, 100)]);
+
+		expect(after(split, done)).toBeNull();
+	});
+
+	test('names the anchor still in the rotation, never the retired plan that beat it', () => {
+		const done = lastDoneByTemplate([session('push', 100), session('retired', 200)]);
+
+		expect(after(split, done)).toBe('push');
+	});
+
+	test('names itself with a single plan, which is both the step and what it steps off', () => {
+		expect(after([push], { push: 100 })).toBe('push');
 	});
 });

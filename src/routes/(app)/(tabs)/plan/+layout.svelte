@@ -10,8 +10,8 @@
 	let { children }: LayoutProps = $props();
 
 	const halves = [
-		{ value: '/templates', href: '/templates', label: 'Templates', icon: Cards },
-		{ value: '/exercises', href: '/exercises', label: 'Exercises', icon: Books }
+		{ value: '/plan/templates', href: '/plan/templates', label: 'Templates', icon: Cards },
+		{ value: '/plan/exercises', href: '/plan/exercises', label: 'Exercises', icon: Books }
 	];
 </script>
 

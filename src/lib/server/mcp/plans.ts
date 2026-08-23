@@ -128,7 +128,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 
 			return reply({
 				plans: shown.map((template) => row(template, positions)),
-				nextUp: next === null ? null : { id: next.id, name: next.name },
+				nextUp: next === null ? null : { id: next.plan.id, name: next.plan.name },
 				archived: templates.length - active.length
 			});
 		}
@@ -297,7 +297,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 					name: template.name,
 					position: index
 				})),
-				nextUp: next === null ? null : { id: next.id, name: next.name }
+				nextUp: next === null ? null : { id: next.plan.id, name: next.plan.name }
 			});
 		}
 	);
