@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Flat near-black behind the cobalt rest ring in `ic_launcher_foreground`.
-    The hex is the sRGB of oklch(14.5% 0 0), Tailwind's neutral-950, written
-    out because Android resources cannot read app.css. It is no longer the
-    `on-accent` token — cobalt carries white — but the field is unchanged: the
-    icon audit found the bright-field-with-dark-glyph corner already crowded
-    (LADDER, TrainHeroic, HeavySet), and a dark field is also what lets the
-    mark take app.css's dark-theme accent swatch. The layer must stay a fully
-    opaque flat fill so every adaptive mask crops only dead field.
+    Cobalt field behind the white rest ring in `ic_launcher_foreground`. The
+    hex is the sRGB of oklch(54.6% 0.245 262.881), Tailwind's blue-600 —
+    app.css's `--accent`, which carries white (`--on-accent`) at 5.26:1 —
+    written out because Android resources cannot read app.css. The field moved
+    off near-black because a dark tile melts into a dark wallpaper: the icon
+    read as a bare blue thread with no object behind it. Making the field the
+    accent itself puts a tile of brand colour on any wallpaper, light or dark.
+    The layer must stay a fully opaque flat fill so every adaptive mask crops
+    only dead field.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -15,6 +16,6 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#0a0a0a"
+        android:fillColor="#155dfc"
         android:pathData="M0,0h108v108h-108z" />
 </vector>
