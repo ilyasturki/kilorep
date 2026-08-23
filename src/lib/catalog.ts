@@ -214,6 +214,21 @@ export const catalog: Exercise[] = [
 		}
 	},
 	{
+		id: 'straight-arm-pulldown',
+		name: 'Straight-Arm Pulldown',
+		aliases: [
+			'straight arm lat pulldown',
+			'lat pushdown',
+			'lat prayer',
+			'cable pullover',
+			'straight arm pushdown',
+			'rope straight arm pulldown'
+		],
+		equipment: 'Cable',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Triceps', 'Core'] }
+	},
+	{
 		id: 'barbell-row',
 		name: 'Barbell Row',
 		aliases: ['bent over row', 'bor', 'bb row', 'bent row', 'bent over barbell row'],
@@ -313,6 +328,15 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Back', secondary: ['Forearms'] }
 	},
 	{
+		id: 'dumbbell-shrug',
+		name: 'Dumbbell Shrug',
+		aliases: ['db shrug', 'dumbbell shrugs', 'db shrugs', 'db trap shrug'],
+		equipment: 'Dumbbell',
+		loadMode: 'per-hand',
+		muscles: { primary: 'Back', secondary: ['Forearms'] },
+		variantOf: 'barbell-shrug'
+	},
+	{
 		id: 'back-extension',
 		name: 'Back Extension',
 		aliases: [
@@ -385,6 +409,21 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Shoulders', secondary: ['Back', 'Biceps'] }
 	},
 	{
+		id: 'front-raise',
+		name: 'Front Raise',
+		aliases: [
+			'dumbbell front raise',
+			'db front raise',
+			'front delt raise',
+			'anterior raise',
+			'plate front raise',
+			'cable front raise'
+		],
+		equipment: 'Dumbbell',
+		loadMode: 'per-hand',
+		muscles: { primary: 'Shoulders', secondary: ['Chest'] }
+	},
+	{
 		id: 'lateral-raise',
 		name: 'Lateral Raise',
 		aliases: [
@@ -420,6 +459,15 @@ export const catalog: Exercise[] = [
 			'seated lateral raise machine'
 		],
 		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: [] },
+		variantOf: 'lateral-raise'
+	},
+	{
+		id: 'band-lateral-raise',
+		name: 'Band Lateral Raise',
+		aliases: ['banded lateral raise', 'band side raise', 'resistance band lateral raise'],
+		equipment: 'Band',
 		loadMode: 'total',
 		muscles: { primary: 'Shoulders', secondary: [] },
 		variantOf: 'lateral-raise'
@@ -469,12 +517,30 @@ export const catalog: Exercise[] = [
 		variantOf: 'rear-delt-fly'
 	},
 	{
+		id: 'band-pull-apart',
+		name: 'Band Pull-Apart',
+		aliases: ['pull apart', 'pullapart', 'banded pull apart', 'resistance band pull apart'],
+		equipment: 'Band',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		variantOf: 'rear-delt-fly'
+	},
+	{
 		id: 'face-pull',
 		name: 'Face Pull',
 		aliases: ['facepull', 'rope face pull', 'cable face pull'],
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Shoulders', secondary: ['Back'] }
+	},
+	{
+		id: 'band-face-pull',
+		name: 'Band Face Pull',
+		aliases: ['banded face pull', 'resistance band face pull', 'band facepull'],
+		equipment: 'Band',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		variantOf: 'face-pull'
 	},
 
 	{
@@ -536,10 +602,26 @@ export const catalog: Exercise[] = [
 	{
 		id: 'cable-curl',
 		name: 'Cable Curl',
-		aliases: ['rope curl', 'cable bicep curl', 'standing cable curl'],
+		aliases: [
+			'rope curl',
+			'cable bicep curl',
+			'standing cable curl',
+			'rope hammer curl',
+			'cable hammer curl',
+			'ez bar cable curl'
+		],
 		equipment: 'Cable',
 		loadMode: 'total',
-		muscles: { primary: 'Biceps', secondary: ['Forearms'] }
+		muscles: { primary: 'Biceps', secondary: ['Forearms'] },
+		grips: {
+			label: 'Attachment',
+			default: 'bar',
+			values: [
+				{ id: 'bar', label: 'Straight Bar' },
+				{ id: 'ez', label: 'EZ Bar' },
+				{ id: 'rope', label: 'Rope' }
+			]
+		}
 	},
 	{
 		id: 'machine-curl',
@@ -603,7 +685,19 @@ export const catalog: Exercise[] = [
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 1,
-		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] }
+		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] },
+		grips: {
+			label: 'Lean',
+			default: 'upright',
+			values: [
+				{ id: 'upright', label: 'Upright' },
+				{
+					id: 'forward',
+					label: 'Forward',
+					muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] }
+				}
+			]
+		}
 	},
 
 	{
@@ -688,6 +782,21 @@ export const catalog: Exercise[] = [
 		name: 'Cable Crunch',
 		aliases: ['kneeling crunch', 'rope crunch', 'kneeling cable crunch', 'cable ab crunch'],
 		equipment: 'Cable',
+		loadMode: 'total',
+		muscles: { primary: 'Core', secondary: [] }
+	},
+	{
+		id: 'machine-ab-crunch',
+		name: 'Machine Ab Crunch',
+		aliases: [
+			'ab crunch machine',
+			'crunch machine',
+			'abdominal crunch machine',
+			'ab machine',
+			'seated ab crunch',
+			'machine crunch'
+		],
+		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Core', secondary: [] }
 	},
@@ -778,6 +887,21 @@ export const catalog: Exercise[] = [
 		equipment: 'Dumbbell',
 		loadMode: 'unilateral',
 		muscles: { primary: 'Quads', secondary: ['Glutes'] }
+	},
+	{
+		id: 'step-up',
+		name: 'Step-Up',
+		aliases: [
+			'stepup',
+			'step ups',
+			'dumbbell step up',
+			'db step up',
+			'box step up',
+			'bench step up'
+		],
+		equipment: 'Dumbbell',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] }
 	},
 	{
 		id: 'lunge',
@@ -876,6 +1000,20 @@ export const catalog: Exercise[] = [
 			'glute abduction',
 			'abduction machine',
 			'seated hip abduction'
+		],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Glutes', secondary: [] }
+	},
+	{
+		id: 'hip-adduction',
+		name: 'Hip Adduction',
+		aliases: [
+			'adductor machine',
+			'hip adductor',
+			'inner thigh machine',
+			'adduction machine',
+			'seated hip adduction'
 		],
 		equipment: 'Machine',
 		loadMode: 'total',
