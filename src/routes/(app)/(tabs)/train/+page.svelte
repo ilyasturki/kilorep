@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { invalidate } from '$app/navigation';
+	import { invalidate, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 
 	import { catalogById } from '$lib/catalog';
 	import { lastDoneByTemplate, nextUp } from '$lib/domain/rotation';
@@ -66,6 +67,29 @@
 	function doneAt(template: Template): number | null {
 		return lastDone[template.id] ?? null;
 	}
+
+	// The launcher's Train shortcut, arriving as a request to press the START below rather
+	// than as its own way of starting one — the plan it picks, the empty fallback and the
+	// snapshot it takes are this screen's, unduplicated.
+	//
+	// Struck from the URL before anything is written, and struck whether or not it starts
+	// anything: this is the one entry the lifter never looked at first, and an address
+	// carrying a live instruction would start a second session on the next reload.
+	//
+	// A running session never reaches here at all — `+page.ts` redirects to it first — so
+	// the home screen cannot discard a workout.
+	$effect(() => {
+		if (page.url.searchParams.get('start') !== 'next') {
+			return;
+		}
+
+		const settled = new URL(page.url);
+
+		settled.searchParams.delete('start');
+		replaceState(settled, page.state);
+
+		void (next === null ? startEmpty() : startTemplate(next.plan));
+	});
 </script>
 
 <svelte:head>

@@ -116,11 +116,14 @@
 {/snippet}
 
 {#if href}
-	<a {href} data-list-row class={shape} {@attach press(() => onhold)}>{@render body()}</a>
+	<a {href} data-list-row data-ripple class={shape} {@attach press(() => onhold)}>
+		{@render body()}
+	</a>
 {:else if onclick}
 	<button
 		type="button"
 		data-list-row
+		data-ripple
 		aria-pressed={pressed}
 		{onclick}
 		class={shape}

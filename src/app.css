@@ -30,6 +30,10 @@
 	/* Pointer hover. `active:` keeps `surface-2`, so a press is a visible step past a hover. */
 	--hover: var(--color-neutral-100);
 
+	/* The ripple's ink — a wash over whatever it lands on, so `--ink` (already inverted here)
+	   serves both themes. Ten percent is legible crossing a card, invisible under a label. */
+	--ripple: color-mix(in oklab, var(--ink) 10%, transparent);
+
 	/* Nav tab fills: two even steps off each theme's own bar. Neutral on purpose — the accent means "this logs a set". */
 	--nav-hover: var(--color-neutral-100);
 	--nav-selected: var(--color-neutral-200);
@@ -218,6 +222,54 @@
 			scale: 0.98;
 			transition: scale 90ms ease-out;
 		}
+	}
+}
+
+/* The ripple: a circle sweeping out from where the thumb landed, on the surfaces Android's
+   own rows, menu items, chips and nav pills draw one.
+
+   It does not replace `press:bg-surface-2` — Material's model is both at once, a tint that
+   lands instantly with a sweep crossing it, and the tint alone was the app's whole answer
+   to a tap. The commit button keeps only the tint, marked by its absence of `data-ripple`:
+   it is the one control DESIGN.md singles out and its brightness press was chosen for it.
+
+   `position: relative` is what makes the layer land on the host `ui/ripple.ts` picks, and it
+   is written here rather than as a class because the attribute already says exactly which
+   elements mean it. It assumes nothing wearing `data-ripple` is positioned some other way;
+   nothing is. */
+[data-ripple] {
+	position: relative;
+}
+
+.ripple-layer {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	/* The host's own corners, whatever they are — `rounded-xl` on a row, `rounded-full` on a
+	   nav pill — without either end having to know the other's radius. */
+	border-radius: inherit;
+	pointer-events: none;
+}
+
+.ripple-drop {
+	position: absolute;
+	border-radius: 50%;
+	background: var(--ripple);
+	scale: 0;
+	animation: ripple-sweep var(--dur-small) var(--ease-small) forwards;
+	transition: opacity var(--dur-micro) var(--ease-micro);
+}
+
+/* The release. Deliberately not conditioned on the sweep having finished: a quick tap lifts
+   long before 225ms, and a circle that fades while still growing is what a native ripple
+   does with one. */
+.ripple-drop.is-fading {
+	opacity: 0;
+}
+
+@keyframes ripple-sweep {
+	to {
+		scale: 1;
 	}
 }
 

@@ -96,12 +96,18 @@
 
 	const key = $derived(disabled && variant === 'commit' ? ('inert' as const) : variant);
 	const look = $derived((compact ? compacts[key] : undefined) ?? looks[key]);
+
+	// Every variant ripples but the filled one — which on touch is where a menu's items land,
+	// so this is what gives them Android's own reply. `commit` keeps `--accent-press` alone:
+	// a wash of ink over the accent is a smudge, and its brightness press was chosen for it.
+	const ripples = $derived(key !== 'commit' && key !== 'inert');
 </script>
 
 <svelte:element
 	this={href ? 'a' : 'button'}
 	{href}
 	disabled={href ? undefined : disabled}
+	data-ripple={ripples ? '' : undefined}
 	class={[base, look.shape, caps ? look.caps : look.text, klass]}
 	{...rest}
 	{@attach press()}

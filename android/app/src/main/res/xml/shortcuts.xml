@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The two things worth doing without opening the app first, offered on a long press of
+    the launcher icon. Static rather than dynamic: both are true of every install from the
+    first launch, and a dynamic shortcut would mean a native call on a path that has no
+    other reason to touch the bridge.
+
+    Order matters — the launcher lists these bottom-up, nearest the icon first — so Train
+    is written second and sits under the thumb.
+
+    Both intents are `ACTION_VIEW` carrying a URL, which is the shape Capacitor's App
+    plugin recognises; `src/lib/app/launcher.ts` is what receives it.
+
+    The component is named explicitly. Left implicit, a phone with both the debug and the
+    release build installed would offer a chooser on a home-screen tap: the two declare
+    the same custom URL scheme. `@string/shortcut_target_package` is generated per build
+    type in `build.gradle`, because `${applicationId}` does not reach a resource file.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="weight"
+        android:icon="@drawable/ic_shortcut_weight"
+        android:shortcutShortLabel="@string/shortcut_weight_short"
+        android:shortcutLongLabel="@string/shortcut_weight_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="@string/shortcut_target_package"
+            android:targetClass="io.github.ilyasturki.kilorep.MainActivity"
+            android:data="io.github.ilyasturki.kilorep://shortcut/weight" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="train"
+        android:icon="@drawable/ic_shortcut_train"
+        android:shortcutShortLabel="@string/shortcut_train_short"
+        android:shortcutLongLabel="@string/shortcut_train_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="@string/shortcut_target_package"
+            android:targetClass="io.github.ilyasturki.kilorep.MainActivity"
+            android:data="io.github.ilyasturki.kilorep://shortcut/train" />
+    </shortcut>
+
+</shortcuts>

@@ -40,7 +40,7 @@
 
 <ToggleGroup.Item {value} aria-label={label}>
 	{#snippet child({ props })}
-		<button {...props} class={[chip, fills ? column : token]} {@attach press()}>
+		<button {...props} data-ripple class={[chip, fills ? column : token]} {@attach press()}>
 			{@render children()}
 		</button>
 	{/snippet}

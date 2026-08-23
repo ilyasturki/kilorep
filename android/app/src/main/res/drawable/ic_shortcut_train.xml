@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Phosphor's barbell, the same glyph and the same path data the tab bar draws from
+    `src/lib/ui/icons/Barbell.svelte`. Its 256-unit viewBox is kept verbatim rather than
+    rescaled, so the two stay one icon: a change in the app can be pasted straight across.
+
+    Sized 24dp on a 48dp square because the launcher does not mask or pad a shortcut icon
+    the way it does the launcher icon — what is drawn here is what appears, and a glyph
+    filling its own bounds reads as too large beside the system's own entries.
+
+    `@color/colorAccent` resolves against the *launcher's* configuration, not this app's,
+    which is what makes the `-night` qualifier work here: cobalt is blue-600 on a light
+    home screen and blue-500 on a dark one, exactly as it is inside the app.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <group android:translateX="128" android:translateY="128">
+        <path
+            android:fillColor="@color/colorAccent"
+            android:pathData="M244,116V88a20,20,0,0,0-20-20H208V64a20,20,0,0,0-20-20H164a20,20,0,0,0-20,20v52H112V64A20,20,0,0,0,92,44H68A20,20,0,0,0,48,64v4H32A20,20,0,0,0,12,88v28a12,12,0,0,0,0,24v28a20,20,0,0,0,20,20H48v4a20,20,0,0,0,20,20H92a20,20,0,0,0,20-20V140h32v52a20,20,0,0,0,20,20h24a20,20,0,0,0,20-20v-4h16a20,20,0,0,0,20-20V140a12,12,0,0,0,0-24ZM36,164V92H48v72Zm52,24H72V68H88Zm96,0H168V68h16Zm36-24H208V92h12Z" />
+    </group>
+</vector>

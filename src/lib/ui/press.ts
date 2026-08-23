@@ -1,6 +1,7 @@
 import type { Attachment } from 'svelte/attachments';
 import { tapHold } from '$lib/ui/feedback';
 import { coarsePointer } from '$lib/ui/pointer';
+import { Ripple } from '$lib/ui/ripple';
 
 // Must match dragOrder.svelte.ts: one hold length and one slop across all gestures.
 export const HOLD_MS = 500;
@@ -77,6 +78,11 @@ export class PressTracker {
 		this.#release();
 	}
 
+	/** Whether a pointer already owns this tracker, which is what `down` checks before taking one. */
+	public get tracking(): boolean {
+		return this.#pointerId !== -1;
+	}
+
 	public swallowsClick(): boolean {
 		const held = this.#held;
 
@@ -139,15 +145,32 @@ export function press(holds?: HoldSource): Attachment<HTMLElement> {
 			return true;
 		}
 
+		const ripple = new Ripple(element);
+
 		const tracker = new PressTracker({
+			// One place for both halves of the release, and there are three ways to reach it —
+			// the finger lifting, the press sliding off past the slop, and a long press being
+			// taken by something else. Android's ripple fades on all three.
 			mark: (pressed: boolean): void => {
 				element.classList.toggle(PRESSED, pressed);
+
+				if (!pressed) {
+					ripple.release();
+				}
 			},
 			hold: holds === undefined ? undefined : recognised
 		});
 
 		function onDown(event: PointerEvent): void {
+			// Read before the call, because `down` refuses a second finger silently and a ripple
+			// under one the tracker never took would have nothing to fade it.
+			const taken = !tracker.tracking;
+
 			tracker.down(event.pointerId, event.clientX, event.clientY);
+
+			if (taken) {
+				ripple.spawn(event.clientX, event.clientY);
+			}
 		}
 
 		function onMove(event: PointerEvent): void {

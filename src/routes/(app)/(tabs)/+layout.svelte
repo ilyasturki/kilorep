@@ -90,7 +90,11 @@
 					]}
 					{@attach press()}
 				>
+					<!-- `data-ripple` on the pill rather than on the tab: Android sweeps inside the
+					     shape the indicator draws, and a circle crossing the label under it would
+					     be the bar answering a tap with a bigger gesture than the one it makes. -->
 					<span
+						data-ripple
 						class={[
 							'flex h-8 w-full max-w-16 items-center justify-center rounded-full',
 							'transition-colors pointer-coarse:h-9',

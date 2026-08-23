@@ -18,11 +18,17 @@ def kilorepVersionCode = (project.findProperty('kilorepVersionCode') ?: '1') as 
 // hold the real key.
 def kilorepKeystore = System.getenv('KILOREP_KEYSTORE')
 
+// Named here because `res/xml/shortcuts.xml` needs the installed id as a string resource,
+// and it says why.
+def kilorepApplicationId = 'io.github.ilyasturki.kilorep'
+def kilorepDebugSuffix = '.dev'
+
 android {
     namespace = "io.github.ilyasturki.kilorep"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "io.github.ilyasturki.kilorep"
+        applicationId kilorepApplicationId
+        resValue "string", "shortcut_target_package", kilorepApplicationId
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode kilorepVersionCode
@@ -46,7 +52,8 @@ android {
     }
     buildTypes {
         debug {
-            applicationIdSuffix '.dev'
+            applicationIdSuffix kilorepDebugSuffix
+            resValue "string", "shortcut_target_package", kilorepApplicationId + kilorepDebugSuffix
         }
         release {
             if (kilorepKeystore) {

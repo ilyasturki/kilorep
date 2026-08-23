@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        The opt-in to the ahead-of-time back API. Default-on only from API 35, and minSdk is
+        24: on a 33/34 device the parser still defaults it to false, so the line is what the
+        back animation rests on there rather than decoration.
+
+        Saying yes here is not the same as taking every press. What the app actually wants
+        is pushed at runtime from `src/lib/nav/hardware-back.ts`, screen by screen.
+    -->
     <application
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -29,6 +38,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+                Long-press shortcuts. Declared on the launcher activity because that is
+                the icon they hang off; see `res/xml/shortcuts.xml` for what they do and
+                why their intents name this component outright.
+            -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
 
             <!--
                 The way back in from a Google sign-in, which has to happen in a
