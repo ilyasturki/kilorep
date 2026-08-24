@@ -281,8 +281,12 @@
 			<div class="flex flex-col gap-2 px-1">
 				<span class="label-caps">{axis.label}</span>
 
+				<!-- The scrollport clips what leans out of it, and the selected chip's ring and focus
+				     outline both do: without the room the first chip loses its left stroke. Padding
+				     back out by the same 6px keeps the row flush with the label above. -->
 				<ChipGroup
 					layout="row"
+					class="-mx-1.5 px-1.5"
 					label={axis.label}
 					bind:value={
 						() => grip ?? '',
