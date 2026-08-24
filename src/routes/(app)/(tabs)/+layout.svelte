@@ -56,7 +56,9 @@
 		</div>
 	{/if}
 
-	{#if activeWorkout.session !== null}
+	<!-- Not on the live page: its docked tray is the rest timer's face there, and two
+	     countdowns stacked over one tab bar would be the screen saying it twice. -->
+	{#if activeWorkout.session !== null && !covers(page.url.pathname, '/train/live')}
 		<RestBar />
 	{/if}
 

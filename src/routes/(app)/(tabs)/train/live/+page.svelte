@@ -8,7 +8,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { MediaQuery } from 'svelte/reactivity';
 	import { goto, invalidate } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
@@ -18,26 +17,22 @@
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { restTimer } from '$lib/workout/rest.svelte';
-	import { entriesWithMeta, entryOf, legOf, shelfOf } from '$lib/workout/groups';
+	import { entriesWithMeta, entryOf, legOf, setNote, shelfOf } from '$lib/workout/groups';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
-	import OverviewDrawer from '$lib/workout/OverviewDrawer.svelte';
+	import LiveTray from '$lib/workout/LiveTray.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
-	import OverviewPeek from '$lib/workout/OverviewPeek.svelte';
-	import SessionList from '$lib/workout/SessionList.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import { playMorphs } from '$lib/ui/morph';
-	import { mediumMs, smallMs } from '$lib/ui/motion';
-	import { coarsePointer } from '$lib/ui/pointer';
+	import { smallMs } from '$lib/ui/motion';
 	import { fullyVisible, instantly, revealNearest, revealStart } from '$lib/ui/scroll';
 	import Stack from '$lib/ui/icons/Stack.svelte';
-	import { press, SLOP } from '$lib/ui/press';
+	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	import type { PageProps } from './$types';
 
@@ -80,7 +75,7 @@
 			return;
 		}
 
-		// Logging a set is not a request to be moved. The pane travels only when the set taking
+		// Logging a set is not a request to be moved. The pane travels only when the row taking
 		// over is out of sight, and only far enough to bring it in — the title stays where it is.
 		if (mode === 'advance') {
 			revealNearest(holder);
@@ -123,8 +118,6 @@
 		} else {
 			reveal();
 		}
-
-		playMorphs();
 	}
 
 	function jumped() {
@@ -135,7 +128,13 @@
 		void settle();
 	}
 
+	// A tapped row is the set being lifted now, so a rest still running has been declined —
+	// skipped rather than cleared, and the tray offers the undo for a stray thumb.
 	function jumpTo(setId: string) {
+		if (restTimer.running) {
+			restTimer.skip();
+		}
+
 		activeWorkout.session?.select(setId);
 		jumped();
 	}
@@ -156,8 +155,53 @@
 		persistSession(data.store, session);
 	});
 
-	function commitSet(weight: number, reps: number) {
+	const entries = $derived(session === null ? [] : entriesWithMeta(session.workout, catalogById));
+
+	const allCursors = $derived(entries.flatMap((entry) => entry.cursors));
+
+	const activeLeg = $derived(
+		entries
+			.flatMap((entry) => entry.legs)
+			.find((leg) => leg.cursors.some((c) => c.set.id === session?.activeSetId)) ?? null
+	);
+
+	const activeCursor = $derived(
+		activeLeg?.cursors.find((c) => c.set.id === session?.activeSetId) ?? null
+	);
+
+	const activeCount = $derived(
+		activeLeg === null ? 0 : activeLeg.cursors.filter((c) => c.workingIndex >= 0).length
+	);
+
+	// Rest is earned by a set just done. Advancing may also *clear* a timer — moving on from a
+	// set that earns none ends the wait for the one before it — but a set logged behind the
+	// cursor must never kill the rest the lifter is standing in.
+	function startRest(setId: string, advancing: boolean) {
 		if (session === null) {
+			return;
+		}
+
+		const earned = restAfter(session.workout, setId, restSettings.current);
+
+		if (earned !== null) {
+			restTimer.start(earned);
+		} else if (advancing) {
+			restTimer.clear();
+		}
+	}
+
+	function logSet(weight: number, reps: number) {
+		if (session === null || session.activeSetId === null) {
+			return;
+		}
+
+		const active = allCursors.find((c) => c.set.id === session.activeSetId);
+
+		// Rewriting a logged set changes the numbers and nothing else: the cursor stays, and
+		// the rest already taken is not owed again.
+		if (active !== undefined && active.set.completed) {
+			session.update(weight, reps);
+
 			return;
 		}
 
@@ -167,13 +211,21 @@
 			return;
 		}
 
-		const earned = restAfter(session.workout, committed, restSettings.current);
+		startRest(committed, true);
+	}
 
-		if (earned === null) {
-			restTimer.clear();
-		} else {
-			restTimer.start(earned);
+	function quickLog(setId: string, weight: number, reps: number) {
+		if (session === null) {
+			return;
 		}
+
+		const advancing = setId === session.activeSetId;
+
+		if (!session.quickLog(setId, weight, reps)) {
+			return;
+		}
+
+		startRest(setId, advancing);
 	}
 
 	// The tail order is load-bearing — snapshot, holder, then the way out:
@@ -228,133 +280,7 @@
 		await invalidate(SESSION_DEP);
 	}
 
-	const entries = $derived(session === null ? [] : entriesWithMeta(session.workout, catalogById));
-
 	const slide = $derived(smallMs());
-
-	let overview = $state(false);
-	let instant = $state(false);
-
-	// 64rem is Tailwind's `lg`, where the rail is always open and there is no drawer to swipe.
-	const railed = new MediaQuery('min-width: 64rem', false);
-
-	let drag: { id: number; x0: number; y0: number; x: number; at: number; v: number } | null = null;
-
-	let peek = $state<number | null>(null);
-	let peekWidth = $state(0);
-	let settling = $state(false);
-
-	let swallow = false;
-
-	const SETTLE_AT = 0.4;
-
-	/** px per ms of rightward flick that opens the panel from anywhere. */
-	const FLING = 0.5;
-
-	function swipeStart(event: PointerEvent) {
-		swallow = false;
-
-		if (railed.current || !coarsePointer || !event.isPrimary || overview || peek !== null) {
-			drag = null;
-			return;
-		}
-
-		drag = {
-			id: event.pointerId,
-			x0: event.clientX,
-			y0: event.clientY,
-			x: event.clientX,
-			at: event.timeStamp,
-			v: 0
-		};
-	}
-
-	function swipeMove(event: PointerEvent & { currentTarget: HTMLElement }) {
-		if (drag === null || event.pointerId !== drag.id) {
-			return;
-		}
-
-		const span = event.timeStamp - drag.at;
-
-		if (span > 0) {
-			drag.v = (event.clientX - drag.x) / span;
-			drag.x = event.clientX;
-			drag.at = event.timeStamp;
-		}
-
-		const dx = event.clientX - drag.x0;
-		const dy = Math.abs(event.clientY - drag.y0);
-
-		if (peek !== null) {
-			peek = Math.max(0, Math.min(dx, peekWidth));
-			return;
-		}
-
-		if (dy > SLOP && dy > dx) {
-			drag = null;
-			return;
-		}
-
-		if (dx > SLOP && dx > 2 * dy) {
-			event.currentTarget.setPointerCapture(drag.id);
-			peek = dx;
-		}
-	}
-
-	function settled() {
-		settling = false;
-
-		if (peek === 0) {
-			peek = null;
-			return;
-		}
-
-		instant = true;
-		overview = true;
-
-		requestAnimationFrame(() => {
-			peek = null;
-		});
-	}
-
-	function swipeEnd() {
-		if (drag === null || peek === null) {
-			drag = null;
-			return;
-		}
-
-		const opened = peek >= peekWidth * SETTLE_AT || drag.v > FLING;
-		const target = opened ? peekWidth : 0;
-
-		drag = null;
-		swallow = true;
-
-		// A transition with nothing to do never fires `transitionend`, so settle here instead.
-		if (target === peek || mediumMs() === 0) {
-			peek = target;
-			settled();
-			return;
-		}
-
-		settling = true;
-		peek = target;
-	}
-
-	$effect(() => {
-		if (!overview) {
-			instant = false;
-		}
-	});
-
-	function swipeClick(event: MouseEvent) {
-		if (!swallow) {
-			return;
-		}
-
-		swallow = false;
-		event.preventDefault();
-		event.stopImmediatePropagation();
-	}
 
 	let insertOpen = $state(false);
 	let insertAfter = $state<string | null>(null);
@@ -379,6 +305,10 @@
 	const actingLeg = $derived(legOf(entries, acting));
 	const actingEntry = $derived(entryOf(entries, acting));
 
+	const actingIndex = $derived(
+		actingEntry === null ? -1 : entries.findIndex((entry) => entry.id === actingEntry.id)
+	);
+
 	const supersetShelf = $derived(
 		actingEntry === null ? null : shelfOf(entries, actingEntry.id, 'In this session')
 	);
@@ -397,6 +327,15 @@
 		}
 
 		session.setExerciseGrip(acting, grip);
+		acting = null;
+	}
+
+	function moveActing(to: number) {
+		if (session === null || actingEntry === null) {
+			return;
+		}
+
+		session.moveEntry(actingEntry.id, to);
 		acting = null;
 	}
 
@@ -439,13 +378,9 @@
 	let finishing = $state(false);
 	let discarding = $state(false);
 
-	const owed = $derived(
-		entries.flatMap((entry) => entry.cursors).filter((cursor) => !cursor.set.completed).length
-	);
+	const owed = $derived(allCursors.filter((cursor) => !cursor.set.completed).length);
 
-	const logged = $derived(
-		entries.flatMap((entry) => entry.cursors).filter((cursor) => cursor.set.completed).length
-	);
+	const logged = $derived(allCursors.filter((cursor) => cursor.set.completed).length);
 
 	// FINISH keeps a workout and discards one, and which it does is `hasLoggedSets` — a predicate
 	// the screen never mentions. So the prompt names the act rather than the button: a session
@@ -524,22 +459,11 @@
 		optionsSetId = null;
 	}
 
-	fillAppBar(() => ({ leading: overviewButton, action: finish }));
+	fillAppBar(() => ({
+		title: allCursors.length === 0 ? null : `${logged} of ${allCursors.length} sets`,
+		action: finish
+	}));
 </script>
-
-{#snippet overviewButton()}
-	<button
-		type="button"
-		aria-label="Session overview"
-		onclick={() => (overview = true)}
-		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-			border-line text-ink-muted focus-ring hover:bg-hover lg:hidden
-			press:bg-surface-2"
-		{@attach press()}
-	>
-		<Stack size={20} />
-	</button>
-{/snippet}
 
 {#snippet finish()}
 	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
@@ -551,121 +475,107 @@
 
 {#if session !== null}
 	<div class="flex min-h-0 flex-1 flex-col">
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="relative flex min-h-0 flex-1"
-			onpointerdown={swipeStart}
-			onpointermove={swipeMove}
-			onpointerup={swipeEnd}
-			onpointercancel={swipeEnd}
-			onclickcapture={swipeClick}
-		>
-			<!-- 19rem is the column's 288px half-cap plus 16px of air; the 13rem floor makes
-			     576 + 2 × (208 + 16) = 1024, so the rail lands flush the moment `lg` hits. -->
-			<aside
-				class="absolute inset-y-0 right-[calc(50%+19rem)] hidden
-					w-[clamp(13rem,50%_-_19.75rem,20rem)] py-3 lg:block"
-			>
-				<div class="max-h-full overflow-y-auto rounded-xl bg-surface p-2">
-					<SessionList
-						{entries}
-						activeSetId={session.activeSetId}
-						onjump={jumpTo}
-						onfocus={jumpTo}
-						oninsert={() => insertFrom(null)}
-						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
-						ondrop={jumped}
-						ondiscard={() => (discarding = true)}
-					/>
-				</div>
-			</aside>
-
-			<!-- `touch-pan-y` has to sit on the scroller: `touch-action` intersects from the touched
-			     element up to it only, so on the wrapper above it is never read and the swipe dies. -->
-			<main
-				onscroll={remember}
-				class="min-h-0 flex-1 touch-pan-y overflow-y-auto py-3 pb-[max(1.5rem,var(--spacing-safe-b))]"
-				{@attach restoring}
-			>
-				<div
-					class={['column-content flex flex-col gap-7 px-3', entries.length === 0 && 'min-h-full']}
-				>
-					{#each entries as entry (entry.id)}
-						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-5">
-							<EntryStack
-								legs={entry.legs}
-								superset={entry.superset}
-								onswap={(leg) => session.moveExercise(leg.id)}
-								swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
-							>
-								{#snippet leg(leg)}
-									<ExerciseBlock
-										meta={leg.meta}
-										grip={leg.grip}
-										cursors={leg.cursors}
-										history={data.history}
-										activeSetId={session.activeSetId}
-										oncommit={commitSet}
-										ondraft={(id, w, r) => session.draft(id, w, r)}
-										onrate={(id, rpe) => session.rate(id, rpe)}
-										onselect={(id) => session.select(id)}
-										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
-										oninsert={() => insertFrom(entry.id)}
-										onoptions={options}
-										onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
-									/>
-								{/snippet}
-							</EntryStack>
-						</div>
+		{#if allCursors.length > 1}
+			<div class="shrink-0 px-3 pt-2">
+				<div aria-hidden="true" class="mx-auto flex w-full max-w-xl gap-[3px]">
+					{#each allCursors as cursor (cursor.set.id)}
+						<span
+							class={[
+								'h-1 min-w-0 flex-1 rounded-full',
+								cursor.set.completed
+									? 'bg-accent'
+									: cursor.set.id === session.activeSetId
+										? 'bg-accent-soft [outline:1.5px_solid_var(--accent)] [outline-offset:-1px]'
+										: 'bg-line'
+							]}
+						></span>
 					{/each}
-
-					{#if entries.length === 0}
-						<EmptyState title="Empty session" description="Add an exercise to start logging.">
-							{#snippet icon()}
-								<Stack size={24} />
-							{/snippet}
-							{#snippet action()}
-								<Button variant="commit" onclick={() => insertFrom(null)}>Add exercise</Button>
-							{/snippet}
-						</EmptyState>
-					{:else}
-						<Button
-							variant="commit"
-							compact={!session.finished}
-							caps
-							class="w-full"
-							onclick={() => (finishing = true)}
-						>
-							FINISH
-						</Button>
-					{/if}
 				</div>
-			</main>
-		</div>
+			</div>
+		{/if}
+
+		<main onscroll={remember} class="min-h-0 flex-1 overflow-y-auto py-3 pb-6" {@attach restoring}>
+			<div
+				class={[
+					'mx-auto flex w-full max-w-xl flex-col gap-7 px-3',
+					entries.length === 0 && 'min-h-full'
+				]}
+			>
+				{#each entries as entry (entry.id)}
+					<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-5">
+						<EntryStack
+							legs={entry.legs}
+							superset={entry.superset}
+							onswap={(leg) => session.moveExercise(leg.id)}
+							swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
+						>
+							{#snippet leg(leg)}
+								<ExerciseBlock
+									meta={leg.meta}
+									grip={leg.grip}
+									cursors={leg.cursors}
+									history={data.history}
+									activeSetId={session.activeSetId}
+									onselect={jumpTo}
+									onquick={quickLog}
+									onadd={() => session.addSet(leg.cursors[0].exercise.id)}
+									oninsert={() => insertFrom(entry.id)}
+									onoptions={options}
+									onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
+								/>
+							{/snippet}
+						</EntryStack>
+					</div>
+				{/each}
+
+				{#if entries.length === 0}
+					<EmptyState title="Empty session" description="Add an exercise to start logging.">
+						{#snippet icon()}
+							<Stack size={24} />
+						{/snippet}
+						{#snippet action()}
+							<Button variant="commit" onclick={() => insertFrom(null)}>Add exercise</Button>
+						{/snippet}
+					</EmptyState>
+				{:else}
+					<Button variant="destructive" class="w-full" onclick={() => (discarding = true)}>
+						<Trash size={20} />
+						Discard workout
+					</Button>
+				{/if}
+			</div>
+		</main>
+
+		{#if entries.length > 0}
+			<LiveTray
+				cursor={activeCursor}
+				meta={activeLeg?.meta}
+				note={activeCursor === null
+					? null
+					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
+				count={activeCount}
+				history={data.history}
+				total={allCursors.length}
+				oncommit={logSet}
+				ondraft={(weight, reps) => {
+					if (session.activeSetId !== null) {
+						session.draft(session.activeSetId, weight, reps);
+					}
+				}}
+				onrate={(rpe) => {
+					if (session.activeSetId !== null) {
+						session.rate(session.activeSetId, rpe);
+					}
+				}}
+				onoptions={(anchor) => {
+					if (session.activeSetId !== null) {
+						options(session.activeSetId, anchor);
+					}
+				}}
+				onfinish={() => (finishing = true)}
+			/>
+		{/if}
 	</div>
-
-	<OverviewDrawer
-		bind:open={overview}
-		{instant}
-		{entries}
-		activeSetId={session.activeSetId}
-		onjump={jumpTo}
-		oninsert={() => insertFrom(null)}
-		onreorder={(entryId, index) => session.moveEntry(entryId, index)}
-		ondrop={jumped}
-		ondiscard={() => (discarding = true)}
-	/>
-
-	{#if peek !== null}
-		<OverviewPeek
-			offset={peek}
-			bind:width={peekWidth}
-			{settling}
-			{entries}
-			activeSetId={session.activeSetId}
-			onsettled={settled}
-		/>
-	{/if}
 
 	<ExercisePickerSheet
 		bind:open={insertOpen}
@@ -704,6 +614,10 @@
 		onbreak={breakSuperset}
 		onremove={removeExercise}
 		ongrip={gripExercise}
+		onmoveup={actingIndex > 0 ? () => moveActing(actingIndex - 1) : undefined}
+		onmovedown={actingIndex >= 0 && actingIndex < entries.length - 1
+			? () => moveActing(actingIndex + 1)
+			: undefined}
 	/>
 
 	<SetOptionsMenu

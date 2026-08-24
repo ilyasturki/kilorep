@@ -2,23 +2,19 @@
 	import { slide } from 'svelte/transition';
 
 	import { exertionLabel } from '$lib/domain/exertion';
-	import { hintLabel } from '$lib/domain/workout';
-	import { weightStep } from '$lib/domain/exercise';
+	import { canCommit, prefillFor } from '$lib/domain/workout';
 	import { gripLabel } from '$lib/domain/grip';
-	import { loadUnitLabel } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import AddRow from '$lib/ui/AddRow.svelte';
-	import { captureMorph } from '$lib/ui/morph';
 	import { smallMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
-	import SetRow from '$lib/ui/SetRow.svelte';
 	import { setNote, statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
 	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
-	import ActiveSet from '$lib/workout/ActiveSet.svelte';
+	import SwipeRow from '$lib/workout/SwipeRow.svelte';
 
 	type Props = {
 		meta: Exercise;
@@ -26,10 +22,8 @@
 		cursors: SetCursor[];
 		history: History;
 		activeSetId: string | null;
-		oncommit: (weight: number, reps: number) => void;
-		ondraft: (setId: string, weight: number | null, reps: number | null) => void;
-		onrate: (setId: string, rpe: number | null) => void;
 		onselect: (setId: string) => void;
+		onquick: (setId: string, weight: number, reps: number) => void;
 		onadd: () => void;
 		oninsert?: () => void;
 		onoptions: (setId: string, anchor: HTMLElement) => void;
@@ -42,10 +36,8 @@
 		cursors,
 		history,
 		activeSetId,
-		oncommit,
-		ondraft,
-		onrate,
 		onselect,
+		onquick,
 		onadd,
 		oninsert,
 		onoptions,
@@ -57,18 +49,37 @@
 	// on the same heading, which is where the options for this exercise already live.
 	const setup = $derived([meta.equipment, gripLabel(meta, grip)].filter(Boolean).join(' · '));
 
-	function rowHint(cursor: SetCursor): string | null {
-		if (cursor.set.weight !== null || cursor.set.reps !== null || cursor.set.type === 'warmup') {
+	const done = $derived(cursors.filter((cursor) => cursor.set.completed).length);
+
+	function offerOf(cursor: SetCursor): { weight: number | null; reps: number | null } {
+		return prefillFor(cursor, history, meta);
+	}
+
+	// One gesture logs the numbers the row shows; a row with nothing to offer has no gesture.
+	function quickOf(cursor: SetCursor): { weight: number; reps: number } | null {
+		if (cursor.set.completed || cursor.set.type === 'warmup') {
 			return null;
 		}
 
-		return hintLabel(history, cursor, meta, exertionScale.current);
+		const offer = offerOf(cursor);
+
+		return canCommit(offer.weight, offer.reps)
+			? { weight: offer.weight as number, reps: offer.reps as number }
+			: null;
 	}
 
-	function rowRight(cursor: SetCursor): string {
-		const recall = rowHint(cursor) ?? exertionLabel(cursor.set.rpe, exertionScale.current);
+	function rowWord(cursor: SetCursor): string | null {
+		if (cursor.set.completed) {
+			return exertionLabel(cursor.set.rpe, exertionScale.current) ?? 'Logged';
+		}
 
-		return [setNote(meta, grip, cursor.set), recall].filter(Boolean).join(' · ');
+		return cursor.set.id === activeSetId ? 'Now' : null;
+	}
+
+	function rowRight(cursor: SetCursor): string | null {
+		const parts = [setNote(meta, grip, cursor.set), rowWord(cursor)].filter(Boolean);
+
+		return parts.length === 0 ? null : parts.join(' · ');
 	}
 
 	let mounted = $state(false);
@@ -78,38 +89,6 @@
 	});
 
 	const grow = $derived(mounted ? smallMs() : 0);
-
-	const wrappers = new Map<string, HTMLElement>();
-
-	function tracked(setId: string) {
-		return (node: HTMLElement) => {
-			wrappers.set(setId, node);
-
-			return () => {
-				wrappers.delete(setId);
-			};
-		};
-	}
-
-	function wrapperOf(setId: string | null): HTMLElement | undefined {
-		return setId === null ? undefined : wrappers.get(setId);
-	}
-
-	// svelte-ignore state_referenced_locally
-	let focused = activeSetId;
-
-	$effect.pre(() => {
-		const next = activeSetId;
-
-		if (next === focused) {
-			return;
-		}
-
-		captureMorph(wrapperOf(focused));
-		captureMorph(wrapperOf(next));
-
-		focused = next;
-	});
 </script>
 
 <section data-exercise class="flex flex-col gap-2">
@@ -124,6 +103,8 @@
 			<p class="truncate text-sm font-bold text-ink-faint">{setup}</p>
 		</a>
 
+		<span class="shrink-0 text-sm font-extrabold text-ink-faint">{done}/{cursors.length}</span>
+
 		<button
 			type="button"
 			aria-label="Exercise options"
@@ -137,39 +118,38 @@
 		</button>
 	</div>
 
-	{#each cursors as cursor (cursor.set.id)}
-		<div transition:slide={{ duration: grow }} {@attach tracked(cursor.set.id)}>
-			{#if cursor.set.id === activeSetId}
-				<div data-active-set class="scroll-mb-3">
-					<ActiveSet
-						{cursor}
-						{history}
-						{meta}
-						note={setNote(meta, grip, cursor.set)}
-						step={(from, direction) => weightStep(meta.equipment, from, direction)}
-						unit={loadUnitLabel(meta)}
-						{oncommit}
-						ondraft={(weight, reps) => ondraft(cursor.set.id, weight, reps)}
-						onrate={(rpe) => onrate(cursor.set.id, rpe)}
-						onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
-					/>
-				</div>
-			{:else}
-				<SetRow
-					status={statusOf(cursor)}
+	<div class="list-group">
+		{#each cursors as cursor (cursor.set.id)}
+			{@const status = statusOf(cursor)}
+			{@const active = cursor.set.id === activeSetId}
+			{@const shown = cursor.set.completed
+				? { weight: cursor.set.weight, reps: cursor.set.reps }
+				: offerOf(cursor)}
+			<div
+				transition:slide={{ duration: grow }}
+				data-active-set={active ? '' : undefined}
+				class="scroll-my-3"
+			>
+				<SwipeRow
+					status={active && !cursor.set.completed ? 'active' : status}
 					index={cursor.workingIndex + 1}
-					weight={cursor.set.weight}
-					reps={cursor.set.reps}
+					weight={shown.weight}
+					reps={shown.reps}
+					right={rowRight(cursor)}
+					quick={quickOf(cursor)}
 					onselect={cursor.set.type === 'warmup' ? undefined : () => onselect(cursor.set.id)}
+					onquick={() => {
+						const quick = quickOf(cursor);
+
+						if (quick !== null) {
+							onquick(cursor.set.id, quick.weight, quick.reps);
+						}
+					}}
 					onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
-				>
-					{#snippet right()}
-						{rowRight(cursor)}
-					{/snippet}
-				</SetRow>
-			{/if}
-		</div>
-	{/each}
+				/>
+			</div>
+		{/each}
+	</div>
 
 	<AddRow
 		label="Add set"

@@ -5,6 +5,8 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import MenuItem from '$lib/ui/MenuItem.svelte';
+	import ArrowFatDown from '$lib/ui/icons/ArrowFatDown.svelte';
+	import ArrowFatUp from '$lib/ui/icons/ArrowFatUp.svelte';
 	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
 	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import ArrowsSplit from '$lib/ui/icons/ArrowsSplit.svelte';
@@ -20,6 +22,8 @@
 		onbreak?: () => void;
 		onremove: () => void;
 		ongrip?: (grip: string) => void;
+		onmoveup?: () => void;
+		onmovedown?: () => void;
 	};
 
 	let {
@@ -31,7 +35,9 @@
 		onsuperset,
 		onbreak,
 		onremove,
-		ongrip
+		ongrip,
+		onmoveup,
+		onmovedown
 	}: Props = $props();
 
 	let confirmingSwap = $state(false);
@@ -81,6 +87,11 @@
 		open = false;
 		pairing?.();
 	}
+
+	function move(go: (() => void) | undefined) {
+		open = false;
+		go?.();
+	}
 </script>
 
 <Menu bind:open title={name} {anchor}>
@@ -96,6 +107,18 @@
 		/>
 	{/if}
 
+	{#if onmoveup !== undefined}
+		<MenuItem onselect={() => move(onmoveup)}>
+			<ArrowFatUp size={18} />
+			Move up
+		</MenuItem>
+	{/if}
+	{#if onmovedown !== undefined}
+		<MenuItem onselect={() => move(onmovedown)}>
+			<ArrowFatDown size={18} />
+			Move down
+		</MenuItem>
+	{/if}
 	<MenuItem onselect={swap}>
 		<ArrowsLeftRight size={18} />
 		Swap exercise
