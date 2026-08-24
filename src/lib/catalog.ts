@@ -752,6 +752,19 @@ export const catalog: Exercise[] = [
 			]
 		}
 	},
+	{
+		// A station, not a belt. The bars carry the whole body and the stack carries none of it,
+		// so filing the machine under `dip` had the body added on top of the stack — a hundred and
+		// sixty on the pin read as a two-hundred-and-fifty-kilo dip, and the est-1RM line swung by
+		// the width of a body between one session and the next depending on which was free.
+		id: 'machine-dip',
+		name: 'Machine Dip',
+		aliases: ['dip machine', 'seated dip', 'seated dip machine', 'triceps dip machine'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] },
+		variantOf: 'dip'
+	},
 
 	{
 		id: 'wrist-curl',

@@ -9,6 +9,19 @@ export type PastSession = {
 };
 
 /**
+ * The one ranking both bests read: what was put on, and only then reps at it.
+ *
+ * Strict, and every caller walks its sets oldest first, so matching a best never takes it and
+ * the first achievement keeps it.
+ */
+function beats(candidate: PerformedSet, held: PerformedSet): boolean {
+	return (
+		candidate.weight > held.weight ||
+		(candidate.weight === held.weight && candidate.reps > held.reps)
+	);
+}
+
+/**
  * The heaviest set of one session.
  *
  * Body weight is not read here and does not need to be: every set in a session carried the
@@ -19,11 +32,7 @@ export function bestSet(sets: PerformedSet[]): PerformedSet | null {
 	let best: PerformedSet | null = null;
 
 	for (const set of sets) {
-		if (
-			best === null ||
-			set.weight > best.weight ||
-			(set.weight === best.weight && set.reps > best.reps)
-		) {
+		if (best === null || beats(set, best)) {
 			best = set;
 		}
 	}
@@ -38,10 +47,20 @@ export function estimated1Rm(set: PerformedSet, carried: number): number {
 }
 
 /**
- * The heaviest thing ever lifted on an exercise, body included.
+ * The best set ever logged on an exercise: the heaviest thing put on, most reps at it.
  *
  * `load` is what was moved and `set.weight` what was added to it — the same number twice on
  * a barbell, and eighty-eight against ten on a pull-up.
+ *
+ * The body is **stated and not scored**: the ranking reads what the lifter put on, and only
+ * then reps. On everything loaded by a bar or a stack the two are one number and this is the
+ * heaviest-ever it has always been. On a movement that carries body weight it is the fix for
+ * a best that had nothing else to rank — a pull-up logs nothing on the belt, so ranking the
+ * load ranked the weigh-in, and the badge landed on the morning the lifter was heaviest
+ * rather than the morning they pulled best. Ranking the belt gives that history back its
+ * reps, and the day something does go on it, the belt decides again.
+ *
+ * The estimate beside this one is where a rep is weighed against a kilo; this one is not.
  */
 export type Best = { set: PerformedSet; date: number; load: number };
 
@@ -49,14 +68,11 @@ export function rawPr(sessions: PastSession[], carried: CarriedOn): Best | null 
 	let best: Best | null = null;
 
 	for (const session of sessions) {
-		const body = carried(session.date);
-
 		for (const set of session.sets) {
-			const load = set.weight + body;
-
-			// Strict, and the sessions arrive oldest first: matching a best later never moves it.
-			if (best === null || load > best.load || (load === best.load && set.reps > best.set.reps)) {
-				best = { set, date: session.date, load };
+			if (best === null || beats(set, best.set)) {
+				// Read for the winner alone: the body is stated and never ranked, so the sessions
+				// that lose never need their weigh-in looked up at all.
+				best = { set, date: session.date, load: set.weight + carried(session.date) };
 			}
 		}
 	}

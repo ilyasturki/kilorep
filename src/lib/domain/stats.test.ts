@@ -16,6 +16,8 @@ const set = (weight: number, reps: number): PerformedSet => ({ weight, reps, rpe
 
 const gaining: CarriedOn = (at) => (at === 1 ? 78 : 82);
 
+const cutting: CarriedOn = (at) => (at === 1 ? 82 : 70);
+
 describe('bestSet', () => {
 	test('no history is null, not a zero', () => {
 		expect(bestSet([])).toBeNull();
@@ -77,10 +79,31 @@ describe('rawPr', () => {
 		expect(pr).toEqual({ set: set(10, 8), date: 1, load: 88 });
 	});
 
-	test('a heavier lifter at the same belt takes the best', () => {
+	test('a heavier lifter at the same belt does not take the best', () => {
 		const pr = rawPr([session(1, [set(10, 8)]), session(2, [set(10, 8)])], gaining);
 
-		expect(pr).toMatchObject({ date: 2, load: 92 });
+		expect(pr).toMatchObject({ date: 1, load: 88 });
+	});
+
+	test('with nothing ever on the belt the reps decide, not the weigh-in', () => {
+		const pr = rawPr([session(1, [set(0, 8)]), session(2, [set(0, 5)])], gaining);
+
+		expect(pr).toMatchObject({ set: set(0, 8), date: 1 });
+	});
+
+	test('the belt outranks the reps the day something goes on it', () => {
+		const pr = rawPr([session(1, [set(0, 12)]), session(2, [set(5, 3)])], gaining);
+
+		expect(pr).toMatchObject({ set: set(5, 3), date: 2, load: 87 });
+	});
+
+	// The deliberate half of the rule, and the one a reader would call a bug: `load` is what the
+	// winner moved and not the most ever moved, so a lifter eight kilos down at five on the belt
+	// takes the best off a heavier day that hung nothing on it.
+	test('the belt still leads when the day it was worn moved less', () => {
+		const pr = rawPr([session(1, [set(0, 12)]), session(2, [set(5, 3)])], cutting);
+
+		expect(pr).toMatchObject({ set: set(5, 3), date: 2, load: 75 });
 	});
 });
 

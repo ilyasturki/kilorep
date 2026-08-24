@@ -4,7 +4,7 @@
 	import { catalog } from '$lib/catalog';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
-	import { carriedFrom, carriedOn } from '$lib/domain/load';
+	import { bodyweightShareOf, carriedFrom, carriedOn } from '$lib/domain/load';
 	import { restLabel } from '$lib/domain/rest';
 	import { bestEstimate, rawPr } from '$lib/domain/stats';
 	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
@@ -68,6 +68,24 @@
 	const on = $derived(carriedOn(carried, exercise.id));
 
 	const pr = $derived(rawPr(past, on));
+
+	// A lift the body is part of cannot call its record the heaviest: the heaviest day on a
+	// pull-up is the day the scale read highest, which is the one thing the record is now
+	// careful not to rank. Where the belt was empty the reps are what won, and the tile names
+	// them — `Best set` was the first try and it answers to the `Best` badge in the history
+	// below, which is the other statistic entirely.
+	const carries = $derived(bodyweightShareOf(exercise) > 0);
+
+	const repRecord = $derived(carries && pr !== null && pr.set.weight === 0);
+
+	const HEAVIEST_NOTE =
+		'The heaviest you have ever moved on this grip, body weight included. What you lifted, ' +
+		'not a formula.';
+
+	const REPS_NOTE =
+		'The most reps you have ever held on this grip with nothing on the belt. The kilos are ' +
+		'your body on the day, stated but never ranked — a heavier morning is not a record. Put ' +
+		'something on the belt and that leads again.';
 
 	// The heaviest day and the strongest day are two questions, and the same list answers both.
 	const best = $derived(bestEstimate(past, on));
@@ -284,19 +302,21 @@
 
 		{#if pr !== null}
 			<div class="flex w-fit flex-wrap items-baseline gap-x-2 rounded-xl bg-surface px-3 py-2">
-				<Tooltip
-					text="The heaviest you have ever moved on this grip, body weight included. What you
-						lifted, not a formula."
-				>
-					<span class="label-caps">Heaviest ever</span>
+				<Tooltip text={repRecord ? REPS_NOTE : HEAVIEST_NOTE}>
+					<span class="label-caps">{repRecord ? 'Most reps' : 'Heaviest ever'}</span>
 				</Tooltip>
 				<span class="text-md font-extrabold tracking-tight">
 					{loadLabel(pr.load)} × {pr.set.reps}
 				</span>
 
-				{#if pr.load !== pr.set.weight}
+				<!-- `0 added` is a number saying nothing twice: on a bar it is the load again, and on a
+				     pull-up it is the whole of what was lifted named as an absence. A load that is the
+				     added weight again is also how a missing weigh-in shows: before the first one the body
+				     reads as zero, and the line would either repeat the belt or say the lifter weighs
+				     nothing. -->
+				{#if carries && pr.load !== pr.set.weight}
 					<span class="text-sm font-bold text-ink-faint">
-						{pr.set.weight} added
+						{pr.set.weight === 0 ? 'body weight' : `${pr.set.weight} added`}
 					</span>
 				{/if}
 			</div>
