@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { armsOf } from '$lib/domain/workout';
 	import type { Arms, SetCursor } from '$lib/domain/workout';
+	import { singleArmable } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { hasGrips } from '$lib/domain/grip';
 	import ArmsField from '$lib/workout/ArmsField.svelte';
@@ -90,7 +91,7 @@
 </script>
 
 <Menu bind:open {title} {anchor}>
-	{#if cursor !== null && onarms !== undefined}
+	{#if cursor !== null && onarms !== undefined && singleArmable(meta)}
 		<ArmsField value={arms} onpick={(next) => onarms(next)} />
 	{/if}
 

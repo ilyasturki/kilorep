@@ -41,6 +41,24 @@ export type Equipment =
 	| 'Kettlebell'
 	| 'Band';
 
+/** Implements a single hand or foot can take on its own: a dumbbell, a stack, a bell, a band. */
+const HANDHELD: Equipment[] = ['Dumbbell', 'Cable', 'Machine', 'Kettlebell', 'Band'];
+
+/**
+ * Whether a set of this exercise can honestly claim one arm did the work.
+ *
+ * A barbell, a Smith bar or the lifter's own body offers nothing a single side can take, and a
+ * unilateral movement is already one side at a time — the chip would restate the exercise.
+ * Unknown metadata keeps the offer: recording a fact is cheaper than refusing one.
+ */
+export function singleArmable(meta: Exercise | undefined): boolean {
+	if (meta === undefined) {
+		return true;
+	}
+
+	return meta.loadMode !== 'unilateral' && HANDHELD.includes(meta.equipment);
+}
+
 export const MUSCLES = [
 	'Chest',
 	'Back',

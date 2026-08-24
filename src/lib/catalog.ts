@@ -168,21 +168,34 @@ export const catalog: Exercise[] = [
 	{
 		id: 'pull-up',
 		name: 'Pull-Up',
-		aliases: ['pullup', 'overhand pull up', 'wide grip pull up'],
+		aliases: [
+			'pullup',
+			'overhand pull up',
+			'wide grip pull up',
+			'chinup',
+			'chin up',
+			'supinated pull up',
+			'underhand pull up',
+			'reverse grip pull up',
+			'neutral grip pull up'
+		],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 1,
-		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
-	},
-	{
-		id: 'chin-up',
-		name: 'Chin-Up',
-		aliases: ['chinup', 'supinated pull up', 'underhand pull up', 'reverse grip pull up'],
-		equipment: 'Bodyweight',
-		loadMode: 'total',
-		bodyweightShare: 1,
-		muscles: { primary: 'Back', secondary: ['Biceps'] },
-		variantOf: 'pull-up'
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		grips: {
+			label: 'Grip',
+			default: 'overhand',
+			values: [
+				{ id: 'overhand', label: 'Overhand' },
+				{
+					id: 'underhand',
+					label: 'Underhand',
+					muscles: { primary: 'Back', secondary: ['Biceps'] }
+				},
+				{ id: 'neutral', label: 'Neutral' }
+			]
+		}
 	},
 	{
 		id: 'lat-pulldown',
@@ -198,7 +211,9 @@ export const catalog: Exercise[] = [
 			'close grip pulldown',
 			'narrow grip pulldown',
 			'neutral grip pulldown',
-			'v bar pulldown'
+			'v bar pulldown',
+			'reverse grip pulldown',
+			'underhand pulldown'
 		],
 		equipment: 'Cable',
 		loadMode: 'total',
@@ -209,7 +224,8 @@ export const catalog: Exercise[] = [
 			values: [
 				{ id: 'wide', label: 'Wide' },
 				{ id: 'close', label: 'Close' },
-				{ id: 'neutral', label: 'Neutral' }
+				{ id: 'neutral', label: 'Neutral' },
+				{ id: 'underhand', label: 'Underhand' }
 			]
 		}
 	},
@@ -226,7 +242,15 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Cable',
 		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Triceps', 'Core'] }
+		muscles: { primary: 'Back', secondary: ['Triceps', 'Core'] },
+		grips: {
+			label: 'Attachment',
+			default: 'bar',
+			values: [
+				{ id: 'bar', label: 'Straight Bar' },
+				{ id: 'rope', label: 'Rope' }
+			]
+		}
 	},
 	{
 		id: 'barbell-row',
@@ -239,7 +263,7 @@ export const catalog: Exercise[] = [
 	{
 		id: 'seated-cable-row',
 		name: 'Seated Cable Row',
-		aliases: ['cable row', 'seated row'],
+		aliases: ['cable row', 'seated row', 'v bar row', 'straight bar row', 'wide grip cable row'],
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps'] },
@@ -249,7 +273,7 @@ export const catalog: Exercise[] = [
 			values: [
 				{ id: 'v-bar', label: 'V-Bar' },
 				{ id: 'wide', label: 'Wide Bar' },
-				{ id: 'rope', label: 'Rope' }
+				{ id: 'straight', label: 'Straight Bar' }
 			]
 		}
 	},
@@ -600,6 +624,20 @@ export const catalog: Exercise[] = [
 		muscles: { primary: 'Biceps', secondary: [] }
 	},
 	{
+		id: 'dumbbell-preacher-curl',
+		name: 'Dumbbell Preacher Curl',
+		aliases: [
+			'db preacher curl',
+			'one arm preacher curl',
+			'single arm preacher curl',
+			'dumbbell scott curl'
+		],
+		equipment: 'Dumbbell',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Biceps', secondary: [] },
+		variantOf: 'preacher-curl'
+	},
+	{
 		id: 'cable-curl',
 		name: 'Cable Curl',
 		aliases: [
@@ -626,7 +664,14 @@ export const catalog: Exercise[] = [
 	{
 		id: 'machine-curl',
 		name: 'Machine Curl',
-		aliases: ['machine biceps curl', 'machine bicep curl', 'curl machine', 'seated machine curl'],
+		aliases: [
+			'machine biceps curl',
+			'machine bicep curl',
+			'curl machine',
+			'seated machine curl',
+			'machine preacher curl',
+			'preacher curl machine'
+		],
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Biceps', secondary: [] }
@@ -668,7 +713,15 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Cable',
 		loadMode: 'total',
-		muscles: { primary: 'Triceps', secondary: [] }
+		muscles: { primary: 'Triceps', secondary: [] },
+		grips: {
+			label: 'Attachment',
+			default: 'rope',
+			values: [
+				{ id: 'rope', label: 'Rope' },
+				{ id: 'bar', label: 'Straight Bar' }
+			]
+		}
 	},
 	{
 		id: 'skull-crusher',
@@ -1078,5 +1131,6 @@ export const catalogById: Record<string, Exercise> = Object.fromEntries(
 export const FOLDED: Record<string, { id: string; grip: string }> = {
 	'close-grip-bench-press': { id: 'bench-press', grip: 'close' },
 	'close-grip-lat-pulldown': { id: 'lat-pulldown', grip: 'close' },
-	'wide-grip-lat-pulldown': { id: 'lat-pulldown', grip: 'wide' }
+	'wide-grip-lat-pulldown': { id: 'lat-pulldown', grip: 'wide' },
+	'chin-up': { id: 'pull-up', grip: 'underhand' }
 };
