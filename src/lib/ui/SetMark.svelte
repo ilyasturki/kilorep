@@ -21,9 +21,11 @@
 	type Props = {
 		status: SetStatus;
 		index?: number;
+		// For a mark drawn on an accent-soft ground, where the done tint would melt into it.
+		contrast?: boolean;
 	};
 
-	let { status, index }: Props = $props();
+	let { status, index, contrast = false }: Props = $props();
 
 	const label = $derived(fixedLabels[status] ?? `set ${index ?? ''} ${status}`.trim());
 </script>
@@ -33,7 +35,7 @@
 	aria-label={label}
 	class={[
 		'grid size-8 shrink-0 place-items-center rounded-full text-md font-extrabold',
-		shells[status]
+		contrast && status === 'done' ? 'bg-surface text-accent-text' : shells[status]
 	]}
 >
 	{#if status === 'done'}

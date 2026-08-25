@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { invalidate, replaceState } from '$app/navigation';
+	import { afterNavigate, goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 
 	import { catalogById } from '$lib/catalog';
 	import { lastDoneByTemplate, nextUp } from '$lib/domain/rotation';
 	import { drawableMark, startable, startFrom } from '$lib/domain/template';
-	import { firstUncompleted } from '$lib/domain/workout';
+	import { cursors, firstUncompleted } from '$lib/domain/workout';
 	import { formatSince, lastDoneLine } from '$lib/history/label';
 	import { planLine, planMeta, rotationLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
-	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
+	import { activeWorkout } from '$lib/workout/active.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -23,13 +23,13 @@
 
 	let { data }: PageProps = $props();
 
-	// No goto after the invalidation: this address redirects itself the moment the holder says a
-	// session runs, and replaces its own entry doing it. A goto to where we already are would
-	// push a duplicate, and back out of the session would land on the session.
+	// Starting is the one act that enters the session: this screen no longer redirects itself
+	// while one runs, so the push here is what puts `/train/live` in front — and behind it,
+	// this home for back to land on.
 	async function startEmpty() {
 		activeWorkout.begin(data.history, null, data.grips);
 
-		await invalidate(SESSION_DEP);
+		await goto('/train/live');
 	}
 
 	async function startTemplate(template: Template) {
@@ -42,8 +42,22 @@
 			data.grips
 		);
 
-		await invalidate(SESSION_DEP);
+		await goto('/train/live');
 	}
+
+	const running = $derived(activeWorkout.session);
+
+	const runningTitle = $derived.by(() => {
+		if (running === null) {
+			return '';
+		}
+
+		const template = data.templates.find((t) => t.id === running.workout.templateId);
+
+		return template === undefined ? 'Workout' : templateTitle(template);
+	});
+
+	const runningSets = $derived(running === null ? [] : cursors(running.workout));
 
 	const now = Date.now();
 
@@ -76,9 +90,13 @@
 	// anything: this is the one entry the lifter never looked at first, and an address
 	// carrying a live instruction would start a second session on the next reload.
 	//
-	// A running session never reaches here at all — `+page.ts` redirects to it first — so
-	// the home screen cannot discard a workout.
-	$effect(() => {
+	// A session already running is never discarded for a shortcut — the request collapses
+	// into resuming it.
+	//
+	// `afterNavigate`, not `$effect`: on a cold load the effect fires before the router is
+	// up, and `replaceState` throws there. This callback runs once the navigation — the
+	// initial one included — has settled, which is the earliest a `goto` is worth anything.
+	afterNavigate(() => {
 		if (page.url.searchParams.get('start') !== 'next') {
 			return;
 		}
@@ -87,6 +105,12 @@
 
 		settled.searchParams.delete('start');
 		replaceState(settled, page.state);
+
+		if (running !== null) {
+			void goto('/train/live');
+
+			return;
+		}
 
 		void (next === null ? startEmpty() : startTemplate(next.plan));
 	});
@@ -98,7 +122,27 @@
 
 <main class="min-h-0 flex-1 overflow-y-auto">
 	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
-		{#if next === null}
+		{#if running !== null}
+			<!-- One card and no START buttons: a second workout on top of a running one is not a
+			     thing this screen may offer, and the way back into the session should be the
+			     biggest thing on it. -->
+			<section class="flex flex-col gap-2">
+				<h2 class="px-3 label-caps">In progress</h2>
+
+				<div class="flex flex-col gap-4 rounded-2xl bg-surface p-3">
+					<div class="flex min-w-0 flex-col gap-0.5 px-1">
+						<span class="truncate text-xl font-extrabold tracking-tight text-ink">
+							{runningTitle}
+						</span>
+						<span class="truncate text-md font-bold text-ink-muted">
+							{runningSets.filter((c) => c.set.completed).length} of {runningSets.length} sets logged
+						</span>
+					</div>
+
+					<Button variant="commit" caps class="w-full" href="/train/live">RESUME</Button>
+				</div>
+			</section>
+		{:else if next === null}
 			<!-- No plan is next, because there is no rotation to be next in. The card that used to
 			     stand here said "Next up: Empty workout", which is not a rotation reporting a
 			     position but a screen keeping its shape after its subject left. -->

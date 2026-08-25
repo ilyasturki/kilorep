@@ -23,7 +23,7 @@ export async function launchRepeat(store: Store, workout: Workout): Promise<void
 
 	await invalidate(SESSION_DEP);
 
-	// `/train` redirects itself to the session and replaces its own entry doing it, so this
-	// pushes one entry and back returns to the History screen the repeat was launched from.
-	await goto('/train');
+	// Straight into the session — its own load picks the snapshot up. One pushed entry, and
+	// `‹` walks up to the Train home rather than retracing the launch.
+	await goto('/train/live');
 }

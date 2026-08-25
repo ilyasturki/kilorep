@@ -1,5 +1,3 @@
-import { redirect } from '@sveltejs/kit';
-
 import { historyFrom, lastGripsFrom } from '$lib/store/derive';
 import { getStore } from '$lib/store/store';
 import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
@@ -26,9 +24,7 @@ export const load: PageLoad = async ({ depends }) => {
 		activeWorkout.begin(history, resume, grips);
 	}
 
-	if (activeWorkout.session !== null) {
-		redirect(307, '/train/live');
-	}
-
+	// No redirect while a session runs: this screen stays the tab's home and offers the way
+	// back in as a card, so back from the session has somewhere to land.
 	return { history, grips, templates, workouts };
 };

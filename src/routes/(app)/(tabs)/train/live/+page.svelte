@@ -15,6 +15,7 @@
 	import { canCommit, prefillFor } from '$lib/domain/workout';
 	import type { Arms } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { restTimer } from '$lib/workout/rest.svelte';
@@ -24,6 +25,7 @@
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
+	import ExertionDialog from '$lib/workout/ExertionDialog.svelte';
 	import LiveLedger from '$lib/workout/LiveLedger.svelte';
 	import LiveTray from '$lib/workout/LiveTray.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
@@ -205,17 +207,14 @@
 
 		const active = allCursors.find((c) => c.set.id === session.activeSetId);
 
-		// Rewriting a logged set changes the numbers and nothing else: the cursor stays, and
-		// the rest already taken is not owed again.
-		if (active !== undefined && active.set.completed) {
-			session.update(weight, reps);
-
-			return;
-		}
+		// Rewriting a logged set moves on like logging one — the check was pressed, the lifter
+		// is done here — but the rest already taken is not owed again, so a running timer is
+		// neither restarted nor cleared.
+		const rewriting = active !== undefined && active.set.completed;
 
 		const committed = session.commit(weight, reps);
 
-		if (committed === null) {
+		if (committed === null || rewriting) {
 			return;
 		}
 
@@ -236,8 +235,8 @@
 		startRest(setId, advancing);
 	}
 
-	// The tail order is load-bearing — snapshot, holder, then the way out:
-	// `/train` bounces back here while any of them still says a workout runs.
+	// The tail order is load-bearing — snapshot, holder, then the way out: this address
+	// resumes a session out of either while one still says a workout runs.
 	async function finishSession() {
 		if (session === null) {
 			return;
@@ -434,6 +433,15 @@
 		}
 	}
 
+	// Desktop only: the phone's tray already carries its own custom entry in the picker.
+	let exertionOpen = $state(false);
+
+	function rateSet(rpe: number | null) {
+		if (session !== null && optionsSetId !== null) {
+			session.rate(optionsSetId, rpe);
+		}
+	}
+
 	function armSet(arms: Arms) {
 		if (session !== null && optionsSetId !== null) {
 			session.setSetArms(optionsSetId, arms);
@@ -519,7 +527,12 @@
 {#if session !== null}
 	<div class="flex min-h-0 flex-1 flex-col">
 		{#if allCursors.length > 1}
-			<div class="shrink-0 px-3 pt-2 lg:px-4">
+			<!-- `scrollbar-gutter` on both this strip and the pane below: a classic scrollbar
+			     narrows the pane's content box but not this one's, and the two `mx-auto` centres
+			     drift apart by half its width. Reserving the same gutter here (hidden overflow
+			     makes this a scroll container, which is all the property asks) keeps the bar and
+			     the ledger on one axis. -->
+			<div class="shrink-0 [scrollbar-gutter:stable] overflow-y-hidden px-3 pt-2 lg:px-4">
 				<div aria-hidden="true" class="mx-auto flex w-full max-w-xl gap-[3px] lg:max-w-5xl">
 					{#each allCursors as cursor (cursor.set.id)}
 						<span
@@ -537,7 +550,11 @@
 			</div>
 		{/if}
 
-		<main onscroll={remember} class="min-h-0 flex-1 overflow-y-auto py-3 pb-6" {@attach restoring}>
+		<main
+			onscroll={remember}
+			class="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto py-3 pb-6"
+			{@attach restoring}
+		>
 			{#if entries.length === 0}
 				<div class="mx-auto flex min-h-full w-full max-w-xl flex-col gap-7 px-3">
 					<EmptyState title="Empty session" description="Add an exercise to start logging.">
@@ -572,6 +589,7 @@
 						oninsert={insertFrom}
 						onoptions={options}
 						onexercise={exerciseOptions}
+						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 					/>
 
 					<Button variant="destructive" class="w-full" onclick={() => (discarding = true)}>
@@ -701,6 +719,14 @@
 		onremove={removeSet}
 		ongrip={gripSet}
 		onarms={armSet}
+		onexertion={desk ? () => (exertionOpen = true) : undefined}
+	/>
+
+	<ExertionDialog
+		bind:open={exertionOpen}
+		scale={exertionScale.current}
+		value={optionsCursor?.set.rpe ?? null}
+		onapply={rateSet}
 	/>
 
 	<AlertDialog

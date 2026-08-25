@@ -459,7 +459,7 @@
 	   a custom property is invisible to it. Change one, change its twin. */
 	--dur-micro: 120ms; /* press, toggle, colour, a stepping number — nothing travels */
 	--dur-small: 225ms; /* chip, pill, segment, tab indicator, list row — under 120px */
-	--dur-medium: 335ms; /* sheet, drawer, menu — a screen fraction */
+	--dur-medium: 335ms; /* sheet, drawer — a screen fraction */
 	--dur-large: 430ms; /* page travel — full width */
 
 	--ease-micro: ease-out;
@@ -662,9 +662,11 @@
 	color: var(--ink);
 	@apply shadow-lg;
 
+	/* Micro, not medium: the panel travels 4px, and a fine pointer that just clicked is
+	   already waiting on it. The sheets keep the medium rung; only anchored menus pop. */
 	transition:
-		translate var(--dur-medium) var(--ease-medium),
-		opacity var(--dur-medium) var(--ease-medium);
+		translate var(--dur-micro) var(--ease-micro),
+		opacity var(--dur-micro) var(--ease-micro);
 
 	&[data-starting-style],
 	&[data-ending-style] {

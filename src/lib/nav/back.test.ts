@@ -81,8 +81,8 @@ describe('decideBack', () => {
 		expect(decide(LIVE)).toEqual({ kind: 'history-back' });
 	});
 
-	it('sends a cold-booted session to History, the one address that is not its own redirect', () => {
-		expect(decide(LIVE, { depth: 0 })).toEqual({ kind: 'goto', path: '/history' });
+	it('sends a cold-booted session up to the Train home, which holds its Resume card', () => {
+		expect(decide(LIVE, { depth: 0 })).toEqual({ kind: 'goto', path: '/train' });
 	});
 
 	it('matches roots on segments, not prefixes, and minimizes where nothing claims the address', () => {
@@ -101,9 +101,9 @@ describe('parentOf', () => {
 		}
 	});
 
-	it('parents the live session on History, not the address that redirects back to it', () => {
+	it('parents the live session on the Train home, which no longer redirects back into it', () => {
 		expect(navRoots()).toContain(LIVE);
-		expect(parentOf(LIVE)).toBe('/history');
+		expect(parentOf(LIVE)).toBe('/train');
 	});
 
 	it('still walks a screen inside a tab up to the root that owns it', () => {

@@ -124,23 +124,6 @@ export class WorkoutSession {
 		return id;
 	}
 
-	// Rewriting a logged set moves nothing: the lifter came back for the numbers, not to be
-	// carried forward. The cursor leaves only when this set was the last thing holding it —
-	// a session with nothing left to lift has no set to stand on.
-	public update(weight: number, reps: number): string | null {
-		const id = this.activeSetId;
-
-		if (id === null || !commitSet(this.workout, id, weight, reps)) {
-			return null;
-		}
-
-		if (firstUncompleted(this.workout) === null) {
-			this.#focus(null);
-		}
-
-		return id;
-	}
-
 	// One gesture logs a set exactly as offered, wherever it sits. The set under the cursor
 	// commits and advances as a logged set always has; any other row keeps the cursor where
 	// the lifter parked it — logging a set behind it is a correction, not a move.

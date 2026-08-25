@@ -227,7 +227,7 @@
 		});
 
 		await invalidate(SESSION_DEP);
-		await goto('/train');
+		await goto('/train/live');
 	}
 
 	let markOpen = $state(false);

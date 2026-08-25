@@ -57,12 +57,12 @@ export function tabRoots(): string[] {
 	return navTabs().flatMap((tab) => rootsOf(tab));
 }
 
-// The live session names History rather than `/train`, which redirects straight back to it,
-// and rather than nothing: Train owns the address, but leaving a running session is a step
-// inside the app, not the end of it. The session keeps running; the tab's dot is the way in.
+// The live session steps up to the Train home, which holds the way back in as a Resume
+// card while it runs. Leaving the session is a step inside the app, not the end of it —
+// the session keeps running behind the card.
 const PARENTS: Record<string, string> = {
 	'/history': '/progress',
-	'/train/live': '/history'
+	'/train/live': '/train'
 };
 
 export function parentOf(pathname: string): string | null {

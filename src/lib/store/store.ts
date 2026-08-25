@@ -32,11 +32,12 @@ import type { RecordKind, SyncAck, WireRecord } from '$lib/sync/protocol';
 
 import type { KilorepDatabase } from './db.ts';
 import { openDatabase } from './db.ts';
-import type { FinishedWorkout, LastPerformed } from './derive.ts';
+import type { FinishedWorkout, LastGrips, LastPerformed } from './derive.ts';
 import {
 	frequentFrom,
 	gripSessionsFrom,
 	historyFrom,
+	lastGripsFrom,
 	lastPerformedFrom,
 	pastSessionsFrom
 } from './derive.ts';
@@ -221,13 +222,15 @@ export class Store {
 		lastPerformed: LastPerformed;
 		frequent: string[];
 		history: History;
+		grips: LastGrips;
 	}> {
 		const workouts = await this.listWorkouts();
 
 		return {
 			lastPerformed: lastPerformedFrom(workouts),
 			frequent: frequentFrom(workouts),
-			history: historyFrom(workouts)
+			history: historyFrom(workouts),
+			grips: lastGripsFrom(workouts)
 		};
 	}
 

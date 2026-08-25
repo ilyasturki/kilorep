@@ -3,7 +3,9 @@
 	import type { Arms, SetCursor } from '$lib/domain/workout';
 	import { singleArmable } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
+	import { scaleName } from '$lib/domain/exertion';
 	import { hasGrips } from '$lib/domain/grip';
+	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import ArmsField from '$lib/workout/ArmsField.svelte';
 	import GripField from '$lib/workout/GripField.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -11,6 +13,7 @@
 	import MenuItem from '$lib/ui/MenuItem.svelte';
 	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
 	import Backspace from '$lib/ui/icons/Backspace.svelte';
+	import Gauge from '$lib/ui/icons/Gauge.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	type Props = {
@@ -24,6 +27,7 @@
 		onremove: () => void;
 		ongrip?: (grip: string) => void;
 		onarms?: (arms: Arms) => void;
+		onexertion?: () => void;
 	};
 
 	let {
@@ -36,7 +40,8 @@
 		onclear,
 		onremove,
 		ongrip,
-		onarms
+		onarms,
+		onexertion
 	}: Props = $props();
 
 	let confirming = $state(false);
@@ -96,6 +101,11 @@
 		onunlog?.();
 	}
 
+	function rate() {
+		open = false;
+		onexertion?.();
+	}
+
 	// Same trade Remove makes: a logged set's numbers are the one thing here nothing can put
 	// back, so the ask is owed. A draft is asked for nothing — it was never a record.
 	function clear() {
@@ -122,6 +132,13 @@
 			note="This set only"
 			onpick={(g) => ongrip?.(g)}
 		/>
+	{/if}
+
+	{#if onexertion !== undefined}
+		<MenuItem onselect={rate}>
+			<Gauge size={18} />
+			Custom {scaleName(exertionScale.current)}…
+		</MenuItem>
 	{/if}
 
 	{#if logged && onunlog !== undefined}
