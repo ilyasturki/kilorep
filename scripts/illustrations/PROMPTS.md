@@ -19,8 +19,11 @@ like one set, and one `Subject:` line per catalog id.
   thing holding the set together across separate runs and separate models.
 - **Attach references.** The set was originally drawn by a different model than
   the one running now, so words alone no longer guarantee the match. Pass two
-  or three existing PNGs — `squat`, `cable-fly`, `plank` cover a standing lift,
-  a machine and a floor hold — as style references alongside the prompt.
+  or three existing PNGs — `goblet-squat`, `machine-chest-press`, `side-plank`
+  cover a standing lift, a machine and a floor hold — as style references
+  alongside the prompt. Those three are named because they are what `raw/` still
+  holds: the first batch's PNGs are long gone, so pick the substitutes from the
+  directory's contents, never by converting a shipped SVG back to a raster.
 - **Never tune `trace.ts` to rescue a bad PNG.** Its options define the whole
   catalog's look; a threshold nudged for one drawing re-renders every other.
   Fix the drawing.
@@ -77,19 +80,22 @@ notices across a list of thumbs.
 
 ## Subjects
 
-One line per catalog id, in catalog order. Two ids deliberately share another's
-drawing rather than getting their own, because the movement is the same one:
-`wide-grip-lat-pulldown` ships a copy of `lat-pulldown`, and `leg-curl` ships a
-copy of `lying-leg-curl`. Their lines below are the shared source's.
+One line per catalog id, in catalog order. One id deliberately shares another's
+drawing rather than getting its own, because the movement is the same one:
+`leg-curl` ships a copy of `lying-leg-curl`, and its line below is the shared
+source's. That case is the only one — a different implement or a different angle
+is a different drawing, which is why every band, machine and dumbbell variant
+below has a line of its own.
 
 ### Chest
 
 - `bench-press`: Subject: a person performing a barbell bench press, lying flat on a bench with feet on the floor, pressing the barbell straight up above the chest with arms nearly extended, side view.
-- `close-grip-bench-press`: Subject: a person performing a close-grip barbell bench press, lying on a flat bench, hands close together on the bar and elbows tucked along the torso, side view.
 - `incline-bench-press`: Subject: a person performing an incline barbell bench press, lying on a bench inclined about 40 degrees, pressing the barbell up above the upper chest, side view.
+- `decline-bench-press`: Subject: a person performing a decline barbell bench press, lying on a bench declined about 20 degrees with the head lower than the hips and the ankles hooked under the leg pads at the high end, pressing the barbell straight up above the lower chest with the arms nearly extended, side view.
 - `dumbbell-bench-press`: Subject: a person performing a dumbbell bench press, lying flat on a bench, pressing a dumbbell in each hand straight up above the chest, front three-quarter view.
 - `incline-dumbbell-press`: Subject: a person performing an incline dumbbell bench press, lying on an inclined bench, pressing two dumbbells up above the upper chest, front three-quarter view.
 - `machine-chest-press`: Subject: a person performing a machine chest press, seated upright at a simplified chest press machine, pressing the horizontal handles forward, side view.
+- `incline-machine-chest-press`: Subject: a person performing an incline machine chest press, seated on a simplified plate-loaded incline press machine with the seat back reclined, both hands on the handles at chest height, pressing them forward and up, side view.
 - `smith-machine-bench-press`: Subject: a person performing a Smith machine bench press, lying flat on a bench set between the two vertical guide rails of a simplified Smith machine, feet on the floor, pressing the fixed bar up off the chest along the rails with the arms nearly extended, side view.
 - `cable-fly`: Subject: a person performing a cable fly, standing between two tall cable pulley towers, leaning slightly forward, bringing the two handles together in front of the chest in a wide arc, front view.
 - `dumbbell-fly`: Subject: a person performing a dumbbell fly, lying on a flat bench, arms open wide to the sides with slightly bent elbows holding a dumbbell in each hand, viewed from the head end of the bench.
@@ -103,15 +109,18 @@ copy of `lying-leg-curl`. Their lines below are the shared source's.
 - `pull-up`: Subject: a person performing a pull-up on a tall pull-up bar mounted well overhead, hanging with a wide overhand grip and the feet hanging clear of the floor with the knees bent and the ankles crossed behind, pulled up so the chin is level with the bar, front view.
 - `chin-up`: Subject: a person performing a chin-up, hanging from a straight overhead bar with a narrow underhand grip, palms facing the body, chin at bar height, front view.
 - `lat-pulldown`: Subject: a person performing a lat pulldown, seated at a simplified lat pulldown machine with thighs under the pads, pulling a wide bar down toward the upper chest with the cable running up to the overhead pulley, side view.
-- `close-grip-lat-pulldown`: Subject: a person performing a close-grip lat pulldown, seated at a simplified lat pulldown machine with the thighs under the pads, both hands close together on a small V-shaped double-D handle, pulling that handle down to the upper chest with the cable running up to the overhead pulley, side view.
-- `wide-grip-lat-pulldown`: Subject: a person performing a lat pulldown, seated at a simplified lat pulldown machine with thighs under the pads, pulling a wide bar down toward the upper chest with the cable running up to the overhead pulley, side view.
+- `straight-arm-pulldown`: Subject: a person performing a straight-arm pulldown, standing and facing a simplified cable machine, hinged forward at the hips with both arms straight, sweeping a rope attachment down from overhead to the front of the thighs, side view.
 - `barbell-row`: Subject: a person performing a bent-over barbell row, torso bent forward near parallel to the floor with a flat back, rowing the barbell up to the lower chest, side view.
 - `seated-cable-row`: Subject: a person performing a seated cable row, seated on the machine bench with knees slightly bent, feet on the platform, pulling the cable handle to the torso, simplified cable row machine, side view.
 - `dumbbell-row`: Subject: a person performing a one-arm dumbbell row, one knee and one hand supported on a flat bench, the other arm rowing a dumbbell up to the hip, back flat, side view.
+- `chest-supported-row`: Subject: a person performing a chest-supported dumbbell row, lying face down on a bench whose pad is thick, wide and clearly padded and is inclined about 45 degrees, the chest and stomach resting flat along the whole length of that pad and never floating above it, both feet planted on the floor behind, rowing a dumbbell in each hand up beside the ribs with both elbows driving back behind the torso, side view with the far arm and its dumbbell drawn just behind the near ones so that two separate dumbbells are visible, and the bench never drawn as a thin rail or bare tube.
 - `pendlay-row`: Subject: a person performing a Pendlay row, torso bent forward parallel to the floor with a flat back, rowing the barbell explosively from the floor up to the lower chest, side view.
 - `t-bar-row`: Subject: a person performing a T-bar row, standing astride a barbell whose far end is anchored in a floor hinge and whose near end is loaded with plates, torso hinged forward near parallel to the floor with a flat back, both hands gripping a V-shaped double-D handle clamped under the bar just behind the plates, pulling that handle up to the chest, side view.
 - `machine-row`: Subject: a person performing a chest-supported machine row, seated with chest against the pad, pulling the handles back with bent elbows, side view.
+- `high-row`: Subject: a person performing a machine high row, seated at a simplified plate-loaded machine with the chest against a vertical pad, both hands gripping handles mounted well above shoulder height, pulling them down and back toward the upper chest with the elbows driving behind the torso, side view.
+- `low-row`: Subject: a person performing a machine low row, seated at a simplified low row machine with the chest against a vertical pad, the feet on a footplate and a weight stack behind the seat, pulling two handles at hip height back to the waist with the elbows close to the sides, side view.
 - `barbell-shrug`: Subject: a person performing a barbell shrug, standing holding a barbell at thigh height with straight arms, shoulders shrugged up toward the ears, front view.
+- `dumbbell-shrug`: Subject: a person performing a dumbbell shrug at the very top of the rep, standing upright holding a heavy dumbbell in each hand at the sides with the arms hanging straight, both shoulders lifted hard toward the ears so the traps bunch up and the neck is hidden between them, front view.
 - `back-extension`: Subject: a person performing a back extension on a simplified 45-degree hyperextension bench, hips against the pad and ankles under the rollers, torso raised to a straight line with the legs and hands crossed on the chest, side view.
 
 ### Shoulders
@@ -121,11 +130,17 @@ copy of `lying-leg-curl`. Their lines below are the shared source's.
 - `seated-dumbbell-press`: Subject: a person performing a seated dumbbell shoulder press, pressing a dumbbell in each hand overhead with palms forward, front view.
 - `arnold-press`: Subject: a person performing a seated Arnold press, holding two dumbbells in front of the shoulders with palms facing the body and elbows in front, starting to press upward, front three-quarter view.
 - `upright-row`: Subject: a person performing a barbell upright row, standing holding a barbell with a narrow overhand grip, pulling it straight up to chest height with the elbows lifted high and wide above the hands, front view.
+- `front-raise`: Subject: a person performing a dumbbell front raise, standing upright with a dumbbell in each hand, the near arm raised straight out in front of the body to shoulder height with the palm facing down, the other arm hanging at the side, side view.
 - `lateral-raise`: Subject: a person performing a dumbbell lateral raise, standing, both arms raised straight out to the sides at shoulder height holding small dumbbells, front view.
 - `cable-lateral-raise`: Subject: a person performing a cable lateral raise, standing upright beside a cable tower with the pulley set at floor level, the working arm the one farther from the tower so the cable runs diagonally up across the front of the body, that arm raised straight out to the side to shoulder height, the other arm hanging relaxed at the side, front view.
+- `machine-lateral-raise`: Subject: a person performing a machine lateral raise, seated at a simplified lateral raise machine with the outer upper arms against the pads and the elbows bent, the pad arms pivoting level with the shoulders, lifting both elbows out sideways to shoulder height, front view.
+- `band-lateral-raise`: Subject: a person performing a band lateral raise, standing with both feet on the middle of a long resistance band and one end of the band gripped in each hand, both arms raised straight out to the sides to shoulder height with the band stretched taut from the feet up to the hands, front view.
 - `rear-delt-fly`: Subject: a person performing a bent-over dumbbell rear delt fly, torso bent forward near parallel to the floor with a flat back, raising a dumbbell in each hand out to the sides, side view.
 - `reverse-pec-deck`: Subject: a person performing a reverse pec deck fly, seated facing the machine with chest against the pad, arms swept out wide behind the torso gripping the handles, viewed from behind.
+- `cable-reverse-fly`: Subject: a person performing a cable reverse fly, standing between two simplified cable towers with the pulleys at shoulder height, each hand holding the handle from the opposite side so the cables cross in front of the chest, both arms sweeping out wide to the sides, front view.
+- `band-pull-apart`: Subject: a person performing a band pull-apart, standing upright with both arms straight out in front at shoulder height, one end of a resistance band gripped in each hand, pulling the hands apart so the arms sweep out wide to the sides and the band is stretched taut across the front of the chest, front view.
 - `face-pull`: Subject: a person performing a face pull, standing facing a high cable pulley, pulling a rope attachment toward the face with elbows high and wide, side view.
+- `band-face-pull`: Subject: a person performing a band face pull, standing facing a resistance band anchored at head height in front, one end of the band gripped in each hand, pulling both ends toward the face with the elbows lifted high and wide and the band stretched taut, side view.
 
 ### Biceps
 
@@ -142,6 +157,7 @@ copy of `lying-leg-curl`. Their lines below are the shared source's.
 - `hammer-curl`: Subject: a person performing a standing hammer curl, curling a dumbbell in each hand with a neutral thumbs-up grip, palms facing each other, front view.
 - `preacher-curl`: Subject: a person performing a preacher curl, seated at a preacher bench with upper arms resting on the sloped pad, curling an EZ-bar, side view.
 - `cable-curl`: Subject: a person performing a cable curl, standing facing a low cable pulley, elbows at the sides, curling a bar attached to the low cable, side view.
+- `machine-curl`: Subject: a person performing a machine biceps curl, seated at a simplified preacher curl machine with both upper arms resting on the angled pad, curling the handles up toward the shoulders, side view.
 
 ### Triceps
 
@@ -176,6 +192,7 @@ copy of `lying-leg-curl`. Their lines below are the shared source's.
 - `ab-wheel-rollout`: Subject: a person performing an ab wheel rollout, kneeling on the floor gripping a small wheel with both hands, arms extended forward and the torso lowered near parallel to the floor with a flat back, side view.
 - `russian-twist`: Subject: a person performing a Russian twist, seated on the floor leaning back with knees bent and feet lifted, holding a weight with both hands rotated to one side of the torso, three-quarter view.
 - `cable-crunch`: Subject: a person performing a kneeling cable crunch, kneeling below a high cable pulley, holding a rope attachment beside the head, crunching the torso down toward the floor, side view.
+- `machine-ab-crunch`: Subject: a person performing a machine ab crunch, seated in a simplified abdominal crunch machine with the hips staying back in the seat and the lower back against the pad, both hands gripping the handles beside the head with the elbows pointing down and forward, the torso curling forward and down so the ribs come toward the hips and the stomach visibly compresses into a rounded crunch, side view.
 - `hanging-leg-raise`: Subject: a person performing a hanging leg raise, hanging from a straight overhead bar with straight arms, both legs raised together straight in front to hip height forming an L shape, side view.
 
 ### Quads
@@ -188,6 +205,7 @@ copy of `lying-leg-curl`. Their lines below are the shared source's.
 - `leg-press`: Subject: a person performing a leg press, seated reclined in a simplified leg press machine, feet on the sled plate, knees bent at 90 degrees, side view.
 - `leg-extension`: Subject: a person performing a leg extension, seated on a simplified leg extension machine with shins behind the ankle pad, extending both legs straight out, side view.
 - `bulgarian-split-squat`: Subject: a person performing a Bulgarian split squat, rear foot resting on a bench behind, front knee bent deep, a dumbbell in each hand at the sides, side view.
+- `step-up`: Subject: a person performing a dumbbell step-up, one foot planted flat on a knee-high box with that knee bent and driving the body upward, the trailing foot still on the floor behind, torso upright with a dumbbell hanging in each hand at the sides, side view.
 - `lunge`: Subject: a person performing a walking lunge mid-step, front knee bent at ninety degrees, rear knee just above the floor, torso upright, a dumbbell in each hand, side view.
 
 ### Hamstrings
@@ -218,6 +236,7 @@ copy of `lying-leg-curl`. Their lines below are the shared source's.
 
 - `hip-thrust`: Subject: a person performing a barbell hip thrust, upper back resting on a flat bench, feet flat on the floor, hips bridged up to full extension with a barbell across the hips, side view.
 - `hip-abduction`: Subject: a person performing a seated hip abduction, seated on a simplified abduction machine with knees against the outer pads, pushing both legs apart, front view.
+- `hip-adduction`: Subject: a person performing a seated hip adduction, seated on a simplified adduction machine with the knees spread wide against the inner pads, squeezing both legs together toward the midline, front view.
 - `kettlebell-swing`: Subject: a person performing a kettlebell swing at the top of the swing, standing tall with the hips fully extended, both arms straight out in front at chest height gripping a single cast-iron kettlebell — a round ball-shaped weight with a flat base and a thick inverted-U loop handle across its top, both hands side by side inside the loop, the ball hanging below the hands — side view.
 - `glute-kickback`: Subject: a person performing a cable glute kickback, standing facing a low cable pulley and leaning slightly forward with both hands on the machine frame, an ankle strap on one foot driving that leg straight back and up behind the body, side view.
 
