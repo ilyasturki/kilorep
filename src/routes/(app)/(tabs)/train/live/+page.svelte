@@ -12,6 +12,7 @@
 
 	import { catalogById } from '$lib/catalog';
 	import { restAfter } from '$lib/domain/rest';
+	import { canCommit, prefillFor } from '$lib/domain/workout';
 	import type { Arms } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
@@ -23,14 +24,17 @@
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
+	import LiveLedger from '$lib/workout/LiveLedger.svelte';
 	import LiveTray from '$lib/workout/LiveTray.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
+	import RestPill from '$lib/workout/RestPill.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import { smallMs } from '$lib/ui/motion';
 	import { fullyVisible, instantly, revealNearest, revealStart } from '$lib/ui/scroll';
+	import { deskViewport } from '$lib/ui/viewport';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
@@ -39,6 +43,10 @@
 	let { data }: PageProps = $props();
 
 	const session = $derived(activeWorkout.session);
+
+	// The lg rung swaps the phone column for the ledger; the tray and its editor stand down
+	// there, so the desktop rows carry the editing and the app bar carries the rest.
+	const desk = $derived(deskViewport.current);
 
 	let intent: 'jump' | 'advance' = 'advance';
 	let scheduled = false;
@@ -463,10 +471,45 @@
 		title: allCursors.length === 0 ? null : `${logged} of ${allCursors.length} sets`,
 		action: finish
 	}));
+
+	// The ledger has no commit button of its own beyond the row checks, so Enter logs the
+	// highlighted set — but only from the page floor: a focused button or an open dialog
+	// answers Enter itself, and firing both would log a set behind the lifter's back.
+	function deskEnter(event: KeyboardEvent) {
+		if (!desk || event.key !== 'Enter' || event.target !== document.body) {
+			return;
+		}
+
+		if (session === null || activeCursor === null || activeLeg === null) {
+			return;
+		}
+
+		const offer = prefillFor(activeCursor, data.history, activeLeg.meta);
+
+		if (canCommit(offer.weight, offer.reps)) {
+			logSet(offer.weight as number, offer.reps as number);
+		}
+	}
 </script>
 
+<svelte:window onkeydown={deskEnter} />
+
 {#snippet finish()}
-	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
+	<div class="flex items-center gap-2.5">
+		{#if desk}
+			<RestPill />
+
+			{#if allCursors.length > 0}
+				<!-- The app bar's own title hides on lg to make room for the nav, so the count
+				     rides along here instead. -->
+				<span class="text-md font-extrabold text-ink-faint">
+					{logged} of {allCursors.length} sets
+				</span>
+			{/if}
+		{/if}
+
+		<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
+	</div>
 {/snippet}
 
 <svelte:head>
@@ -476,8 +519,8 @@
 {#if session !== null}
 	<div class="flex min-h-0 flex-1 flex-col">
 		{#if allCursors.length > 1}
-			<div class="shrink-0 px-3 pt-2">
-				<div aria-hidden="true" class="mx-auto flex w-full max-w-xl gap-[3px]">
+			<div class="shrink-0 px-3 pt-2 lg:px-4">
+				<div aria-hidden="true" class="mx-auto flex w-full max-w-xl gap-[3px] lg:max-w-5xl">
 					{#each allCursors as cursor (cursor.set.id)}
 						<span
 							class={[
@@ -495,40 +538,8 @@
 		{/if}
 
 		<main onscroll={remember} class="min-h-0 flex-1 overflow-y-auto py-3 pb-6" {@attach restoring}>
-			<div
-				class={[
-					'mx-auto flex w-full max-w-xl flex-col gap-7 px-3',
-					entries.length === 0 && 'min-h-full'
-				]}
-			>
-				{#each entries as entry (entry.id)}
-					<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-5">
-						<EntryStack
-							legs={entry.legs}
-							superset={entry.superset}
-							onswap={(leg) => session.moveExercise(leg.id)}
-							swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
-						>
-							{#snippet leg(leg)}
-								<ExerciseBlock
-									meta={leg.meta}
-									grip={leg.grip}
-									cursors={leg.cursors}
-									history={data.history}
-									activeSetId={session.activeSetId}
-									onselect={jumpTo}
-									onquick={quickLog}
-									onadd={() => session.addSet(leg.cursors[0].exercise.id)}
-									oninsert={() => insertFrom(entry.id)}
-									onoptions={options}
-									onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
-								/>
-							{/snippet}
-						</EntryStack>
-					</div>
-				{/each}
-
-				{#if entries.length === 0}
+			{#if entries.length === 0}
+				<div class="mx-auto flex min-h-full w-full max-w-xl flex-col gap-7 px-3">
 					<EmptyState title="Empty session" description="Add an exercise to start logging.">
 						{#snippet icon()}
 							<Stack size={24} />
@@ -537,16 +548,75 @@
 							<Button variant="commit" onclick={() => insertFrom(null)}>Add exercise</Button>
 						{/snippet}
 					</EmptyState>
-				{:else}
+				</div>
+			{:else if desk}
+				<div class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4">
+					<LiveLedger
+						{entries}
+						history={data.history}
+						activeSetId={session.activeSetId}
+						onselect={jumpTo}
+						onquick={quickLog}
+						oncommit={logSet}
+						ondraft={(weight, reps) => {
+							if (session.activeSetId !== null) {
+								session.draft(session.activeSetId, weight, reps);
+							}
+						}}
+						onrate={(rpe) => {
+							if (session.activeSetId !== null) {
+								session.rate(session.activeSetId, rpe);
+							}
+						}}
+						onadd={(exerciseId) => session.addSet(exerciseId)}
+						oninsert={insertFrom}
+						onoptions={options}
+						onexercise={exerciseOptions}
+					/>
+
 					<Button variant="destructive" class="w-full" onclick={() => (discarding = true)}>
 						<Trash size={20} />
 						Discard workout
 					</Button>
-				{/if}
-			</div>
+				</div>
+			{:else}
+				<div class="mx-auto flex w-full max-w-xl flex-col gap-7 px-3">
+					{#each entries as entry (entry.id)}
+						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-5">
+							<EntryStack
+								legs={entry.legs}
+								superset={entry.superset}
+								onswap={(leg) => session.moveExercise(leg.id)}
+								swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
+							>
+								{#snippet leg(leg)}
+									<ExerciseBlock
+										meta={leg.meta}
+										grip={leg.grip}
+										cursors={leg.cursors}
+										history={data.history}
+										activeSetId={session.activeSetId}
+										onselect={jumpTo}
+										onquick={quickLog}
+										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
+										oninsert={() => insertFrom(entry.id)}
+										onoptions={options}
+										onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
+									/>
+								{/snippet}
+							</EntryStack>
+						</div>
+					{/each}
+
+					<Button variant="destructive" class="w-full" onclick={() => (discarding = true)}>
+						<Trash size={20} />
+						Discard workout
+					</Button>
+				</div>
+			{/if}
 		</main>
 
-		{#if entries.length > 0}
+		{#if !desk && entries.length > 0}
 			<LiveTray
 				cursor={activeCursor}
 				meta={activeLeg?.meta}

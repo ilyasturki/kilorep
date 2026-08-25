@@ -166,10 +166,15 @@
 		</div>
 	{/if}
 
+	<!-- The hover reads on the whole row — trailing buttons included — so a fine pointer sees
+	     one target, and each button answers its own hover a shade deeper. -->
 	<div
 		class={[
 			'flex items-stretch',
 			status === 'active' ? 'bg-accent-soft' : 'bg-surface',
+			status !== 'active' &&
+				onselect !== undefined &&
+				'pointer-fine:transition-[background-color] pointer-fine:duration-100 pointer-fine:hover:bg-hover',
 			status === 'warmup' && 'opacity-[0.72]',
 			!pulling && pull === 0 && mediumMs() > 0 && 'transition-transform duration-(--dur-small)'
 		]}
@@ -181,7 +186,8 @@
 			onclick={onselect}
 			class={[
 				'flex min-h-row-dense min-w-0 flex-1 items-center gap-3 py-1.5 pl-3 text-left',
-				onselect !== undefined && 'focus-ring-inset hover:bg-hover press:bg-surface-2',
+				onselect !== undefined && 'focus-ring-inset press:bg-surface-2',
+				onselect !== undefined && status === 'active' && 'hover:bg-hover',
 				onselect !== undefined && 'pointer-fine:transition-[background-color]',
 				onselect !== undefined && 'pointer-fine:duration-100'
 			]}
@@ -207,7 +213,7 @@
 				aria-label="Log {quick.weight} × {quick.reps} as planned"
 				onclick={onquick}
 				class="grid w-12 shrink-0 place-items-center focus-ring-inset
-					hover:bg-hover press:bg-surface-2"
+					hover:bg-surface-2 press:bg-surface-2"
 				{@attach press()}
 			>
 				<span
@@ -218,7 +224,9 @@
 				</span>
 			</button>
 		{:else}
-			<span class="w-12 shrink-0 pointer-fine:hidden"></span>
+			<!-- Held on every pointer so the right-hand labels line up across rows: a completed
+			     row's word ends where the active row's does, check button or not. -->
+			<span class="w-12 shrink-0"></span>
 		{/if}
 
 		<!-- A fine pointer cannot long-press, so it keeps its own way into the options. -->
@@ -228,7 +236,7 @@
 				aria-label="Set options"
 				onclick={(e) => onoptions?.(e.currentTarget)}
 				class="hidden w-11 shrink-0 place-items-center text-ink-faint focus-ring-inset
-					hover:bg-hover hover:text-ink-muted pointer-fine:grid
+					hover:bg-surface-2 hover:text-ink-muted pointer-fine:grid
 					pointer-fine:transition-[background-color,color] pointer-fine:duration-100"
 			>
 				<More size={20} />

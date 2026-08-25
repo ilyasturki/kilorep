@@ -662,11 +662,14 @@
 	color: var(--ink);
 	@apply shadow-lg;
 
-	transition: translate var(--dur-medium) var(--ease-medium);
+	transition:
+		translate var(--dur-medium) var(--ease-medium),
+		opacity var(--dur-medium) var(--ease-medium);
 
 	&[data-starting-style],
 	&[data-ending-style] {
 		translate: 0 -0.25rem;
+		opacity: 0;
 	}
 }
 

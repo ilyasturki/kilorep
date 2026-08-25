@@ -80,7 +80,9 @@
 
 <svelte:document onvisibilitychange={wake} />
 
-<div class="shrink-0 overflow-hidden rounded-t-sheet border-t border-line bg-surface">
+<!-- `pb-safe-b`: with the tab bar gone from this screen, the tray is the bottommost thing
+     and owes the home-indicator inset the bar used to absorb. -->
+<div class="shrink-0 overflow-hidden rounded-t-sheet border-t border-line bg-surface pb-safe-b">
 	{#if restTimer.running}
 		<div role="timer" aria-label="Rest timer" class="relative">
 			<div

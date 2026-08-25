@@ -42,23 +42,43 @@
 	let confirming = $state(false);
 	let wiping = $state(false);
 
+	// Frozen at close, like the exercise menu: removing the set kills the live cursor while
+	// the sheet is still sliding out, and the confirm dialogs read from here after it's gone.
+	let held: { cursor: SetCursor | null; meta: Exercise | undefined; removable: boolean } = {
+		cursor: null,
+		meta: undefined,
+		removable: false
+	};
+
+	const view = $derived.by(() => {
+		if (open && cursor !== null) {
+			held = { cursor, meta, removable };
+		}
+
+		return held;
+	});
+
 	const title = $derived(
-		cursor === null || cursor.workingIndex < 0 ? 'Warmup' : `Set ${cursor.workingIndex + 1}`
+		view.cursor === null || view.cursor.workingIndex < 0
+			? 'Warmup'
+			: `Set ${view.cursor.workingIndex + 1}`
 	);
 
-	const logged = $derived(cursor !== null && cursor.set.completed);
+	const logged = $derived(view.cursor !== null && view.cursor.set.completed);
 
-	const performed = $derived(cursor === null ? '' : `${cursor.set.weight} × ${cursor.set.reps}`);
+	const performed = $derived(
+		view.cursor === null ? '' : `${view.cursor.set.weight} × ${view.cursor.set.reps}`
+	);
 
 	// Nothing to take back on a set that holds nothing: the card's offer is not the set's, and
 	// a row already reading `– × –` would be given a menu item that changes nothing on screen.
 	const holds = $derived(
-		cursor !== null && (cursor.set.weight !== null || cursor.set.reps !== null)
+		view.cursor !== null && (view.cursor.set.weight !== null || view.cursor.set.reps !== null)
 	);
 
-	const gripped = $derived(hasGrips(meta) && ongrip !== undefined);
+	const gripped = $derived(hasGrips(view.meta) && ongrip !== undefined);
 
-	const arms = $derived(cursor === null ? 'both' : armsOf(cursor.set));
+	const arms = $derived(view.cursor === null ? 'both' : armsOf(view.cursor.set));
 
 	function remove() {
 		open = false;
@@ -91,12 +111,17 @@
 </script>
 
 <Menu bind:open {title} {anchor}>
-	{#if cursor !== null && onarms !== undefined && singleArmable(meta)}
+	{#if view.cursor !== null && onarms !== undefined && singleArmable(view.meta)}
 		<ArmsField value={arms} onpick={(next) => onarms(next)} />
 	{/if}
 
-	{#if gripped && cursor !== null}
-		<GripField {meta} value={cursor.set.grip} note="This set only" onpick={(g) => ongrip?.(g)} />
+	{#if gripped && view.cursor !== null}
+		<GripField
+			meta={view.meta}
+			value={view.cursor.set.grip}
+			note="This set only"
+			onpick={(g) => ongrip?.(g)}
+		/>
 	{/if}
 
 	{#if logged && onunlog !== undefined}
@@ -113,7 +138,7 @@
 		</MenuItem>
 	{/if}
 
-	{#if removable}
+	{#if view.removable}
 		<MenuItem destructive onselect={remove}>
 			<Trash size={18} />
 			Remove set

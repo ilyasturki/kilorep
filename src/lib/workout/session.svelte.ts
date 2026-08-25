@@ -283,7 +283,10 @@ export class WorkoutSession {
 			return;
 		}
 
-		const next = above === null ? firstUncompleted(this.workout) : advanceFrom(this.workout, above);
+		// `advanceFrom` only looks forward, and the removed exercise may have been the last
+		// thing ahead — sets still owed behind the seam are why the wrap-around is owed too.
+		const next =
+			(above === null ? null : advanceFrom(this.workout, above)) ?? firstUncompleted(this.workout);
 
 		this.#focus(next?.set.id ?? null);
 	}
@@ -309,7 +312,9 @@ export class WorkoutSession {
 			return;
 		}
 
-		const next = above === null ? firstUncompleted(this.workout) : advanceFrom(this.workout, above);
+		// Same wrap as removing an exercise: forward first, then anything still owed behind.
+		const next =
+			(above === null ? null : advanceFrom(this.workout, above)) ?? firstUncompleted(this.workout);
 
 		this.#focus(next?.set.id ?? null);
 	}

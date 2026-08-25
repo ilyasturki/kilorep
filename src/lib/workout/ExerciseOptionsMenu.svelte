@@ -43,14 +43,32 @@
 	let confirmingSwap = $state(false);
 	let confirmingRemove = $state(false);
 
-	const name = $derived(group === null ? 'Exercise' : group.meta.name);
+	// What the menu shows freezes the moment it closes: every action shuts it before it runs,
+	// and some — swap, remove — take the exercise with them, which would empty the sheet while
+	// it is still sliding out. The exit shows what the tap acted on, not the lookup's null.
+	let held: {
+		group: Group | null;
+		superset: boolean;
+		up: (() => void) | undefined;
+		down: (() => void) | undefined;
+	} = { group: null, superset: false, up: undefined, down: undefined };
 
-	const meta = $derived(group?.meta);
+	const view = $derived.by(() => {
+		if (open && group !== null) {
+			held = { group, superset, up: onmoveup, down: onmovedown };
+		}
+
+		return held;
+	});
+
+	const name = $derived(view.group === null ? 'Exercise' : view.group.meta.name);
+
+	const meta = $derived(view.group?.meta);
 
 	const gripped = $derived(hasGrips(meta) && ongrip !== undefined);
 
 	const logged = $derived(
-		group === null ? 0 : group.cursors.filter((cursor) => cursor.set.completed).length
+		view.group === null ? 0 : view.group.cursors.filter((cursor) => cursor.set.completed).length
 	);
 
 	const lost = $derived(
@@ -81,7 +99,7 @@
 		onremove();
 	}
 
-	const pairing = $derived(superset ? onbreak : onsuperset);
+	const pairing = $derived(view.superset ? onbreak : onsuperset);
 
 	function pair() {
 		open = false;
@@ -95,10 +113,10 @@
 </script>
 
 <Menu bind:open title={name} {anchor}>
-	{#if gripped && group !== null}
+	{#if gripped && view.group !== null}
 		<GripField
 			{meta}
-			value={group.grip}
+			value={view.group.grip}
 			note="Sets still to come"
 			onpick={(grip) => {
 				open = false;
@@ -107,14 +125,14 @@
 		/>
 	{/if}
 
-	{#if onmoveup !== undefined}
-		<MenuItem onselect={() => move(onmoveup)}>
+	{#if view.up !== undefined}
+		<MenuItem onselect={() => move(view.up)}>
 			<ArrowFatUp size={18} />
 			Move up
 		</MenuItem>
 	{/if}
-	{#if onmovedown !== undefined}
-		<MenuItem onselect={() => move(onmovedown)}>
+	{#if view.down !== undefined}
+		<MenuItem onselect={() => move(view.down)}>
 			<ArrowFatDown size={18} />
 			Move down
 		</MenuItem>
@@ -125,7 +143,7 @@
 	</MenuItem>
 	{#if pairing !== undefined}
 		<MenuItem onselect={pair}>
-			{#if superset}
+			{#if view.superset}
 				<ArrowsSplit size={18} />
 				Break superset
 			{:else}

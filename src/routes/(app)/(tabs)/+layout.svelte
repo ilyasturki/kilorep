@@ -62,62 +62,67 @@
 		<RestBar />
 	{/if}
 
-	<nav
-		aria-label="Main"
-		class="vt-tabbar shrink-0 border-t border-line-soft bg-surface px-1 pb-safe-b lg:hidden"
-	>
-		<div
-			class="relative mx-auto flex max-w-sm"
-			style="--seg-count: {tabs.length}; --seg-index: {selected}"
+	<!-- The live screen keeps the whole bottom edge: its tray is the working surface there,
+	     and a tab bar under it would be one more chrome row between the lifter and the set. -->
+	{#if !covers(page.url.pathname, '/train/live')}
+		<nav
+			aria-label="Main"
+			class="vt-tabbar shrink-0 border-t border-line-soft bg-surface px-1 pb-safe-b lg:hidden"
 		>
-			<!-- `aria-hidden`: `aria-current` on the link is what states the selection. Absent while
+			<div
+				class="relative mx-auto flex max-w-sm"
+				style="--seg-count: {tabs.length}; --seg-index: {selected}"
+			>
+				<!-- `aria-hidden`: `aria-current` on the link is what states the selection. Absent while
 			     no tab owns the route, so it never parks under the wrong one. -->
-			{#if selected >= 0}
-				<span aria-hidden="true" class="tab-pill">
-					<span class="h-8 w-full max-w-16 rounded-full bg-nav-selected pointer-coarse:h-9"></span>
-				</span>
-			{/if}
+				{#if selected >= 0}
+					<span aria-hidden="true" class="tab-pill">
+						<span class="h-8 w-full max-w-16 rounded-full bg-nav-selected pointer-coarse:h-9"
+						></span>
+					</span>
+				{/if}
 
-			{#each tabs as tab (tab.href)}
-				{@const active = isActive(page.url.pathname, tab)}
-				{@const Icon = (active && tab.iconActive) || tab.icon}
+				{#each tabs as tab (tab.href)}
+					{@const active = isActive(page.url.pathname, tab)}
+					{@const Icon = (active && tab.iconActive) || tab.icon}
 
-				<a
-					href={tab.href}
-					aria-current={active ? 'page' : undefined}
-					class={[
-						'group relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-1',
-						'focus-ring transition-colors',
-						active ? 'text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
-					]}
-					{@attach press()}
-				>
-					<!-- `data-ripple` on the pill rather than on the tab: Android sweeps inside the
+					<a
+						href={tab.href}
+						aria-current={active ? 'page' : undefined}
+						class={[
+							'group relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-1',
+							'focus-ring transition-colors',
+							active ? 'text-ink' : 'text-ink-faint pointer-fine:hover:text-ink-muted'
+						]}
+						{@attach press()}
+					>
+						<!-- `data-ripple` on the pill rather than on the tab: Android sweeps inside the
 					     shape the indicator draws, and a circle crossing the label under it would
 					     be the bar answering a tap with a bigger gesture than the one it makes. -->
-					<span
-						data-ripple
-						class={[
-							'flex h-8 w-full max-w-16 items-center justify-center rounded-full',
-							'transition-colors pointer-coarse:h-9',
-							!active && 'group-[.is-pressed]:bg-nav-hover pointer-fine:group-hover:bg-nav-hover'
-						]}
-					>
-						<span class="relative flex">
-							<Icon size={22} />
-							{#if tab.live}
-								<span class="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-accent"></span>
-							{/if}
+						<span
+							data-ripple
+							class={[
+								'flex h-8 w-full max-w-16 items-center justify-center rounded-full',
+								'transition-colors pointer-coarse:h-9',
+								!active && 'group-[.is-pressed]:bg-nav-hover pointer-fine:group-hover:bg-nav-hover'
+							]}
+						>
+							<span class="relative flex">
+								<Icon size={22} />
+								{#if tab.live}
+									<span class="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-accent"></span>
+								{/if}
+							</span>
 						</span>
-					</span>
 
-					<!-- The label is the half that gives. Five tabs of `w-16` plus five words wider than
+						<!-- The label is the half that gives. Five tabs of `w-16` plus five words wider than
 					     that is a min-content the bar cannot honour on a zoomed phone, and it used to
 					     answer by scrolling sideways — a row of five that has to be scrolled to is not a
 					     tab bar. The icon is the tab; the word under it truncates before the bar breaks. -->
-					<span class="max-w-full truncate text-xs font-medium">{tab.label}</span>
-				</a>
-			{/each}
-		</div>
-	</nav>
+						<span class="max-w-full truncate text-xs font-medium">{tab.label}</span>
+					</a>
+				{/each}
+			</div>
+		</nav>
+	{/if}
 </div>
