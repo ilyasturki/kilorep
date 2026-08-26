@@ -218,7 +218,9 @@ export function prefillFor(
 	meta: Exercise | undefined
 ): Prefill {
 	// Once the lifter has spoken there is nothing to offer, and a blank they made is a blank.
-	if (cursor.set.entered === true) {
+	// A completed set counts as spoken even without the flag: records written before `entered`
+	// existed hold logged numbers, and the offer for those is what they hold, not the carry.
+	if (cursor.set.entered === true || cursor.set.completed) {
 		return { weight: cursor.set.weight, reps: cursor.set.reps };
 	}
 

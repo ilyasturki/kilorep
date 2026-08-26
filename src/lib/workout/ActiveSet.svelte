@@ -19,6 +19,8 @@
 		note: string | null;
 		/** Working sets in this exercise — the "of n" the heading owes the set number. */
 		count: number;
+		/** Off where last time is beside the point — editing a record older than "last time". */
+		hints?: boolean;
 		step: Step;
 		unit: string;
 		oncommit: (weight: number, reps: number) => void;
@@ -33,6 +35,7 @@
 		meta,
 		note,
 		count,
+		hints = true,
 		step,
 		unit,
 		oncommit,
@@ -120,17 +123,23 @@
 		<div class="flex min-w-0 items-center gap-1 text-sm font-bold text-ink-faint">
 			{#if note !== null}
 				<span class="shrink-0">{note}</span>
-				<span aria-hidden="true">·</span>
+				{#if planned !== null || hints}
+					<span aria-hidden="true">·</span>
+				{/if}
 			{/if}
 
 			{#if planned !== null}
 				<span class="shrink-0">Target {planned}</span>
-				<span aria-hidden="true">·</span>
+				{#if hints}
+					<span aria-hidden="true">·</span>
+				{/if}
 			{/if}
 
-			<span class="truncate">
-				{hint === null ? 'First time' : `Last ${hint}`}
-			</span>
+			{#if hints}
+				<span class="truncate">
+					{hint === null ? 'First time' : `Last ${hint}`}
+				</span>
+			{/if}
 
 			<button
 				type="button"

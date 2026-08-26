@@ -8,6 +8,7 @@
 		title: string;
 		description?: string;
 		confirmLabel: string;
+		confirmVariant?: 'destructive' | 'primary';
 		stacked?: boolean;
 		onconfirm: () => void;
 	};
@@ -17,6 +18,7 @@
 		title,
 		description,
 		confirmLabel,
+		confirmVariant = 'destructive',
 		stacked = false,
 		onconfirm
 	}: Props = $props();
@@ -60,7 +62,7 @@
 					{/snippet}
 				</AlertDialog.Cancel>
 
-				<Button variant="destructive" class="flex-1" onclick={confirm}>
+				<Button variant={confirmVariant} class="flex-1" onclick={confirm}>
 					{confirmLabel}
 				</Button>
 			</div>

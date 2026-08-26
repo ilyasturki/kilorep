@@ -20,6 +20,11 @@
 		history: History;
 		/** Sets in the whole session — what the finish panel counts. */
 		total: number;
+		/** Off when the tray edits a record: no rest is owed for a set lifted weeks ago. */
+		rest?: boolean;
+		/** Off where last time is beside the point — editing a record older than "last time". */
+		hints?: boolean;
+		finishLabel?: string;
 		oncommit: (weight: number, reps: number) => void;
 		ondraft: (weight: number | null, reps: number | null) => void;
 		onrate: (rpe: number | null) => void;
@@ -34,6 +39,9 @@
 		count,
 		history,
 		total,
+		rest = true,
+		hints = true,
+		finishLabel = 'FINISH',
 		oncommit,
 		ondraft,
 		onrate,
@@ -44,7 +52,7 @@
 	// The tray is the rest timer's face on this screen — the global bar stands down here —
 	// so the tick lives with it. 250ms: a 1s poll would hold a digit for up to two seconds.
 	$effect(() => {
-		if (!restTimer.running && !restTimer.undoing) {
+		if (!rest || (!restTimer.running && !restTimer.undoing)) {
 			return;
 		}
 
@@ -57,7 +65,7 @@
 
 	// A backgrounded WebView throttles the interval, leaving `now` stale on the way back.
 	function wake() {
-		if (!document.hidden && (restTimer.running || restTimer.undoing)) {
+		if (rest && !document.hidden && (restTimer.running || restTimer.undoing)) {
 			restTimer.tick(Date.now());
 		}
 	}
@@ -83,7 +91,7 @@
 <!-- `pb-safe-b`: with the tab bar gone from this screen, the tray is the bottommost thing
      and owes the home-indicator inset the bar used to absorb. -->
 <div class="shrink-0 overflow-hidden rounded-t-sheet border-t border-line bg-surface pb-safe-b">
-	{#if restTimer.running}
+	{#if rest && restTimer.running}
 		<div role="timer" aria-label="Rest timer" class="relative">
 			<div
 				aria-hidden="true"
@@ -157,7 +165,7 @@
 		</div>
 	{:else}
 		<div class="mx-auto flex w-full max-w-xl flex-col px-3 py-3">
-			{#if restTimer.undoing}
+			{#if rest && restTimer.undoing}
 				<div
 					role="status"
 					class="-mt-0.5 mb-2 flex items-center gap-2 border-b border-line-soft pb-2"
@@ -190,6 +198,7 @@
 						{meta}
 						{note}
 						{count}
+						{hints}
 						step={(from, direction) => weightStep(meta.equipment, from, direction)}
 						unit={loadUnitLabel(meta)}
 						{oncommit}
@@ -216,7 +225,7 @@
 						</span>
 					</div>
 
-					<Button variant="commit" compact caps onclick={onfinish}>FINISH</Button>
+					<Button variant="commit" compact caps onclick={onfinish}>{finishLabel}</Button>
 				</div>
 			{/if}
 		</div>

@@ -1,6 +1,6 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { prefersReducedMotion } from 'svelte/motion';
 	import { goto } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
@@ -10,45 +10,39 @@
 	import type { SetDrift } from '$lib/domain/drift';
 	import { isArchived, startable } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
-	import {
-		addExercise,
-		addSet,
-		cursorFor,
-		draftSet,
-		markSet,
-		moveEntry,
-		rateSet,
-		removeExercise,
-		removeSet,
-		replaceExercise,
-		setExerciseGrip,
-		setSetArms,
-		setSetGrip
-	} from '$lib/domain/workout';
-	import type { Arms } from '$lib/domain/workout';
+	import { canCommit, firstUncompleted, prefillFor } from '$lib/domain/workout';
+	import type { Arms, History } from '$lib/domain/workout';
 	import { workoutTitle } from '$lib/history/label';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
+	import RecordLedger from '$lib/history/RecordLedger.svelte';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
-	import WorkoutSection from '$lib/history/WorkoutSection.svelte';
 	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { bottomDock } from '$lib/nav/dock.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
+	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { syncSoon } from '$lib/sync/client';
-	import { entriesWithMeta, legOf } from '$lib/workout/groups';
+	import { entriesWithMeta, entryOf, legOf, setNote, shelfOf } from '$lib/workout/groups';
+	import { WorkoutSession } from '$lib/workout/session.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
+	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
-	import AddRow from '$lib/ui/AddRow.svelte';
+	import ExertionDialog from '$lib/workout/ExertionDialog.svelte';
+	import LiveLedger from '$lib/workout/LiveLedger.svelte';
+	import LiveTray from '$lib/workout/LiveTray.svelte';
+	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
-	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import { smallMs } from '$lib/ui/motion';
 	import { registerOverlay } from '$lib/ui/overlays';
-	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
+	import { revealNearest } from '$lib/ui/scroll';
+	import { deskViewport } from '$lib/ui/viewport';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
-	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import More from '$lib/ui/icons/More.svelte';
-	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
+	import Pencil from '$lib/ui/icons/Pencil.svelte';
+	import Stack from '$lib/ui/icons/Stack.svelte';
 	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
@@ -95,24 +89,35 @@
 		}
 	});
 
-	// Not `insertedSetCount`: that reads today's hints, which for an old session
-	// would be later lifting shaping an earlier record.
-	const ADDED_SETS = 3;
+	// The record predates today's lifting, so nothing here may read it: no last-time hints, no
+	// prefilled offers shaped by later sessions — the numbers on screen are the record's own.
+	const NO_HISTORY: History = {};
 
-	const ids = () => Array.from({ length: ADDED_SETS }, () => crypto.randomUUID());
+	// Editing IS a session: the same holder the live screen drives, resumed over this record's
+	// own state proxy, so every mutation lands in the workout the page already persists.
+	// Read through the derived alias — a plain `let` never narrows inside the template.
+	let held = $state<WorkoutSession | null>(null);
 
-	let editing = $state(false);
+	const session = $derived(held);
 
-	let openSetId = $state<string | null>(null);
+	const editing = $derived(session !== null);
+
+	const desk = $derived(deskViewport.current);
+
+	let unlockOpen = $state(false);
 
 	function startEditing() {
-		pageSlide('push', () => (editing = true));
+		pageSlide('push', () => {
+			held = new WorkoutSession(NO_HISTORY, {
+				workout,
+				activeSetId: firstUncompleted(workout)?.set.id ?? null
+			});
+		});
 	}
 
 	function stopEditing() {
 		pageSlide('pop', () => {
-			editing = false;
-			openSetId = null;
+			held = null;
 		});
 	}
 
@@ -124,58 +129,102 @@
 		return registerOverlay(stopEditing);
 	});
 
-	function draft(setId: string, weight: number | null, reps: number | null) {
-		draftSet(workout, setId, { weight, reps });
+	$effect(() => {
+		bottomDock.claimed = editing;
+
+		return () => {
+			bottomDock.claimed = false;
+		};
+	});
+
+	async function settle() {
+		await tick();
+
+		const holder = document.querySelector('[data-active-set]');
+
+		if (holder instanceof HTMLElement) {
+			revealNearest(holder);
+		}
 	}
 
-	function rate(setId: string, rpe: number | null) {
-		rateSet(workout, setId, rpe);
-	}
-
-	function toggle(setId: string) {
-		const cursor = cursorFor(workout, setId);
-
-		if (cursor === null) {
+	$effect(() => {
+		if (session === null || session.activeSetId === null) {
 			return;
 		}
 
-		if (!markSet(workout, setId, !cursor.set.completed)) {
-			openSetId = setId;
+		void settle();
+	});
+
+	function jumpTo(setId: string) {
+		session?.select(setId);
+	}
+
+	const allCursors = $derived(entries.flatMap((entry) => entry.cursors));
+
+	const activeLeg = $derived(
+		entries
+			.flatMap((entry) => entry.legs)
+			.find((leg) => leg.cursors.some((c) => c.set.id === session?.activeSetId)) ?? null
+	);
+
+	const activeCursor = $derived(
+		activeLeg?.cursors.find((c) => c.set.id === session?.activeSetId) ?? null
+	);
+
+	const activeCount = $derived(
+		activeLeg === null ? 0 : activeLeg.cursors.filter((c) => c.workingIndex >= 0).length
+	);
+
+	function logSet(weight: number, reps: number) {
+		session?.commit(weight, reps);
+	}
+
+	function quickLog(setId: string, weight: number, reps: number) {
+		session?.quickLog(setId, weight, reps);
+	}
+
+	function draftActive(weight: number | null, reps: number | null) {
+		if (session !== null && session.activeSetId !== null) {
+			session.draft(session.activeSetId, weight, reps);
 		}
 	}
 
-	function add(exerciseId: string) {
-		const set = addSet(workout, exerciseId, crypto.randomUUID());
-
-		if (set !== null) {
-			openSetId = set.id;
+	function rateActive(rpe: number | null) {
+		if (session !== null && session.activeSetId !== null) {
+			session.rate(session.activeSetId, rpe);
 		}
 	}
 
-	function insert(exerciseIds: string[]) {
-		let opened = false;
-
-		for (const exerciseId of exerciseIds) {
-			const entry = addExercise(workout, exerciseId, {
-				entry: crypto.randomUUID(),
-				exercise: crypto.randomUUID(),
-				sets: ids()
-			});
-
-			if (entry !== null && !opened) {
-				openSetId = entry.exercises[0].sets[0].id;
-				opened = true;
-			}
-		}
-	}
+	const slide = $derived(smallMs());
 
 	let insertOpen = $state(false);
+	let insertAfter = $state<string | null>(null);
+
+	function insertFrom(entryId: string | null) {
+		insertAfter = entryId;
+		insertOpen = true;
+	}
+
+	function insertPicks(exerciseIds: string[]) {
+		session?.addExercises(exerciseIds, insertAfter ?? undefined);
+		insertAfter = null;
+	}
 
 	let exerciseOpen = $state(false);
 	let swapOpen = $state(false);
+	let supersetOpen = $state(false);
 	let acting = $state<string | null>(null);
 
 	const actingLeg = $derived(legOf(entries, acting));
+	const actingEntry = $derived(entryOf(entries, acting));
+
+	const actingIndex = $derived(
+		actingEntry === null ? -1 : entries.findIndex((entry) => entry.id === actingEntry.id)
+	);
+
+	const supersetShelf = $derived(
+		actingEntry === null ? null : shelfOf(entries, actingEntry.id, 'In this workout')
+	);
 
 	let exerciseAnchor = $state<HTMLElement | null>(null);
 
@@ -185,37 +234,58 @@
 		exerciseOpen = true;
 	}
 
-	function swap(catalogId: string) {
-		if (acting === null) {
-			return;
-		}
-
-		const exercise = replaceExercise(workout, acting, catalogId, {
-			exercise: crypto.randomUUID(),
-			sets: ids()
-		});
-
-		acting = null;
-
-		openSetId = exercise === null ? null : exercise.sets[0].id;
-	}
-
 	function gripExercise(grip: string) {
-		if (actingLeg !== null) {
-			setExerciseGrip(workout, actingLeg.id, actingLeg.meta, grip);
-		}
-
-		acting = null;
-	}
-
-	function dropExercise() {
-		if (acting === null) {
+		if (session === null || acting === null) {
 			return;
 		}
 
-		removeExercise(workout, acting);
+		session.setExerciseGrip(acting, grip);
 		acting = null;
-		openSetId = null;
+	}
+
+	function moveActing(to: number) {
+		if (session === null || actingEntry === null) {
+			return;
+		}
+
+		session.moveEntry(actingEntry.id, to);
+		acting = null;
+	}
+
+	function swapPick(catalogId: string) {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.swapExercise(acting, catalogId);
+		acting = null;
+	}
+
+	function supersetPicks(exerciseIds: string[]) {
+		if (session === null || actingEntry === null) {
+			return;
+		}
+
+		session.superset(actingEntry.id, exerciseIds);
+		acting = null;
+	}
+
+	function breakSuperset() {
+		if (session === null || actingEntry === null) {
+			return;
+		}
+
+		session.breakSuperset(actingEntry.id);
+		acting = null;
+	}
+
+	function removeExercise() {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.removeExercise(acting);
+		acting = null;
 	}
 
 	let optionsOpen = $state(false);
@@ -234,46 +304,59 @@
 			: (optionsGroup.cursors.find((c) => c.set.id === optionsSetId) ?? null)
 	);
 
-	function setOptions(setId: string, anchor: HTMLElement) {
+	function options(setId: string, anchor: HTMLElement) {
 		optionsSetId = setId;
 		optionsAnchor = anchor;
 		optionsOpen = true;
 	}
 
 	function gripSet(grip: string) {
-		if (optionsSetId !== null && optionsGroup !== null) {
-			setSetGrip(workout, optionsSetId, optionsGroup.meta, grip);
+		if (session !== null && optionsSetId !== null) {
+			session.setSetGrip(optionsSetId, grip);
+		}
+	}
+
+	// Desktop only: the phone's tray already carries its own custom entry in the picker.
+	let exertionOpen = $state(false);
+
+	function rateSet(rpe: number | null) {
+		if (session !== null && optionsSetId !== null) {
+			session.rate(optionsSetId, rpe);
 		}
 	}
 
 	function armSet(arms: Arms) {
-		if (optionsSetId !== null) {
-			setSetArms(workout, optionsSetId, arms);
+		if (session !== null && optionsSetId !== null) {
+			session.setSetArms(optionsSetId, arms);
 		}
 	}
 
-	function dropSet() {
-		if (optionsSetId === null) {
+	function unlogSet() {
+		if (session === null || optionsSetId === null) {
 			return;
 		}
 
-		removeSet(workout, optionsSetId);
-
-		if (openSetId === optionsSetId) {
-			openSetId = null;
-		}
-
+		session.unlogSet(optionsSetId);
 		optionsSetId = null;
 	}
 
-	const entryIds = $derived(entries.map((entry) => entry.id));
+	function clearSet() {
+		if (session === null || optionsSetId === null) {
+			return;
+		}
 
-	const drag = new DragOrder({
-		order: () => entryIds,
-		move: (id, index) => moveEntry(workout, id, index)
-	});
+		session.clear(optionsSetId);
+		optionsSetId = null;
+	}
 
-	const slide = $derived(prefersReducedMotion.current ? 0 : 200);
+	function removeSet() {
+		if (session === null || optionsSetId === null) {
+			return;
+		}
+
+		session.removeSet(optionsSetId);
+		optionsSetId = null;
+	}
 
 	const when = new Intl.DateTimeFormat('en-GB', {
 		weekday: 'short',
@@ -316,6 +399,25 @@
 		}
 
 		return hasSetDrift(setDrift) ? driftMarks(setDrift, meta) : [];
+	}
+
+	// The ledger has no commit button of its own beyond the row checks, so Enter logs the
+	// highlighted set — but only from the page floor: a focused button or an open dialog
+	// answers Enter itself, and firing both would log a set behind the lifter's back.
+	function deskEnter(event: KeyboardEvent) {
+		if (!desk || event.key !== 'Enter' || event.target !== document.body) {
+			return;
+		}
+
+		if (session === null || activeCursor === null || activeLeg === null) {
+			return;
+		}
+
+		const offer = prefillFor(activeCursor, NO_HISTORY, activeLeg.meta);
+
+		if (canCommit(offer.weight, offer.reps)) {
+			logSet(offer.weight as number, offer.reps as number);
+		}
 	}
 
 	let menuOpen = $state(false);
@@ -362,12 +464,25 @@
 	fillAppBar(() => ({ title, action: actions }));
 </script>
 
+<svelte:window onkeydown={deskEnter} />
+
 {#snippet actions()}
 	{#if editing}
 		<Button variant="chrome" caps onclick={stopEditing}>DONE</Button>
 	{:else}
 		<div class="flex items-center gap-2">
 			<Button variant="chrome" caps onclick={() => void repeat()}>REPEAT</Button>
+
+			<button
+				type="button"
+				aria-label="Edit this workout"
+				onclick={() => (unlockOpen = true)}
+				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
+					border-line text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+				{@attach press()}
+			>
+				<Pencil size={18} />
+			</button>
 
 			<button
 				type="button"
@@ -390,104 +505,146 @@
 	<title>{title} | Kilorep</title>
 </svelte:head>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
+{#if session === null}
+	<main class="min-h-0 flex-1 overflow-y-auto">
+		<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-6">
+			<p class="px-1 text-md font-bold text-ink-faint">
+				{when.format(workout.startedAt)}
+				{#if drift !== null && !hasDrift(drift)}· as planned{/if}
+			</p>
 
-{#snippet handle(entryId: string)}
-	<span
-		role="presentation"
-		aria-hidden="true"
-		onpointerdown={(event) => drag.handleDown(event, entryId)}
-		onpointermove={(event) => drag.move(event)}
-		onpointerup={(event) => drag.up(event)}
-		onpointercancel={(event) => drag.up(event)}
-		class="grid size-11 shrink-0 cursor-grab touch-none place-items-center
-			text-ink-faint select-none"
-	>
-		<DotsSixVertical size={18} />
-	</span>
-{/snippet}
-
-<main class={['column-content flex min-h-full flex-col gap-5 px-3 pt-3', editing && 'pb-4']}>
-	<p class="px-1 text-md font-bold text-ink-faint">
-		{when.format(workout.startedAt)}
-		{#if drift !== null && !hasDrift(drift)}· as planned{/if}
-	</p>
-
-	<div class="flex flex-1 flex-col gap-3">
-		<div bind:this={drag.root} class="flex flex-col gap-3">
-			{#each entries as entry (entry.id)}
-				{@const lifted = drag.isLifted(entry.id)}
-				{@const settling = drag.settlingId === entry.id}
-
-				<div
-					data-drag-id={entry.id}
-					animate:flip={{ duration: slide }}
-					class={lifted ? 'relative z-10 rounded-2xl bg-sunken' : ''}
-				>
-					<div
-						style:transform={lifted ? `translateY(${drag.offset}px) scale(1.01)` : null}
-						style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
-						class={['relative flex flex-col gap-2 rounded-2xl', lifted && 'shadow-lg']}
-					>
-						<EntryStack legs={entry.legs} superset={entry.superset}>
-							{#snippet leg(leg, at)}
-								<WorkoutSection
-									meta={leg.meta}
-									setup={leg.grip}
-									entryId={entry.id}
-									cursors={leg.cursors}
-									badges={badgesFor(leg.id, leg.meta)}
-									{editing}
-									{openSetId}
-									onopen={(setId) => (openSetId = setId)}
-									onclose={() => (openSetId = null)}
-									ondraft={draft}
-									onrate={rate}
-									ontoggle={toggle}
-									onoptions={setOptions}
-									onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
-									onadd={() => add(leg.cursors[0].exercise.id)}
-									grip={editing && at === 0 ? handle : undefined}
-								/>
+			<div class="flex flex-1 flex-col gap-3">
+				{#if entries.length === 0}
+					<div class="flex flex-1 flex-col justify-center">
+						<EmptyState
+							title="Nothing in this workout"
+							description="Every exercise has been removed."
+						>
+							{#snippet icon()}
+								<ClockCounterClockwise size={24} />
 							{/snippet}
-						</EntryStack>
+						</EmptyState>
 					</div>
-				</div>
-			{/each}
-		</div>
+				{:else}
+					{#each entries as entry (entry.id)}
+						<div class="relative flex flex-col gap-2 rounded-2xl">
+							<EntryStack legs={entry.legs} superset={entry.superset}>
+								{#snippet leg(leg)}
+									<RecordLedger
+										meta={leg.meta}
+										grip={leg.grip}
+										cursors={leg.cursors}
+										badges={badgesFor(leg.id, leg.meta)}
+									/>
+								{/snippet}
+							</EntryStack>
+						</div>
+					{/each}
+				{/if}
 
-		{#if editing}
-			<AddRow label="Add exercise" icon={StackPlus} onclick={() => (insertOpen = true)} />
-		{:else if entries.length === 0}
-			<div class="flex flex-1 flex-col justify-center">
-				<EmptyState title="Nothing in this workout" description="Every exercise has been removed.">
-					{#snippet icon()}
-						<ClockCounterClockwise size={24} />
-					{/snippet}
-				</EmptyState>
+				{#if drift !== null && drift.missing.length > 0}
+					<section class="flex flex-col gap-1 rounded-2xl border border-dashed border-line p-3">
+						<h2 class="px-1 label-caps text-ink-faint">Planned, not done</h2>
+						{#each drift.missing as exerciseId, slot (slot)}
+							<p class="px-1 text-md font-bold text-ink-muted">
+								{catalogById[exerciseId]?.name ?? exerciseId}
+							</p>
+						{/each}
+					</section>
+				{/if}
 			</div>
-		{/if}
+		</div>
+	</main>
+{:else}
+	<div class="flex min-h-0 flex-1 flex-col">
+		<main class="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto py-3 pb-6">
+			{#if entries.length === 0}
+				<div class="mx-auto flex min-h-full w-full max-w-xl flex-col gap-7 px-3">
+					<EmptyState title="Nothing in this workout" description="Add an exercise to log sets.">
+						{#snippet icon()}
+							<Stack size={24} />
+						{/snippet}
+						{#snippet action()}
+							<Button variant="commit" onclick={() => insertFrom(null)}>Add exercise</Button>
+						{/snippet}
+					</EmptyState>
+				</div>
+			{:else if desk}
+				<div class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4">
+					<LiveLedger
+						{entries}
+						history={NO_HISTORY}
+						activeSetId={session.activeSetId}
+						onselect={jumpTo}
+						onquick={quickLog}
+						oncommit={logSet}
+						ondraft={draftActive}
+						onrate={rateActive}
+						onadd={(exerciseId) => session.addSet(exerciseId)}
+						oninsert={insertFrom}
+						onoptions={options}
+						onexercise={exerciseOptions}
+						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
+					/>
+				</div>
+			{:else}
+				<div class="mx-auto flex w-full max-w-xl flex-col gap-7 px-3">
+					{#each entries as entry (entry.id)}
+						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-5">
+							<EntryStack
+								legs={entry.legs}
+								superset={entry.superset}
+								onswap={(leg) => session.moveExercise(leg.id)}
+								swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
+							>
+								{#snippet leg(leg)}
+									<ExerciseBlock
+										meta={leg.meta}
+										grip={leg.grip}
+										cursors={leg.cursors}
+										history={NO_HISTORY}
+										activeSetId={session.activeSetId}
+										onselect={jumpTo}
+										onquick={quickLog}
+										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
+										oninsert={() => insertFrom(entry.id)}
+										onoptions={options}
+										onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
+									/>
+								{/snippet}
+							</EntryStack>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</main>
 
-		{#if drift !== null && drift.missing.length > 0}
-			<section class="flex flex-col gap-1 rounded-2xl border border-dashed border-line p-3">
-				<h2 class="px-1 label-caps text-ink-faint">Planned, not done</h2>
-				{#each drift.missing as exerciseId, slot (slot)}
-					<p class="px-1 text-md font-bold text-ink-muted">
-						{catalogById[exerciseId]?.name ?? exerciseId}
-					</p>
-				{/each}
-			</section>
+		{#if !desk && entries.length > 0}
+			<LiveTray
+				cursor={activeCursor}
+				meta={activeLeg?.meta}
+				note={activeCursor === null
+					? null
+					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
+				count={activeCount}
+				history={NO_HISTORY}
+				total={allCursors.length}
+				rest={false}
+				hints={false}
+				finishLabel="DONE"
+				oncommit={logSet}
+				ondraft={draftActive}
+				onrate={rateActive}
+				onoptions={(anchor) => {
+					if (session.activeSetId !== null) {
+						options(session.activeSetId, anchor);
+					}
+				}}
+				onfinish={stopEditing}
+			/>
 		{/if}
 	</div>
-
-	{#if !editing}
-		<div class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3">
-			<Button variant="commit" class="w-full" onclick={() => void repeat()}>
-				Repeat this workout
-			</Button>
-		</div>
-	{/if}
-</main>
+{/if}
 
 <ExercisePickerSheet
 	bind:open={insertOpen}
@@ -495,7 +652,7 @@
 	multiple
 	frequent={data.frequent}
 	lastPerformed={data.lastPerformed}
-	onpick={insert}
+	onpick={insertPicks}
 />
 
 <ExercisePickerSheet
@@ -504,16 +661,40 @@
 	replacing={actingLeg === null ? null : actingLeg.meta}
 	lastPerformed={data.lastPerformed}
 	heaviest={data.heaviest}
-	onpick={([id]) => swap(id)}
+	onpick={([id]) => swapPick(id)}
+/>
+
+<ExercisePickerSheet
+	bind:open={supersetOpen}
+	title="Superset {actingLeg === null ? 'exercise' : actingLeg.meta.name} with…"
+	multiple
+	verb="Superset"
+	pinned={supersetShelf}
+	lastPerformed={data.lastPerformed}
+	onpick={supersetPicks}
 />
 
 <ExerciseOptionsMenu
 	bind:open={exerciseOpen}
 	group={actingLeg}
+	superset={actingEntry !== null && actingEntry.superset}
 	anchor={exerciseAnchor}
 	onswap={() => (swapOpen = true)}
-	onremove={dropExercise}
-	ongrip={editing ? gripExercise : undefined}
+	onsuperset={() => (supersetOpen = true)}
+	onbreak={breakSuperset}
+	onremove={removeExercise}
+	ongrip={gripExercise}
+	onmoveup={actingIndex > 0 ? () => moveActing(actingIndex - 1) : undefined}
+	onmovedown={actingIndex >= 0 && actingIndex < entries.length - 1
+		? () => moveActing(actingIndex + 1)
+		: undefined}
+/>
+
+<ExertionDialog
+	bind:open={exertionOpen}
+	scale={exertionScale.current}
+	value={optionsCursor?.set.rpe ?? null}
+	onapply={rateSet}
 />
 
 <WorkoutOptionsMenu
@@ -521,7 +702,6 @@
 	{title}
 	anchor={menuAnchor}
 	linked={template !== null}
-	onedit={startEditing}
 	onlink={() => (linkOpen = true)}
 	ondelete={() => (deleteOpen = true)}
 />
@@ -541,9 +721,21 @@
 	meta={optionsGroup?.meta}
 	anchor={optionsAnchor}
 	removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
-	onremove={dropSet}
-	ongrip={editing ? gripSet : undefined}
-	onarms={editing ? armSet : undefined}
+	onunlog={unlogSet}
+	onclear={clearSet}
+	onremove={removeSet}
+	ongrip={gripSet}
+	onarms={armSet}
+	onexertion={desk ? () => (exertionOpen = true) : undefined}
+/>
+
+<AlertDialog
+	bind:open={unlockOpen}
+	title="Edit this record?"
+	description="Changes land in history, hints and records as you make them, on every device."
+	confirmLabel="Edit"
+	confirmVariant="primary"
+	onconfirm={startEditing}
 />
 
 <AlertDialog

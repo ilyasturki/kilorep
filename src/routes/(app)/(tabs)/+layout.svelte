@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 
 	import { covers, isActive, navTabs } from '$lib/nav/bar.svelte';
+	import { bottomDock } from '$lib/nav/dock.svelte';
 	import { press } from '$lib/ui/press';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 	import RestBar from '$lib/workout/RestBar.svelte';
@@ -14,9 +15,13 @@
 
 	// The plan editor scrolls a pane of its own — its sidebar and start bar dock to it — but the
 	// pages under it, a plan's history among them, are ordinary scrollers: handed the pane, they
-	// grow past the viewport and push the tab bar off the bottom of it.
+	// grow past the viewport and push the tab bar off the bottom of it. A workout record owns
+	// its pane too: unlocked, it docks the live tray to the bottom edge the way the live screen
+	// does, and a tray inside a borrowed scroller would have the rows sliding underneath it.
 	const ownsPane = $derived(
-		covers(page.url.pathname, '/train') || /^\/plan\/templates\/[^/]+$/u.test(page.url.pathname)
+		covers(page.url.pathname, '/train') ||
+			/^\/plan\/templates\/[^/]+$/u.test(page.url.pathname) ||
+			/^\/history\/[^/]+$/u.test(page.url.pathname)
 	);
 
 	const tabs = $derived(navTabs());
@@ -64,7 +69,7 @@
 
 	<!-- The live screen keeps the whole bottom edge: its tray is the working surface there,
 	     and a tab bar under it would be one more chrome row between the lifter and the set. -->
-	{#if !covers(page.url.pathname, '/train/live')}
+	{#if !covers(page.url.pathname, '/train/live') && !bottomDock.claimed}
 		<nav
 			aria-label="Main"
 			class="vt-tabbar shrink-0 border-t border-line-soft bg-surface px-1 pb-safe-b lg:hidden"

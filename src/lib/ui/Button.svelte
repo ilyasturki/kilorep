@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	type Variant = 'commit' | 'secondary' | 'destructive' | 'chrome' | 'raised';
+	type Variant = 'commit' | 'secondary' | 'primary' | 'destructive' | 'chrome' | 'raised';
 
 	type Look = Variant | 'inert';
 
@@ -28,6 +28,11 @@
 		secondary: {
 			shape: `${outlined} text-ink-muted`,
 			text: 'text-md font-bold',
+			caps: 'text-md font-extrabold tracking-caps'
+		},
+		primary: {
+			shape: `${outlined} text-accent-text`,
+			text: 'text-md font-extrabold',
 			caps: 'text-md font-extrabold tracking-caps'
 		},
 		destructive: {

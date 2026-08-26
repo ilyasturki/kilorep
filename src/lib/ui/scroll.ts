@@ -100,7 +100,7 @@ function glide(scroller: HTMLElement, delta: number): void {
 	gliding = requestAnimationFrame(frame);
 }
 
-function shortfall(node: HTMLElement, block: 'start' | 'end' | 'nearest'): number {
+function shortfall(node: HTMLElement, block: 'start' | 'nearest'): number {
 	const bounds = viewport(scrollParent(node));
 	const rect = node.getBoundingClientRect();
 	const margin = margins(node);
@@ -110,10 +110,6 @@ function shortfall(node: HTMLElement, block: 'start' | 'end' | 'nearest'): numbe
 
 	if (block === 'start') {
 		return top - bounds.top;
-	}
-
-	if (block === 'end') {
-		return bottom - bounds.bottom;
 	}
 
 	if (top < bounds.top) {
@@ -127,7 +123,7 @@ function shortfall(node: HTMLElement, block: 'start' | 'end' | 'nearest'): numbe
 	return 0;
 }
 
-function land(node: HTMLElement, block: 'start' | 'end' | 'nearest'): void {
+function land(node: HTMLElement, block: 'start' | 'nearest'): void {
 	glide(scrollParent(node), shortfall(node, block));
 }
 
@@ -137,14 +133,6 @@ export function revealNearest(node: HTMLElement): void {
 	}
 
 	land(node, 'nearest');
-}
-
-export function revealEnd(node: HTMLElement): void {
-	if (fullyVisible(node)) {
-		return;
-	}
-
-	land(node, 'end');
 }
 
 export function revealStart(node: HTMLElement): void {
