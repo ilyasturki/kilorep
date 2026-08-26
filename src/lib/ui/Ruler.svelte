@@ -276,17 +276,6 @@
 		aria-label="Pick a {label}"
 	>
 		<div
-			class="pointer-events-none absolute inset-x-2 top-1/2 -mt-7 h-14 rounded-[0.875rem]
-				bg-accent-soft"
-			aria-hidden="true"
-		>
-			<span class="absolute top-1/2 left-2.5 -mt-[11px] h-[22px] w-1 rounded-sm bg-accent-text"
-			></span>
-			<span class="absolute top-1/2 right-2.5 -mt-[11px] h-[22px] w-1 rounded-sm bg-accent-text"
-			></span>
-		</div>
-
-		<div
 			onpointerdown={grab}
 			onpointermove={move}
 			onpointerup={release}
@@ -297,43 +286,60 @@
 			class="absolute inset-0 touch-none"
 			role="presentation"
 		>
-			{#each rungs as rung (rung.i)}
+			<!-- The thumb scrubs anywhere on the pane, but the ladder itself keeps a phone's
+			     column. Spanning a landscape tablet strands each rung's ticks against the screen
+			     edges, a hand's width from the number they mark, and the band they sit in stops
+			     reading as one row. -->
+			<div class="absolute inset-y-0 left-1/2 w-full max-w-xl -translate-x-1/2">
 				<div
-					class={[
-						'absolute inset-x-0 flex -translate-y-1/2 items-center justify-center',
-						'tracking-numeral whitespace-nowrap',
-						rung.near
-							? 'text-3xl font-extrabold text-accent-text'
-							: 'text-xl font-bold text-ink-muted'
-					]}
-					style="top:{rung.y}px"
+					class="pointer-events-none absolute inset-x-2 top-1/2 -mt-7 h-14 rounded-[0.875rem]
+						bg-accent-soft"
+					aria-hidden="true"
 				>
-					{#if !rung.near}
-						<span
-							class="absolute left-3.5 h-0.5 rounded-[1px] {rung.major
-								? 'bg-ink-faint'
-								: 'bg-line'}"
-							style="width:{rung.mark}px"
-						></span>
-						<span
-							class="absolute right-3.5 h-0.5 rounded-[1px] {rung.major
-								? 'bg-ink-faint'
-								: 'bg-line'}"
-							style="width:{rung.mark}px"
-						></span>
-					{/if}
-					<span>{rung.text}</span>
+					<span class="absolute top-1/2 left-2.5 -mt-[11px] h-[22px] w-1 rounded-sm bg-accent-text"
+					></span>
+					<span class="absolute top-1/2 right-2.5 -mt-[11px] h-[22px] w-1 rounded-sm bg-accent-text"
+					></span>
 				</div>
-			{/each}
 
-			{#if draft !== null}
-				<div
-					class="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center
+				{#each rungs as rung (rung.i)}
+					<div
+						class={[
+							'absolute inset-x-0 flex -translate-y-1/2 items-center justify-center',
+							'tracking-numeral whitespace-nowrap',
+							rung.near
+								? 'text-3xl font-extrabold text-accent-text'
+								: 'text-xl font-bold text-ink-muted'
+						]}
+						style="top:{rung.y}px"
+					>
+						{#if !rung.near}
+							<span
+								class="absolute left-3.5 h-0.5 rounded-[1px] {rung.major
+									? 'bg-ink-faint'
+									: 'bg-line'}"
+								style="width:{rung.mark}px"
+							></span>
+							<span
+								class="absolute right-3.5 h-0.5 rounded-[1px] {rung.major
+									? 'bg-ink-faint'
+									: 'bg-line'}"
+								style="width:{rung.mark}px"
+							></span>
+						{/if}
+						<span>{rung.text}</span>
+					</div>
+				{/each}
+
+				{#if draft !== null}
+					<div
+						class="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center
 						text-3xl font-extrabold tracking-numeral whitespace-nowrap text-accent-text"
-				>
-					{draft}<i class="caret-band" aria-hidden="true"></i>
-				</div>
-			{/if}
+					>
+						{draft}<i class="caret-band" aria-hidden="true"></i>
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 {/if}

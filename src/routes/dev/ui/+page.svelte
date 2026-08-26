@@ -3,6 +3,13 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
+	import Card from '$lib/styleguide/Card.svelte';
+	import ChromeSection from '$lib/styleguide/ChromeSection.svelte';
+	import DataSection from '$lib/styleguide/DataSection.svelte';
+	import PlanSection from '$lib/styleguide/PlanSection.svelte';
+	import Spec from '$lib/styleguide/Spec.svelte';
+	import WorkoutSection from '$lib/styleguide/WorkoutSection.svelte';
+	import { bento, caption, chromeButton, specimen, tile } from '$lib/styleguide/chrome';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
@@ -49,15 +56,6 @@
 	import PlayFill from '$lib/ui/icons/PlayFill.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
-
-	// Tailwind scans source text: a class composed at runtime is never emitted.
-	const card = 'flex flex-col gap-3 rounded-2xl bg-surface p-4';
-	const caption = 'text-xs font-extrabold text-ink-faint';
-	const tile = 'grid size-8 place-items-center text-ink-muted';
-	const specimen = 'flex flex-col items-start gap-1.5';
-	const chromeButton =
-		'grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border border-line ' +
-		'text-ink-muted focus-ring hover:bg-hover press:bg-surface-2';
 
 	const outlined = [
 		{ variant: 'secondary', label: 'Add note' },
@@ -226,6 +224,20 @@
 	let syncEnabled = $state(false);
 	let deleteOpen = $state(false);
 	let deleted = $state(false);
+
+	// The sheet is long enough that scrolling it end to end to find one component is the slow
+	// way round. Ordered the way the app is built up: the pieces, then the screens made of them.
+	const index = [
+		{ id: 'controls', label: 'Controls' },
+		{ id: 'fields', label: 'Fields' },
+		{ id: 'rows', label: 'Rows & lists' },
+		{ id: 'overlays', label: 'Overlays' },
+		{ id: 'foundations', label: 'Icons' },
+		{ id: 'chrome', label: 'Nav & settings' },
+		{ id: 'workout', label: 'Workout' },
+		{ id: 'plan', label: 'Plan' },
+		{ id: 'data', label: 'Progress & weight' }
+	];
 </script>
 
 <svelte:head><title>Components | Kilorep</title></svelte:head>
@@ -253,35 +265,61 @@
 	</div>
 {/snippet}
 
+{#snippet band(id: string, title: string, blurb: string)}
+	<div class="flex flex-col gap-1 pt-2" {id}>
+		<h2 class="text-lg font-extrabold tracking-tight text-ink">{title}</h2>
+		<p class="text-sm font-bold text-ink-faint">{blurb}</p>
+	</div>
+{/snippet}
+
 <div class="min-h-dvh bg-canvas px-6 pt-safe-t pb-16 text-ink">
 	<div class="mx-auto flex max-w-[1280px] flex-col gap-6 pt-6">
-		<div
-			class="grid grid-flow-row-dense [grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr))] gap-4"
-		>
-			<article class={card}>
-				<h2 class="label-caps">Button</h2>
-				<div class={specimen}>
+		<header class="flex flex-col gap-3">
+			<h1 class="text-2xl font-extrabold tracking-tight">Components</h1>
+			<p class="max-w-2xl text-md font-bold text-ink-muted">
+				Every component the app is built from, running the same code the app runs. Steppers step,
+				sheets open, the ledger reorders — what is on this page behaves the way it behaves on a
+				screen, so a change can be judged here before it is judged in the gym.
+			</p>
+			<nav aria-label="Sections" class="flex flex-wrap gap-x-1 gap-y-1">
+				{#each index as entry (entry.id)}
+					<a
+						href="#{entry.id}"
+						class="min-h-chrome rounded-full px-3 py-2 text-sm font-extrabold text-ink-muted
+							focus-ring hover:bg-hover press:bg-surface-2"
+						{@attach press()}
+					>
+						{entry.label}
+					</a>
+				{/each}
+			</nav>
+		</header>
+
+		{@render band(
+			'controls',
+			'Controls',
+			'Pressed, toggled, picked — nothing that holds a number.'
+		)}
+
+		<div class={bento}>
+			<Card name="Button">
+				<Spec label={`variant="commit"`} full>
 					<Button variant="commit" class="w-full">82.5 × 7</Button>
-					<span class={caption}>variant="commit"</span>
-				</div>
-				<div class={specimen}>
+				</Spec>
+				<Spec label={`variant="raised" — surface-filled, for a row on the canvas`} full>
 					<Button variant="raised" class="w-full">+ New template</Button>
-					<span class={caption}>variant="raised" — surface-filled, for a row on the canvas</span>
-				</div>
+				</Spec>
 				<div class="flex flex-wrap gap-x-4 gap-y-3">
 					{#each outlined as button (button.variant)}
-						<div class={specimen}>
+						<Spec label={`variant="${button.variant}"`}>
 							<Button variant={button.variant}>{button.label}</Button>
-							<span class={caption}>variant="{button.variant}"</span>
-						</div>
+						</Spec>
 					{/each}
 				</div>
-			</article>
+			</Card>
 
-			<article class={card}>
-				<h2 class="label-caps">press</h2>
-
-				<div class={specimen}>
+			<Card name="press" note="the attachment every pressable thing wears">
+				<Spec label="tint + sink, no `onhold`" full>
 					<button
 						type="button"
 						class="min-h-row w-full press-sink rounded-xl border border-line px-4 text-md
@@ -290,10 +328,12 @@
 					>
 						Hold me — nothing happens
 					</button>
-					<span class={caption}>tint + sink, no `onhold`</span>
-				</div>
+				</Spec>
 
-				<div class={specimen}>
+				<Spec
+					label={`\`onhold\` — buzzes at ${HOLD_MS}ms, cancels past ${SLOP}px, eats the click`}
+					full
+				>
 					<button
 						type="button"
 						class="min-h-row w-full press-sink rounded-xl border border-line px-4 text-md
@@ -302,14 +342,10 @@
 					>
 						Hold me — a menu opens
 					</button>
-					<span class={caption}>
-						`onhold` — buzzes at {HOLD_MS}ms, cancels past {SLOP}px, eats the click
-					</span>
-				</div>
-			</article>
+				</Spec>
+			</Card>
 
-			<article class="{card} row-span-2">
-				<h2 class="label-caps">ChipGroup</h2>
+			<Card name="ChipGroup · Chip · ExertionPicker" tall>
 				{@render pickers(true)}
 				<div class="flex items-baseline gap-2">
 					<h3 class="label-caps">Muscle targets</h3>
@@ -320,16 +356,29 @@
 						<Chip value={muscle.value}>{muscle.label}</Chip>
 					{/each}
 				</ChipGroup>
-			</article>
+			</Card>
 
-			<article class={card}>
-				<h2 class="label-caps">Segmented</h2>
+			<Card name="Segmented">
 				<Segmented bind:value={half} items={halves} label="Plan" />
 				<span class={caption}>full width · `icon` per segment · arrow keys between them</span>
-			</article>
+			</Card>
 
-			<article class={card}>
-				<h2 class="label-caps">SetMark</h2>
+			<Card name="Switch">
+				<div class="flex flex-col">
+					<Switch
+						label="Keep screen awake"
+						description="During an active workout"
+						bind:checked={keepAwake}
+					/>
+					<span class={caption}>description="…"</span>
+				</div>
+				<div class="flex flex-col">
+					<Switch label="Sync with server" bind:checked={syncEnabled} />
+					<span class={caption}>label only</span>
+				</div>
+			</Card>
+
+			<Card name="SetMark" note="the dot a set is counted by">
 				<div class="flex flex-wrap items-center gap-5">
 					{#each marks as mark (mark.status)}
 						<div class="flex flex-col items-center gap-1.5">
@@ -338,10 +387,111 @@
 						</div>
 					{/each}
 				</div>
-			</article>
+			</Card>
 
-			<article class="{card} row-span-2">
-				<h2 class="label-caps">SetRow</h2>
+			<Card name="Badge">
+				<div class="flex flex-wrap items-center gap-5">
+					{#each badges as badge (badge.tone)}
+						<div class="flex flex-col items-center gap-1.5">
+							<Badge tone={badge.tone}>{badge.label}</Badge>
+							<span class={caption}>tone="{badge.tone}"</span>
+						</div>
+					{/each}
+				</div>
+			</Card>
+		</div>
+
+		{@render band('fields', 'Fields', 'Everything that holds a value and hands it back.')}
+
+		<div class={bento}>
+			<Card name="StepperField" note="two 44px arms around a number">
+				<!-- A stepper is two 44px targets around a readout: below ~10rem the value is
+				     squeezed to nothing and the glyphs collide. The specimens wrap rather than
+				     divide the card, so every one of them stays the size the gym floor gets. -->
+				<div class="grid [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))] gap-2">
+					{#each steppers as stepper (stepper.prop)}
+						<div class="flex min-w-0 flex-col gap-1.5">
+							<StepperField
+								bind:value={stepper.value}
+								recalled={stepper.recalled}
+								label={stepper.label}
+								step={stepper.step}
+								ruler={stepper.ruler}
+								rulerStep={stepper.rulerStep}
+								major={stepper.major}
+								min={stepper.min}
+								max={stepper.max}
+							/>
+							<span class={caption}>{stepper.prop}</span>
+						</div>
+					{/each}
+				</div>
+				<span class={caption}>
+					the ruler opens on a tap on the number, and only under a coarse pointer
+				</span>
+			</Card>
+
+			<Card name="Input">
+				<Spec label={`label="Exercise"`} full>
+					<Input label="Exercise" bind:value={exerciseName} class="w-full" />
+				</Spec>
+				<Spec label={`error="…"`} full>
+					<Input
+						label="Exercise"
+						value="Bench Press (Barbell)"
+						error="Already in your exercises"
+						class="w-full"
+					/>
+				</Spec>
+			</Card>
+
+			<Card name="Textarea">
+				<Spec label="rows={3}" full>
+					<Textarea
+						label="Note"
+						bind:value={note}
+						placeholder="left shoulder tight"
+						class="w-full"
+					/>
+				</Spec>
+			</Card>
+
+			<Card name="SearchField">
+				<Spec label="label is the accessible name, not a heading" full>
+					<SearchField label="Search exercises" bind:value={query} class="w-full" />
+				</Spec>
+			</Card>
+
+			<Card name="Select" note="a sheet on a phone, a listbox on a pointer">
+				<Spec label={`type="single"`} full>
+					<Select label="Equipment" items={equipmentItems} bind:value={equipment} class="w-full" />
+				</Spec>
+				<Spec label={`type="multiple"`} full>
+					<Select
+						label="Muscle targets"
+						items={muscleItems}
+						bind:value={muscles}
+						type="multiple"
+						class="w-full"
+					/>
+				</Spec>
+			</Card>
+
+			<Card name="DatePicker">
+				<Spec label="maxToday" full>
+					<DatePicker label="Date" bind:value={date} maxToday class="w-full" />
+				</Spec>
+			</Card>
+		</div>
+
+		{@render band(
+			'rows',
+			'Rows & lists',
+			'The shapes a list is made of, and what a list does when it is empty.'
+		)}
+
+		<div class={bento}>
+			<Card name="SetRow" tall>
 				<div class="flex flex-col gap-2.5 rounded-xl bg-canvas p-3">
 					<div class="flex flex-col gap-1">
 						<span class={caption}>status="warmup"</span>
@@ -377,157 +527,9 @@
 						</SetRow>
 					</div>
 				</div>
-			</article>
+			</Card>
 
-			<article class={card}>
-				<h2 class="label-caps">StepperField</h2>
-				<div class="flex gap-2">
-					{#each steppers as stepper (stepper.prop)}
-						<div class="flex flex-1 flex-col gap-1.5">
-							<StepperField
-								bind:value={stepper.value}
-								recalled={stepper.recalled}
-								label={stepper.label}
-								step={stepper.step}
-								ruler={stepper.ruler}
-								rulerStep={stepper.rulerStep}
-								major={stepper.major}
-								min={stepper.min}
-								max={stepper.max}
-							/>
-							<span class={caption}>{stepper.prop}</span>
-						</div>
-					{/each}
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Sheet</h2>
-				<div class="flex flex-wrap gap-x-4 gap-y-3">
-					<div class={specimen}>
-						<Button variant="secondary" onclick={() => (overviewOpen = true)}>
-							<Stack size={20} /> Session overview
-						</Button>
-						<span class={caption}>title="Session"</span>
-					</div>
-					<div class={specimen}>
-						<Button variant="secondary" onclick={() => (optionsOpen = true)}>Set options</Button>
-						<span class={caption}>title="Set 3"</span>
-					</div>
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Menu</h2>
-				<div class={specimen}>
-					<button
-						type="button"
-						aria-label="Exercise options"
-						onclick={(e) => openMenu(e.currentTarget)}
-						class="grid min-h-chrome w-11 place-items-center rounded-full text-ink-muted
-							focus-ring hover:bg-hover press:bg-surface-2"
-						{@attach press()}
-					>
-						<More size={20} />
-					</button>
-					<span class={caption}>anchor = the ⋯ that asked</span>
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Input</h2>
-				<div class={specimen}>
-					<Input label="Exercise" bind:value={exerciseName} class="w-full" />
-					<span class={caption}>label="Exercise"</span>
-				</div>
-				<div class={specimen}>
-					<Input
-						label="Exercise"
-						value="Bench Press (Barbell)"
-						error="Already in your exercises"
-						class="w-full"
-					/>
-					<span class={caption}>error="…"</span>
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Textarea</h2>
-				<div class={specimen}>
-					<Textarea
-						label="Note"
-						bind:value={note}
-						placeholder="left shoulder tight"
-						class="w-full"
-					/>
-					<span class={caption}>rows={3}</span>
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">SearchField</h2>
-				<div class={specimen}>
-					<SearchField label="Search exercises" bind:value={query} class="w-full" />
-					<span class={caption}>label is the accessible name, not a heading</span>
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Select</h2>
-				<div class={specimen}>
-					<Select label="Equipment" items={equipmentItems} bind:value={equipment} class="w-full" />
-					<span class={caption}>type="single"</span>
-				</div>
-				<div class={specimen}>
-					<Select
-						label="Muscle targets"
-						items={muscleItems}
-						bind:value={muscles}
-						type="multiple"
-						class="w-full"
-					/>
-					<span class={caption}>type="multiple"</span>
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">DatePicker</h2>
-				<div class={specimen}>
-					<DatePicker label="Date" bind:value={date} maxToday class="w-full" />
-					<span class={caption}>maxToday</span>
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Switch</h2>
-				<div class="flex flex-col">
-					<Switch
-						label="Keep screen awake"
-						description="During an active workout"
-						bind:checked={keepAwake}
-					/>
-					<span class={caption}>description="…"</span>
-				</div>
-				<div class="flex flex-col">
-					<Switch label="Sync with server" bind:checked={syncEnabled} />
-					<span class={caption}>label only</span>
-				</div>
-			</article>
-
-			<article class={card}>
-				<h2 class="label-caps">Badge</h2>
-				<div class="flex flex-wrap items-center gap-5">
-					{#each badges as badge (badge.tone)}
-						<div class="flex flex-col items-center gap-1.5">
-							<Badge tone={badge.tone}>{badge.label}</Badge>
-							<span class={caption}>tone="{badge.tone}"</span>
-						</div>
-					{/each}
-				</div>
-			</article>
-
-			<article class="{card} row-span-2">
-				<h2 class="label-caps">ListRow</h2>
+			<Card name="ListRow" tall>
 				<div class="flex flex-col gap-1 rounded-xl bg-canvas p-2">
 					<div class="flex flex-col">
 						<ListRow title="Push A" meta="6 exercises · 24 sets" onclick={() => {}} />
@@ -551,10 +553,9 @@
 						<span class={caption}>no href, no onclick — inert</span>
 					</div>
 				</div>
-			</article>
+			</Card>
 
-			<article class={card}>
-				<h2 class="label-caps">list-group</h2>
+			<Card name="list-group" note="the class, not a component">
 				<div class="rounded-xl bg-canvas p-2">
 					<div class="list-group">
 						<ListRow title="Bench Press" meta="80 kg × 8" href="#list-group" />
@@ -563,10 +564,9 @@
 					</div>
 				</div>
 				<span class={caption}>rows squared and parted; the card clips the ends</span>
-			</article>
+			</Card>
 
-			<article class="{card} row-span-2">
-				<h2 class="label-caps">DragOrder</h2>
+			<Card name="DragOrder" note="the runtime, driving a hand-rolled list" tall>
 				<div bind:this={dragList.root} class="flex flex-col gap-1 rounded-xl bg-canvas p-2">
 					{#each dragItems as item (item.id)}
 						{@const lifted = dragList.isLifted(item.id)}
@@ -630,10 +630,15 @@
 				<span class={caption}
 					>the sunken block is the landing · the ends give a little and spring back</span
 				>
-			</article>
+				<span class={caption}>DragList wraps this — see PlanList under Plan</span>
+			</Card>
 
-			<article class="{card} row-span-2">
-				<h2 class="label-caps">EmptyState</h2>
+			<Card name="AddRow">
+				<AddRow label="Add exercise" />
+				<span class={caption}>the dashed grow-by-one silhouette every list ends on</span>
+			</Card>
+
+			<Card name="EmptyState" tall>
 				<EmptyState
 					title="No templates yet"
 					description="Plan a session once, start it every gym day."
@@ -642,27 +647,68 @@
 					{#snippet action()}<Button variant="commit" compact>New template</Button>{/snippet}
 				</EmptyState>
 				<span class={caption}>icon · action — flex-1 centres it in a pane with height to give</span>
-			</article>
+			</Card>
+		</div>
 
-			<article class={card}>
-				<h2 class="label-caps">AddRow</h2>
-				<AddRow label="Add exercise" />
-				<span class={caption}>the dashed grow-by-one silhouette every list ends on</span>
-			</article>
+		{@render band('overlays', 'Overlays', 'What opens over the screen, and what it opens from.')}
 
-			<article class={card}>
-				<h2 class="label-caps">Tooltip</h2>
-				<div class={specimen}>
+		<div class={bento}>
+			<Card name="Sheet">
+				<div class="flex flex-wrap gap-x-4 gap-y-3">
+					<Spec label={`title="Session"`}>
+						<Button variant="secondary" onclick={() => (overviewOpen = true)}>
+							<Stack size={20} /> Session overview
+						</Button>
+					</Spec>
+					<Spec label={`title="Set 3"`}>
+						<Button variant="secondary" onclick={() => (optionsOpen = true)}>Set options</Button>
+					</Spec>
+				</div>
+				<span class={caption}>SheetHeader is inside it — Select and DatePicker use it too</span>
+			</Card>
+
+			<Card name="Menu · MenuItem" note="anchored to whatever asked for it">
+				<div class="flex flex-col gap-2 rounded-xl bg-canvas p-2">
+					<div class="flex min-h-row items-center gap-2 rounded-xl pr-1 pl-3">
+						<span class="min-w-0 flex-1 truncate text-base font-extrabold tracking-tight">
+							Bench Press (Barbell)
+						</span>
+						<button
+							type="button"
+							aria-label="Exercise options"
+							onclick={(e) => openMenu(e.currentTarget)}
+							class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full
+								text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+							{@attach press()}
+						>
+							<More size={20} />
+						</button>
+					</div>
+				</div>
+				<span class={caption}
+					>the ⋯ is the anchor — the menu opens against the row it belongs to</span
+				>
+			</Card>
+
+			<Card name="AlertDialog">
+				<Spec label={`confirmLabel="Delete"`}>
+					<Button variant="destructive" onclick={() => (deleteOpen = true)}>Delete template</Button>
+				</Spec>
+				<p class="text-sm font-bold text-ink-faint">
+					{deleted ? 'Push A was deleted.' : 'Nothing deleted yet.'}
+				</p>
+			</Card>
+
+			<Card name="Tooltip">
+				<Spec label="hover on a mouse, tap on a touchscreen">
 					<Tooltip text="Epley estimate from your best set. Never the headline PR.">
 						<span class="text-md font-extrabold">Est. 1RM</span>
 					</Tooltip>
-					<span class={caption}>hover on a mouse, tap on a touchscreen</span>
-				</div>
-			</article>
+				</Spec>
+			</Card>
 
-			<article class={card}>
-				<h2 class="label-caps">TipButton</h2>
-				<div class={specimen}>
+			<Card name="TipButton">
+				<Spec label="label — said aloud, and shown on demand">
 					<div class="flex items-center gap-2">
 						<TipButton label="Archive template" onclick={() => {}} class={chromeButton}>
 							<Archive size={20} />
@@ -675,28 +721,23 @@
 							<Trash size={20} />
 						</TipButton>
 					</div>
-					<span class={caption}>label — said aloud, and shown on demand</span>
-				</div>
+				</Spec>
 				<p class="text-sm font-bold text-ink-faint">
 					A cursor hovers and the bubble follows on the provider's delay. A finger has no hover, so
 					the label rides the {HOLD_MS}ms hold instead — and the hold swallows the tap, so asking
 					what a button is never also presses it.
 				</p>
-			</article>
+			</Card>
+		</div>
 
-			<article class={card}>
-				<h2 class="label-caps">AlertDialog</h2>
-				<div class={specimen}>
-					<Button variant="destructive" onclick={() => (deleteOpen = true)}>Delete template</Button>
-					<span class={caption}>confirmLabel="Delete"</span>
-				</div>
-				<p class="text-sm font-bold text-ink-faint">
-					{deleted ? 'Push A was deleted.' : 'Nothing deleted yet.'}
-				</p>
-			</article>
+		{@render band(
+			'foundations',
+			'Icons',
+			'One weight, one size vocabulary. Fill is for a selected tab, never for emphasis.'
+		)}
 
-			<article class={card}>
-				<h2 class="label-caps">Icons</h2>
+		<div class={bento}>
+			<Card name="Icons" wide>
 				<div class="flex flex-wrap items-center gap-5">
 					<div class="flex flex-col items-center gap-1.5">
 						<div class={tile}><Backspace size={22} /></div>
@@ -738,23 +779,53 @@
 						<div class={tile}><Books size={22} /></div>
 						<span class={caption}>Books</span>
 					</div>
-				</div>
-				<div class="flex flex-wrap items-center gap-5 border-t border-line-soft pt-3">
-					<div class="flex flex-col items-center gap-1.5">
-						<div class={tile}><Play size={22} /></div>
-						<div class={tile}><PlayFill size={22} /></div>
-						<span class={caption}>Play</span>
-					</div>
-					<div class="flex flex-col items-center gap-1.5">
-						<div class={tile}><Barbell size={22} /></div>
-						<div class={tile}><BarbellFill size={22} /></div>
-						<span class={caption}>Barbell</span>
-					</div>
 					<div class="flex flex-col items-center gap-1.5">
 						<div class={tile}><ListBullets size={22} /></div>
 						<span class={caption}>ListBullets</span>
 					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><DotsSixVertical size={18} /></div>
+						<span class={caption}>DotsSixVertical</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Archive size={22} /></div>
+						<span class={caption}>Archive</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Trash size={22} /></div>
+						<span class={caption}>Trash</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><Eye size={22} /></div>
+						<span class={caption}>Eye</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class={tile}><ArrowsLeftRight size={22} /></div>
+						<span class={caption}>ArrowsLeftRight</span>
+					</div>
 				</div>
+
+				<div class="flex flex-wrap items-center gap-5 border-t border-line-soft pt-3">
+					<div class="flex flex-col items-center gap-1.5">
+						<div class="flex items-center gap-1">
+							<div class={tile}><Play size={22} /></div>
+							<div class={tile}><PlayFill size={22} /></div>
+						</div>
+						<span class={caption}>Play · PlayFill</span>
+					</div>
+					<div class="flex flex-col items-center gap-1.5">
+						<div class="flex items-center gap-1">
+							<div class={tile}><Barbell size={22} /></div>
+							<div class={tile}><BarbellFill size={22} /></div>
+						</div>
+						<span class={caption}>Barbell · BarbellFill</span>
+					</div>
+					<p class="max-w-xs text-sm font-bold text-ink-faint">
+						A pair is an outline and its fill. The fill marks the selected tab in the nav bars and
+						nothing else.
+					</p>
+				</div>
+
 				<div class="flex flex-wrap items-center gap-5 border-t border-line-soft pt-3">
 					{#each ['×', '‹', '›', '·', '−'] as glyph (glyph)}
 						<div class="flex flex-col items-center gap-1.5">
@@ -762,9 +833,36 @@
 							<span class={caption}>character</span>
 						</div>
 					{/each}
+					<p class="max-w-xs text-sm font-bold text-ink-faint">
+						Set in the face rather than drawn, so they take the weight of the text beside them.
+					</p>
 				</div>
-			</article>
+			</Card>
 		</div>
+
+		{@render band(
+			'chrome',
+			'Nav & settings',
+			'The frame around every screen, and the rows inside the one that configures it.'
+		)}
+
+		<div class={bento}><ChromeSection /></div>
+
+		{@render band(
+			'workout',
+			'Workout',
+			'The screen the app exists for, in the pieces it is assembled from.'
+		)}
+
+		<div class={bento}><WorkoutSection onoptions={openMenu} /></div>
+
+		{@render band('plan', 'Plan', 'What a session is before it is performed.')}
+
+		<div class={bento}><PlanSection onoptions={openMenu} /></div>
+
+		{@render band('data', 'Progress & weight', 'Numbers that have already happened.')}
+
+		<div class={bento}><DataSection /></div>
 	</div>
 </div>
 
