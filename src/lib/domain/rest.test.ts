@@ -8,12 +8,15 @@ import {
 	closesRound,
 	defaultRestSettings,
 	nudgedEnd,
+	parseRestDraft,
 	restAfter,
+	restDraft,
 	restLabel,
 	restProgress,
 	restSecondsFor,
 	restSecondsOf,
-	settleRestSeconds
+	settleRestSeconds,
+	snapRestSeconds
 } from '$lib/domain/rest';
 import type { RestSettings } from '$lib/domain/rest';
 import { commitSet, markSet, supersetWith } from '$lib/domain/workout';
@@ -264,5 +267,69 @@ describe('settleRestSeconds', () => {
 		expect(settleRestSeconds(0)).toBe(MIN_REST_SECONDS);
 		expect(settleRestSeconds(9999)).toBe(MAX_REST_SECONDS);
 		expect(settleRestSeconds(120.4)).toBe(120);
+	});
+});
+
+describe('restDraft', () => {
+	test('grows the colon as the digits fill from the right', () => {
+		expect(restDraft('2')).toBe('0:02');
+		expect(restDraft('23')).toBe('0:23');
+		expect(restDraft('230')).toBe('2:30');
+		expect(restDraft('1000')).toBe('10:00');
+	});
+
+	test('a colon typed on a real keyboard says nothing the digits did not', () => {
+		expect(restDraft('2:30')).toBe('2:30');
+		expect(restDraft('2:3')).toBe('0:23');
+	});
+
+	test('leading zeros are typed through rather than kept', () => {
+		expect(restDraft('0230')).toBe('2:30');
+	});
+
+	test('empties to empty, so a cleared field reads as cleared', () => {
+		expect(restDraft('')).toBe('');
+	});
+
+	test('refuses the fifth digit rather than dropping the first', () => {
+		expect(restDraft('10000')).toBeNull();
+	});
+});
+
+describe('parseRestDraft', () => {
+	test('reads restLabel backwards', () => {
+		expect(parseRestDraft('2:30')).toBe(150);
+		expect(parseRestDraft('0:09')).toBe(9);
+		expect(parseRestDraft('10:00')).toBe(600);
+	});
+
+	test('reads the digits alone the same way', () => {
+		expect(parseRestDraft('230')).toBe(150);
+		expect(parseRestDraft('45')).toBe(45);
+	});
+
+	test('a seconds half over a minute counts on rather than clamping', () => {
+		expect(parseRestDraft('1:90')).toBe(150);
+	});
+
+	test('nothing typed is nothing landed', () => {
+		expect(parseRestDraft('')).toBeNull();
+		expect(parseRestDraft(':')).toBeNull();
+	});
+});
+
+describe('snapRestSeconds', () => {
+	test('a duration typed between two rungs joins the ladder', () => {
+		expect(snapRestSeconds(127)).toBe(120);
+		expect(snapRestSeconds(128)).toBe(135);
+	});
+
+	test('the rungs themselves do not move', () => {
+		expect(snapRestSeconds(150)).toBe(150);
+	});
+
+	test('clamps to the range the arms offer', () => {
+		expect(snapRestSeconds(5)).toBe(MIN_REST_SECONDS);
+		expect(snapRestSeconds(9999)).toBe(MAX_REST_SECONDS);
 	});
 });

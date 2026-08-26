@@ -61,6 +61,7 @@
 
 			<StepperField
 				bind:value={shown}
+				recalled={null}
 				label={scaleName(scale)}
 				step={EXERTION_STEP}
 				min={shownMin(scale)}

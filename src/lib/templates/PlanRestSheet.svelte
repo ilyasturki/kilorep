@@ -49,10 +49,15 @@
 		/>
 
 		{#if rests}
+			<!-- No ladder in here: it is a pane fixed to the screen, and a sheet is translated, so
+			     it would dock to the panel; sent out to the body instead, the first frame of the
+			     drag reads as a thumb outside the sheet and closes it. The arms and the keyboard
+			     are the whole of it here, as they are in every other field inside a panel. -->
 			<RestDurationField
 				label="Duration"
 				description={planned === undefined ? source : 'This plan only'}
 				seconds={shown}
+				ruler={false}
 				onchange={(next) => onchange(next)}
 			/>
 		{/if}

@@ -15,6 +15,7 @@
 
 	const arm =
 		'grid w-11 shrink-0 place-items-center text-xl font-semibold text-ink-muted ' +
+		'touch-manipulation ' +
 		'focus-ring-inset select-none hover:bg-hover press:bg-surface-2 press:text-ink ' +
 		'disabled:pointer-events-none disabled:opacity-40';
 </script>

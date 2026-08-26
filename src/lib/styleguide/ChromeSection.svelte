@@ -89,7 +89,7 @@
 	</span>
 </Card>
 
-<Card name="RestDurationField" note="MiniStepper in the place it was built for">
+<Card name="RestDurationField" note="a compact StepperField, counting in a clock’s units">
 	<Frame label="a rest that can be turned off entirely">
 		<div class="flex flex-col gap-3 p-3">
 			<RestDurationField
@@ -106,10 +106,13 @@
 			/>
 		</div>
 	</Frame>
-	<span class={caption}>the second is disabled — flip "Sync with server" above to wake it</span>
+	<span class={caption}>
+		tap the number and type it — 2 3 0 is 2:30, and the pad never needs a colon. the second is
+		disabled — flip "Sync with server" above to wake it
+	</span>
 </Card>
 
-<Card name="MiniStepper" note="the bare control under it — a value between two arms">
+<Card name="MiniStepper" note="two arms around a value that is not a number">
 	<Spec label="ondec / oninc — null on either side disables that arm" full>
 		<MiniStepper
 			label="Plates per side"

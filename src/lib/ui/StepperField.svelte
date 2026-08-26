@@ -1,15 +1,39 @@
 <script lang="ts" module>
+	import { isEntryDraft, parseEntry, settle } from '$lib/domain/workout';
+
 	/**
 	 * How far one tap on an arm travels: a number where the ladder is uniform, a function
 	 * where it is not, asked for each jump — the rack it stands for decides how far the
 	 * next one goes.
 	 */
 	export type Step = number | ((from: number, direction: number) => number);
+
+	/**
+	 * What the number in the box is made of. A weight is a number and reads as one, so the
+	 * default below is the whole story for most of the app; a field that counts in something
+	 * else — a rest, which is a clock — hands over its own reading, writing and rounding here
+	 * rather than growing a branch inside the control for every unit there might be.
+	 */
+	export type Entry = {
+		/** What the box should show, given the raw text it now holds. `null` refuses the keystroke. */
+		draft: (raw: string) => string | null;
+		parse: (raw: string) => number | null;
+		format: (value: number) => string;
+		/** Where a value lands after every step, scrub and commit. Absent, wherever it fell. */
+		snap?: (value: number) => number;
+		inputmode?: 'decimal' | 'numeric';
+	};
+
+	export const NUMBER: Entry = {
+		draft: (raw) => (isEntryDraft(raw) ? raw : null),
+		parse: parseEntry,
+		format: String,
+		inputmode: 'decimal'
+	};
 </script>
 
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
-	import { isEntryDraft, parseEntry, settle } from '$lib/domain/workout';
 	import { tapHold } from '$lib/ui/feedback';
 	import { coarsePointer } from '$lib/ui/pointer';
 	import { press } from '$lib/ui/press';
@@ -17,6 +41,10 @@
 
 	type Props = {
 		value: number | null;
+		// What last time's number was, and the thing the accent marks a departure from. Left
+		// unsaid where there is no last time — a stored default is only ever itself — which is
+		// not the same as passing `null`, which says nothing was recalled and so anything here
+		// is a departure.
 		recalled?: number | null;
 		// Where an empty field lands when an arm is tapped — a default worth waking to, rather
 		// than one step off the floor. Absent, the arms count from `min` as they always did.
@@ -25,6 +53,14 @@
 		step?: Step;
 		min?: number;
 		max?: number;
+		entry?: Entry;
+		// The settings row's footprint: the same card at a chip's height, with the label already
+		// spoken by the row beside it and no room under the number to repeat it.
+		compact?: boolean;
+		disabled?: boolean;
+		// Whether an emptied box means anything. A set that has not been entered is a real state
+		// and reads `–`; a rest that is off is said with a switch, not by clearing the duration.
+		nullable?: boolean;
 		ruler?: boolean;
 		rulerStep?: number;
 		major?: number;
@@ -35,12 +71,16 @@
 
 	let {
 		value = $bindable(null),
-		recalled = null,
+		recalled,
 		seed = null,
 		label,
 		step = 2.5,
 		min = 0,
 		max = Infinity,
+		entry = NUMBER,
+		compact = false,
+		disabled = false,
+		nullable = true,
 		ruler = false,
 		rulerStep,
 		major,
@@ -57,20 +97,36 @@
 	// the one off the floor — or every value between two coarse rungs becomes unscrubbable.
 	const detent = $derived(rulerStep ?? jump(min, 1));
 
-	const scrubbable = $derived(ruler && coarsePointer);
+	const scrubbable = $derived(ruler && coarsePointer && !disabled);
 
-	const touched = $derived(value !== recalled);
+	const touched = $derived(recalled !== undefined && value !== recalled);
 
-	const display = $derived(value === null ? '–' : String(settle(value, min, max)));
+	// Inside the range, and then on the ladder. Clamped either side of the snap because a unit
+	// that rounds outward — a rest at 9:56 reaching for 10:00 — would otherwise step past the
+	// ceiling on its way to the nearest rung.
+	function land(raw: number): number {
+		const settled = settle(raw, min, max);
+
+		return entry.snap === undefined ? settled : settle(entry.snap(settled), min, max);
+	}
+
+	// Honest about what is stored rather than about where the arms can go: a duration that
+	// arrived off the ladder — an older sync, a record edited by hand — reads as the seconds it
+	// is and joins the fifteens on the first tap, instead of being quietly redrawn as one of
+	// them while the store still holds the other.
+	const display = $derived(value === null ? '–' : entry.format(settle(value, min, max)));
+
+	// An arm that cannot move is shown dead rather than left to be discovered. Never over an
+	// empty field: there the first tap has somewhere to go — the seed, or the floor.
+	const atFloor = $derived(value !== null && value <= min);
+	const atCeiling = $derived(value !== null && value >= max);
 
 	function nudge(direction: number) {
 		// Either arm wakes a seeded empty field onto the seed itself: an open rep target is
 		// where every planned exercise starts, and the first tap there means "the usual".
 		const from = value ?? min;
 		const next =
-			value === null && seed !== null
-				? settle(seed, min, max)
-				: settle(from + direction * jump(from, direction), min, max);
+			value === null && seed !== null ? land(seed) : land(from + direction * jump(from, direction));
 		if (next === value) {
 			return false;
 		}
@@ -156,7 +212,7 @@
 
 	function scrub(next: number) {
 		value = next;
-		draft = String(next);
+		draft = entry.format(next);
 		typed = null;
 		onchange?.(next);
 	}
@@ -166,9 +222,9 @@
 			return null;
 		}
 
-		const parsed = parseEntry(draft);
+		const parsed = entry.parse(draft);
 
-		return parsed === null ? value : settle(parsed, min, max);
+		return parsed === null ? value : land(parsed);
 	}
 
 	function commit() {
@@ -186,6 +242,13 @@
 		}
 
 		const next = landing();
+
+		// A field with nothing to clear to keeps what it had: the box was emptied on the way to
+		// typing something else, and the thumb left before the something else arrived.
+		if (next === null && !nullable) {
+			return;
+		}
+
 		if (next !== value) {
 			value = next;
 			onchange?.(next);
@@ -203,15 +266,24 @@
 	// Refused after the fact: each `inputType` splices differently, so `beforeinput` is unreliable.
 	function oninput(event: Event & { currentTarget: HTMLInputElement }) {
 		const field = event.currentTarget;
+		const next = entry.draft(field.value);
 
-		if (!isEntryDraft(field.value)) {
+		if (next === null) {
 			field.value = draft;
 			field.setSelectionRange(caret[0], caret[1]);
 			return;
 		}
 
-		draft = field.value;
-		typed = draft;
+		draft = next;
+		typed = next;
+
+		// A field that rewrites what was typed — a clock growing its own colon — has moved every
+		// glyph after the caret, so there is nowhere left to put it back but the end.
+		if (next !== field.value) {
+			field.value = next;
+			field.setSelectionRange(next.length, next.length);
+		}
+
 		onpreview?.(landing());
 	}
 
@@ -229,20 +301,24 @@
 <!-- The arm is `44px` and not `w-11`: a thumb is the same width whoever's phone this is, and OS
      text scaling growing it is the one thing the pair cannot afford — every pixel an arm takes is
      one the number beside it loses, and there are four arms across the card. Height still follows
-     the scale (`min-h-19` on the row), because down the page there is room. -->
+     the scale (`min-h-19` on the row), because down the page there is room. Compact is the other
+     way around — one field to a row, the label already said beside it — so its arms may scale. -->
 {#snippet arm(direction: number, verb: string, corner: string)}
 	<button
 		type="button"
 		aria-label="{verb} {label}"
+		disabled={disabled || (direction < 0 ? atFloor : atCeiling)}
 		onclick={(event) => nudgeOnce(event, direction)}
 		onpointerdown={() => holdStart(direction)}
 		onpointerup={holdEnd}
 		onpointerleave={holdEnd}
 		onpointercancel={holdEnd}
 		class={[
-			'grid w-[44px] shrink-0 place-items-center text-2xl font-semibold focus-ring-inset',
+			'grid shrink-0 place-items-center font-semibold focus-ring-inset',
 			'touch-manipulation select-none',
 			'text-ink-muted hover:bg-hover press:bg-surface-2 press:text-ink',
+			'disabled:pointer-events-none disabled:opacity-40',
+			compact ? 'w-11 text-xl' : 'w-[44px] text-2xl',
 			corner
 		]}
 		{@attach press()}
@@ -252,39 +328,55 @@
 {/snippet}
 
 <div
-	class={['flex min-h-19 items-stretch rounded-2xl bg-sunken focus-ring-within', klass]}
+	class={[
+		'flex items-stretch bg-sunken focus-ring-within',
+		compact ? 'min-h-11 rounded-xl' : 'min-h-19 rounded-2xl',
+		klass
+	]}
 	role="group"
 	aria-label={label}
 >
-	{@render arm(-1, 'decrease', 'rounded-l-2xl')}
+	{@render arm(-1, 'decrease', compact ? 'rounded-l-xl' : 'rounded-l-2xl')}
 
-	<div class="@container flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5">
+	<div
+		class={[
+			'flex min-w-0 flex-1 items-center justify-center',
+			!compact && '@container flex-col gap-0.5'
+		]}
+	>
 		<input
 			bind:this={box}
 			value={editing ? draft : display}
 			placeholder={display}
+			{disabled}
 			onbeforeinput={aim}
 			{oninput}
 			onfocus={start}
 			onblur={commit}
 			onclick={reveal}
 			{onkeydown}
-			inputmode="decimal"
+			inputmode={entry.inputmode ?? 'decimal'}
 			autocomplete="off"
 			aria-label={label}
 			class={[
-				'w-full scroll-mb-32 bg-transparent p-0 text-center numeral-fit',
+				'w-full scroll-mb-32 bg-transparent p-0 text-center',
 				'font-extrabold tracking-numeral outline-hidden',
+				// Safari greys a disabled input through the fill colour, where `color` cannot reach
+				// it. The row above says "off" by dimming as a whole, and says it once.
+				'[-webkit-text-fill-color:currentColor]',
 				// The ghost is the number the field is holding, so it must not read as a hint about
 				// what to type: same weight and size, one step back in ink.
 				'placeholder:text-ink-faint',
+				compact ? 'text-md' : 'numeral-fit',
 				touched ? 'text-accent-text' : 'text-ink'
 			]}
 		/>
-		<div class="label-caps whitespace-nowrap">{label}</div>
+		{#if !compact}
+			<div class="label-caps whitespace-nowrap">{label}</div>
+		{/if}
 	</div>
 
-	{@render arm(1, 'increase', 'rounded-r-2xl')}
+	{@render arm(1, 'increase', compact ? 'rounded-r-xl' : 'rounded-r-2xl')}
 </div>
 
 {#if open}
@@ -296,6 +388,8 @@
 		{major}
 		{min}
 		{max}
+		format={entry.format}
+		parse={entry.parse}
 		onscrub={scrub}
 		onpick={(next) => {
 			scrub(next);

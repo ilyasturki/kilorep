@@ -13,6 +13,10 @@
 		major?: number;
 		min: number;
 		max: number;
+		// How a rung reads, and how the draft over it is read back. A plain number by default;
+		// a field that counts in something else — a clock, say — says so here.
+		format?: (value: number) => string;
+		parse?: (raw: string) => number | null;
 		onscrub: (value: number) => void;
 		onpick: (value: number) => void;
 		// Android eats the OS back gesture that drops the keyboard, so keyboard-down is the
@@ -28,6 +32,8 @@
 		major: majorEvery = 4,
 		min,
 		max,
+		format = String,
+		parse = parseEntry,
 		onscrub,
 		onpick,
 		ondismiss
@@ -99,7 +105,7 @@
 	const draft = $derived(typed === null ? null : typed.trim());
 
 	$effect(() => {
-		const parsed = draft === null ? null : parseEntry(draft);
+		const parsed = draft === null ? null : parse(draft);
 
 		if (parsed !== null) {
 			pos = clampIndex(parsed / step);
@@ -130,7 +136,7 @@
 				near: i === centre,
 				major,
 				mark: major ? 26 : 14,
-				text: String(at(i))
+				text: format(at(i))
 			});
 		}
 
@@ -268,6 +274,12 @@
 	}
 </script>
 
+<!-- Inside the field's own tree, which is why the ladder cannot be opened from a sheet: the pane
+     is `fixed`, a sheet is translated, and a translated ancestor becomes the containing block for
+     everything fixed under it — the ladder would dock to the panel instead of the screen. Sending
+     it out to the body fixes the geometry and loses the gesture: to a modal, a thumb on a sibling
+     of its panel is a thumb outside it, and the first frame of the drag closes the sheet. Fields
+     in sheets keep their arms and their keyboard; `RestDurationField` takes `ruler={false}`. -->
 {#if docked}
 	<div
 		class="fixed inset-x-0 z-50 overflow-hidden bg-surface select-none"
