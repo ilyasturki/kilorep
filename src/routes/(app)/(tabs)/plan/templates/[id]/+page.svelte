@@ -468,6 +468,7 @@
 	title="Swap exercise"
 	replacing={actingGroup === null ? null : actingGroup.meta}
 	lastPerformed={data.lastPerformed}
+	heaviest={data.heaviest}
 	onpick={([id]) => swapPick(id)}
 />
 

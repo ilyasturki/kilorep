@@ -5,6 +5,9 @@ export type Family = { parent: Exercise; variants: Exercise[] };
 
 export type Section = { muscle: Muscle; families: Family[] };
 
+export const countOf = (families: Family[]): number =>
+	families.reduce((count, family) => count + 1 + family.variants.length, 0);
+
 const byName = (a: Exercise, b: Exercise): number => a.name.localeCompare(b.name);
 
 export function sections(pool: Exercise[]): Section[] {

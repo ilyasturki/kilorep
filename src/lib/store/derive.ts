@@ -2,6 +2,7 @@ import { catalogById } from '$lib/catalog';
 import { isExertion } from '$lib/domain/exertion';
 import { historyKey } from '$lib/domain/grip';
 import type { PastSession } from '$lib/domain/stats';
+import { rawPr } from '$lib/domain/stats';
 import type { History, PerformedSet, Workout } from '$lib/domain/workout';
 
 export type FinishedWorkout = Workout & { finishedAt: number };
@@ -127,6 +128,23 @@ export type LastPerformed = Record<string, PastSession | undefined>;
 export function lastPerformedFrom(workouts: FinishedWorkout[]): LastPerformed {
 	return Object.fromEntries(
 		Object.entries(sessionsByExercise(workouts)).map(([id, sessions]) => [id, sessions.at(-1)])
+	);
+}
+
+export type Heaviest = Record<string, PerformedSet | undefined>;
+
+/**
+ * The best set ever logged per exercise. Zero body weight carried (`() => 0`) on purpose —
+ * the weigh-in shifts what a set moved, never which set ranks first, and a ledger column has
+ * no weigh-in to hand.
+ */
+export function heaviestFrom(workouts: FinishedWorkout[]): Heaviest {
+	return Object.fromEntries(
+		Object.entries(sessionsByExercise(workouts)).map(([id, sessions]) => {
+			const best = rawPr(sessions, () => 0);
+
+			return [id, best === null ? undefined : best.set];
+		})
 	);
 }
 

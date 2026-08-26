@@ -1,24 +1,19 @@
 import { describe, expect, test } from 'vitest';
 
-import { ordinal, variantLabel } from '$lib/exercises/label';
+import { catalogById } from '$lib/catalog';
+import { ordinal, setLabel } from '$lib/exercises/label';
 
-describe('variantLabel', () => {
-	test('strips the parent name, keeping the qualifier', () => {
-		expect(variantLabel('Close-Grip Bench Press', 'Bench Press')).toBe('Close-Grip');
-		expect(variantLabel('Wide-Grip Lat Pulldown', 'Lat Pulldown')).toBe('Wide-Grip');
-		expect(variantLabel('Front Squat', 'Squat')).toBe('Front');
+describe('setLabel', () => {
+	test('a loaded lift prints what was on the bar', () => {
+		expect(setLabel(catalogById['bench-press'], { weight: 80, reps: 5, rpe: null })).toBe('80 × 5');
 	});
 
-	test('compares DB and Dumbbell as the same word', () => {
-		expect(variantLabel('Incline DB Press', 'Dumbbell Bench Press')).toBe('Incline');
+	test('a bodyweight movement with nothing on the belt prints reps alone', () => {
+		expect(setLabel(catalogById['push-up'], { weight: 0, reps: 20, rpe: null })).toBe('20 reps');
 	});
 
-	test('a variant sharing no words keeps its full name', () => {
-		expect(variantLabel('Chin-Up', 'Pull-Up')).toBe('Chin-Up');
-	});
-
-	test('a variant whose every word the parent carries keeps its full name', () => {
-		expect(variantLabel('Bench Press', 'Bench Press')).toBe('Bench Press');
+	test('a weighted bodyweight movement prints what was added', () => {
+		expect(setLabel(catalogById['pull-up'], { weight: 10, reps: 6, rpe: null })).toBe('+10 × 6');
 	});
 });
 

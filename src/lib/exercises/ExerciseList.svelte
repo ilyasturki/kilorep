@@ -1,44 +1,22 @@
-<script lang="ts" module>
-	import { catalog } from '$lib/catalog';
-	import { sections } from '$lib/exercises/browse';
-
-	const chip =
-		'relative inline-flex min-h-chip items-center rounded-xl bg-sunken px-3 text-sm font-bold ' +
-		'text-ink-muted select-none focus-ring hover:bg-hover press:bg-surface-2 press-sink ' +
-		'pointer-fine:transition-[background-color] pointer-fine:duration-100 ' +
-		'aria-pressed:bg-surface aria-pressed:text-accent-text ' +
-		'aria-pressed:ring-[1.5px] aria-pressed:ring-accent-text';
-
-	const backdrop = 'absolute inset-0 focus-ring';
-
-	const cell =
-		'relative flex flex-col hover:bg-hover press:bg-surface-2 ' +
-		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
-</script>
-
 <script lang="ts">
+	import { catalog } from '$lib/catalog';
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Exercise, Muscle } from '$lib/domain/exercise';
-	import type { Family } from '$lib/exercises/browse';
+	import { countOf, sections } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
-	import { lastSetLabel, lastSinceLabel, variantLabel } from '$lib/exercises/label';
+	import { lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
 	import type { LastPerformed } from '$lib/store/derive';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
-	import Check from '$lib/ui/icons/Check.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
-	import { press } from '$lib/ui/press';
+	import { revealStart } from '$lib/ui/scroll';
 
 	type Props = {
 		query: string;
-		muscle?: Muscle | null;
 		lastPerformed: LastPerformed;
-		onpick?: (exercise: Exercise) => void;
-		shelf?: { title: string; exercises: Exercise[] } | null;
-		selected?: ReadonlySet<string>;
 	};
 
-	let { query, muscle = null, lastPerformed, onpick, shelf = null, selected }: Props = $props();
+	let { query, lastPerformed }: Props = $props();
 
 	const now = Date.now();
 
@@ -46,37 +24,87 @@
 
 	const searching = $derived(query.trim() !== '');
 
-	const results = $derived(
-		searchExercises(catalog, query).filter(
-			(exercise) => muscle === null || exercise.muscles.primary === muscle
-		)
-	);
+	const results = $derived(searchExercises(catalog, query));
 
-	const shelves = $derived(
-		muscle === null ? browse : browse.filter((section) => section.muscle === muscle)
-	);
+	let active = $state<Muscle>(browse[0].muscle);
+
+	// A tap owns the highlight until its scroll settles — without this the spy would flick
+	// through every muscle the jump passes.
+	let jumping = $state(false);
+
+	let settle: ReturnType<typeof setTimeout> | undefined;
+
+	const targets = new Map<Muscle, HTMLElement>();
+	const pills = new Map<Muscle, HTMLElement>();
+
+	let rail = $state<HTMLElement | null>(null);
+
+	function spy() {
+		if (jumping) {
+			return;
+		}
+
+		const floor = (rail?.getBoundingClientRect().bottom ?? 0) + 8;
+
+		let current = browse[0].muscle;
+
+		for (const section of browse) {
+			const target = targets.get(section.muscle);
+
+			if (target !== undefined && target.getBoundingClientRect().top <= floor) {
+				current = section.muscle;
+			}
+		}
+
+		if (current !== active) {
+			active = current;
+			pills.get(current)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		}
+	}
+
+	function jump(muscle: Muscle) {
+		const target = targets.get(muscle);
+
+		if (target === undefined) {
+			return;
+		}
+
+		active = muscle;
+		jumping = true;
+
+		clearTimeout(settle);
+		settle = globalThis.setTimeout(() => (jumping = false), 900);
+
+		// The section's `scroll-mt-14` is the rail's height plus the same 8px breath `spy` uses.
+		revealStart(target);
+	}
+
+	// The list scrolls inside the tab layout's pane, not the window — a capture-phase listener
+	// hears it without this component having to know which ancestor scrolls.
+	$effect(() => {
+		if (searching) {
+			return;
+		}
+
+		globalThis.addEventListener('scroll', spy, { capture: true, passive: true });
+
+		return () => {
+			globalThis.removeEventListener('scroll', spy, { capture: true });
+			clearTimeout(settle);
+		};
+	});
 </script>
 
-{#snippet row(exercise: Exercise, merged = false)}
+{#snippet variantBadge()}
+	<span class="rounded-full bg-surface-2 px-2 py-0.5 label-caps text-ink-muted">Variant</span>
+{/snippet}
+
+{#snippet row(exercise: Exercise, variant = false)}
 	{@const last = lastPerformed[exercise.id]}
 	{@const since = lastSinceLabel(last, now)}
-	{@const picked = selected !== undefined && selected.has(exercise.id)}
+	{@const set = lastSetLabel(exercise, last)}
 
-	{#snippet recency()}
-		{since}
-
-		{#if selected !== undefined}
-			<span
-				aria-hidden="true"
-				class={[
-					'grid size-6 place-items-center rounded-full',
-					picked ? 'bg-accent-soft text-accent-text' : 'border-[1.5px] border-line text-transparent'
-				]}
-			>
-				<Check size={14} />
-			</span>
-		{/if}
-	{/snippet}
+	{#snippet recency()}{since}{/snippet}
 
 	{#snippet thumb()}
 		<span class="size-11 shrink-0">
@@ -84,86 +112,30 @@
 		</span>
 	{/snippet}
 
+	{#snippet elbow()}
+		<span
+			aria-hidden="true"
+			class="mb-2.5 ml-1 size-3 shrink-0 rounded-bl-md border-b-2 border-l-2 border-line-soft"
+		></span>
+	{/snippet}
+
 	<ListRow
 		title={exercise.name}
 		match={searching ? matchRange(exercise.name, query) : null}
-		meta={lastSetLabel(last)}
-		leading={thumb}
-		trailing={since === undefined && selected === undefined ? undefined : recency}
-		chevron={onpick === undefined}
-		pressed={selected === undefined || merged ? undefined : picked}
-		href={merged || onpick !== undefined ? undefined : `/plan/exercises/${exercise.id}`}
-		onclick={merged || onpick === undefined ? undefined : () => onpick(exercise)}
-		class={merged ? 'pointer-events-none' : undefined}
+		description={set === undefined ? exercise.equipment : `${exercise.equipment} · ${set}`}
+		weight={variant ? 'bold' : 'extrabold'}
+		badge={searching && exercise.variantOf !== undefined ? variantBadge : undefined}
+		leading={variant ? elbow : thumb}
+		trailing={since === undefined ? undefined : recency}
+		dense={variant}
+		href="/plan/exercises/{exercise.id}"
+		class={variant ? 'pl-4' : undefined}
 	/>
-{/snippet}
-
-{#snippet familyRow(family: Family)}
-	{@const parent = family.parent}
-
-	<div class={cell}>
-		{#if onpick === undefined}
-			<a
-				href="/plan/exercises/{parent.id}"
-				aria-label={parent.name}
-				data-list-row
-				class={backdrop}
-				{@attach press()}
-			></a>
-		{:else}
-			<button
-				type="button"
-				aria-label={parent.name}
-				aria-pressed={selected === undefined ? undefined : selected.has(parent.id)}
-				onclick={() => onpick?.(parent)}
-				data-list-row
-				class={backdrop}
-				{@attach press()}
-			></button>
-		{/if}
-
-		{@render row(parent, true)}
-
-		{#if family.variants.length > 0}
-			<div class="relative -mt-1 flex flex-wrap gap-1.5 pr-3 pb-2.5 pl-17">
-				{#each family.variants as variant (variant.id)}
-					{@const label = variantLabel(variant.name, parent.name)}
-
-					{#if onpick === undefined}
-						<a
-							href="/plan/exercises/{variant.id}"
-							aria-label={variant.name}
-							class={chip}
-							{@attach press()}
-						>
-							{label}
-						</a>
-					{:else}
-						<button
-							type="button"
-							onclick={() => onpick?.(variant)}
-							aria-label={variant.name}
-							aria-pressed={selected === undefined ? undefined : selected.has(variant.id)}
-							class={chip}
-							{@attach press()}
-						>
-							{label}
-						</button>
-					{/if}
-				{/each}
-			</div>
-		{/if}
-	</div>
 {/snippet}
 
 {#if searching}
 	{#if results.length === 0}
-		<EmptyState
-			title="Nothing found"
-			description={muscle === null
-				? 'No exercise answers to that.'
-				: `No ${muscle} exercise answers to that.`}
-		>
+		<EmptyState title="Nothing found" description="No exercise answers to that.">
 			{#snippet icon()}
 				<MagnifyingGlass size={24} />
 			{/snippet}
@@ -176,30 +148,53 @@
 		</div>
 	{/if}
 {:else}
+	<nav
+		bind:this={rail}
+		aria-label="Jump to muscle"
+		class="sticky top-0 z-10 -mx-3 flex [scrollbar-width:none] gap-0.5 overflow-x-auto bg-canvas px-3
+			py-2 [&::-webkit-scrollbar]:hidden"
+	>
+		{#each browse as section (section.muscle)}
+			{@const on = section.muscle === active}
+
+			<button
+				type="button"
+				aria-current={on ? 'true' : undefined}
+				onclick={() => jump(section.muscle)}
+				class={[
+					'flex h-8 flex-none items-center rounded-full px-3 text-md focus-ring select-none',
+					on ? 'bg-nav-selected font-extrabold text-ink' : 'font-semibold text-ink-faint'
+				]}
+				{@attach (node) => {
+					pills.set(section.muscle, node);
+
+					return () => pills.delete(section.muscle);
+				}}
+			>
+				{section.muscle}
+			</button>
+		{/each}
+	</nav>
+
 	<div class="flex flex-col gap-5">
-		{#if shelf !== null && shelf.exercises.length > 0 && muscle === null}
-			<section class="flex flex-col gap-2">
-				<h2 class="px-3 label-caps">{shelf.title}</h2>
+		{#each browse as section (section.muscle)}
+			<section
+				class="flex scroll-mt-14 flex-col gap-2"
+				{@attach (node) => {
+					targets.set(section.muscle, node);
 
-				<div class="list-group">
-					{#each shelf.exercises as exercise (exercise.id)}
-						{@render row(exercise)}
-					{/each}
-				</div>
-			</section>
-		{/if}
-
-		{#each shelves as section (section.muscle)}
-			<section class="flex flex-col gap-2">
-				<h2 class="px-3 label-caps">{section.muscle}</h2>
+					return () => targets.delete(section.muscle);
+				}}
+			>
+				<h2 class="px-3 label-caps">{section.muscle} · {countOf(section.families)}</h2>
 
 				<div class="list-group">
 					{#each section.families as family (family.parent.id)}
-						{#if family.variants.length > 0}
-							{@render familyRow(family)}
-						{:else}
-							{@render row(family.parent)}
-						{/if}
+						{@render row(family.parent)}
+
+						{#each family.variants as variant (variant.id)}
+							{@render row(variant, true)}
+						{/each}
 					{/each}
 				</div>
 			</section>

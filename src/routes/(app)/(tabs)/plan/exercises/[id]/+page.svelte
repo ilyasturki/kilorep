@@ -244,7 +244,7 @@
 
 	<ListRow
 		title={entry.name}
-		meta={lastSetLabel(last)}
+		meta={lastSetLabel(entry, last)}
 		leading={thumb}
 		trailing={since === undefined ? undefined : recency}
 		href="/plan/exercises/{entry.id}"

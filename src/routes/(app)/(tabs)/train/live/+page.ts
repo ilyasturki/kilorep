@@ -12,7 +12,7 @@ export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 	depends(SESSION_DEP);
 
 	const store = await getStore();
-	const { lastPerformed, frequent, history, grips } = await store.pickerData();
+	const { lastPerformed, heaviest, frequent, history, grips } = await store.pickerData();
 
 	// This address answers for itself: a launch that saved a snapshot and navigated straight
 	// here — repeat, a template's own START — must not depend on `/train` having run first.
@@ -30,5 +30,5 @@ export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 		redirect(307, '/train');
 	}
 
-	return { store, lastPerformed, frequent, history };
+	return { store, lastPerformed, heaviest, frequent, history };
 };

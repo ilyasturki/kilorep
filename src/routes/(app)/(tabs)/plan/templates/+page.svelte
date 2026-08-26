@@ -6,6 +6,7 @@
 	import { catalogById } from '$lib/catalog';
 	import { byRank, drawableMark, isArchived, reorder } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
+	import PlanTabs from '$lib/nav/PlanTabs.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { planLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
@@ -100,6 +101,8 @@
 {/snippet}
 
 <main class="column-content flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
+	<PlanTabs value="/plan/templates" />
+
 	{#if templates.length === 0}
 		<EmptyState title="No templates yet" description="Plan a session once, start it every gym day.">
 			{#snippet icon()}

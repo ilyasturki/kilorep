@@ -695,6 +695,30 @@
 	}
 }
 
+/* The command palette: top-anchored so the list grows downward as the query narrows it, wide
+   enough for the ledger columns its rows carry. */
+@utility overlay-palette {
+	top: 5.5rem;
+	left: 50%;
+	translate: -50% 0;
+	width: min(47.5rem, 100% - 2rem);
+	--panel-cap: calc(100dvh - 8rem);
+	overflow: hidden;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sheet);
+	@apply shadow-lg;
+
+	transition:
+		opacity var(--dur-medium) var(--ease-medium),
+		scale var(--dur-medium) var(--ease-medium);
+
+	&[data-starting-style],
+	&[data-ending-style] {
+		opacity: 0;
+		scale: 0.98;
+	}
+}
+
 /* `overlay-sheet`'s phone geometry with the motion removed — vaul owns the panel's position, and two
    owners for it play against each other. */
 @utility overlay-drawer {

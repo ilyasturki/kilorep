@@ -5,5 +5,5 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async () => {
 	const store = await getStore();
 
-	return { lastPerformed: await store.lastPerformed() };
+	return store.ledgerData();
 };

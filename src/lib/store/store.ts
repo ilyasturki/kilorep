@@ -32,10 +32,11 @@ import type { RecordKind, SyncAck, WireRecord } from '$lib/sync/protocol';
 
 import type { KilorepDatabase } from './db.ts';
 import { openDatabase } from './db.ts';
-import type { FinishedWorkout, LastGrips, LastPerformed } from './derive.ts';
+import type { FinishedWorkout, Heaviest, LastGrips, LastPerformed } from './derive.ts';
 import {
 	frequentFrom,
 	gripSessionsFrom,
+	heaviestFrom,
 	historyFrom,
 	lastGripsFrom,
 	lastPerformedFrom,
@@ -220,6 +221,7 @@ export class Store {
 
 	public async pickerData(): Promise<{
 		lastPerformed: LastPerformed;
+		heaviest: Heaviest;
 		frequent: string[];
 		history: History;
 		grips: LastGrips;
@@ -228,9 +230,19 @@ export class Store {
 
 		return {
 			lastPerformed: lastPerformedFrom(workouts),
+			heaviest: heaviestFrom(workouts),
 			frequent: frequentFrom(workouts),
 			history: historyFrom(workouts),
 			grips: lastGripsFrom(workouts)
+		};
+	}
+
+	public async ledgerData(): Promise<{ lastPerformed: LastPerformed; heaviest: Heaviest }> {
+		const workouts = await this.listWorkouts();
+
+		return {
+			lastPerformed: lastPerformedFrom(workouts),
+			heaviest: heaviestFrom(workouts)
 		};
 	}
 

@@ -2,6 +2,7 @@ import type { Exercise, LoadMode } from '$lib/domain/exercise';
 import { bodyweightShareOf } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import { bestSet } from '$lib/domain/stats';
+import type { PerformedSet } from '$lib/domain/workout';
 import { formatSince } from '$lib/history/label';
 
 const LOAD_MODE_NOTES: Record<LoadMode, string> = {
@@ -37,31 +38,33 @@ export function loadLabel(kg: number): string {
 	return String(Math.round(kg * 10) / 10);
 }
 
-export function lastSetLabel(session: PastSession | undefined): string | undefined {
+/**
+ * One logged set as a line. The weigh-in never prints: `80` on a bench and `+10` on a pull-up
+ * are both what the lifter chose — the only number a list can compare across days.
+ */
+export function setLabel(exercise: Exercise, set: PerformedSet): string {
+	if (bodyweightShareOf(exercise) === 0) {
+		return `${set.weight} × ${set.reps}`;
+	}
+
+	return set.weight === 0 ? `${set.reps} reps` : `+${set.weight} × ${set.reps}`;
+}
+
+export function lastSetLabel(
+	exercise: Exercise,
+	session: PastSession | undefined
+): string | undefined {
 	if (session === undefined) {
 		return undefined;
 	}
 
 	const best = bestSet(session.sets);
 
-	return best === null ? undefined : `${best.weight} × ${best.reps}`;
+	return best === null ? undefined : setLabel(exercise, best);
 }
 
 export function lastSinceLabel(session: PastSession | undefined, now: number): string | undefined {
 	return session === undefined ? undefined : formatSince(session.date, now);
-}
-
-const normalizeWord = (word: string): string => {
-	const lower = word.toLowerCase();
-
-	return lower === 'db' ? 'dumbbell' : lower;
-};
-
-export function variantLabel(variant: string, parent: string): string {
-	const parentWords = new Set(parent.split(' ').map((word) => normalizeWord(word)));
-	const kept = variant.split(' ').filter((word) => !parentWords.has(normalizeWord(word)));
-
-	return kept.length === 0 ? variant : kept.join(' ');
 }
 
 const ORDINAL_SUFFIX: Record<string, string> = { one: 'st', two: 'nd', few: 'rd', other: 'th' };

@@ -6,6 +6,7 @@ import type { FinishedWorkout } from './derive.ts';
 import {
 	frequentFrom,
 	gripSessionsFrom,
+	heaviestFrom,
 	historyFrom,
 	lastGripsFrom,
 	lastPerformedFrom,
@@ -194,5 +195,22 @@ describe('folded slugs', () => {
 		const clean = workout(100, leg('squat', [{ weight: 100, reps: 5 }]));
 
 		expect(foldWorkout(clean)).toBe(clean);
+	});
+});
+
+describe('heaviestFrom', () => {
+	it('ranks weight first, then reps at it, across every session', () => {
+		const heaviest = heaviestFrom([
+			workout(
+				100,
+				leg('bench-press', [
+					{ weight: 80, reps: 5 },
+					{ weight: 100, reps: 2 }
+				])
+			),
+			workout(200, leg('bench-press', [{ weight: 100, reps: 1 }]))
+		]);
+
+		expect(heaviest['bench-press']).toMatchObject({ weight: 100, reps: 2 });
 	});
 });
