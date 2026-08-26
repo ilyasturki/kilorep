@@ -16,7 +16,6 @@
 		cursor: SetCursor | null;
 		meta: Exercise | undefined;
 		note: string | null;
-		count: number;
 		history: History;
 		/** Sets in the whole session — what the finish panel counts. */
 		total: number;
@@ -25,6 +24,8 @@
 		/** Off where last time is beside the point — editing a record older than "last time". */
 		hints?: boolean;
 		finishLabel?: string;
+		/** Tapping the exercise name scrolls the list back to it; absent, the name is inert. */
+		onjump?: () => void;
 		oncommit: (weight: number, reps: number) => void;
 		ondraft: (weight: number | null, reps: number | null) => void;
 		onrate: (rpe: number | null) => void;
@@ -36,12 +37,12 @@
 		cursor,
 		meta,
 		note,
-		count,
 		history,
 		total,
 		rest = true,
 		hints = true,
 		finishLabel = 'FINISH',
+		onjump,
 		oncommit,
 		ondraft,
 		onrate,
@@ -197,8 +198,8 @@
 						{history}
 						{meta}
 						{note}
-						{count}
 						{hints}
+						{onjump}
 						step={(from, direction) => weightStep(meta.equipment, from, direction)}
 						unit={loadUnitLabel(meta)}
 						{oncommit}

@@ -17,12 +17,12 @@
 		history: History;
 		meta: Exercise;
 		note: string | null;
-		/** Working sets in this exercise — the "of n" the heading owes the set number. */
-		count: number;
 		/** Off where last time is beside the point — editing a record older than "last time". */
 		hints?: boolean;
 		step: Step;
 		unit: string;
+		/** Tapping the heading scrolls the list back to this exercise; absent, it is inert. */
+		onjump?: () => void;
 		oncommit: (weight: number, reps: number) => void;
 		ondraft: (weight: number | null, reps: number | null) => void;
 		onrate: (rpe: number | null) => void;
@@ -34,10 +34,10 @@
 		history,
 		meta,
 		note,
-		count,
 		hints = true,
 		step,
 		unit,
+		onjump,
 		oncommit,
 		ondraft,
 		onrate,
@@ -76,12 +76,6 @@
 
 	const inertLabel = $derived(liveWeight === null ? 'Enter a weight to log' : 'Enter reps to log');
 
-	const title = $derived(
-		cursor.workingIndex < 0
-			? `${meta.name} · Warmup`
-			: `${meta.name} · Set ${cursor.workingIndex + 1}/${count}`
-	);
-
 	const commitLabel = $derived(cursor.set.completed ? 'Update set' : 'Log set');
 
 	let card = $state<HTMLElement | null>(null);
@@ -115,7 +109,20 @@
 
 <div bind:this={card} onfocusout={settlePreviews} class="flex flex-col gap-2.5">
 	<div class="flex items-center justify-between gap-2">
-		<span class="min-w-0 truncate label-caps text-ink">{title}</span>
+		<!-- The list already says which set this is — the highlighted row — so the heading keeps
+		     only the name, and where the page can scroll, tapping it walks back to the exercise. -->
+		{#if onjump !== undefined}
+			<button
+				type="button"
+				aria-label="Show {meta.name} in the list"
+				onclick={onjump}
+				class="min-w-0 truncate rounded-md text-left label-caps text-ink focus-ring"
+			>
+				{meta.name}
+			</button>
+		{:else}
+			<span class="min-w-0 truncate label-caps text-ink">{meta.name}</span>
+		{/if}
 
 		<!-- Which set this is always reads; last time's numbers are the half that gives. The
 		     target holds its ground and the hint clips into it, because the target is one

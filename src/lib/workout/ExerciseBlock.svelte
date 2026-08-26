@@ -49,8 +49,6 @@
 	// on the same heading, which is where the options for this exercise already live.
 	const setup = $derived([meta.equipment, gripLabel(meta, grip)].filter(Boolean).join(' · '));
 
-	const done = $derived(cursors.filter((cursor) => cursor.set.completed).length);
-
 	function offerOf(cursor: SetCursor): { weight: number | null; reps: number | null } {
 		return prefillFor(cursor, history, meta);
 	}
@@ -102,8 +100,6 @@
 			<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
 			<p class="truncate text-sm font-bold text-ink-faint">{setup}</p>
 		</a>
-
-		<span class="shrink-0 text-sm font-extrabold text-ink-faint">{done}/{cursors.length}</span>
 
 		<button
 			type="button"

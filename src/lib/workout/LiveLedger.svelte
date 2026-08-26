@@ -147,8 +147,8 @@
 	}
 
 	const mini =
-		'grid size-7 shrink-0 place-items-center rounded-lg bg-black/6 text-base font-semibold ' +
-		'text-ink-muted focus-ring hover:bg-black/11 press:bg-black/11 press:text-ink ' +
+		'grid size-8 shrink-0 place-items-center rounded-lg bg-black/8 text-lg font-semibold ' +
+		'text-ink focus-ring hover:bg-black/14 press:bg-black/14 ' +
 		'pointer-fine:transition-[background-color] pointer-fine:duration-100';
 </script>
 
@@ -390,13 +390,11 @@
 													onrate(lit ? null : storedExertion(shownExertion(rung, scale), scale));
 												}}
 												class={[
-													'grid h-7 min-w-7 shrink-0 place-items-center rounded-lg px-1 text-xs',
+													'grid h-8 min-w-8 shrink-0 place-items-center rounded-lg px-1 text-sm',
 													'font-extrabold tabular-nums focus-ring',
 													'pointer-fine:transition-[background-color,color]',
 													'pointer-fine:duration-100',
-													lit
-														? 'bg-accent text-on-accent'
-														: 'bg-black/6 text-ink-muted hover:bg-black/11'
+													lit ? 'bg-accent text-on-accent' : 'bg-black/8 text-ink hover:bg-black/14'
 												]}
 											>
 												{shownExertion(rung, scale)}
@@ -414,8 +412,8 @@
 													swallow(e);
 													onrate(null);
 												}}
-												class="grid h-7 min-w-7 shrink-0 place-items-center rounded-lg
-											bg-accent px-1 text-xs font-extrabold text-on-accent tabular-nums
+												class="grid h-8 min-w-8 shrink-0 place-items-center rounded-lg
+											bg-accent px-1 text-sm font-extrabold text-on-accent tabular-nums
 											focus-ring"
 											>
 												{shownExertion(cursor.set.rpe, scale)}

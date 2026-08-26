@@ -171,10 +171,6 @@
 		activeLeg?.cursors.find((c) => c.set.id === session?.activeSetId) ?? null
 	);
 
-	const activeCount = $derived(
-		activeLeg === null ? 0 : activeLeg.cursors.filter((c) => c.workingIndex >= 0).length
-	);
-
 	function logSet(weight: number, reps: number) {
 		session?.commit(weight, reps);
 	}
@@ -626,7 +622,6 @@
 				note={activeCursor === null
 					? null
 					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
-				count={activeCount}
 				history={NO_HISTORY}
 				total={allCursors.length}
 				rest={false}

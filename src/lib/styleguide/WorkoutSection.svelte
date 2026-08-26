@@ -93,7 +93,6 @@
 					history={sessionHistory}
 					meta={bench}
 					note={null}
-					count={4}
 					{step}
 					unit={loadUnitLabel(bench)}
 					oncommit={say('oncommit')}
@@ -118,7 +117,6 @@
 					cursor={trayCursor}
 					meta={bench}
 					note={null}
-					count={4}
 					history={sessionHistory}
 					total={13}
 					oncommit={noop}

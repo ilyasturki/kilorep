@@ -34,9 +34,13 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import Menu from '$lib/ui/Menu.svelte';
+	import MenuItem from '$lib/ui/MenuItem.svelte';
 	import { smallMs } from '$lib/ui/motion';
+	import { press } from '$lib/ui/press';
 	import { fullyVisible, instantly, revealNearest, revealStart } from '$lib/ui/scroll';
 	import { deskViewport } from '$lib/ui/viewport';
+	import More from '$lib/ui/icons/More.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
@@ -177,10 +181,6 @@
 
 	const activeCursor = $derived(
 		activeLeg?.cursors.find((c) => c.set.id === session?.activeSetId) ?? null
-	);
-
-	const activeCount = $derived(
-		activeLeg === null ? 0 : activeLeg.cursors.filter((c) => c.workingIndex >= 0).length
 	);
 
 	// Rest is earned by a set just done. Advancing may also *clear* a timer — moving on from a
@@ -385,6 +385,9 @@
 	let finishing = $state(false);
 	let discarding = $state(false);
 
+	let menuOpen = $state(false);
+	let menuAnchor = $state<HTMLElement | null>(null);
+
 	const owed = $derived(allCursors.filter((cursor) => !cursor.set.completed).length);
 
 	const logged = $derived(allCursors.filter((cursor) => cursor.set.completed).length);
@@ -506,17 +509,23 @@
 	<div class="flex items-center gap-2.5">
 		{#if desk}
 			<RestPill />
-
-			{#if allCursors.length > 0}
-				<!-- The app bar's own title hides on lg to make room for the nav, so the count
-				     rides along here instead. -->
-				<span class="text-md font-extrabold text-ink-faint">
-					{logged} of {allCursors.length} sets
-				</span>
-			{/if}
 		{/if}
 
 		<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
+
+		<button
+			type="button"
+			aria-label="Workout options"
+			onclick={(e) => {
+				menuAnchor = e.currentTarget;
+				menuOpen = true;
+			}}
+			class="grid min-h-chrome w-9 shrink-0 place-items-center rounded-full text-ink-muted
+				focus-ring hover:bg-hover press:bg-surface-2"
+			{@attach press()}
+		>
+			<More size={20} />
+		</button>
 	</div>
 {/snippet}
 
@@ -526,30 +535,6 @@
 
 {#if session !== null}
 	<div class="flex min-h-0 flex-1 flex-col">
-		{#if allCursors.length > 1}
-			<!-- `scrollbar-gutter` on both this strip and the pane below: a classic scrollbar
-			     narrows the pane's content box but not this one's, and the two `mx-auto` centres
-			     drift apart by half its width. Reserving the same gutter here (hidden overflow
-			     makes this a scroll container, which is all the property asks) keeps the bar and
-			     the ledger on one axis. -->
-			<div class="shrink-0 [scrollbar-gutter:stable] overflow-y-hidden px-3 pt-2 lg:px-4">
-				<div aria-hidden="true" class="mx-auto flex w-full max-w-xl gap-[3px] lg:max-w-5xl">
-					{#each allCursors as cursor (cursor.set.id)}
-						<span
-							class={[
-								'h-1 min-w-0 flex-1 rounded-full',
-								cursor.set.completed
-									? 'bg-accent'
-									: cursor.set.id === session.activeSetId
-										? 'bg-accent-soft [outline:1.5px_solid_var(--accent)] [outline-offset:-1px]'
-										: 'bg-line'
-							]}
-						></span>
-					{/each}
-				</div>
-			</div>
-		{/if}
-
 		<main
 			onscroll={remember}
 			class="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto py-3 pb-6"
@@ -591,11 +576,6 @@
 						onexercise={exerciseOptions}
 						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 					/>
-
-					<Button variant="destructive" class="w-full" onclick={() => (discarding = true)}>
-						<Trash size={20} />
-						Discard workout
-					</Button>
 				</div>
 			{:else}
 				<div class="mx-auto flex w-full max-w-xl flex-col gap-7 px-3">
@@ -625,11 +605,6 @@
 							</EntryStack>
 						</div>
 					{/each}
-
-					<Button variant="destructive" class="w-full" onclick={() => (discarding = true)}>
-						<Trash size={20} />
-						Discard workout
-					</Button>
 				</div>
 			{/if}
 		</main>
@@ -641,9 +616,9 @@
 				note={activeCursor === null
 					? null
 					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
-				count={activeCount}
 				history={data.history}
 				total={allCursors.length}
+				onjump={jumped}
 				oncommit={logSet}
 				ondraft={(weight, reps) => {
 					if (session.activeSetId !== null) {
@@ -664,6 +639,13 @@
 			/>
 		{/if}
 	</div>
+
+	<Menu bind:open={menuOpen} title="Workout" anchor={menuAnchor}>
+		<MenuItem destructive onselect={() => (discarding = true)}>
+			<Trash size={18} />
+			Discard workout
+		</MenuItem>
+	</Menu>
 
 	<ExercisePickerSheet
 		bind:open={insertOpen}
