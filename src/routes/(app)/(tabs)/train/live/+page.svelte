@@ -28,6 +28,8 @@
 	import ExertionDialog from '$lib/workout/ExertionDialog.svelte';
 	import LiveLedger from '$lib/workout/LiveLedger.svelte';
 	import LiveTray from '$lib/workout/LiveTray.svelte';
+	import OverviewDrawer from '$lib/workout/OverviewDrawer.svelte';
+	import OverviewPeek from '$lib/workout/OverviewPeek.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
 	import RestBar from '$lib/workout/RestBar.svelte';
 	import RestPill from '$lib/workout/RestPill.svelte';
@@ -35,15 +37,12 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import Menu from '$lib/ui/Menu.svelte';
-	import MenuItem from '$lib/ui/MenuItem.svelte';
-	import { smallMs } from '$lib/ui/motion';
-	import { press } from '$lib/ui/press';
+	import { mediumMs, smallMs } from '$lib/ui/motion';
+	import { coarsePointer } from '$lib/ui/pointer';
+	import { press, SLOP } from '$lib/ui/press';
 	import { fullyVisible, instantly, revealNearest, revealStart } from '$lib/ui/scroll';
 	import { deskViewport } from '$lib/ui/viewport';
-	import More from '$lib/ui/icons/More.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
-	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	import type { PageProps } from './$types';
 
@@ -59,6 +58,13 @@
 	// back to the list; raised by the three things that make it the screen's business again —
 	// a set tapped, a set logged, a rest run out.
 	let trayOpen = $state(true);
+
+	// The tray stands over the list rather than beside it, so the list keeps this much of its
+	// own floor clear: enough that the last row can be scrolled out from under the tray, and
+	// handed straight back when the tray goes down.
+	let traySpan = $state(0);
+
+	const floor = $derived(trayOpen ? traySpan : 0);
 
 	const restShowing = $derived(restTimer.running || restTimer.undoing);
 
@@ -322,6 +328,146 @@
 
 	const slide = $derived(smallMs());
 
+	// The session drawer, and the pull that opens it. It takes the whole page rather than an
+	// edge strip — but never a pull that started on a set row, which owns the same axis for
+	// logging and unlogging. A row is the one place on this screen where sideways already
+	// means something, so it keeps it and the rest of the page opens the drawer.
+	let overview = $state(false);
+	let instant = $state(false);
+
+	let peek = $state<number | null>(null);
+	let peekWidth = $state(0);
+	let settling = $state(false);
+
+	let swipe: { id: number; x0: number; y0: number; x: number; at: number; v: number } | null = null;
+	let swallow = false;
+
+	const SETTLE_AT = 0.4;
+
+	/** px per ms of rightward flick that opens the panel from anywhere. */
+	const FLING = 0.5;
+
+	function swipeStart(event: PointerEvent) {
+		swallow = false;
+
+		if (desk || !coarsePointer || !event.isPrimary || overview || peek !== null) {
+			swipe = null;
+			return;
+		}
+
+		// Inside the list and nowhere else. The tray below it is a working surface of steppers
+		// and chips, and a row inside it owns this axis already — right on a row logs the set,
+		// left takes it out. Everything else the list is made of has nothing sideways to say,
+		// which is what leaves the gesture free to mean the drawer.
+		const target = event.target;
+
+		if (
+			!(target instanceof Element) ||
+			pane === null ||
+			!pane.contains(target) ||
+			target.closest('[data-swipe-row]') !== null
+		) {
+			swipe = null;
+			return;
+		}
+
+		swipe = {
+			id: event.pointerId,
+			x0: event.clientX,
+			y0: event.clientY,
+			x: event.clientX,
+			at: event.timeStamp,
+			v: 0
+		};
+	}
+
+	function swipeMove(event: PointerEvent & { currentTarget: HTMLElement }) {
+		if (swipe === null || event.pointerId !== swipe.id) {
+			return;
+		}
+
+		const span = event.timeStamp - swipe.at;
+
+		if (span > 0) {
+			swipe.v = (event.clientX - swipe.x) / span;
+			swipe.x = event.clientX;
+			swipe.at = event.timeStamp;
+		}
+
+		const dx = event.clientX - swipe.x0;
+		const dy = Math.abs(event.clientY - swipe.y0);
+
+		if (peek !== null) {
+			peek = Math.max(0, Math.min(dx, peekWidth));
+			return;
+		}
+
+		if (dy > SLOP && dy > dx) {
+			swipe = null;
+			return;
+		}
+
+		if (dx > SLOP && dx > 2 * dy) {
+			event.currentTarget.setPointerCapture(swipe.id);
+			peek = dx;
+		}
+	}
+
+	function settled() {
+		settling = false;
+
+		if (peek === 0) {
+			peek = null;
+			return;
+		}
+
+		instant = true;
+		overview = true;
+
+		requestAnimationFrame(() => {
+			peek = null;
+		});
+	}
+
+	function swipeEnd() {
+		if (swipe === null || peek === null) {
+			swipe = null;
+			return;
+		}
+
+		const opened = peek >= peekWidth * SETTLE_AT || swipe.v > FLING;
+		const target = opened ? peekWidth : 0;
+
+		swipe = null;
+		swallow = true;
+
+		// A transition with nothing to do never fires `transitionend`, so settle here instead.
+		if (target === peek || mediumMs() === 0) {
+			peek = target;
+			settled();
+			return;
+		}
+
+		settling = true;
+		peek = target;
+	}
+
+	$effect(() => {
+		if (!overview) {
+			instant = false;
+		}
+	});
+
+	function swipeClick(event: MouseEvent) {
+		if (!swallow) {
+			return;
+		}
+
+		swallow = false;
+		event.preventDefault();
+		event.stopImmediatePropagation();
+	}
+
 	let insertOpen = $state(false);
 	let insertAfter = $state<string | null>(null);
 
@@ -418,8 +564,58 @@
 	let finishing = $state(false);
 	let discarding = $state(false);
 
-	let menuOpen = $state(false);
-	let menuAnchor = $state<HTMLElement | null>(null);
+	// A logged set taken back by a gesture. The cursor lands on it, so the tray comes up
+	// showing the numbers that were there — taking a log back is almost always the first half
+	// of writing a better one.
+	function unlogFrom(setId: string) {
+		if (session === null) {
+			return;
+		}
+
+		session.unlogSet(setId);
+		trayOpen = true;
+	}
+
+	// Frozen at the ask, like the options sheets: the dialog reads this after the set is gone.
+	let removing = $state<{ id: string; title: string; lost: string } | null>(null);
+	let removingOpen = $state(false);
+
+	function removeFrom(setId: string) {
+		if (session === null) {
+			return;
+		}
+
+		const cursor = allCursors.find((c) => c.set.id === setId);
+
+		if (cursor === undefined) {
+			return;
+		}
+
+		// An empty row is nothing to lose, and asking about it would be the screen making a
+		// ceremony of clearing a blank line. A logged one holds a number nothing can put back.
+		if (!cursor.set.completed) {
+			session.removeSet(setId);
+
+			return;
+		}
+
+		removing = {
+			id: setId,
+			title: cursor.workingIndex < 0 ? 'Remove warmup?' : `Remove set ${cursor.workingIndex + 1}?`,
+			lost: `${cursor.set.weight} × ${cursor.set.reps} goes with it, and nothing in the app can put it back.`
+		};
+
+		removingOpen = true;
+	}
+
+	function removeConfirmed() {
+		if (session === null || removing === null) {
+			return;
+		}
+
+		session.removeSet(removing.id);
+		removing = null;
+	}
 
 	const owed = $derived(allCursors.filter((cursor) => !cursor.set.completed).length);
 
@@ -513,6 +709,7 @@
 
 	fillAppBar(() => ({
 		title: allCursors.length === 0 ? null : `${logged} of ${allCursors.length} sets`,
+		leading: overviewButton,
 		action: finish
 	}));
 
@@ -538,6 +735,25 @@
 
 <svelte:window onkeydown={deskEnter} />
 
+<!-- Where the drawer is found by someone who never swipes. Beside back, because that is the
+     side it comes in from — and `lg:hidden` because the desktop ledger is the same list, laid
+     out rather than hidden behind a gesture. -->
+{#snippet overviewButton()}
+	<button
+		type="button"
+		aria-label="Session overview"
+		onclick={() => (overview = true)}
+		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
+			border-line text-ink-muted focus-ring hover:bg-hover lg:hidden
+			press:bg-surface-2"
+		{@attach press()}
+	>
+		<Stack size={20} />
+	</button>
+{/snippet}
+
+<!-- No ⋮ here any more: its one item was Discard workout, and the drawer carries that at its
+     own foot, under the list the act is about. -->
 {#snippet finish()}
 	<div class="flex items-center gap-2.5">
 		{#if desk}
@@ -545,20 +761,6 @@
 		{/if}
 
 		<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
-
-		<button
-			type="button"
-			aria-label="Workout options"
-			onclick={(e) => {
-				menuAnchor = e.currentTarget;
-				menuOpen = true;
-			}}
-			class="grid min-h-chrome w-9 shrink-0 place-items-center rounded-full text-ink-muted
-				focus-ring hover:bg-hover press:bg-surface-2"
-			{@attach press()}
-		>
-			<More size={20} />
-		</button>
 	</div>
 {/snippet}
 
@@ -567,7 +769,18 @@
 </svelte:head>
 
 {#if session !== null}
-	<div class="flex min-h-0 flex-1 flex-col">
+	<!-- `relative` because the tray stands inside this box rather than under it, and
+	     `overflow-hidden` so a lowered tray leaves the screen instead of the document.
+	     The pull that opens the drawer is caught here, above the list and everything in it. -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+		onpointerdown={swipeStart}
+		onpointermove={swipeMove}
+		onpointerup={swipeEnd}
+		onpointercancel={swipeEnd}
+		onclickcapture={swipeClick}
+	>
 		<main
 			onscroll={remember}
 			class="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto py-3 pb-6"
@@ -628,9 +841,11 @@
 										cursors={leg.cursors}
 										history={data.history}
 										activeSetId={session.activeSetId}
-										from="/train/live"
+										{floor}
 										onselect={jumpTo}
 										onquick={quickLog}
+										onunlog={unlogFrom}
+										onremove={removeFrom}
 										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
 										oninsert={() => insertFrom(entry.id)}
 										onoptions={options}
@@ -642,11 +857,36 @@
 					{/each}
 				</div>
 			{/if}
+
+			{#if !desk && entries.length > 0}
+				<!-- The floor the tray covers, kept clear inside the scroller so the last row can
+				     still be brought out from under it — and handed straight back on the way down,
+				     on the tray's own curve, so the two read as one movement. -->
+				<div
+					aria-hidden="true"
+					class={[
+						mediumMs() > 0 && 'transition-[height] duration-(--dur-medium) ease-(--ease-medium)'
+					]}
+					style="height: {floor}px"
+				></div>
+			{/if}
 		</main>
 
 		{#if !desk && entries.length > 0}
+			{#if !trayOpen}
+				<!-- What stands on the edge the tray gave up. The global bar is kept off this
+				     screen while the tray is the timer's face; with the tray down it is the only
+				     face left, and it carries the home-indicator inset the tray took with it.
+				     Above the tray in the file but under it on screen — the tray is out of flow,
+				     so this is already standing where the tray uncovers it. -->
+				<div class={['shrink-0 pb-safe-b', restShowing && 'bg-surface']}>
+					<RestBar />
+				</div>
+			{/if}
+
 			<LiveTray
 				bind:open={trayOpen}
+				bind:span={traySpan}
 				cursor={activeCursor}
 				meta={activeLeg?.meta}
 				note={activeCursor === null
@@ -654,7 +894,6 @@
 					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
 				history={data.history}
 				total={allCursors.length}
-				onjump={jumped}
 				oncommit={logSet}
 				ondraft={(weight, reps) => {
 					if (session.activeSetId !== null) {
@@ -673,24 +912,31 @@
 				}}
 				onfinish={() => (finishing = true)}
 			/>
-
-			{#if !trayOpen}
-				<!-- What stands on the edge the tray gave up. The global bar is kept off this
-				     screen while the tray is the timer's face; with the tray down it is the only
-				     face left, and it carries the home-indicator inset the tray took with it. -->
-				<div class={['shrink-0 pb-safe-b', restShowing && 'bg-surface']}>
-					<RestBar />
-				</div>
-			{/if}
 		{/if}
 	</div>
 
-	<Menu bind:open={menuOpen} title="Workout" anchor={menuAnchor}>
-		<MenuItem destructive onselect={() => (discarding = true)}>
-			<Trash size={18} />
-			Discard workout
-		</MenuItem>
-	</Menu>
+	<OverviewDrawer
+		bind:open={overview}
+		{instant}
+		{entries}
+		activeSetId={session.activeSetId}
+		onjump={jumpTo}
+		oninsert={() => insertFrom(null)}
+		onreorder={(entryId, index) => session.moveEntry(entryId, index)}
+		ondrop={jumped}
+		ondiscard={() => (discarding = true)}
+	/>
+
+	{#if peek !== null}
+		<OverviewPeek
+			offset={peek}
+			bind:width={peekWidth}
+			{settling}
+			{entries}
+			activeSetId={session.activeSetId}
+			onsettled={settled}
+		/>
+	{/if}
 
 	<ExercisePickerSheet
 		bind:open={insertOpen}
@@ -725,6 +971,7 @@
 		group={actingLeg}
 		superset={actingEntry !== null && actingEntry.superset}
 		anchor={exerciseAnchor}
+		from="/train/live"
 		onswap={() => (swapOpen = true)}
 		onsuperset={() => (supersetOpen = true)}
 		onbreak={breakSuperset}
@@ -771,5 +1018,13 @@
 		description={discardLabel}
 		confirmLabel="Discard"
 		onconfirm={() => void discardSession()}
+	/>
+
+	<AlertDialog
+		bind:open={removingOpen}
+		title={removing?.title ?? 'Remove set?'}
+		description={removing?.lost}
+		confirmLabel="Remove"
+		onconfirm={removeConfirmed}
 	/>
 {/if}

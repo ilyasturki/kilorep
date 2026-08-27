@@ -35,7 +35,7 @@
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import { smallMs } from '$lib/ui/motion';
+	import { mediumMs, smallMs } from '$lib/ui/motion';
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { revealNearest } from '$lib/ui/scroll';
 	import { deskViewport } from '$lib/ui/viewport';
@@ -108,6 +108,12 @@
 	// back to the record; raised by a set tapped or a set logged. No rest is owed for a set
 	// lifted weeks ago, so the third way in on the live screen has nothing to say here.
 	let trayOpen = $state(true);
+
+	// The tray stands over the record rather than beside it; this is the floor the list keeps
+	// clear underneath, so the row it covers can still be scrolled out from under it.
+	let traySpan = $state(0);
+
+	const floor = $derived(trayOpen ? traySpan : 0);
 
 	let unlockOpen = $state(false);
 
@@ -366,6 +372,52 @@
 		optionsSetId = null;
 	}
 
+	// The gesture pair the rows carry, same as the live screen: rightward takes a log back,
+	// leftward takes the row out — and only a logged row is worth stopping to ask about.
+	function unlogFrom(setId: string) {
+		session?.unlogSet(setId);
+		trayOpen = true;
+	}
+
+	// Frozen at the ask, like the options sheets: the dialog reads this after the set is gone.
+	let removing = $state<{ id: string; title: string; lost: string } | null>(null);
+	let removingOpen = $state(false);
+
+	function removeFrom(setId: string) {
+		if (session === null) {
+			return;
+		}
+
+		const cursor = allCursors.find((c) => c.set.id === setId);
+
+		if (cursor === undefined) {
+			return;
+		}
+
+		if (!cursor.set.completed) {
+			session.removeSet(setId);
+
+			return;
+		}
+
+		removing = {
+			id: setId,
+			title: cursor.workingIndex < 0 ? 'Remove warmup?' : `Remove set ${cursor.workingIndex + 1}?`,
+			lost: `${cursor.set.weight} × ${cursor.set.reps} goes with it, and nothing in the app can put it back.`
+		};
+
+		removingOpen = true;
+	}
+
+	function removeConfirmed() {
+		if (session === null || removing === null) {
+			return;
+		}
+
+		session.removeSet(removing.id);
+		removing = null;
+	}
+
 	const when = new Intl.DateTimeFormat('en-GB', {
 		weekday: 'short',
 		day: 'numeric',
@@ -564,7 +616,9 @@
 		</div>
 	</main>
 {:else}
-	<div class="flex min-h-0 flex-1 flex-col">
+	<!-- `relative` because the tray stands inside this box rather than under it, and
+	     `overflow-hidden` so a lowered tray leaves the screen instead of the document. -->
+	<div class="relative flex min-h-0 flex-1 flex-col overflow-hidden">
 		<main class="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto py-3 pb-6">
 			{#if entries.length === 0}
 				<div class="mx-auto flex min-h-full w-full max-w-xl flex-col gap-7 px-3">
@@ -613,9 +667,11 @@
 										cursors={leg.cursors}
 										history={NO_HISTORY}
 										activeSetId={session.activeSetId}
-										from="/history/{workout.id}"
+										{floor}
 										onselect={jumpTo}
 										onquick={quickLog}
+										onunlog={unlogFrom}
+										onremove={removeFrom}
 										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
 										oninsert={() => insertFrom(entry.id)}
 										onoptions={options}
@@ -627,11 +683,32 @@
 					{/each}
 				</div>
 			{/if}
+
+			{#if !desk && entries.length > 0}
+				<!-- The floor the tray covers, kept clear inside the scroller and handed back on
+				     the tray's own curve, so the two read as one movement. -->
+				<div
+					aria-hidden="true"
+					class={[
+						mediumMs() > 0 && 'transition-[height] duration-(--dur-medium) ease-(--ease-medium)'
+					]}
+					style="height: {floor}px"
+				></div>
+			{/if}
 		</main>
 
 		{#if !desk && entries.length > 0}
+			{#if !trayOpen}
+				<!-- The home-indicator inset the lowered tray took down with it. Nothing else
+				     stands here: the global rest bar belongs to the layout, below this column.
+				     Above the tray in the file but under it on screen — the tray is out of flow,
+				     so this is already standing where the tray uncovers it. -->
+				<div class="shrink-0 pb-safe-b"></div>
+			{/if}
+
 			<LiveTray
 				bind:open={trayOpen}
+				bind:span={traySpan}
 				cursor={activeCursor}
 				meta={activeLeg?.meta}
 				note={activeCursor === null
@@ -652,12 +729,6 @@
 				}}
 				onfinish={stopEditing}
 			/>
-
-			{#if !trayOpen}
-				<!-- The home-indicator inset the lowered tray took down with it. Nothing else
-				     stands here: the global rest bar belongs to the layout, below this column. -->
-				<div class="shrink-0 pb-safe-b"></div>
-			{/if}
 		{/if}
 	</div>
 {/if}
@@ -695,6 +766,7 @@
 	group={actingLeg}
 	superset={actingEntry !== null && actingEntry.superset}
 	anchor={exerciseAnchor}
+	from="/history/{workout.id}"
 	onswap={() => (swapOpen = true)}
 	onsuperset={() => (supersetOpen = true)}
 	onbreak={breakSuperset}
@@ -760,6 +832,14 @@
 	description="Its sets leave history, hints and records for good, on every device."
 	confirmLabel="Delete"
 	onconfirm={() => void deleteWorkout()}
+/>
+
+<AlertDialog
+	bind:open={removingOpen}
+	title={removing?.title ?? 'Remove set?'}
+	description={removing?.lost}
+	confirmLabel="Remove"
+	onconfirm={removeConfirmed}
 />
 
 <AlertDialog

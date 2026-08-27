@@ -21,8 +21,6 @@
 		hints?: boolean;
 		step: Step;
 		unit: string;
-		/** Tapping the heading scrolls the list back to this exercise; absent, it is inert. */
-		onjump?: () => void;
 		oncommit: (weight: number, reps: number) => void;
 		ondraft: (weight: number | null, reps: number | null) => void;
 		onrate: (rpe: number | null) => void;
@@ -37,7 +35,6 @@
 		hints = true,
 		step,
 		unit,
-		onjump,
 		oncommit,
 		ondraft,
 		onrate,
@@ -108,57 +105,45 @@
 <svelte:window {onkeydown} />
 
 <div bind:this={card} onfocusout={settlePreviews} class="flex flex-col gap-2.5">
-	<div class="flex items-center justify-between gap-2">
-		<!-- The list already says which set this is — the highlighted row — so the heading keeps
-		     only the name, and where the page can scroll, tapping it walks back to the exercise. -->
-		{#if onjump !== undefined}
-			<button
-				type="button"
-				aria-label="Show {meta.name} in the list"
-				onclick={onjump}
-				class="min-w-0 truncate rounded-md text-left label-caps text-ink focus-ring"
-			>
-				{meta.name}
-			</button>
-		{:else}
-			<span class="min-w-0 truncate label-caps text-ink">{meta.name}</span>
-		{/if}
-
-		<!-- Which set this is always reads; last time's numbers are the half that gives. The
-		     target holds its ground and the hint clips into it, because the target is one
-		     short number the field has no way of stating and the hint truncates legibly. -->
-		<div class="flex min-w-0 items-center gap-1 text-sm font-bold text-ink-faint">
+	<div class="flex items-start gap-2">
+		<!-- No name here. The list behind the tray says which exercise this is — the highlighted
+		     row — and the name was the half that gave way, leaving the target and last time
+		     clipped on any exercise called more than two words. What is left is the half a
+		     lifter reads mid-set, and it wraps rather than truncates: on a long grip note and a
+		     rated hint it takes a second line, which is cheaper than hiding the number. -->
+		<div
+			class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1.5 text-sm font-bold
+				text-ink-faint"
+		>
 			{#if note !== null}
-				<span class="shrink-0">{note}</span>
+				<span>{note}</span>
 				{#if planned !== null || hints}
 					<span aria-hidden="true">·</span>
 				{/if}
 			{/if}
 
 			{#if planned !== null}
-				<span class="shrink-0">Target {planned}</span>
+				<span>Target {planned}</span>
 				{#if hints}
 					<span aria-hidden="true">·</span>
 				{/if}
 			{/if}
 
 			{#if hints}
-				<span class="truncate">
-					{hint === null ? 'First time' : `Last ${hint}`}
-				</span>
+				<span>{hint === null ? 'First time' : `Last ${hint}`}</span>
 			{/if}
-
-			<button
-				type="button"
-				aria-label="Set options"
-				onclick={(e) => onoptions(e.currentTarget)}
-				class="-my-1.5 -mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-lg
-					text-ink-faint focus-ring hover:bg-hover press:bg-surface-2"
-				{@attach press()}
-			>
-				<More size={20} />
-			</button>
 		</div>
+
+		<button
+			type="button"
+			aria-label="Set options"
+			onclick={(e) => onoptions(e.currentTarget)}
+			class="-mt-1.5 -mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-lg
+				text-ink-faint focus-ring hover:bg-hover press:bg-surface-2"
+			{@attach press()}
+		>
+			<More size={20} />
+		</button>
 	</div>
 
 	<div class="stepper-pair">

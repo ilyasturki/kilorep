@@ -1,6 +1,8 @@
 <script lang="ts">
+	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import Trash from '$lib/ui/icons/Trash.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 	import { mediumMs } from '$lib/ui/motion';
@@ -17,6 +19,14 @@
 		quick?: { weight: number; reps: number } | null;
 		onselect?: () => void;
 		onquick?: () => void;
+		/**
+		 * Takes a logged row back to owed, keeping its numbers. The same rightward pull as
+		 * logging, because it is the same axis of the same act — a row that has nothing left
+		 * to log is the only row that offers it.
+		 */
+		onunlog?: () => void;
+		/** Takes the row out of the session. Leftward; absent, the row cannot be swiped away. */
+		onremove?: () => void;
 		onoptions?: (anchor: HTMLElement) => void;
 	};
 
@@ -29,6 +39,8 @@
 		quick = null,
 		onselect,
 		onquick,
+		onunlog,
+		onremove,
 		onoptions
 	}: Props = $props();
 
@@ -44,13 +56,39 @@
 	);
 
 	// The swipe. Same intent test as every horizontal gesture here: vertical wins past SLOP,
-	// a clear rightward pull captures the pointer. The row travels over an accent track that
-	// says what release will do; the dashed check is the same act for a tap or a mouse.
+	// a clear sideways pull captures the pointer. The row travels over a track that says what
+	// release will do; the dashed check is the same act for a tap or a mouse.
+
+	/** Rightward: log what the row shows, or — with nothing left to log — take the log back. */
+	const forward = $derived.by((): 'log' | 'unlog' | null => {
+		if (quick !== null && onquick !== undefined) {
+			return 'log';
+		}
+
+		return onunlog === undefined ? null : 'unlog';
+	});
+
+	const back = $derived(onremove === undefined ? null : 'remove');
+
 	let width = $state(0);
 
-	const cap = $derived(Math.min(150, width * 0.4));
+	// The reveal has to finish the sentence it starts. A track that stops mid-word is the
+	// gesture asking the lifter to guess, which is what a flat 150px cap did to `Log 100 × 12`
+	// — so each cap is its own label's measured width, and only then bounded by the row.
+	let forwardLabel = $state(0);
+	let backLabel = $state(0);
 
-	/** px per ms of rightward flick that logs from anywhere. */
+	const REST = 8;
+	const LEAST = 96;
+
+	function capFor(label: number, offered: boolean): number {
+		return offered && width > 0 ? Math.min(Math.max(label + REST, LEAST), width * 0.75) : 0;
+	}
+
+	const forwardCap = $derived(capFor(forwardLabel, forward !== null));
+	const backCap = $derived(capFor(backLabel, back !== null));
+
+	/** px per ms of flick that settles from anywhere in the pull. */
 	const FLING = 0.5;
 
 	const SETTLE_AT = 0.6;
@@ -61,10 +99,12 @@
 	let pulling = $state(false);
 	let swallow = false;
 
+	const clamp = (dx: number) => Math.max(-backCap, Math.min(dx, forwardCap));
+
 	function swipeStart(event: PointerEvent) {
 		swallow = false;
 
-		if (!coarsePointer || quick === null || onquick === undefined || !event.isPrimary) {
+		if (!coarsePointer || !event.isPrimary || (forwardCap === 0 && backCap === 0)) {
 			drag = null;
 			return;
 		}
@@ -96,20 +136,29 @@
 		const dy = Math.abs(event.clientY - drag.y0);
 
 		if (pulling) {
-			pull = Math.max(0, Math.min(dx, cap));
+			pull = clamp(dx);
 			return;
 		}
 
-		if (dy > SLOP && dy > dx) {
+		if (dy > SLOP && dy > Math.abs(dx)) {
 			drag = null;
 			return;
 		}
 
-		if (dx > SLOP && dx > 2 * dy) {
-			event.currentTarget.setPointerCapture(drag.id);
-			pulling = true;
-			pull = Math.min(dx, cap);
+		if (Math.abs(dx) <= SLOP || Math.abs(dx) <= 2 * dy) {
+			return;
 		}
+
+		// A direction with nothing behind it is refused rather than clamped to zero: the row
+		// would otherwise swallow a pointer it has no use for, and with it the pane's own pan.
+		if (dx > 0 ? forwardCap === 0 : backCap === 0) {
+			drag = null;
+			return;
+		}
+
+		event.currentTarget.setPointerCapture(drag.id);
+		pulling = true;
+		pull = clamp(dx);
 	}
 
 	function swipeEnd() {
@@ -118,16 +167,31 @@
 			return;
 		}
 
-		const logs = pull >= cap * SETTLE_AT || drag.v > FLING;
+		const went = pull;
+		const cap = went > 0 ? forwardCap : backCap;
+		const settles =
+			Math.abs(went) >= cap * SETTLE_AT || (went > 0 ? drag.v > FLING : drag.v < -FLING);
 
 		drag = null;
 		pulling = false;
 		swallow = true;
 		pull = 0;
 
-		if (logs) {
-			onquick?.();
+		if (!settles || went === 0) {
+			return;
 		}
+
+		if (went < 0) {
+			onremove?.();
+			return;
+		}
+
+		if (forward === 'log') {
+			onquick?.();
+			return;
+		}
+
+		onunlog?.();
 	}
 
 	function swipeClick(event: MouseEvent) {
@@ -143,6 +207,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+	data-swipe-row
 	bind:clientWidth={width}
 	onpointerdown={swipeStart}
 	onpointermove={swipeMove}
@@ -152,17 +217,46 @@
 	class="relative touch-pan-y overflow-hidden"
 	{@attach press(() => onoptions)}
 >
-	{#if quick !== null}
+	<!-- `invisible` rather than a `{#if}`: the label is what sizes the cap, and a track that
+	     only exists once the pull has begun would be measured a frame after it was needed. -->
+	{#if forward !== null}
 		<div
 			aria-hidden="true"
 			class={[
-				'absolute inset-0 flex items-center gap-2 bg-accent pl-4',
-				'text-base font-extrabold text-on-accent',
-				pull === 0 && 'invisible'
+				'absolute inset-0 flex items-center bg-accent text-on-accent',
+				pull <= 0 && 'invisible'
 			]}
 		>
-			<Check size={20} />
-			Log {quick.weight} × {quick.reps}
+			<span
+				bind:clientWidth={forwardLabel}
+				class="flex shrink-0 items-center gap-2 px-4 text-base font-extrabold"
+			>
+				{#if forward === 'log' && quick !== null}
+					<Check size={20} />
+					Log {quick.weight} × {quick.reps}
+				{:else}
+					<ArrowCounterClockwise size={20} />
+					Unlog
+				{/if}
+			</span>
+		</div>
+	{/if}
+
+	{#if back !== null}
+		<div
+			aria-hidden="true"
+			class={[
+				'absolute inset-0 flex items-center justify-end bg-danger-soft text-danger',
+				pull >= 0 && 'invisible'
+			]}
+		>
+			<span
+				bind:clientWidth={backLabel}
+				class="flex shrink-0 items-center gap-2 px-4 text-base font-extrabold"
+			>
+				Remove
+				<Trash size={20} />
+			</span>
 		</div>
 	{/if}
 

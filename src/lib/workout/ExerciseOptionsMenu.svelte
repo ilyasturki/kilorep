@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { hasGrips } from '$lib/domain/grip';
+	import { openedFrom } from '$lib/nav/bar.svelte';
 	import type { Group } from '$lib/workout/groups';
 	import GripField from '$lib/workout/GripField.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -10,6 +11,7 @@
 	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
 	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import ArrowsSplit from '$lib/ui/icons/ArrowsSplit.svelte';
+	import Eye from '$lib/ui/icons/Eye.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	type Props = {
@@ -17,6 +19,11 @@
 		group: Group | null;
 		superset?: boolean;
 		anchor?: HTMLElement | null;
+		/**
+		 * The address the exercise's own page walks back to. Set, the sheet carries the way to
+		 * that page — which is the tap the heading used to be, now that tapping it opens this.
+		 */
+		from?: string;
 		onswap: () => void;
 		onsuperset?: () => void;
 		onbreak?: () => void;
@@ -31,6 +38,7 @@
 		group,
 		superset = false,
 		anchor = null,
+		from,
 		onswap,
 		onsuperset,
 		onbreak,
@@ -66,6 +74,10 @@
 	const meta = $derived(view.group?.meta);
 
 	const gripped = $derived(hasGrips(meta) && ongrip !== undefined);
+
+	const details = $derived(
+		meta === undefined ? null : openedFrom(`/plan/exercises/${meta.id}`, from)
+	);
 
 	const logged = $derived(
 		view.group === null ? 0 : view.group.cursors.filter((cursor) => cursor.set.completed).length
@@ -123,6 +135,15 @@
 				ongrip?.(grip);
 			}}
 		/>
+	{/if}
+
+	<!-- First, and a link: tapping the heading opens this sheet now, so the page the heading
+	     used to reach has to be the first thing the sheet offers back. -->
+	{#if details !== null}
+		<MenuItem href={details} onselect={() => (open = false)}>
+			<Eye size={18} />
+			View exercise
+		</MenuItem>
 	{/if}
 
 	{#if view.up !== undefined}

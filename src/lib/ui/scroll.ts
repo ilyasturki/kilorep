@@ -35,11 +35,17 @@ function margins(node: HTMLElement): { top: number; bottom: number } {
 	return { top: px(style.scrollMarginTop), bottom: px(style.scrollMarginBottom) };
 }
 
+// Margins included, and they have to be: `revealNearest` asks this before it scrolls, so a
+// box this calls visible is a box nothing will move. The live tray stands *over* its list and
+// the rows say so through `scroll-margin-bottom` — read without it, a row underneath the tray
+// reads as plainly visible, and the set the lifter just advanced to is never brought out.
+// Same criterion `shortfall` scrolls by, which is what makes the pair agree.
 export function fullyVisible(node: HTMLElement): boolean {
 	const bounds = viewport(scrollParent(node));
 	const rect = node.getBoundingClientRect();
+	const margin = margins(node);
 
-	return rect.top >= bounds.top && rect.bottom <= bounds.bottom;
+	return rect.top - margin.top >= bounds.top && rect.bottom + margin.bottom <= bounds.bottom;
 }
 
 let gliding: number | undefined;

@@ -10,9 +10,7 @@
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import { smallMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
-	import { openedFrom } from '$lib/nav/bar.svelte';
 	import { setNote, statusOf } from '$lib/workout/groups';
-	import More from '$lib/ui/icons/More.svelte';
 	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import SwipeRow from '$lib/workout/SwipeRow.svelte';
@@ -23,10 +21,17 @@
 		cursors: SetCursor[];
 		history: History;
 		activeSetId: string | null;
-		/** The address the exercise's own page walks back to — this screen, not the browse list. */
-		from?: string;
+		/**
+		 * How much of the list's bottom edge something else stands over — the tray. A row has
+		 * to clear it to count as revealed, and nothing in the list can see what covers it.
+		 */
+		floor?: number;
 		onselect: (setId: string) => void;
 		onquick: (setId: string, weight: number, reps: number) => void;
+		/** Absent, a logged row cannot be taken back by a gesture. */
+		onunlog?: (setId: string) => void;
+		/** Absent, no row here can be swiped away. */
+		onremove?: (setId: string) => void;
 		onadd: () => void;
 		oninsert?: () => void;
 		onoptions: (setId: string, anchor: HTMLElement) => void;
@@ -39,9 +44,11 @@
 		cursors,
 		history,
 		activeSetId,
-		from,
+		floor = 0,
 		onselect,
 		onquick,
+		onunlog,
+		onremove,
 		onadd,
 		oninsert,
 		onoptions,
@@ -94,28 +101,26 @@
 </script>
 
 <section data-exercise class="flex flex-col gap-2">
+	<!-- The heading is the whole control now. A ⋮ on every exercise put four of them on a
+	     phone screen for one act apiece, so the act moved onto the thing it acts on: tapping
+	     the name opens the exercise's sheet, and the page it used to link to is the first row
+	     inside that sheet. -->
 	<div data-exercise-head class="flex scroll-mt-3 items-center gap-1">
-		<a
-			href={openedFrom(`/plan/exercises/${meta.id}`, from)}
-			class="min-w-0 flex-1 press-sink rounded-xl px-1 py-1 text-left focus-ring
-				hover:bg-hover press:bg-surface-2"
-			{@attach press(() => onexercise)}
-		>
-			<h2 class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</h2>
-			<p class="truncate text-sm font-bold text-ink-faint">{setup}</p>
-		</a>
-
-		<button
-			type="button"
-			aria-label="Exercise options"
-			onclick={(e) => onexercise(e.currentTarget)}
-			class="grid size-9 shrink-0 place-items-center rounded-lg text-ink-faint focus-ring
-				hover:bg-sunken hover:text-ink-muted pointer-fine:transition-[background-color,color] pointer-fine:duration-100
-				press:bg-sunken press:text-ink-muted"
-			{@attach press()}
-		>
-			<More size={20} />
-		</button>
+		<h2 class="min-w-0 flex-1">
+			<button
+				type="button"
+				aria-label="{meta.name} options"
+				onclick={(e) => onexercise(e.currentTarget)}
+				class="w-full press-sink rounded-xl px-1 py-1 text-left focus-ring hover:bg-hover
+					press:bg-surface-2"
+				{@attach press()}
+			>
+				<span class="block truncate text-lg font-extrabold tracking-tight text-ink">
+					{meta.name}
+				</span>
+				<span class="block truncate text-sm font-bold text-ink-faint">{setup}</span>
+			</button>
+		</h2>
 	</div>
 
 	<div class="list-group">
@@ -128,7 +133,8 @@
 			<div
 				transition:slide={{ duration: grow }}
 				data-active-set={active ? '' : undefined}
-				class="scroll-my-3"
+				class="scroll-mt-3"
+				style="scroll-margin-bottom: {floor + 12}px"
 			>
 				<SwipeRow
 					status={active && !cursor.set.completed ? 'active' : status}
@@ -145,6 +151,12 @@
 							onquick(cursor.set.id, quick.weight, quick.reps);
 						}
 					}}
+					onunlog={onunlog !== undefined && cursor.set.completed
+						? () => onunlog(cursor.set.id)
+						: undefined}
+					onremove={onremove !== undefined && cursors.length > 1
+						? () => onremove(cursor.set.id)
+						: undefined}
 					onoptions={(anchor) => onoptions(cursor.set.id, anchor)}
 				/>
 			</div>

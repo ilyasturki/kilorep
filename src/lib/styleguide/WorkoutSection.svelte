@@ -113,26 +113,25 @@
 
 <Card name="LiveTray" note="ActiveSet as a drawer over the bottom of the phone" tall>
 	<Frame label="drag the handle down, or tap it — the page is what raises it again" canvas>
-		<div class="relative h-[26rem]">
-			<div class="absolute inset-x-0 bottom-0">
-				<LiveTray
-					bind:open={trayOpen}
-					cursor={trayCursor}
-					meta={bench}
-					note={null}
-					history={sessionHistory}
-					total={13}
-					oncommit={noop}
-					ondraft={noop}
-					onrate={noop}
-					{onoptions}
-					onfinish={noop}
-				/>
-			</div>
+		<div class="relative h-[26rem] overflow-hidden">
+			<LiveTray
+				bind:open={trayOpen}
+				cursor={trayCursor}
+				meta={bench}
+				note={null}
+				history={sessionHistory}
+				total={13}
+				oncommit={noop}
+				ondraft={noop}
+				onrate={noop}
+				{onoptions}
+				onfinish={noop}
+			/>
 		</div>
 	</Frame>
 	<span class={caption}>
-		lowered, it is inert and takes no height — on /train/live the list gets that back
+		it stands over the list rather than beside it — lowered, it slides off the bottom edge and what
+		it uncovers was already there
 	</span>
 	<Button variant="chrome" caps disabled={trayOpen} onclick={() => (trayOpen = true)}>
 		RAISE THE TRAY
