@@ -42,7 +42,13 @@ export type Equipment =
 	| 'Band';
 
 /** Implements a single hand or foot can take on its own: a dumbbell, a stack, a bell, a band. */
-const HANDHELD: Equipment[] = ['Dumbbell', 'Cable', 'Machine', 'Kettlebell', 'Band'];
+const HANDHELD: ReadonlySet<Equipment> = new Set([
+	'Dumbbell',
+	'Cable',
+	'Machine',
+	'Kettlebell',
+	'Band'
+]);
 
 /**
  * Whether a set of this exercise can honestly claim one arm did the work.
@@ -56,7 +62,7 @@ export function singleArmable(meta: Exercise | undefined): boolean {
 		return true;
 	}
 
-	return meta.loadMode !== 'unilateral' && HANDHELD.includes(meta.equipment);
+	return meta.loadMode !== 'unilateral' && HANDHELD.has(meta.equipment);
 }
 
 export const MUSCLES = [
