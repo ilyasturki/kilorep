@@ -13,6 +13,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Nothing else reads these: prettier ignores /android/ (.prettierignore)
+      # and the first parser to see them is aapt2, minutes into the release
+      # build — where a stray `--` inside a comment once failed the APK with
+      # every other check already green. Expat holds the same line for free,
+      # so it runs before the install and the build rather than after them.
+      - name: Parse the Android resource XML
+        run: |
+          python3 - <<'PY'
+          import pathlib, sys, xml.dom.minidom
+
+          broken = []
+          for path in sorted(pathlib.Path('android/app/src').rglob('*.xml')):
+              try:
+                  xml.dom.minidom.parse(str(path))
+              except Exception as error:
+                  broken.append(f'::error file={path}::{error}')
+
+          print('\n'.join(broken))
+          sys.exit(1 if broken else 0)
+          PY
+
       - uses: oven-sh/setup-bun@v2
 
       - uses: actions/cache@v6
