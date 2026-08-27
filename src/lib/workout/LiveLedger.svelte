@@ -23,6 +23,7 @@
 	import More from '$lib/ui/icons/More.svelte';
 	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
+	import { openedFrom } from '$lib/nav/bar.svelte';
 	import type { Entry, Group } from '$lib/workout/groups';
 	import { setNote, statusOf } from '$lib/workout/groups';
 
@@ -30,6 +31,8 @@
 		entries: Entry[];
 		history: History;
 		activeSetId: string | null;
+		/** The address an exercise's own page walks back to — this screen, not the browse list. */
+		from?: string;
 		onselect: (setId: string) => void;
 		onquick: (setId: string, weight: number, reps: number) => void;
 		/** The selected row's check — routed through the page, which owes rest only on a first log. */
@@ -47,6 +50,7 @@
 		entries,
 		history,
 		activeSetId,
+		from,
 		onselect,
 		onquick,
 		oncommit,
@@ -136,8 +140,8 @@
 	type Offer = { weight: number | null; reps: number | null };
 
 	function draftWeight(offer: Offer, meta: Exercise, direction: number) {
-		const from = offer.weight ?? 0;
-		const next = from + direction * weightStep(meta.equipment, from, direction);
+		const base = offer.weight ?? 0;
+		const next = base + direction * weightStep(meta.equipment, base, direction);
 
 		ondraft(Math.max(0, Math.round(next * 10) / 10), offer.reps);
 	}
@@ -222,7 +226,7 @@
 					     ellipsised over empty grid. -->
 							<span data-exercise-head class="col-span-5 flex min-w-0 items-baseline gap-2 py-1">
 								<a
-									href="/plan/exercises/{leg.meta.id}"
+									href={openedFrom(`/plan/exercises/${leg.meta.id}`, from)}
 									class="truncate rounded-md text-md font-extrabold tracking-tight text-ink
 								focus-ring hover:underline"
 								>

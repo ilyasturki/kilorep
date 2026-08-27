@@ -104,10 +104,18 @@
 
 	const desk = $derived(deskViewport.current);
 
+	// Whether the tray stands over the bottom edge. Lowered by its handle, to hand the height
+	// back to the record; raised by a set tapped or a set logged. No rest is owed for a set
+	// lifted weeks ago, so the third way in on the live screen has nothing to say here.
+	let trayOpen = $state(true);
+
 	let unlockOpen = $state(false);
 
 	function startEditing() {
 		pageSlide('push', () => {
+			// The editor opens standing, however it was left the last time this record was one.
+			trayOpen = true;
+
 			held = new WorkoutSession(NO_HISTORY, {
 				workout,
 				activeSetId: firstUncompleted(workout)?.set.id ?? null
@@ -156,6 +164,7 @@
 	});
 
 	function jumpTo(setId: string) {
+		trayOpen = true;
 		session?.select(setId);
 	}
 
@@ -176,6 +185,9 @@
 	}
 
 	function quickLog(setId: string, weight: number, reps: number) {
+		// A set logged by swipe is the one way to work with the tray down, and the set it hands
+		// over to is the tray's business — so logging one asks for it back.
+		trayOpen = true;
 		session?.quickLog(setId, weight, reps);
 	}
 
@@ -571,6 +583,7 @@
 						{entries}
 						history={NO_HISTORY}
 						activeSetId={session.activeSetId}
+						from="/history/{workout.id}"
 						onselect={jumpTo}
 						onquick={quickLog}
 						oncommit={logSet}
@@ -600,6 +613,7 @@
 										cursors={leg.cursors}
 										history={NO_HISTORY}
 										activeSetId={session.activeSetId}
+										from="/history/{workout.id}"
 										onselect={jumpTo}
 										onquick={quickLog}
 										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
@@ -617,6 +631,7 @@
 
 		{#if !desk && entries.length > 0}
 			<LiveTray
+				bind:open={trayOpen}
 				cursor={activeCursor}
 				meta={activeLeg?.meta}
 				note={activeCursor === null
@@ -637,6 +652,12 @@
 				}}
 				onfinish={stopEditing}
 			/>
+
+			{#if !trayOpen}
+				<!-- The home-indicator inset the lowered tray took down with it. Nothing else
+				     stands here: the global rest bar belongs to the layout, below this column. -->
+				<div class="shrink-0 pb-safe-b"></div>
+			{/if}
 		{/if}
 	</div>
 {/if}

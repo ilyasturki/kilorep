@@ -3,18 +3,23 @@ import { goto } from '$app/navigation';
 
 import { remove } from '$lib/app/capacitor';
 import { decideBack } from '$lib/nav/back';
-import { parentOf, tabRoots } from '$lib/nav/bar.svelte';
+import { backTo, tabRoots } from '$lib/nav/bar.svelte';
 import { backDepth } from '$lib/nav/depth';
 import { closeTopOverlay, hasOpenOverlay, watchOverlays } from '$lib/ui/overlays';
 
 import type { BackDecision } from '$lib/nav/back';
 
 function decide(): BackDecision {
+	const url = new URL(location.href);
+
 	return decideBack({
-		pathname: location.pathname,
+		pathname: url.pathname,
 		overlayOpen: hasOpenOverlay(),
 		tabRoots: tabRoots(),
-		parentOf,
+		// The argument is ignored because it would say less than what is closed over: the
+		// address `decideBack` was handed is this URL, and the way back out of a screen opened
+		// from elsewhere is written in its query, which a pathname alone has already dropped.
+		parentOf: () => backTo(url),
 		depth: backDepth()
 	});
 }

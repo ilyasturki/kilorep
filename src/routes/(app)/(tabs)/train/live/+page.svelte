@@ -29,6 +29,7 @@
 	import LiveLedger from '$lib/workout/LiveLedger.svelte';
 	import LiveTray from '$lib/workout/LiveTray.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
+	import RestBar from '$lib/workout/RestBar.svelte';
 	import RestPill from '$lib/workout/RestPill.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -53,6 +54,13 @@
 	// The lg rung swaps the phone column for the ledger; the tray and its editor stand down
 	// there, so the desktop rows carry the editing and the app bar carries the rest.
 	const desk = $derived(deskViewport.current);
+
+	// Whether the tray stands over the bottom edge. Lowered by its handle, to hand the height
+	// back to the list; raised by the three things that make it the screen's business again —
+	// a set tapped, a set logged, a rest run out.
+	let trayOpen = $state(true);
+
+	const restShowing = $derived(restTimer.running || restTimer.undoing);
 
 	let intent: 'jump' | 'advance' = 'advance';
 	let scheduled = false;
@@ -149,6 +157,7 @@
 			restTimer.skip();
 		}
 
+		trayOpen = true;
 		activeWorkout.session?.select(setId);
 		jumped();
 	}
@@ -167,6 +176,26 @@
 		}
 
 		persistSession(data.store, session);
+	});
+
+	// Rest running out is the set coming up, so the tray comes back with it. Guarded on the
+	// edge rather than the state: `overtime` stays true for as long as the lifter leaves the
+	// clock over, and re-running it every tick would pin the tray open against the handle.
+	let rang = false;
+
+	$effect(() => {
+		if (!restTimer.overtime) {
+			rang = false;
+
+			return;
+		}
+
+		if (rang) {
+			return;
+		}
+
+		rang = true;
+		trayOpen = true;
 	});
 
 	const entries = $derived(session === null ? [] : entriesWithMeta(session.workout, catalogById));
@@ -231,6 +260,10 @@
 		if (!session.quickLog(setId, weight, reps)) {
 			return;
 		}
+
+		// A set logged by swipe is the one way to work with the tray down, and the set it
+		// hands over to is the tray's business — so logging one asks for it back.
+		trayOpen = true;
 
 		startRest(setId, advancing);
 	}
@@ -557,6 +590,7 @@
 						{entries}
 						history={data.history}
 						activeSetId={session.activeSetId}
+						from="/train/live"
 						onselect={jumpTo}
 						onquick={quickLog}
 						oncommit={logSet}
@@ -594,6 +628,7 @@
 										cursors={leg.cursors}
 										history={data.history}
 										activeSetId={session.activeSetId}
+										from="/train/live"
 										onselect={jumpTo}
 										onquick={quickLog}
 										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
@@ -611,6 +646,7 @@
 
 		{#if !desk && entries.length > 0}
 			<LiveTray
+				bind:open={trayOpen}
 				cursor={activeCursor}
 				meta={activeLeg?.meta}
 				note={activeCursor === null
@@ -637,6 +673,15 @@
 				}}
 				onfinish={() => (finishing = true)}
 			/>
+
+			{#if !trayOpen}
+				<!-- What stands on the edge the tray gave up. The global bar is kept off this
+				     screen while the tray is the timer's face; with the tray down it is the only
+				     face left, and it carries the home-indicator inset the tray took with it. -->
+				<div class={['shrink-0 pb-safe-b', restShowing && 'bg-surface']}>
+					<RestBar />
+				</div>
+			{/if}
 		{/if}
 	</div>
 

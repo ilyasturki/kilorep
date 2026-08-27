@@ -8,13 +8,14 @@ import { getStore } from '$lib/store/store';
 
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ params }) => {
+export const load: PageLoad = async ({ params, url }) => {
 	// A slug that became a grip keeps its address and forwards it: the entry is gone from the
-	// browse list, not from the web, and an old bookmark should land where the sets went.
+	// browse list, not from the web, and an old bookmark should land where the sets went. The
+	// query rides along — it carries where `‹` walks back to, which the fold has no say in.
 	const folded = foldedTo(params.id);
 
 	if (folded !== null) {
-		redirect(307, `/plan/exercises/${folded}`);
+		redirect(307, `/plan/exercises/${folded}${url.search}`);
 	}
 
 	// Widened by hand: a route param is any string, so the index can miss.

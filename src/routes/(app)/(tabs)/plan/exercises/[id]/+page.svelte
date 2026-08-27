@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
+	import { page } from '$app/state';
+
 	import { catalog } from '$lib/catalog';
-	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { bodyweightShareOf, carriedFrom, carriedOn } from '$lib/domain/load';
 	import { restLabel } from '$lib/domain/rest';
@@ -47,6 +49,10 @@
 	const exercise = $derived(data.exercise);
 
 	fillAppBar(() => ({ title: exercise.name }));
+
+	// Passed on to the family links: a lifter who opened this page mid-session and walked from
+	// one variation to its neighbour is still one `‹` away from the set they left.
+	const cameFrom = $derived(page.url.searchParams.get('from'));
 
 	const family = $derived(kin(catalog, exercise));
 
@@ -247,7 +253,7 @@
 		meta={lastSetLabel(entry, last)}
 		leading={thumb}
 		trailing={since === undefined ? undefined : recency}
-		href="/plan/exercises/{entry.id}"
+		href={openedFrom(`/plan/exercises/${entry.id}`, cameFrom)}
 	/>
 {/snippet}
 

@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 
 	import BackLink from '$lib/nav/BackLink.svelte';
-	import { appBarSlot, isActive, navTabs, parentOf } from '$lib/nav/bar.svelte';
+	import { appBarSlot, backTo, isActive, navTabs } from '$lib/nav/bar.svelte';
 
 	const slot = appBarSlot();
 
@@ -11,7 +11,7 @@
 
 	const title = $derived(slot.title ?? current?.label ?? '');
 
-	const parent = $derived(parentOf(pathname));
+	const parent = $derived(backTo(page.url));
 </script>
 
 <header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t">

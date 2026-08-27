@@ -75,6 +75,8 @@
 	// that card writes it: a readout fed by every card on the page would report the wrong one.
 	let fired = $state<string | null>(null);
 
+	let trayOpen = $state(true);
+
 	const say =
 		(name: string) =>
 		(...args: unknown[]) => {
@@ -109,11 +111,12 @@
 	</span>
 </Card>
 
-<Card name="LiveTray" note="ActiveSet docked to the bottom of the phone" tall>
-	<Frame label="the tray as it sits on /train/live" canvas>
+<Card name="LiveTray" note="ActiveSet as a drawer over the bottom of the phone" tall>
+	<Frame label="drag the handle down, or tap it — the page is what raises it again" canvas>
 		<div class="relative h-[26rem]">
 			<div class="absolute inset-x-0 bottom-0">
 				<LiveTray
+					bind:open={trayOpen}
 					cursor={trayCursor}
 					meta={bench}
 					note={null}
@@ -128,6 +131,12 @@
 			</div>
 		</div>
 	</Frame>
+	<span class={caption}>
+		lowered, it is inert and takes no height — on /train/live the list gets that back
+	</span>
+	<Button variant="chrome" caps disabled={trayOpen} onclick={() => (trayOpen = true)}>
+		RAISE THE TRAY
+	</Button>
 </Card>
 
 <Card name="ExerciseBlock" note="one exercise's sets, the phone's list" tall>

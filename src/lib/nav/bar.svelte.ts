@@ -83,6 +83,34 @@ export function parentOf(pathname: string): string | null {
 	);
 }
 
+/** How a link says where it was opened from, so the screen it opens can walk back to it. */
+const FROM = 'from';
+
+/**
+ * Where `‹` walks from an address. The hierarchy is the answer everywhere it is the whole
+ * story — but a lifter who taps an exercise's name mid-set is asking what it is, not asking
+ * to leave the session, and the browse list it is filed under is not where they came from.
+ * A link that opens a screen out of its own branch says so, and `‹` reads that first.
+ */
+export function backTo(url: URL): string | null {
+	const from = url.searchParams.get(FROM);
+
+	// An address of ours and nothing else: one slash, and the character after it neither a
+	// slash nor a backslash. `//host` is protocol-relative, and a browser folds `/\` to `//`
+	// before it resolves, so both spellings leave the app — as does anything with a scheme.
+	// `‹` is a plain anchor, and `from` arrives from whatever URL was opened.
+	if (from !== null && /^\/(?![/\\])/u.test(from)) {
+		return from;
+	}
+
+	return parentOf(url.pathname);
+}
+
+/** `href` with the way back written into it — `from` absent, a plain address. */
+export function openedFrom(href: string, from: string | null | undefined): string {
+	return from === null || from === undefined ? href : `${href}?${FROM}=${encodeURIComponent(from)}`;
+}
+
 export class AppBarSlot {
 	public title: string | null = $state(null);
 	// Sits where the panel it opens comes from, beside back rather than instead of it: a live

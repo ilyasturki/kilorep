@@ -10,6 +10,7 @@
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import { smallMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
+	import { openedFrom } from '$lib/nav/bar.svelte';
 	import { setNote, statusOf } from '$lib/workout/groups';
 	import More from '$lib/ui/icons/More.svelte';
 	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
@@ -22,6 +23,8 @@
 		cursors: SetCursor[];
 		history: History;
 		activeSetId: string | null;
+		/** The address the exercise's own page walks back to — this screen, not the browse list. */
+		from?: string;
 		onselect: (setId: string) => void;
 		onquick: (setId: string, weight: number, reps: number) => void;
 		onadd: () => void;
@@ -36,6 +39,7 @@
 		cursors,
 		history,
 		activeSetId,
+		from,
 		onselect,
 		onquick,
 		onadd,
@@ -92,7 +96,7 @@
 <section data-exercise class="flex flex-col gap-2">
 	<div data-exercise-head class="flex scroll-mt-3 items-center gap-1">
 		<a
-			href="/plan/exercises/{meta.id}"
+			href={openedFrom(`/plan/exercises/${meta.id}`, from)}
 			class="min-w-0 flex-1 press-sink rounded-xl px-1 py-1 text-left focus-ring
 				hover:bg-hover press:bg-surface-2"
 			{@attach press(() => onexercise)}

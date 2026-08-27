@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { BackDecision } from './back';
 
 import { decideBack } from './back';
-import { parentOf, tabRoots as navRoots } from './bar.svelte';
+import { backTo, openedFrom, parentOf, tabRoots as navRoots } from './bar.svelte';
 
 vi.mock('$lib/ui/icons/Barbell.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/BarbellFill.svelte', () => ({ default: {} }));
@@ -111,5 +111,62 @@ describe('parentOf', () => {
 		expect(parentOf('/plan/templates/t1')).toBe('/plan/templates');
 		expect(parentOf('/history/abc')).toBe('/history');
 		expect(parentOf('/history')).toBe('/progress');
+	});
+});
+
+const ORIGIN = 'https://kilorep.test';
+
+function at(address: string): URL {
+	return new URL(address, ORIGIN);
+}
+
+describe('backTo', () => {
+	it('walks the hierarchy where the address says nothing about where it was opened from', () => {
+		expect(backTo(at('/plan/exercises/bench-press'))).toBe('/plan/exercises');
+		expect(backTo(at('/history/abc'))).toBe('/history');
+		expect(backTo(at('/train'))).toBeNull();
+	});
+
+	it('walks back into the session a lifter opened the exercise from, not to the browse list', () => {
+		expect(backTo(at('/plan/exercises/deadlift?from=%2Ftrain%2Flive'))).toBe(LIVE);
+	});
+
+	it('carries a record editor back to its own record', () => {
+		expect(backTo(at('/plan/exercises/deadlift?from=%2Fhistory%2Fabc'))).toBe('/history/abc');
+	});
+
+	it('keeps every other query out of it — only `from` says where back goes', () => {
+		expect(backTo(at('/plan/exercises/deadlift?q=press'))).toBe('/plan/exercises');
+	});
+
+	it('refuses anywhere that is not an address of ours, however it is dressed up', () => {
+		// Assembled rather than written out: spelled whole, the lint rule against `javascript:`
+		// hrefs reads the test's own fixture as one.
+		const script = ['java', 'script:alert(1)'].join('');
+
+		// `/\evil.test` is the one that reads as ours and is not: a browser folds the backslash
+		// to a slash before it resolves, and the anchor lands off-site.
+		const hostile = ['//evil.test', String.raw`/\evil.test`, 'https://evil.test', script, ''];
+
+		for (const value of hostile) {
+			const address = `/plan/exercises/deadlift?from=${encodeURIComponent(value)}`;
+
+			expect(backTo(at(address))).toBe('/plan/exercises');
+		}
+	});
+
+	it('reads back what the link wrote, through a path holding characters of its own', () => {
+		const href = openedFrom('/plan/exercises/deadlift', '/history/a?b');
+
+		expect(backTo(at(href))).toBe('/history/a?b');
+	});
+});
+
+describe('openedFrom', () => {
+	it('leaves a link alone when it has no way back to declare', () => {
+		const unset: string | undefined = undefined;
+
+		expect(openedFrom('/plan/exercises/deadlift', null)).toBe('/plan/exercises/deadlift');
+		expect(openedFrom('/plan/exercises/deadlift', unset)).toBe('/plan/exercises/deadlift');
 	});
 });
