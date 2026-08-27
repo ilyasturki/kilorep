@@ -1,12 +1,18 @@
 <script lang="ts">
 	import { catalogById } from '$lib/catalog';
-	import type { TemplateExercise } from '$lib/domain/template';
+	import {
+		moveEntry,
+		setExerciseReps,
+		setExerciseRest,
+		setPlannedReps,
+		setSetCount
+	} from '$lib/domain/template';
 	import Card from '$lib/styleguide/Card.svelte';
 	import Frame from '$lib/styleguide/Frame.svelte';
 	import { caption } from '$lib/styleguide/chrome';
-	import { bench, marks, planExercise, pushTemplate } from '$lib/styleguide/fixtures';
+	import { bench, marks, pushTemplate } from '$lib/styleguide/fixtures';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
-	import PlanList from '$lib/templates/PlanList.svelte';
+	import PlanLedger from '$lib/templates/PlanLedger.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { plannedEntries } from '$lib/templates/plan';
 
@@ -14,67 +20,61 @@
 
 	let { onoptions }: Props = $props();
 
-	let exercise = $state<TemplateExercise>(planExercise());
+	let open = $state(true);
 
-	// The plan reorders for real: the list is the specimen, so a drag that did not move
-	// anything would be showing the gesture without its answer.
+	// The plan edits for real: the ledger is the specimen, so a step that did not move a
+	// number would be showing the control without its answer. Two templates, so the two cards
+	// are not arguing about the same afternoon.
+	const cardPlan = $state(pushTemplate());
+
 	const template = $state(pushTemplate());
+
+	const exercise = $derived(cardPlan.entries[0].exercises[0]);
 
 	const entries = $derived(plannedEntries(template, catalogById));
 
-	function setCount(count: number) {
-		const sets = exercise.sets;
-
-		while (sets.length > count) {
-			sets.pop();
-		}
-
-		while (sets.length < count) {
-			sets.push({ id: `ts-${sets.length + 1}`, plannedReps: sets.at(-1)?.plannedReps ?? 8 });
-		}
-	}
-
-	function reorder(entryId: string, index: number) {
-		const from = template.entries.findIndex((entry) => entry.id === entryId);
-
-		if (from === -1 || from === index) {
-			return;
-		}
-
-		const [moved] = template.entries.splice(from, 1);
-
-		template.entries.splice(index, 0, moved);
-	}
+	const mint = () => crypto.randomUUID();
 </script>
 
-<Card name="PlanCard" note="one exercise of a template — sets, reps, rest" tall>
-	<Frame label="stepping the set count adds and drops rows">
+<Card name="PlanCard" note="one exercise of a template — closed it is a row, open it is the fields">
+	<Frame label="tap the row to open it; stepping the set count adds and drops rows">
 		<div class="p-3">
 			<PlanCard
 				meta={bench}
 				{exercise}
+				{open}
+				ontoggle={() => (open = !open)}
 				{onoptions}
-				onsets={setCount}
-				onreps={(reps) => exercise.sets.forEach((set) => (set.plannedReps = reps))}
-				onsetreps={(setId, reps) => {
-					const set = exercise.sets.find((candidate) => candidate.id === setId);
-
-					if (set !== undefined) {
-						set.plannedReps = reps;
-					}
-				}}
+				onsets={(count) => setSetCount(cardPlan, exercise.id, count, mint)}
+				onreps={(reps) => setExerciseReps(cardPlan, exercise.id, reps)}
+				onsetreps={(setId, reps) => setPlannedReps(cardPlan, setId, reps)}
 			/>
 		</div>
 	</Frame>
 </Card>
 
-<Card name="PlanList" note="DragList carrying a plan's entries" tall>
-	<Frame label="hold a row or take its grip — the superset travels as one">
-		<div class="p-3">
-			<PlanList {entries} onjump={() => {}} oninsert={() => {}} onreorder={reorder} />
+<Card name="PlanLedger" note="the desktop's whole plan, one table" wide tall>
+	<Frame
+		label="desktop column — entries reorder by their grip; a superset travels as one"
+		size="column"
+		floor={640}
+	>
+		<div class="p-4">
+			<PlanLedger
+				{entries}
+				onoptions={(_, anchor) => onoptions(anchor)}
+				onsets={(id, count) => setSetCount(template, id, count, mint)}
+				onreps={(id, reps) => setExerciseReps(template, id, reps)}
+				onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
+				onrest={(id, seconds) => setExerciseRest(template, id, seconds)}
+				oninsert={() => {}}
+				onreorder={(entryId, index) => moveEntry(template, entryId, index)}
+			/>
 		</div>
 	</Frame>
-	<span class={caption}>the only DragList in the app — AddRow is built into its tail</span>
+	<span class={caption}>
+		one row per exercise — per-set rows only where the targets differ, or where the caret opens them
+	</span>
 </Card>
 
 <Card name="TemplateMark" note="the tile a plan is recognised by">

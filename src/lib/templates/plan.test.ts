@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
 import {
-	entrySummary,
 	planLine,
 	planShape,
 	planSummary,
@@ -65,11 +64,6 @@ describe('what an exercise prescribes', () => {
 		expect(planSummary(planned([8, 8, 8]))).toBe('3 × 8');
 		expect(planSummary(planned([12, 10, 8]))).toBe('3 × 8–12');
 		expect(planSummary(planned([null]))).toBe('1 × Open');
-	});
-
-	test('a superset row spells every leg it holds', () => {
-		expect(entrySummary([planned([8, 8, 8]), planned([15, 15])])).toBe('3 × 8 + 2 × 15');
-		expect(entrySummary([planned([8, 8, 8])])).toBe('3 × 8');
 	});
 });
 

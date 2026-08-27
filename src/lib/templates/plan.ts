@@ -134,20 +134,24 @@ export function exercisesLabel(count: number): string {
 	return count === 1 ? '1 exercise' : `${count} exercises`;
 }
 
+export function planCounts(template: Template): { exercises: number; sets: number } {
+	const exercises = template.entries.flatMap((entry) => entry.exercises);
+
+	return {
+		exercises: exercises.length,
+		sets: exercises.reduce((count, exercise) => count + exercise.sets.length, 0)
+	};
+}
+
 /** What the plan asks of you, in the shape History states what a session took. */
 export function planMeta(template: Template): string {
-	const exercises = template.entries.flatMap((entry) => entry.exercises);
-	const sets = exercises.reduce((count, exercise) => count + exercise.sets.length, 0);
+	const { exercises, sets } = planCounts(template);
 
-	return `${exercisesLabel(exercises.length)} · ${setsLabel(sets)}`;
+	return `${exercisesLabel(exercises)} · ${setsLabel(sets)}`;
 }
 
 export function planSummary(exercise: TemplateExercise): string {
 	const shape = planShape(exercise);
 
 	return `${shape.sets} × ${shape.target}`;
-}
-
-export function entrySummary(exercises: TemplateExercise[]): string {
-	return exercises.map((exercise) => planSummary(exercise)).join(' + ');
 }

@@ -27,9 +27,9 @@
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import MarkPickerSheet from '$lib/templates/MarkPickerSheet.svelte';
-	import { plannedEntries } from '$lib/templates/plan';
+	import { plannedEntries, planMeta } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
-	import PlanList from '$lib/templates/PlanList.svelte';
+	import PlanLedger from '$lib/templates/PlanLedger.svelte';
 	import PlanOptionsMenu from '$lib/templates/PlanOptionsMenu.svelte';
 	import PlanRestSheet from '$lib/templates/PlanRestSheet.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
@@ -41,8 +41,8 @@
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import { revealNearest } from '$lib/ui/scroll';
 	import TipButton from '$lib/ui/TipButton.svelte';
+	import { deskViewport } from '$lib/ui/viewport';
 	import Archive from '$lib/ui/icons/Archive.svelte';
 	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
@@ -110,27 +110,44 @@
 
 	let insertOpen = $state(false);
 
+	// Which entry the picker was opened from — the ledger's per-entry footer inserts after
+	// the block it hangs off, the way the live session's own footer does. Null adds at the end.
+	let insertAfter = $state<string | null>(null);
+
 	const setIds = () => Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID());
 
 	function plan(exerciseIds: string[]) {
+		let after = insertAfter;
+
 		for (const exerciseId of exerciseIds) {
-			addExercise(template, exerciseId, {
+			const entry = addExercise(template, exerciseId, {
 				entry: crypto.randomUUID(),
 				exercise: crypto.randomUUID(),
 				sets: setIds()
 			});
+
+			if (entry === null || after === null) {
+				continue;
+			}
+
+			// Read after the append and before the move: the slot wanted is the one behind the
+			// anchor, and each pick becomes the anchor for the next so a multi-pick lands in
+			// the order it was picked rather than reversed.
+			const anchor = after;
+			const at = template.entries.findIndex((existing) => existing.id === anchor);
+
+			if (at !== -1) {
+				moveEntry(template, entry.id, at + 1);
+				after = entry.id;
+			}
 		}
+
+		insertAfter = null;
 	}
 
-	// Scoped to the pane: the sidebar rows carry the same `data-drag-id`.
-	let pane = $state<HTMLElement | null>(null);
-
-	function jumpTo(entryId: string) {
-		const card = pane?.querySelector(`[data-drag-id="${entryId}"]`);
-
-		if (card instanceof HTMLElement) {
-			revealNearest(card);
-		}
+	function openInsert(after: string | null = null) {
+		insertAfter = after;
+		insertOpen = true;
 	}
 
 	let optionsOpen = $state(false);
@@ -258,6 +275,10 @@
 
 	const title = $derived(template.name.trim() === '' ? 'New template' : template.name);
 
+	// One card at a time on the phone: the collapsed rows are what makes the whole plan fit a
+	// screen, and two open at once puts the second one's fields off the bottom again.
+	let openLegId = $state<string | null>(null);
+
 	fillAppBar(() => ({ title, action: deskActions }));
 </script>
 
@@ -309,6 +330,62 @@
 	</div>
 {/snippet}
 
+{#snippet identity(meta: boolean)}
+	<div class="flex items-center gap-2">
+		<TipButton
+			label={mark === null ? 'Pick a template icon' : 'Change the template icon'}
+			onclick={() => (markOpen = true)}
+			class="grid size-11 shrink-0 place-items-center rounded-xl focus-ring
+				hover:bg-hover press:bg-surface-2"
+		>
+			{#if mark === null}
+				<span
+					aria-hidden="true"
+					class="grid size-8 place-items-center rounded-lg border border-dashed
+						border-line text-ink-faint"
+				>
+					<Plus size={16} />
+				</span>
+			{:else}
+				<TemplateMark {mark} />
+			{/if}
+		</TipButton>
+
+		<input
+			bind:value={template.name}
+			aria-label="Template name"
+			placeholder="Push day"
+			autocomplete="off"
+			class="min-w-0 flex-1 rounded-lg bg-transparent px-1 text-2xl font-extrabold
+				tracking-tight text-ink focus-ring placeholder:text-ink-faint"
+		/>
+
+		{#if meta && entries.length > 0}
+			<span class="shrink-0 text-sm font-bold text-ink-faint">{planMeta(template)}</span>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet nothing()}
+	<EmptyState title="Nothing planned" description="Add an exercise to shape the session.">
+		{#snippet icon()}
+			<Stack size={24} />
+		{/snippet}
+		{#snippet action()}
+			<Button onclick={() => openInsert()}>Add exercise</Button>
+		{/snippet}
+	</EmptyState>
+{/snippet}
+
+{#snippet startWorkout(klass?: string)}
+	<div
+		bind:this={startBar}
+		class={['sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3', klass]}
+	>
+		<Button variant="commit" class="w-full" onclick={() => void start()}>Start workout</Button>
+	</div>
+{/snippet}
+
 <svelte:head>
 	<title>{title} | Kilorep</title>
 </svelte:head>
@@ -316,54 +393,35 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
 <div class="flex min-h-0 flex-1 flex-col">
-	<div class="relative flex min-h-0 flex-1">
-		<aside
-			class="absolute inset-y-0 left-[calc(50%-32rem)] hidden w-52 py-3
-				lg:block xl:left-[calc(50%-37rem)] xl:w-72"
-		>
-			{#if entries.length > 0}
-				<div class="max-h-full overflow-y-auto rounded-xl bg-surface p-2">
-					<PlanList
+	<main class="min-h-0 flex-1 overflow-y-auto">
+		{#if deskViewport.current}
+			<div class="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-3 px-3 pt-3">
+				{@render identity(true)}
+
+				{#if entries.length === 0}
+					{@render nothing()}
+				{:else}
+					<PlanLedger
 						{entries}
-						onjump={jumpTo}
-						oninsert={() => (insertOpen = true)}
+						onoptions={options}
+						onsets={(id, count) => setSetCount(template, id, count, () => crypto.randomUUID())}
+						onreps={(id, reps) => setExerciseReps(template, id, reps)}
+						onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
+						onrest={(id, seconds) => setExerciseRest(template, id, seconds)}
+						oninsert={openInsert}
 						onreorder={(entryId, index) => moveEntry(template, entryId, index)}
 					/>
-				</div>
-			{/if}
-		</aside>
 
-		<main bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
-			<div bind:this={drag.root} class="column-content flex min-h-full flex-col gap-3 px-3 pt-3">
-				<div class="flex items-center gap-2">
-					<TipButton
-						label={mark === null ? 'Pick a template icon' : 'Change the template icon'}
-						onclick={() => (markOpen = true)}
-						class="grid size-11 shrink-0 place-items-center rounded-xl focus-ring
-							hover:bg-hover press:bg-surface-2"
+					<Button variant="raised" class="w-full" onclick={() => openInsert()}
+						>+ Add exercise</Button
 					>
-						{#if mark === null}
-							<span
-								aria-hidden="true"
-								class="grid size-8 place-items-center rounded-lg border border-dashed
-									border-line text-ink-faint"
-							>
-								<Plus size={16} />
-							</span>
-						{:else}
-							<TemplateMark {mark} />
-						{/if}
-					</TipButton>
+				{/if}
 
-					<input
-						bind:value={template.name}
-						aria-label="Template name"
-						placeholder="Push day"
-						autocomplete="off"
-						class="min-w-0 flex-1 rounded-lg bg-transparent px-1 text-2xl font-extrabold
-							tracking-tight text-ink focus-ring placeholder:text-ink-faint"
-					/>
-				</div>
+				{@render startWorkout('pb-[max(0.75rem,var(--spacing-safe-b))]')}
+			</div>
+		{:else}
+			<div bind:this={drag.root} class="column-content flex min-h-full flex-col gap-3 px-3 pt-3">
+				{@render identity(false)}
 
 				{#each entries as entry (entry.id)}
 					{@const lifted = drag.isLifted(entry.id)}
@@ -404,6 +462,8 @@
 									<PlanCard
 										meta={leg.meta}
 										exercise={leg.exercise}
+										open={openLegId === leg.id}
+										ontoggle={() => (openLegId = openLegId === leg.id ? null : leg.id)}
 										onoptions={(anchor) => options(leg.id, anchor)}
 										onsets={(count) =>
 											setSetCount(template, leg.id, count, () => crypto.randomUUID())}
@@ -418,40 +478,25 @@
 				{/each}
 
 				{#if entries.length === 0}
-					<EmptyState title="Nothing planned" description="Add an exercise to shape the session.">
-						{#snippet icon()}
-							<Stack size={24} />
-						{/snippet}
-						{#snippet action()}
-							<Button onclick={() => (insertOpen = true)}>Add exercise</Button>
-						{/snippet}
-					</EmptyState>
+					{@render nothing()}
 				{:else}
-					<Button variant="raised" class="w-full" onclick={() => (insertOpen = true)}>
-						+ Add exercise
-					</Button>
+					<Button variant="raised" class="w-full" onclick={() => openInsert()}
+						>+ Add exercise</Button
+					>
 				{/if}
 
 				{#if persisted}
-					<div class="flex justify-center gap-2 pt-2 pb-1 lg:hidden">
+					<div class="flex justify-center gap-2 pt-2 pb-1">
 						{@render history(18)}
 						{@render archive(18)}
 						{@render trash(18)}
 					</div>
 				{/if}
 
-				<div
-					bind:this={startBar}
-					class="sticky bottom-0 -mx-3 mt-auto border-t border-line-soft bg-canvas px-3 py-3
-						lg:pb-[max(0.75rem,var(--spacing-safe-b))]"
-				>
-					<Button variant="commit" class="w-full" onclick={() => void start()}>
-						Start workout
-					</Button>
-				</div>
+				{@render startWorkout()}
 			</div>
-		</main>
-	</div>
+		{/if}
+	</main>
 </div>
 
 <ExercisePickerSheet

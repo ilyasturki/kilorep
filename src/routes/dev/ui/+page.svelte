@@ -630,7 +630,9 @@
 				<span class={caption}
 					>the sunken block is the landing · the ends give a little and spring back</span
 				>
-				<span class={caption}>DragList wraps this — see PlanList under Plan</span>
+				<span class={caption}
+					>PlanLedger and LiveLedger drive it — see them under Plan and Workout</span
+				>
 			</Card>
 
 			<Card name="AddRow">
