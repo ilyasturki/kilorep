@@ -2,8 +2,8 @@
 <!--
     Cobalt field behind the white rest ring in `ic_launcher_foreground`. The
     hex is the sRGB of oklch(54.6% 0.245 262.881), Tailwind's blue-600 —
-    app.css's `--accent`, which carries white (`--on-accent`) at 5.26:1 —
-    written out because Android resources cannot read app.css. The field moved
+    app.css's accent, which carries its white on-accent at 5.26:1 — written
+    out because Android resources cannot read app.css. The field moved
     off near-black because a dark tile melts into a dark wallpaper: the icon
     read as a bare blue thread with no object behind it. Making the field the
     accent itself puts a tile of brand colour on any wallpaper, light or dark.
