@@ -55,7 +55,7 @@ describe('the sets CSV', () => {
 		const csv = setsCsv([], [], []);
 
 		expect(csv).toBe(
-			'date,workout,exercise,set,type,weight_kg,load_mode,reps,rpe,grip,arms,completed,load_kg\r\n'
+			'date,workout,exercise,set,type,weight_kg,load_mode,reps,rpe,grip,arms,completed,load_kg,note\r\n'
 		);
 	});
 
@@ -65,11 +65,11 @@ describe('the sets CSV', () => {
 		});
 
 		expect(lines(setsCsv([workout], [], [])).slice(0, 5)).toEqual([
-			'2026-07-20,Bench Press + 3 more,Bench Press,,warmup,40,total,10,,Standard,both,true,',
-			'2026-07-20,Bench Press + 3 more,Bench Press,1,normal,,total,,,Standard,both,false,',
-			'2026-07-20,Bench Press + 3 more,Bench Press,2,normal,,total,,,Standard,both,false,',
-			'2026-07-20,Bench Press + 3 more,Bench Press,3,normal,,total,,,Standard,both,false,',
-			'2026-07-20,Bench Press + 3 more,Bench Press,4,normal,,total,,,Standard,both,false,'
+			'2026-07-20,Bench Press + 3 more,Bench Press,,warmup,40,total,10,,Standard,both,true,,',
+			'2026-07-20,Bench Press + 3 more,Bench Press,1,normal,,total,,,Standard,both,false,,',
+			'2026-07-20,Bench Press + 3 more,Bench Press,2,normal,,total,,,Standard,both,false,,',
+			'2026-07-20,Bench Press + 3 more,Bench Press,3,normal,,total,,,Standard,both,false,,',
+			'2026-07-20,Bench Press + 3 more,Bench Press,4,normal,,total,,,Standard,both,false,,'
 		]);
 	});
 
@@ -103,11 +103,11 @@ describe('the sets CSV', () => {
 		};
 
 		expect(lines(setsCsv([workout], [], []))).toEqual([
-			'2026-07-21,Incline DB Press + 1 more,Incline DB Press,,warmup,12,per-hand,10,,,both,true,',
-			'2026-07-21,Incline DB Press + 1 more,Incline DB Press,1,normal,30,per-hand,10,8,,both,true,',
-			'2026-07-21,Incline DB Press + 1 more,Cable Fly,1,normal,20,per-hand,12,,,one,true,',
-			'2026-07-21,Incline DB Press + 1 more,Incline DB Press,2,failure,30,per-hand,9,9.5,,both,true,',
-			'2026-07-21,Incline DB Press + 1 more,Cable Fly,2,drop,15,per-hand,12,,,both,true,'
+			'2026-07-21,Incline DB Press + 1 more,Incline DB Press,,warmup,12,per-hand,10,,,both,true,,',
+			'2026-07-21,Incline DB Press + 1 more,Incline DB Press,1,normal,30,per-hand,10,8,,both,true,,',
+			'2026-07-21,Incline DB Press + 1 more,Cable Fly,1,normal,20,per-hand,12,,,one,true,,',
+			'2026-07-21,Incline DB Press + 1 more,Incline DB Press,2,failure,30,per-hand,9,9.5,,both,true,,',
+			'2026-07-21,Incline DB Press + 1 more,Cable Fly,2,drop,15,per-hand,12,,,both,true,,'
 		]);
 	});
 
@@ -148,14 +148,14 @@ describe('the sets CSV', () => {
 		const workouts = [pulls('before', '2026-07-01'), pulls('after', '2026-07-10')];
 
 		expect(lines(setsCsv(workouts, [plan], weighIns))).toEqual([
-			'2026-07-01,Pull,Pull-Up,1,normal,10,total,6,,Supinated,both,true,',
-			'2026-07-01,Pull,Pull-Up,2,normal,0,total,8,,Pronated,both,true,',
-			'2026-07-01,Pull,Push-Up,1,normal,0,total,20,,,both,true,',
-			'2026-07-01,Pull,Bench Press,1,normal,80,total,5,,Standard,both,true,',
-			'2026-07-10,Pull,Pull-Up,1,normal,10,total,6,,Supinated,both,true,90',
-			'2026-07-10,Pull,Pull-Up,2,normal,0,total,8,,Pronated,both,true,80',
-			'2026-07-10,Pull,Push-Up,1,normal,0,total,20,,,both,true,52',
-			'2026-07-10,Pull,Bench Press,1,normal,80,total,5,,Standard,both,true,'
+			'2026-07-01,Pull,Pull-Up,1,normal,10,total,6,,Supinated,both,true,,',
+			'2026-07-01,Pull,Pull-Up,2,normal,0,total,8,,Pronated,both,true,,',
+			'2026-07-01,Pull,Push-Up,1,normal,0,total,20,,,both,true,,',
+			'2026-07-01,Pull,Bench Press,1,normal,80,total,5,,Standard,both,true,,',
+			'2026-07-10,Pull,Pull-Up,1,normal,10,total,6,,Supinated,both,true,90,',
+			'2026-07-10,Pull,Pull-Up,2,normal,0,total,8,,Pronated,both,true,80,',
+			'2026-07-10,Pull,Push-Up,1,normal,0,total,20,,,both,true,52,',
+			'2026-07-10,Pull,Bench Press,1,normal,80,total,5,,Standard,both,true,,'
 		]);
 	});
 
@@ -172,7 +172,35 @@ describe('the sets CSV', () => {
 		const plan: Template = { id: 'push', name: 'Push "A", heavy', createdAt: 0, entries: [] };
 
 		expect(lines(setsCsv([workout], [plan], []))).toEqual([
-			'2026-07-22,"Push ""A"", heavy",my-own-press,1,normal,50,,8,,,both,true,'
+			'2026-07-22,"Push ""A"", heavy",my-own-press,1,normal,50,,8,,,both,true,,'
+		]);
+	});
+
+	it("repeats the exercise's session note on each of its rows, quoted where it needs it", () => {
+		const workout: FinishedWorkout = {
+			id: 'n',
+			templateId: null,
+			startedAt: at('2026-07-24'),
+			finishedAt: at('2026-07-24'),
+			entries: [
+				{
+					id: 'e',
+					exercises: [
+						{
+							id: 'x',
+							exerciseId: 'bench-press',
+							note: 'Wider grip, "slow"\nnext time',
+							sets: [done('s1', 80, 5), done('s2', 80, 5)]
+						}
+					]
+				}
+			]
+		};
+		const note = '"Wider grip, ""slow""\nnext time"';
+
+		expect(lines(setsCsv([workout], [], []))).toEqual([
+			`2026-07-24,Bench Press,Bench Press,1,normal,80,total,5,,Standard,both,true,,${note}`,
+			`2026-07-24,Bench Press,Bench Press,2,normal,80,total,5,,Standard,both,true,,${note}`
 		]);
 	});
 });
@@ -188,7 +216,7 @@ it('leaves blank what a set from an older build never wrote', () => {
 	};
 
 	expect(lines(setsCsv([workout], [], [{ date: '2026-07-01', kg: 80 }]))).toEqual([
-		'2026-07-23,Pull-Up,Pull-Up,1,,,total,5,,Pronated,both,false,'
+		'2026-07-23,Pull-Up,Pull-Up,1,,,total,5,,Pronated,both,false,,'
 	]);
 });
 

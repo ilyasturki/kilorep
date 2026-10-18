@@ -24,7 +24,8 @@ export const SET_COLUMNS = [
 	'grip',
 	'arms',
 	'completed',
-	'load_kg'
+	'load_kg',
+	'note'
 ] as const;
 
 export const BODYWEIGHT_COLUMNS = ['date', 'kg'] as const;
@@ -87,7 +88,8 @@ export function setsCsv(
 				gripLabel(meta, set.grip) ?? null,
 				set.arms ?? 'both',
 				set.completed ? 'true' : 'false',
-				loadOf(meta, weight, weighIn)
+				loadOf(meta, weight, weighIn),
+				exercise.note ?? null
 			]);
 		}
 	}
