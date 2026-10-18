@@ -37,7 +37,7 @@ import { byRank } from '$lib/domain/template';
 import type { History, Workout } from '$lib/domain/workout';
 import type { RecordKind, SyncAck, WireRecord } from '$lib/sync/protocol';
 
-import type { KilorepDatabase } from './db.ts';
+import type { KilorepDatabase, StoredRecord } from './db.ts';
 import { openDatabase } from './db.ts';
 import type { FinishedWorkout, Heaviest, LastGrips, LastNotes, LastPerformed } from './derive.ts';
 import {
@@ -131,6 +131,10 @@ function settleSnapshot(value: LegacySnapshot): Snapshot {
 		muted: value.muted === true,
 		dismissed: isRestSnapshot(value.dismissed) ? value.dismissed : null
 	};
+}
+
+function wireOf({ id, kind, updatedAt, deletedAt, payload }: StoredRecord): WireRecord {
+	return { id, kind, updatedAt, deletedAt, payload };
 }
 
 function settledPlanRest({ seconds }: PlanRestPreference): number | null {
@@ -592,13 +596,7 @@ export class Store {
 		return {
 			records: records
 				.filter((record) => record.deletedAt === null)
-				.map(({ id, kind, updatedAt, deletedAt, payload }) => ({
-					id,
-					kind,
-					updatedAt,
-					deletedAt,
-					payload
-				})),
+				.map((record) => wireOf(record)),
 			session: isSnapshot(session) ? session : null
 		};
 	}
@@ -656,15 +654,7 @@ export class Store {
 	public async dirtyRecords(): Promise<WireRecord[]> {
 		const records = await this.db.getAll('records');
 
-		return records
-			.filter((record) => record.dirty)
-			.map(({ id, kind, updatedAt, deletedAt, payload }) => ({
-				id,
-				kind,
-				updatedAt,
-				deletedAt,
-				payload
-			}));
+		return records.filter((record) => record.dirty).map((record) => wireOf(record));
 	}
 
 	// A count rather than the records: the Settings row asks after every write and
