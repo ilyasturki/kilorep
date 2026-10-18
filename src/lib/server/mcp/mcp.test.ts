@@ -541,7 +541,9 @@ describe('exercise', () => {
 		const detail = await callTool<Detail>(send, 'exercise', { id: 'seated-cable-row' });
 
 		expect(detail.pattern).toBe('horizontal-pull');
-		expect(detail.grips).toMatchObject({ values: [{ id: 'v-bar' }, { id: 'wide' }, { id: 'rope' }] });
+		expect(detail.grips).toMatchObject({
+			values: [{ id: 'v-bar' }, { id: 'wide' }, { id: 'rope' }]
+		});
 		expect(detail.grips).not.toHaveProperty('retired');
 	});
 
