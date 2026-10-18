@@ -31,7 +31,7 @@
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import SetRow from '$lib/ui/SetRow.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
-	import StepperField from '$lib/ui/StepperField.svelte';
+	import StepperField, { INTEGER } from '$lib/ui/StepperField.svelte';
 	import Switch from '$lib/ui/Switch.svelte';
 	import Textarea from '$lib/ui/Textarea.svelte';
 	import TipButton from '$lib/ui/TipButton.svelte';
@@ -80,6 +80,8 @@
 		major?: number;
 		min?: number;
 		max?: number;
+		whole?: boolean;
+		dense?: boolean;
 		prop: string;
 	};
 
@@ -98,7 +100,8 @@
 			label: 'reps',
 			step: 1,
 			ruler: false,
-			prop: 'step={1}'
+			whole: true,
+			prop: 'entry={INTEGER}'
 		},
 		{
 			value: 100,
@@ -119,6 +122,15 @@
 			min: 20,
 			max: 300,
 			prop: 'rulerStep={0.05}'
+		},
+		{
+			value: 80,
+			recalled: 80,
+			label: 'kg',
+			step: 2.5,
+			ruler: true,
+			dense: true,
+			prop: 'dense (the tray)'
 		}
 	]);
 
@@ -421,6 +433,8 @@
 								major={stepper.major}
 								min={stepper.min}
 								max={stepper.max}
+								entry={stepper.whole ? INTEGER : undefined}
+								dense={stepper.dense}
 							/>
 							<span class={caption}>{stepper.prop}</span>
 						</div>

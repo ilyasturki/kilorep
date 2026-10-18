@@ -193,7 +193,7 @@
 	<!-- `pb-safe-b`: with the tab bar gone from this screen, the tray is the bottommost
 			     thing and owes the home-indicator inset the bar used to absorb. -->
 	<div class="pb-safe-b">
-		<div class="mx-auto flex w-full max-w-xl flex-col px-3 py-3">
+		<div class="mx-auto flex w-full max-w-xl flex-col px-3 pt-1 pb-3">
 			{#if cursor !== null && meta !== undefined}
 				<!-- Keyed so each set gets a fresh editor: what it captures on opening — the
 				     recalled numbers, the previews — belongs to the set it opened on. -->

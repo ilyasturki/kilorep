@@ -6,7 +6,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import ExertionPicker from '$lib/ui/ExertionPicker.svelte';
 	import { tapCommit } from '$lib/ui/feedback';
-	import StepperField from '$lib/ui/StepperField.svelte';
+	import StepperField, { INTEGER } from '$lib/ui/StepperField.svelte';
 	import type { Step } from '$lib/ui/StepperField.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import More from '$lib/ui/icons/More.svelte';
@@ -43,11 +43,9 @@
 
 	const hint = $derived(hintLabel(history, cursor, meta, exertionScale.current));
 
-	const recall = $derived(
-		hint !== null ? `Last ${hint}` : neverLogged(history, cursor) ? 'First time' : null
+	const recalls = $derived(
+		hints && cursor.workingIndex >= 0 && (hint !== null || neverLogged(history, cursor))
 	);
-
-	const recalls = $derived(hints && cursor.workingIndex >= 0 && recall !== null);
 
 	// The plan's own number, which the reps field cannot say for itself: what it holds is the
 	// prefill, and from the second set on that is the weight and reps carried from the first.
@@ -110,33 +108,35 @@
 
 <svelte:window {onkeydown} />
 
-<div bind:this={card} onfocusout={settlePreviews} class="flex flex-col gap-2.5">
-	<div class="flex items-start gap-2">
+<div bind:this={card} onfocusout={settlePreviews} class="flex flex-col gap-2">
+	<div class="flex items-center gap-2">
 		<!-- No name here. The list behind the tray says which exercise this is — the highlighted
-		     row — and the name was the half that gave way, leaving the target and last time
-		     clipped on any exercise called more than two words. What is left is the half a
-		     lifter reads mid-set, and it wraps rather than truncates: on a long grip note and a
-		     rated hint it takes a second line, which is cheaper than hiding the number. -->
-		<div
-			class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1.5 text-sm font-bold
-				text-ink-faint"
-		>
-			{#if note !== null}
-				<span>{note}</span>
-				{#if planned !== null || recalls}
-					<span aria-hidden="true">·</span>
-				{/if}
-			{/if}
-
+		     row. What is left is what a lifter reads mid-set, each number under its own word, so
+		     the target and last time stay apart at a glance instead of running into one line. -->
+		<div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-5 gap-y-0.5">
 			{#if planned !== null}
-				<span>Target {planned}</span>
-				{#if recalls}
-					<span aria-hidden="true">·</span>
-				{/if}
+				<div class="flex items-baseline gap-1.5">
+					<span class="label-caps">Target</span>
+					<span class="text-base font-extrabold tracking-numeral text-ink">{planned} reps</span>
+				</div>
 			{/if}
 
 			{#if recalls}
-				<span>{recall}</span>
+				<div class="flex min-w-0 items-baseline gap-1.5">
+					<span class="label-caps">Last</span>
+					<span
+						class={[
+							'text-base font-extrabold tracking-numeral',
+							hint === null ? 'text-ink-faint' : 'text-ink'
+						]}
+					>
+						{hint ?? 'First time'}
+					</span>
+				</div>
+			{/if}
+
+			{#if note !== null}
+				<span class="basis-full text-sm font-bold text-ink-faint">{note}</span>
 			{/if}
 		</div>
 
@@ -144,7 +144,7 @@
 			type="button"
 			aria-label="Set options"
 			onclick={(e) => onoptions(e.currentTarget)}
-			class="-mt-1.5 -mr-1 grid size-9 shrink-0 place-items-center rounded-lg text-lg
+			class="-my-2 -mr-1 grid size-11 shrink-0 place-items-center rounded-lg text-lg
 				text-ink-faint focus-ring hover:bg-hover press:bg-surface-2"
 			{@attach press()}
 		>
@@ -159,6 +159,7 @@
 			recalled={opened.weight}
 			{step}
 			ruler
+			dense
 			onchange={(v) => ondraft(v, reps)}
 			onpreview={(v) => (previewWeight = v)}
 		/>
@@ -167,16 +168,18 @@
 			value={reps}
 			recalled={opened.reps}
 			step={1}
+			entry={INTEGER}
 			ruler
+			dense
 			onchange={(v) => ondraft(weight, v)}
 			onpreview={(v) => (previewReps = v)}
 		/>
 	</div>
 
 	<div class="flex flex-wrap items-stretch gap-2">
-		<ExertionPicker value={cursor.set.rpe} scale={exertionScale.current} onchange={onrate} />
+		<ExertionPicker value={cursor.set.rpe} scale={exertionScale.current} dense onchange={onrate} />
 
-		<Button variant="commit" compact disabled={!live} class="flex-1" onclick={commit}>
+		<Button variant="commit" disabled={!live} class="flex-1" onclick={commit}>
 			{#if live}
 				<Check size={24} />
 				{commitLabel}

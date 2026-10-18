@@ -64,6 +64,9 @@
 		// The settings row's footprint: the same card at a chip's height, with the label already
 		// spoken by the row beside it and no room under the number to repeat it.
 		compact?: boolean;
+		// The tray's footprint: the full card, its arms still a thumb wide, at a height that
+		// leaves the commit button the tallest thing under the thumb.
+		dense?: boolean;
 		disabled?: boolean;
 		// Whether an emptied box means anything. A set that has not been entered is a real state
 		// and reads `–`; a rest that is off is said with a switch, not by clearing the duration.
@@ -86,6 +89,7 @@
 		max = Infinity,
 		entry = NUMBER,
 		compact = false,
+		dense = false,
 		disabled = false,
 		nullable = true,
 		ruler = false,
@@ -337,7 +341,11 @@
 <div
 	class={[
 		'flex items-stretch bg-sunken focus-ring-within',
-		compact ? 'min-h-11 rounded-xl' : 'min-h-19 rounded-2xl',
+		compact
+			? 'min-h-11 rounded-xl'
+			: dense
+				? 'min-h-14 rounded-2xl pointer-fine:min-h-12'
+				: 'min-h-19 rounded-2xl',
 		klass
 	]}
 	role="group"

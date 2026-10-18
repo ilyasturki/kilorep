@@ -20,10 +20,11 @@
 	type Props = {
 		value: number | null;
 		scale: ExertionScale;
+		dense?: boolean;
 		onchange: (rpe: number | null) => void;
 	};
 
-	let { value, scale, onchange }: Props = $props();
+	let { value, scale, dense = false, onchange }: Props = $props();
 
 	let mode = $state<'pill' | 'chips' | 'custom'>('pill');
 
@@ -164,6 +165,7 @@
 				min={shownMin(scale)}
 				max={shownMax(scale)}
 				ruler
+				{dense}
 				class="flex-1"
 				onchange={(v) => onchange(v === null ? null : storedExertion(v, scale))}
 			/>
