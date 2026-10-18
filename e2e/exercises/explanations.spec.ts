@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures.ts';
-import { plantWorkout, pulled } from '../helpers.ts';
+import { finishedSession, plantRecords } from '../plant.ts';
 
 const MARKS = /^PR marks the set behind Heaviest ever\. Top e1RM marks/u;
 
@@ -21,9 +21,9 @@ function info(heading: Locator): Locator {
 }
 
 test.beforeEach(async ({ db, account, page }) => {
-	await pulled(page, [
-		plantWorkout(db, account.id, 9, [{ exerciseId: 'bench-press', sets: [{ kg: 60, reps: 8 }] }]),
-		plantWorkout(db, account.id, 2, [{ exerciseId: 'bench-press', sets: [{ kg: 65, reps: 8 }] }])
+	await plantRecords(db, account.id, page, [
+		finishedSession(9, [{ exerciseId: 'bench-press', sets: [{ kg: 60, reps: 8 }] }]),
+		finishedSession(2, [{ exerciseId: 'bench-press', sets: [{ kg: 65, reps: 8 }] }])
 	]);
 });
 

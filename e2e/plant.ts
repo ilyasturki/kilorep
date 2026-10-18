@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import type { Template } from '../src/lib/domain/template.ts';
+import type { WorkoutEntry, WorkoutExercise, WorkoutSet } from '../src/lib/domain/workout.ts';
 import type { Database } from '../src/lib/server/db/client.ts';
 import { records } from '../src/lib/server/db/schema.ts';
 import { claimSeq } from '../src/lib/server/db/seq.ts';
@@ -55,4 +56,56 @@ export async function plantRecords(
 			{ timeout: 15_000 }
 		)
 		.toBe(ids.length);
+}
+
+export type PlantedExercise = {
+	exerciseId: string;
+	grip?: string;
+	sets: { kg: number; reps: number; grip?: string }[];
+};
+
+const DAY = 24 * 60 * 60 * 1000;
+
+// As stored: retired grips and folded slugs go in as written, which the app and MCP no longer produce.
+export function finishedSession(daysAgo: number, exercises: PlantedExercise[]): Planted {
+	const startedAt = Date.now() - daysAgo * DAY;
+
+	const entries = exercises.map(({ exerciseId, grip, sets }): WorkoutEntry => {
+		const leg: WorkoutExercise = {
+			id: crypto.randomUUID(),
+			exerciseId,
+			sets: sets.map((planted) => {
+				const set: WorkoutSet = {
+					id: crypto.randomUUID(),
+					type: 'normal',
+					plannedReps: null,
+					weight: planted.kg,
+					reps: planted.reps,
+					rpe: null,
+					completed: true,
+					entered: true
+				};
+
+				if (planted.grip !== undefined) {
+					set.grip = planted.grip;
+				}
+
+				return set;
+			})
+		};
+
+		if (grip !== undefined) {
+			leg.grip = grip;
+		}
+
+		return { id: crypto.randomUUID(), exercises: [leg] };
+	});
+
+	const finishedAt = startedAt + 45 * 60 * 1000;
+
+	return {
+		kind: 'workout',
+		payload: { id: crypto.randomUUID(), templateId: null, startedAt, finishedAt, entries },
+		updatedAt: finishedAt
+	};
 }

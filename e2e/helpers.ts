@@ -1,12 +1,7 @@
 import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import type { Database } from '../src/lib/server/db/client.ts';
-import { records as recordRows } from '../src/lib/server/db/schema.ts';
-import { claimSeq } from '../src/lib/server/db/seq.ts';
 import type { StoredRecord } from '../src/lib/store/db.ts';
-import type { WorkoutEntry, WorkoutExercise, WorkoutSet } from '../src/lib/domain/workout.ts';
-import type { FinishedWorkout } from '../src/lib/store/derive.ts';
 
 export type ClientStore = { records: StoredRecord[]; meta: Record<string, unknown> };
 
@@ -230,96 +225,4 @@ export async function waitForSync(page: Page): Promise<void> {
 export async function syncNow(page: Page): Promise<void> {
 	await page.context().setOffline(true);
 	await page.context().setOffline(false);
-}
-
-export type PlantedExercise = {
-	exerciseId: string;
-	grip?: string;
-	sets: { kg: number; reps: number; grip?: string }[];
-};
-
-const DAY = 24 * 60 * 60 * 1000;
-
-/**
- * A finished session written into the server as stored, retired grips and folded slugs included,
- * which nothing writing through the app or MCP can produce any more. Resolves to its id.
- */
-export function plantWorkout(
-	db: Database,
-	userId: string,
-	daysAgo: number,
-	exercises: PlantedExercise[]
-): string {
-	const startedAt = Date.now() - daysAgo * DAY;
-
-	const entries = exercises.map(({ exerciseId, grip, sets }): WorkoutEntry => {
-		const leg: WorkoutExercise = {
-			id: crypto.randomUUID(),
-			exerciseId,
-			sets: sets.map((planted) => {
-				const set: WorkoutSet = {
-					id: crypto.randomUUID(),
-					type: 'normal',
-					plannedReps: null,
-					weight: planted.kg,
-					reps: planted.reps,
-					rpe: null,
-					completed: true,
-					entered: true
-				};
-
-				if (planted.grip !== undefined) {
-					set.grip = planted.grip;
-				}
-
-				return set;
-			})
-		};
-
-		if (grip !== undefined) {
-			leg.grip = grip;
-		}
-
-		return { id: crypto.randomUUID(), exercises: [leg] };
-	});
-
-	const workout: FinishedWorkout = {
-		id: crypto.randomUUID(),
-		templateId: null,
-		startedAt,
-		finishedAt: startedAt + 45 * 60 * 1000,
-		entries
-	};
-
-	db.transaction((tx) => {
-		tx.insert(recordRows)
-			.values({
-				userId,
-				seq: claimSeq(tx, userId),
-				id: workout.id,
-				kind: 'workout',
-				updatedAt: workout.finishedAt,
-				deletedAt: null,
-				payload: workout
-			})
-			.run();
-	});
-
-	return workout.id;
-}
-
-/** Opens Train and waits until the device holds these records. */
-export async function pulled(page: Page, ids: string[]): Promise<void> {
-	await page.goto('/train');
-	await expect
-		.poll(
-			async () => {
-				const { records } = await readStore(page);
-				const known = new Set(records.map(({ id }) => id));
-
-				return ids.filter((id) => !known.has(id));
-			},
-			{ message: 'planted records still missing on the device', timeout: 15_000 }
-		)
-		.toEqual([]);
 }

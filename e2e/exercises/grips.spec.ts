@@ -3,7 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import { catalogById } from '../../src/lib/catalog.ts';
 
 import { expect, test } from '../fixtures.ts';
-import { plantWorkout, pulled } from '../helpers.ts';
+import { finishedSession, plantRecords } from '../plant.ts';
 
 function section(page: Page, heading: RegExp): Locator {
 	return page
@@ -53,8 +53,8 @@ async function watchForBlank(page: Page, name: string): Promise<() => Promise<bo
 
 test.describe('Pull-Up across its grips', () => {
 	test.beforeEach(async ({ db, account, page }) => {
-		const ids = [
-			plantWorkout(db, account.id, 21, [
+		const sessions = [
+			finishedSession(21, [
 				{
 					exerciseId: 'pull-up',
 					sets: [
@@ -63,7 +63,7 @@ test.describe('Pull-Up across its grips', () => {
 					]
 				}
 			]),
-			plantWorkout(db, account.id, 14, [
+			finishedSession(14, [
 				{
 					exerciseId: 'pull-up',
 					grip: 'underhand',
@@ -73,7 +73,7 @@ test.describe('Pull-Up across its grips', () => {
 					]
 				}
 			]),
-			plantWorkout(db, account.id, 7, [
+			finishedSession(7, [
 				{
 					exerciseId: 'pull-up',
 					sets: [
@@ -83,7 +83,7 @@ test.describe('Pull-Up across its grips', () => {
 				}
 			])
 		];
-		await pulled(page, ids);
+		await plantRecords(db, account.id, page, sessions);
 		await page.goto('/plan/exercises/pull-up');
 	});
 

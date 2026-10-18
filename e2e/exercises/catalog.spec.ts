@@ -2,7 +2,8 @@ import type { Locator, Page } from '@playwright/test';
 
 import { catalogById } from '../../src/lib/catalog.ts';
 import { expect, test } from '../fixtures.ts';
-import { plantWorkout, pulled, startEmpty } from '../helpers.ts';
+import { startEmpty } from '../helpers.ts';
+import { finishedSession, plantRecords } from '../plant.ts';
 
 function history(page: Page): Locator {
 	return page
@@ -26,18 +27,18 @@ test.describe('grips on history logged before the catalog changed', () => {
 		account,
 		page
 	}) => {
-		await pulled(page, [
-			plantWorkout(db, account.id, 10, [
+		await plantRecords(db, account.id, page, [
+			finishedSession(10, [
 				{ exerciseId: 'seated-cable-row', grip: 'rope', sets: [{ kg: 41, reps: 10, grip: 'rope' }] }
 			]),
-			plantWorkout(db, account.id, 6, [
+			finishedSession(6, [
 				{
 					exerciseId: 'seated-cable-row',
 					grip: 'straight',
 					sets: [{ kg: 46, reps: 10, grip: 'straight' }]
 				}
 			]),
-			plantWorkout(db, account.id, 2, [
+			finishedSession(2, [
 				{ exerciseId: 'seated-cable-row', sets: [{ kg: 51, reps: 10, grip: 'v-bar' }] }
 			])
 		]);
@@ -69,14 +70,12 @@ test.describe('grips on history logged before the catalog changed', () => {
 		account,
 		page
 	}) => {
-		await pulled(page, [
-			plantWorkout(db, account.id, 9, [
-				{ exerciseId: 'close-grip-lat-pulldown', sets: [{ kg: 47, reps: 10 }] }
-			]),
-			plantWorkout(db, account.id, 5, [
+		await plantRecords(db, account.id, page, [
+			finishedSession(9, [{ exerciseId: 'close-grip-lat-pulldown', sets: [{ kg: 47, reps: 10 }] }]),
+			finishedSession(5, [
 				{ exerciseId: 'lat-pulldown', grip: 'close', sets: [{ kg: 52, reps: 10, grip: 'close' }] }
 			]),
-			plantWorkout(db, account.id, 1, [
+			finishedSession(1, [
 				{ exerciseId: 'lat-pulldown', sets: [{ kg: 61, reps: 10, grip: 'wide' }] }
 			])
 		]);
@@ -98,11 +97,9 @@ test.describe('grips on history logged before the catalog changed', () => {
 	});
 
 	test('Pull-Up: chin-ups under Supinated', async ({ db, account, page }) => {
-		await pulled(page, [
-			plantWorkout(db, account.id, 4, [{ exerciseId: 'chin-up', sets: [{ kg: 0, reps: 9 }] }]),
-			plantWorkout(db, account.id, 2, [
-				{ exerciseId: 'pull-up', sets: [{ kg: 0, reps: 7, grip: 'overhand' }] }
-			])
+		await plantRecords(db, account.id, page, [
+			finishedSession(4, [{ exerciseId: 'chin-up', sets: [{ kg: 0, reps: 9 }] }]),
+			finishedSession(2, [{ exerciseId: 'pull-up', sets: [{ kg: 0, reps: 7, grip: 'overhand' }] }])
 		]);
 		await page.goto('/plan/exercises/pull-up');
 
@@ -179,8 +176,8 @@ test('"bench machine" and "press machine" find Machine Bench Press', async ({
 });
 
 test('hip adduction counts as Quads', async ({ db, account, page }) => {
-	await pulled(page, [
-		plantWorkout(db, account.id, 2, [
+	await plantRecords(db, account.id, page, [
+		finishedSession(2, [
 			{
 				exerciseId: 'hip-adduction',
 				sets: [
