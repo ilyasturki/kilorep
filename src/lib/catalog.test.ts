@@ -206,10 +206,10 @@ describe('illustrations', () => {
 		for (const exercise of catalog) {
 			expect(shipped.has(exercise.id), exercise.id).toBe(true);
 
-			for (const value of exercise.grips?.values ?? []) {
-				const name = `${exercise.id}--${value.id}`;
+			for (const grip of offeredBy(exercise)) {
+				const name = `${exercise.id}--${grip}`;
 
-				if (value.id !== exercise.grips?.default) {
+				if (grip !== settleGrip(exercise, null)) {
 					expect(shipped.has(name), name).toBe(true);
 				}
 			}
@@ -219,16 +219,16 @@ describe('illustrations', () => {
 	it('key a grip drawing on a real entry and one of its non-default values', () => {
 		for (const name of drawn) {
 			const [id = '', grip] = name.split('--');
-			const axis = catalogById[id]?.grips;
+			const exercise: Exercise | undefined = catalogById[id];
 
-			expect(catalogById[id], name).toBeDefined();
+			expect(exercise, name).toBeDefined();
 
 			if (grip !== undefined) {
 				expect(
-					axis?.values.some((value) => value.id === grip),
+					gripsOf(exercise).map((value) => value.id),
 					name
-				).toBe(true);
-				expect(axis?.default, name).not.toBe(grip);
+				).toContain(grip);
+				expect(settleGrip(exercise, null), name).not.toBe(grip);
 			}
 		}
 	});
