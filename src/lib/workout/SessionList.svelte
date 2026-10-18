@@ -8,6 +8,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
+	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 	import { press } from '$lib/ui/press';
 
@@ -136,7 +137,7 @@
 			</div>
 		{/each}
 
-		<AddRow label="Add exercise" onclick={oninsert} />
+		<AddRow flush label="Add exercise" icon={StackPlus} onclick={oninsert} />
 	</div>
 
 	{#if ondiscard !== undefined}

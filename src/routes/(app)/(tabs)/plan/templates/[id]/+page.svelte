@@ -49,6 +49,7 @@
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Plus from '$lib/ui/icons/Plus.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
+	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	import type { PageProps } from './$types';
@@ -372,7 +373,10 @@
 			<Stack size={24} />
 		{/snippet}
 		{#snippet action()}
-			<Button onclick={() => openInsert()}>Add exercise</Button>
+			<Button onclick={() => openInsert()}>
+				<StackPlus size={20} />
+				Add exercise
+			</Button>
 		{/snippet}
 	</EmptyState>
 {/snippet}
@@ -412,9 +416,10 @@
 						onreorder={(entryId, index) => moveEntry(template, entryId, index)}
 					/>
 
-					<Button variant="raised" class="w-full" onclick={() => openInsert()}
-						>+ Add exercise</Button
-					>
+					<Button variant="raised" class="w-full" onclick={() => openInsert()}>
+						<StackPlus size={20} />
+						Add exercise
+					</Button>
 				{/if}
 
 				{@render startWorkout('pb-[max(0.75rem,var(--spacing-safe-b))]')}
@@ -480,9 +485,10 @@
 				{#if entries.length === 0}
 					{@render nothing()}
 				{:else}
-					<Button variant="raised" class="w-full" onclick={() => openInsert()}
-						>+ Add exercise</Button
-					>
+					<Button variant="raised" class="w-full" onclick={() => openInsert()}>
+						<StackPlus size={20} />
+						Add exercise
+					</Button>
 				{/if}
 
 				{#if persisted}

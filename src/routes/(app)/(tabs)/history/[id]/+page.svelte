@@ -43,6 +43,7 @@
 	import More from '$lib/ui/icons/More.svelte';
 	import Pencil from '$lib/ui/icons/Pencil.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
+	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import { press } from '$lib/ui/press';
 
 	import type { PageProps } from './$types';
@@ -627,7 +628,10 @@
 							<Stack size={24} />
 						{/snippet}
 						{#snippet action()}
-							<Button variant="commit" onclick={() => insertFrom(null)}>Add exercise</Button>
+							<Button variant="commit" onclick={() => insertFrom(null)}>
+								<StackPlus size={20} />
+								Add exercise
+							</Button>
 						{/snippet}
 					</EmptyState>
 				</div>

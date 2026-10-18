@@ -43,6 +43,7 @@
 	import { fullyVisible, instantly, revealNearest, revealStart } from '$lib/ui/scroll';
 	import { deskViewport } from '$lib/ui/viewport';
 	import Stack from '$lib/ui/icons/Stack.svelte';
+	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 
 	import type { PageProps } from './$types';
 
@@ -793,7 +794,10 @@
 							<Stack size={24} />
 						{/snippet}
 						{#snippet action()}
-							<Button variant="commit" onclick={() => insertFrom(null)}>Add exercise</Button>
+							<Button variant="commit" onclick={() => insertFrom(null)}>
+								<StackPlus size={20} />
+								Add exercise
+							</Button>
 						{/snippet}
 					</EmptyState>
 				</div>
