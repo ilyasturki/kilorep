@@ -3,6 +3,7 @@ import { and, eq, gt } from 'drizzle-orm';
 import type { SyncAck, SyncRequest, SyncResponse, WireRecord } from '$lib/sync/protocol';
 
 import type { Database } from './client.ts';
+import { WRITER } from './client.ts';
 import type { RecordRow } from './schema.ts';
 import { records } from './schema.ts';
 import type { Executor } from './seq.ts';
@@ -96,5 +97,5 @@ export function syncExchange(db: Database, userId: string, request: SyncRequest)
 		}
 
 		return { acks, records: [...out.values()], watermark };
-	});
+	}, WRITER);
 }

@@ -1,11 +1,16 @@
-import { beforeEach, describe, expect, test } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
 import type { WireRecord } from '$lib/sync/protocol';
 
-import { createUser } from '../auth/accounts.ts';
+import { createUser, insertUser } from '../auth/accounts.ts';
+import { writeRecord } from '../mcp/write.ts';
 import type { Database } from './client.ts';
 import { createDatabase } from './client.ts';
 import { runMigrations } from './migrate.ts';
+import { syncCounters } from './schema.ts';
 import { syncExchange } from './sync.ts';
 
 let db: Database;
@@ -129,5 +134,86 @@ describe('tenancy', () => {
 
 		const mine = syncExchange(db, userId, { watermark: 0, push: [] });
 		expect(mine.records[0].payload).toEqual({ of: 'mine' });
+	});
+});
+
+// Stands in for `account:create` run against a live server: its commit lands after the exchange has read and before it writes.
+function interleaved(server: Database, between: () => void): Database {
+	const transaction: Database['transaction'] = (run, config) =>
+		server.transaction((tx) => {
+			tx.select().from(syncCounters).all();
+			between();
+
+			return run(tx);
+		}, config);
+
+	return Object.assign(Object.create(server) as Database, { transaction });
+}
+
+describe('beside another connection', () => {
+	let directory: string;
+	let server: Database;
+	let script: Database;
+	let id: string;
+
+	beforeEach(async () => {
+		directory = mkdtempSync(path.join(os.tmpdir(), 'kilorep-test-'));
+		const file = path.join(directory, 'test.db');
+		server = createDatabase(file);
+		runMigrations(server);
+		script = createDatabase(file);
+		script.$client.exec('pragma busy_timeout = 0');
+		({ id } = await createUser(server, 'lifter@example.com', 'a-long-enough-password'));
+	});
+
+	afterEach(() => {
+		script.$client.close();
+		server.$client.close();
+		rmSync(directory, { recursive: true, force: true });
+	});
+
+	// Held off by the exchange's lock it fails at once (busy_timeout 0); a real script would wait, so it writes again after.
+	function scripted(): { beside: Database; settle: () => void } {
+		let written = false;
+		const beside = interleaved(server, () => {
+			try {
+				insertUser(script, 'other@example.com', null, null);
+				written = true;
+			} catch {
+				/* empty */
+			}
+		});
+
+		return {
+			beside,
+			settle: () => {
+				if (!written) {
+					insertUser(script, 'other@example.com', null, null);
+				}
+			}
+		};
+	}
+
+	test('a push lands while an account is written elsewhere', () => {
+		const { beside, settle } = scripted();
+
+		const response = syncExchange(beside, id, { watermark: 0, push: [record('w1', 100)] });
+
+		expect(response.acks).toEqual([{ id: 'w1', updatedAt: 100 }]);
+		settle();
+	});
+
+	test('an assistant’s write lands while an account is written elsewhere', () => {
+		const { beside, settle } = scripted();
+
+		const outcome = writeRecord(beside, id, {
+			id: 'w1',
+			kind: 'workout',
+			payload: { id: 'w1' },
+			expect: 'absent'
+		});
+
+		expect(outcome.ok).toBe(true);
+		settle();
 	});
 });

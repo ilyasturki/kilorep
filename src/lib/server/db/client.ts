@@ -8,6 +8,9 @@ import { databasePath } from './config.ts';
 
 export type Database = NodeSQLiteDatabase & { $client: DatabaseSync };
 
+// Deferred, a transaction that reads first fails outright (SQLITE_BUSY_SNAPSHOT, no busy wait) once another connection commits before its first write.
+export const WRITER = { behavior: 'immediate' } as const;
+
 export function createDatabase(file: string = databasePath): Database {
 	if (file !== ':memory:') {
 		mkdirSync(path.dirname(file), { recursive: true });

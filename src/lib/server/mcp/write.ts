@@ -1,6 +1,7 @@
 import type { RecordKind, WireRecord } from '$lib/sync/protocol';
 
 import type { Database } from '../db/client.ts';
+import { WRITER } from '../db/client.ts';
 import type { Executor } from '../db/seq.ts';
 import { applyPush, rowFor } from '../db/sync.ts';
 
@@ -94,7 +95,7 @@ function attempt(tx: Executor, userId: string, request: WriteRequest): WriteOutc
  * so losing the write to a future timestamp would be a silent no-op rather than safety.
  */
 export function writeRecord(db: Database, userId: string, request: WriteRequest): WriteOutcome {
-	return db.transaction((tx) => attempt(tx, userId, request));
+	return db.transaction((tx) => attempt(tx, userId, request), WRITER);
 }
 
 export type BatchOutcome =
@@ -128,7 +129,7 @@ export function writeRecords(db: Database, userId: string, requests: WriteReques
 			}
 
 			return { ok: true };
-		});
+		}, WRITER);
 	} catch (error) {
 		if (refusals.length === 0) {
 			throw error;
