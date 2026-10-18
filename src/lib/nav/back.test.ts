@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { activeWorkout } from '$lib/workout/active.svelte';
 
 import type { BackDecision } from './back';
 
@@ -19,78 +21,111 @@ const tabRoots = navRoots();
 
 const LIVE = '/train/live';
 
-function decide(
-	pathname: string,
-	overrides: { overlayOpen?: boolean; depth?: number } = {}
-): BackDecision {
-	return decideBack({
-		pathname,
-		overlayOpen: overrides.overlayOpen ?? false,
-		tabRoots,
-		parentOf,
-		depth: overrides.depth ?? 3
-	});
+const ORIGIN = 'https://kilorep.test';
+
+function at(address: string): URL {
+	return new URL(address, ORIGIN);
 }
+
+// The whole of a back press, the way `‹` and the hardware button both make it.
+function press(address: string, behind: string | null = null, overlayOpen = false): BackDecision {
+	return decideBack({ overlayOpen, target: backTo(at(address), behind), behind });
+}
+
+function running(): void {
+	activeWorkout.session = {} as typeof activeWorkout.session;
+}
+
+afterEach(() => {
+	activeWorkout.session = null;
+});
 
 describe('decideBack', () => {
 	it('closes an open overlay before anything else, wherever back is pressed', () => {
-		expect(decide('/train', { overlayOpen: true })).toEqual({ kind: 'close-overlay' });
-		expect(decide('/history/abc', { overlayOpen: true })).toEqual({ kind: 'close-overlay' });
-		expect(decide('/settings', { overlayOpen: true, depth: 0 })).toEqual({
-			kind: 'close-overlay'
-		});
+		expect(press('/train', null, true)).toEqual({ kind: 'close-overlay' });
+		expect(press('/settings', '/progress', true)).toEqual({ kind: 'close-overlay' });
+	});
+
+	it('stops editing a record rather than leaving it, the editor being an overlay', () => {
+		expect(press('/history/abc', '/history', true)).toEqual({ kind: 'close-overlay' });
 	});
 
 	it('minimizes at every tab root but the session — tabs are peers, no funnel through home', () => {
 		for (const root of tabRoots.filter((address) => address !== LIVE)) {
-			expect(decide(root)).toEqual({ kind: 'minimize' });
+			expect(press(root)).toEqual({ kind: 'minimize' });
 		}
 	});
 
 	it('minimizes at a tab root even with history behind it, so back never replays tab taps', () => {
-		expect(decide('/train', { depth: 9 })).toEqual({ kind: 'minimize' });
+		expect(press('/train', '/settings')).toEqual({ kind: 'minimize' });
+		expect(press('/settings', '/progress')).toEqual({ kind: 'minimize' });
 	});
 
-	it('walks real history from a screen inside a tab, so back is where the user was', () => {
-		expect(decide('/history/abc')).toEqual({ kind: 'history-back' });
-		expect(decide('/plan/templates/t1')).toEqual({ kind: 'history-back' });
-		expect(decide('/plan/exercises/bench-press')).toEqual({ kind: 'history-back' });
+	it('pops when the screen back walks to is the entry behind', () => {
+		expect(press('/history/abc', '/history')).toEqual({ kind: 'pop' });
+		expect(press('/plan/templates/t1', '/plan/templates')).toEqual({ kind: 'pop' });
+		expect(press('/history', '/progress')).toEqual({ kind: 'pop' });
 	});
 
-	it('falls back to the tab root when nothing of ours is behind — a deep link, a cold boot', () => {
-		expect(decide('/plan/templates/t1', { depth: 0 })).toEqual({
-			kind: 'goto',
-			path: '/plan/templates'
+	it('pops onto a list left filtered, which is still the list', () => {
+		expect(press('/plan/exercises/bench-press', '/plan/exercises?q=press')).toEqual({
+			kind: 'pop'
 		});
-		expect(decide('/plan/exercises/bench-press', { depth: 0 })).toEqual({
-			kind: 'goto',
+	});
+
+	it('replaces rather than pushes when the way back is not behind — a deep link, a jump', () => {
+		expect(press('/history/abc')).toEqual({ kind: 'replace', path: '/history' });
+		expect(press('/history/abc', '/train')).toEqual({ kind: 'replace', path: '/history' });
+		expect(press('/history')).toEqual({ kind: 'replace', path: '/progress' });
+		expect(press('/plan/exercises/bench-press')).toEqual({
+			kind: 'replace',
 			path: '/plan/exercises'
 		});
 	});
 
-	it('walks a child of Progress up to its list, and the list up to Progress', () => {
-		expect(decide('/history/abc', { depth: 0 })).toEqual({ kind: 'goto', path: '/history' });
-		expect(decide('/history', { depth: 0 })).toEqual({ kind: 'goto', path: '/progress' });
+	it('holds a screen opened out of its branch to the exact address it was opened from', () => {
+		const opened = '/plan/exercises/bench-press?from=%2Fprogress';
+
+		expect(press(opened, '/progress')).toEqual({ kind: 'pop' });
+		expect(press(opened)).toEqual({ kind: 'replace', path: '/progress' });
+
+		const nested = openedFrom('/history/w1', '/plan/exercises/squat?from=%2Fprogress');
+
+		expect(press(nested, '/plan/exercises/squat?from=%2Fprogress')).toEqual({ kind: 'pop' });
+		expect(press(nested, '/plan/exercises/squat')).toEqual({
+			kind: 'replace',
+			path: '/plan/exercises/squat?from=%2Fprogress'
+		});
 	});
 
-	it('minimizes at Weight rather than walking to Progress, which no longer parents it', () => {
-		expect(decide('/bodyweight', { depth: 0 })).toEqual({ kind: 'minimize' });
+	it('walks out of the live session to wherever the lifter came from', () => {
+		expect(press(LIVE, '/plan/templates/t1')).toEqual({ kind: 'pop' });
+		expect(press(LIVE, '/history/abc')).toEqual({ kind: 'pop' });
+		expect(press(LIVE, '/plan/exercises')).toEqual({ kind: 'pop' });
+		expect(press(LIVE, '/train')).toEqual({ kind: 'pop' });
 	});
 
-	it('walks out of the live session to where the lifter came from, not out of the app', () => {
-		expect(decide(LIVE)).toEqual({ kind: 'history-back' });
+	it('sends a session with nothing of ours behind it up to the Train home', () => {
+		expect(press(LIVE)).toEqual({ kind: 'replace', path: '/train' });
+		expect(press(LIVE, '/login')).toEqual({ kind: 'replace', path: '/train' });
+		expect(press(LIVE, '/')).toEqual({ kind: 'replace', path: '/train' });
+		expect(press(LIVE, LIVE)).toEqual({ kind: 'replace', path: '/train' });
 	});
 
-	it('sends a cold-booted session up to the Train home, which holds its Resume card', () => {
-		expect(decide(LIVE, { depth: 0 })).toEqual({ kind: 'goto', path: '/train' });
+	it('walks a tab glanced at mid-session back into the session', () => {
+		running();
+
+		expect(press('/settings', LIVE)).toEqual({ kind: 'pop' });
+		expect(press('/bodyweight', LIVE)).toEqual({ kind: 'pop' });
+		expect(press('/settings', '/progress')).toEqual({ kind: 'minimize' });
+	});
+
+	it('lets a tab minimize once the session behind it has ended', () => {
+		expect(press('/settings', LIVE)).toEqual({ kind: 'minimize' });
 	});
 
 	it('matches roots on segments, not prefixes, and minimizes where nothing claims the address', () => {
-		expect(decide('/historyx', { depth: 0 })).toEqual({ kind: 'minimize' });
-	});
-
-	it('walks real history off the tab grid, when there is history to walk', () => {
-		expect(decide('/history')).toEqual({ kind: 'history-back' });
+		expect(press('/historyx')).toEqual({ kind: 'minimize' });
 	});
 });
 
@@ -101,24 +136,28 @@ describe('parentOf', () => {
 		}
 	});
 
-	it('parents the live session on the Train home, which no longer redirects back into it', () => {
+	it('parents the live session on the Train home, its fallback when nothing is behind', () => {
 		expect(navRoots()).toContain(LIVE);
 		expect(parentOf(LIVE)).toBe('/train');
 	});
 
-	it('still walks a screen inside a tab up to the root that owns it', () => {
+	it('walks a screen inside a tab up one step at a time', () => {
 		expect(parentOf('/plan/exercises/bench-press')).toBe('/plan/exercises');
 		expect(parentOf('/plan/templates/t1')).toBe('/plan/templates');
 		expect(parentOf('/history/abc')).toBe('/history');
 		expect(parentOf('/history')).toBe('/progress');
 	});
+
+	it('walks a plan history up to its editor, not past it to the list', () => {
+		expect(parentOf('/plan/templates/t1/history')).toBe('/plan/templates/t1');
+	});
+
+	it('claims nothing outside the tabs', () => {
+		expect(parentOf('/historyx')).toBeNull();
+		expect(parentOf('/login')).toBeNull();
+		expect(parentOf('/')).toBeNull();
+	});
 });
-
-const ORIGIN = 'https://kilorep.test';
-
-function at(address: string): URL {
-	return new URL(address, ORIGIN);
-}
 
 describe('backTo', () => {
 	it('walks the hierarchy where the address says nothing about where it was opened from', () => {
@@ -137,6 +176,12 @@ describe('backTo', () => {
 
 	it('keeps every other query out of it — only `from` says where back goes', () => {
 		expect(backTo(at('/plan/exercises/deadlift?q=press'))).toBe('/plan/exercises');
+	});
+
+	it('reads `from` before the entry behind, which says when, not where', () => {
+		expect(backTo(at('/plan/exercises/deadlift?from=%2Fprogress'), '/plan/exercises')).toBe(
+			'/progress'
+		);
 	});
 
 	it('refuses anywhere that is not an address of ours, however it is dressed up', () => {

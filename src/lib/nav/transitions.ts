@@ -4,6 +4,7 @@ import { prefersReducedMotion } from 'svelte/motion';
 import { onNavigate } from '$app/navigation';
 
 import { tabRoots } from '$lib/nav/bar.svelte';
+import { retreatingTo } from '$lib/nav/go';
 import { classifyMove } from '$lib/nav/move';
 import { coarsePointer } from '$lib/ui/pointer';
 
@@ -74,6 +75,7 @@ function navigationMove(navigation: OnNavigate): Direction | undefined {
 
 	const a = from.url.pathname;
 	const b = to.url.pathname;
+	const back = retreatingTo(`${b}${to.url.search}`);
 
 	if (a === b || outsideShell(a) || outsideShell(b)) {
 		return undefined;
@@ -82,7 +84,7 @@ function navigationMove(navigation: OnNavigate): Direction | undefined {
 	return classifyMove({
 		from: a,
 		to: b,
-		delta: navigation.delta ?? undefined,
+		delta: navigation.delta ?? (back ? -1 : undefined),
 		tabRoots: tabRoots()
 	});
 }

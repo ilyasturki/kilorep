@@ -24,7 +24,6 @@ export async function launchRepeat(store: Store, workout: Workout): Promise<void
 
 	await invalidate(SESSION_DEP);
 
-	// Straight into the session — its own load picks the snapshot up. One pushed entry, and
-	// `‹` walks up to the Train home rather than retracing the launch.
+	// Straight into the session — its own load picks the snapshot up.
 	await goto('/train/live');
 }

@@ -1,40 +1,32 @@
 export type BackDecision =
 	| { kind: 'close-overlay' }
-	| { kind: 'goto'; path: string }
-	| { kind: 'history-back' }
+	| { kind: 'pop' }
+	| { kind: 'replace'; path: string }
 	| { kind: 'minimize' };
 
 export type BackContext = {
-	pathname: string;
 	overlayOpen: boolean;
-	tabRoots: readonly string[];
-	parentOf: (pathname: string) => string | null;
-	depth: number;
+	target: string | null;
+	behind: string | null;
 };
 
-export function decideBack({
-	pathname,
-	overlayOpen,
-	tabRoots,
-	parentOf,
-	depth
-}: BackContext): BackDecision {
+// A bare target is that screen in whatever state it was left: a filtered list is still the list.
+function walksTo(behind: string | null, target: string): boolean {
+	return (
+		behind === target ||
+		(behind !== null && !target.includes('?') && behind.split('?')[0] === target)
+	);
+}
+
+// A back never pushes, or the browser's own back would replay it.
+export function decideBack({ overlayOpen, target, behind }: BackContext): BackDecision {
 	if (overlayOpen) {
 		return { kind: 'close-overlay' };
 	}
 
-	const parent = parentOf(pathname);
-
-	// The parent is read before the root check, not after: a tab root is a peer rather than a
-	// step and back leaves the app there, but the live session is an address a tab owns while
-	// still answering to something above it — leaving it must not mean leaving the app.
-	if (parent === null && tabRoots.includes(pathname)) {
+	if (target === null) {
 		return { kind: 'minimize' };
 	}
 
-	if (depth > 0) {
-		return { kind: 'history-back' };
-	}
-
-	return parent === null ? { kind: 'minimize' } : { kind: 'goto', path: parent };
+	return walksTo(behind, target) ? { kind: 'pop' } : { kind: 'replace', path: target };
 }

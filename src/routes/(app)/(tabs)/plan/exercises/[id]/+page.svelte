@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-
 	import { page } from '$app/state';
 
 	import { catalog } from '$lib/catalog';
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
+	import { leaveFor } from '$lib/nav/go';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { bodyweightShareOf, carriedFrom, carriedOn } from '$lib/domain/load';
 	import { restLabel } from '$lib/domain/rest';
@@ -178,7 +177,7 @@
 		]);
 		persistSession(store, session);
 
-		await goto('/train/live');
+		await leaveFor('/train/live');
 	}
 
 	async function addToPlan(template: Template) {

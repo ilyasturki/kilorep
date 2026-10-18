@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { goto } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
 	import type { Exercise } from '$lib/domain/exercise';
@@ -19,6 +18,7 @@
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
 	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { leave } from '$lib/nav/go';
 	import { bottomDock } from '$lib/nav/dock.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
@@ -546,7 +546,7 @@
 			syncSoon(data.user.id);
 		}
 
-		await goto('/history');
+		await leave('/history');
 	}
 
 	async function launch() {

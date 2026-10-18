@@ -57,12 +57,13 @@ export function tabRoots(): string[] {
 	return navTabs().flatMap((tab) => rootsOf(tab));
 }
 
-// The live session steps up to the Train home, which holds the way back in as a Resume
-// card while it runs. Leaving the session is a step inside the app, not the end of it —
-// the session keeps running behind the card.
+const LIVE = '/train/live';
+const HOME = '/train';
+
+// The live session's entry is the fallback for when nothing of ours is behind it.
 const PARENTS: Record<string, string> = {
 	'/history': '/progress',
-	'/train/live': '/train'
+	[LIVE]: HOME
 };
 
 export function parentOf(pathname: string): string | null {
@@ -78,9 +79,16 @@ export function parentOf(pathname: string): string | null {
 		return null;
 	}
 
-	return (
-		[...roots, ...Object.keys(PARENTS)].find((root) => pathname.startsWith(`${root}/`)) ?? null
-	);
+	const up = pathname.slice(0, pathname.lastIndexOf('/'));
+	const known = [...roots, ...Object.keys(PARENTS)];
+
+	return up !== '' && known.some((root) => covers(up, root)) ? up : null;
+}
+
+function ours(address: string): boolean {
+	const [pathname] = address.split('?');
+
+	return tabRoots().includes(pathname) || parentOf(pathname) !== null;
 }
 
 /** How a link says where it was opened from, so the screen it opens can walk back to it. */
@@ -92,7 +100,7 @@ const FROM = 'from';
  * to leave the session, and the browse list it is filed under is not where they came from.
  * A link that opens a screen out of its own branch says so, and `‹` reads that first.
  */
-export function backTo(url: URL): string | null {
+export function backTo(url: URL, behind: string | null = null): string | null {
 	const from = url.searchParams.get(FROM);
 
 	// An address of ours and nothing else: one slash, and the character after it neither a
@@ -101,6 +109,17 @@ export function backTo(url: URL): string | null {
 	// `‹` is a plain anchor, and `from` arrives from whatever URL was opened.
 	if (from !== null && /^\/(?![/\\])/u.test(from)) {
 		return from;
+	}
+
+	const behindLive = behind !== null && behind.split('?')[0] === LIVE;
+
+	if (url.pathname === LIVE) {
+		return behind !== null && ours(behind) && !behindLive ? behind : HOME;
+	}
+
+	// A tab glanced at mid-session answers to the session it was opened from.
+	if (behindLive && activeWorkout.session !== null && tabRoots().includes(url.pathname)) {
+		return LIVE;
 	}
 
 	return parentOf(url.pathname);

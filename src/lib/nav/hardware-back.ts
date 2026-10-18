@@ -1,28 +1,8 @@
 import { App } from '@capacitor/app';
-import { goto } from '$app/navigation';
 
 import { remove } from '$lib/app/capacitor';
-import { decideBack } from '$lib/nav/back';
-import { backTo, tabRoots } from '$lib/nav/bar.svelte';
-import { backDepth } from '$lib/nav/depth';
-import { closeTopOverlay, hasOpenOverlay, watchOverlays } from '$lib/ui/overlays';
-
-import type { BackDecision } from '$lib/nav/back';
-
-function decide(): BackDecision {
-	const url = new URL(location.href);
-
-	return decideBack({
-		pathname: url.pathname,
-		overlayOpen: hasOpenOverlay(),
-		tabRoots: tabRoots(),
-		// The argument is ignored because it would say less than what is closed over: the
-		// address `decideBack` was handed is this URL, and the way back out of a screen opened
-		// from elsewhere is written in its query, which a pathname alone has already dropped.
-		parentOf: () => backTo(url),
-		depth: backDepth()
-	});
-}
+import { backDecision, follow } from '$lib/nav/go';
+import { watchOverlays } from '$lib/ui/overlays';
 
 async function minimize(): Promise<void> {
 	try {
@@ -94,7 +74,7 @@ export function syncSystemBack(): void {
 		return;
 	}
 
-	void push(decide().kind !== 'minimize');
+	void push(backDecision().kind !== 'minimize');
 }
 
 // Registering any `backButton` listener is itself the decision: Capacitor
@@ -107,32 +87,20 @@ export function wireHardwareBack(): () => void {
 	}
 
 	const listener = App.addListener('backButton', () => {
-		const decision = decide();
+		const decision = backDecision();
 
-		switch (decision.kind) {
-			case 'close-overlay': {
-				closeTopOverlay();
-				break;
-			}
-			case 'goto': {
-				void goto(decision.path, { replaceState: true });
-				break;
-			}
-			case 'history-back': {
-				history.back();
-				break;
-			}
-			case 'minimize': {
-				// Reached only inside the round-trip `push` takes: the press landed after the
-				// app stopped wanting back and before Android was told. The old exit, without
-				// the animation, which beats a press that does nothing at all.
-				void minimize();
-				break;
-			}
+		if (decision.kind === 'minimize') {
+			// Reached only inside the round-trip `push` takes: the press landed after the app
+			// stopped wanting back and before Android was told. The old exit, without the
+			// animation, which beats a press that does nothing at all.
+			void minimize();
+			return;
 		}
+
+		void follow(decision);
 	});
 
-	// The overlay stack is the half of `decideBack` that navigation never announces: a sheet
+	// The overlay stack is the half of the decision that navigation never announces: a sheet
 	// opening at a tab root turns a press Android was about to answer into one the app must.
 	const unwatch = watchOverlays(syncSystemBack);
 

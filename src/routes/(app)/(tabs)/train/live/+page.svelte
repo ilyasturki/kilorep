@@ -8,7 +8,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { goto, invalidate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
 	import { restAfter } from '$lib/domain/rest';
@@ -16,12 +16,13 @@
 	import type { Pick } from '$lib/exercises/picker';
 	import type { Arms, SwapMode } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { leaveFor } from '$lib/nav/go';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { restTimer } from '$lib/workout/rest.svelte';
 	import { entriesWithMeta, entryOf, legOf, setNote, shelfOf } from '$lib/workout/groups';
-	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
+	import { activeWorkout } from '$lib/workout/active.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
@@ -298,24 +299,9 @@
 
 		activeWorkout.finish();
 
-		// A session with nothing in it leaves no record to land on, so it rides its own
-		// redirect out: this address bounces to the idle screen once the holder is empty.
-		if (!keeping) {
-			await invalidate(SESSION_DEP);
-
-			return;
-		}
-
-		// Two steps rather than one, and no invalidation first — the bounce would draw the idle
-		// screen only to throw it away. History replaces the spent session's entry and the
-		// record pushes onto it, so the workout sits on the list exactly as it would had the
-		// lifter opened it there, and back walks up to the list rather than into a dead address.
-		await goto('/history', { replaceState: true });
-		await goto(`/history/${id}`);
+		await (keeping ? goto(`/history/${id}`, { replaceState: true }) : leaveFor('/train'));
 	}
 
-	// Same tail order as finishing, minus the record: `/train/live` bounces to the idle screen
-	// the moment the holder says no session runs, so no `goto` — there is nothing to land on.
 	async function discardSession() {
 		if (session === null) {
 			return;
@@ -325,7 +311,7 @@
 
 		activeWorkout.finish();
 
-		await invalidate(SESSION_DEP);
+		await leaveFor('/train');
 	}
 
 	const slide = $derived(smallMs());

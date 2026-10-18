@@ -3,6 +3,7 @@
 
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { appBarSlot, backTo, isActive, navTabs } from '$lib/nav/bar.svelte';
+	import { stack } from '$lib/nav/stack.svelte';
 	import RestChip from '$lib/workout/RestChip.svelte';
 	import { restTimer } from '$lib/workout/rest.svelte';
 
@@ -13,7 +14,7 @@
 
 	const title = $derived(slot.title ?? current?.label ?? '');
 
-	const parent = $derived(backTo(page.url));
+	const parent = $derived(backTo(page.url, stack.behind));
 </script>
 
 <header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t">

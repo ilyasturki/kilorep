@@ -27,6 +27,7 @@
 	import { firstUncompleted } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { leave } from '$lib/nav/go';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import MarkPickerSheet from '$lib/templates/MarkPickerSheet.svelte';
@@ -249,7 +250,7 @@
 			syncSoon(data.user.id);
 		}
 
-		await goto('/plan/templates');
+		await leave('/plan/templates');
 	}
 
 	async function launch() {
