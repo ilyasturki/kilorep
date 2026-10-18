@@ -225,6 +225,30 @@ describe('workouts', () => {
 		expect(dirty[0]).toMatchObject({ id: 'w1', deletedAt: 300, updatedAt: 300 });
 	});
 
+	it('keeps a session note and a set type through a finish and an update', async () => {
+		const done = workout('w1', 100, 'bench-press', [
+			{ weight: 40, reps: 8, type: 'warmup' },
+			{ weight: 80, reps: 8, type: 'failure' }
+		]);
+		done.entries[0].exercises[0].note = 'Seat 5';
+
+		await store.finishWorkout(done, 200);
+
+		const stored = (await store.getWorkout('w1'))!;
+
+		stored.entries[0].exercises[0].sets[1].weight = 82.5;
+
+		await store.updateWorkout(stored, 300);
+
+		const updated = (await store.getWorkout('w1'))!;
+		const [exercise] = updated.entries[0].exercises;
+		const { notes } = await store.pickerData();
+
+		expect(exercise.note).toBe('Seat 5');
+		expect(exercise.sets.map((s) => s.type)).toEqual(['warmup', 'failure']);
+		expect(notes).toEqual({ 'bench-press': 'Seat 5' });
+	});
+
 	it('deleting an unknown or wrong-kind id writes nothing', async () => {
 		await store.saveTemplate(template('t1', 100), 150);
 		await store.acknowledge([{ id: 't1', updatedAt: 150 }]);

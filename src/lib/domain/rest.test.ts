@@ -20,7 +20,7 @@ import {
 	startingRest
 } from '$lib/domain/rest';
 import type { RestSettings } from '$lib/domain/rest';
-import { commitSet, markSet, supersetWith } from '$lib/domain/workout';
+import { addWarmup, commitSet, markSet, setSetType, supersetWith } from '$lib/domain/workout';
 import type { Workout } from '$lib/domain/workout';
 
 function settings(over: Partial<RestSettings> = {}): RestSettings {
@@ -150,6 +150,27 @@ describe('restAfter', () => {
 
 	test('a warmup earns nothing', () => {
 		expect(restAfter(logged('bench-w'), 'bench-w', settings())).toBeNull();
+	});
+
+	test('a set turned into a warmup, or added as one, earns nothing once logged', () => {
+		const turned = logged('bench-1');
+		setSetType(turned, 'bench-1', 'warmup');
+
+		const added = freshWorkout(0);
+		addWarmup(added, 'we-bench', 'bench-w2');
+		commitSet(added, 'bench-w2', 60, 5);
+
+		expect(restAfter(turned, 'bench-1', settings())).toBeNull();
+		expect(restAfter(added, 'bench-w2', settings())).toBeNull();
+	});
+
+	test('drop and failure sets rest like any working set', () => {
+		const workout = logged('bench-2');
+		setSetType(workout, 'bench-2', 'drop');
+
+		expect(restAfter(workout, 'bench-2', settings())).toMatchObject({
+			seconds: DEFAULT_REST_SECONDS
+		});
 	});
 
 	test('rest switched off in Settings earns nothing anywhere', () => {

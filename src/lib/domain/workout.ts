@@ -1,8 +1,9 @@
+import { weightStep } from './exercise.ts';
 import type { Exercise } from './exercise.ts';
 import { exertionSuffix, isExertion, settleExertion } from './exertion.ts';
 import type { ExertionScale } from './exertion.ts';
 import { gripLabel, settleGrip } from './grip.ts';
-import { setLabel } from './load.ts';
+import { bodyweightShareOf, setLabel } from './load.ts';
 import {
 	addExerciseTo as addToTree,
 	exerciseIn,
@@ -72,6 +73,8 @@ export type WorkoutExercise = {
 	optional?: true;
 	// The exerciseId a swap took this leg's place from; absent on a leg that is what was planned.
 	plannedAs?: string;
+	// Trimmed, never empty; the next session reads it from history, never from a copy.
+	note?: string;
 };
 
 export type WorkoutEntry = {
@@ -227,16 +230,102 @@ function carriedInto(cursor: SetCursor): Prefill {
 	return { weight: null, reps: null };
 }
 
+// Once the lifter has spoken there is nothing to offer, and a blank they made is a blank.
+// A completed set counts as spoken even without the flag: records written before `entered`
+// existed hold logged numbers, and the offer for those is what they hold, not the carry.
+function spoken(set: WorkoutSet): boolean {
+	return set.entered === true || set.completed;
+}
+
+export function settle(value: number, min = 0, max = Infinity): number {
+	return Math.min(max, Math.max(min, Math.round(value * 100) / 100));
+}
+
+// The first working set's offer, which no carry reaches: only warmups stand above it.
+function firstWeight(first: SetCursor, history: History): number | null {
+	if (spoken(first.set)) {
+		return first.set.weight;
+	}
+
+	const hint = hintFor(history, cursorKey(first), first.workingIndex);
+
+	return hint === null ? null : hint.weight;
+}
+
+const RUNGS = [
+	{ share: 0.5, reps: 8 },
+	{ share: 0.7, reps: 5 },
+	{ share: 0.85, reps: 3 }
+] as const;
+
+const LIGHT = { share: 0.3, reps: 10 };
+
+const EMPTY_BAR_KG = 20;
+
+const FLOAT_SLACK = 1e-9;
+
+export type Ramp = { weight: number; reps: number; share: number; bar: boolean; of: number };
+
+function rampedDown(kg: number, meta: Exercise | undefined): number {
+	const at = settle(kg);
+	const step = meta === undefined ? 2.5 : weightStep(meta.equipment, at, -1);
+
+	return settle(Math.floor(at / step + FLOAT_SLACK) * step);
+}
+
+// `null` for a working set, and for a warmup whose first working set offers no weight.
+export function rampFor(cursor: SetCursor, history: History, meta?: Exercise): Ramp | null {
+	if (cursor.set.type !== 'warmup') {
+		return null;
+	}
+
+	const first = legCursors(cursor.entry, cursor.exercise).find((c) => c.workingIndex === 0);
+	const of = first === undefined ? null : firstWeight(first, history);
+
+	if (of === null) {
+		return null;
+	}
+
+	const warmups = cursor.exercise.sets.filter((set) => set.type === 'warmup');
+	const rung =
+		warmups.findIndex((set) => set.id === cursor.set.id) -
+		Math.max(0, warmups.length - RUNGS.length);
+	const { share, reps } = rung < 0 ? LIGHT : RUNGS[rung];
+
+	if (rung < 0 && meta !== undefined && meta.equipment === 'Barbell' && of > EMPTY_BAR_KG) {
+		return { weight: EMPTY_BAR_KG, reps, share, bar: true, of };
+	}
+
+	return { weight: rampedDown(share * of, meta), reps, share, bar: false, of };
+}
+
+export function rampLabel(ramp: Ramp, meta: Exercise | undefined): string | null {
+	if (ramp.bar) {
+		return 'Empty bar';
+	}
+
+	if (ramp.of === 0) {
+		return null;
+	}
+
+	const of = bodyweightShareOf(meta) > 0 ? `+${ramp.of}` : String(ramp.of);
+
+	return `${Math.round(ramp.share * 100)} % of ${of} kg`;
+}
+
 // What the active card offers, recomputed every time it is asked for. It is never written into
 // the set behind the lifter's back: a set reached and left again holds nothing, so the offer
 // cannot go stale — the older version stored it on the way in, and a set visited before the one
 // above it was logged read its plan's target back over the reps just performed.
-export function prefillFor(cursor: SetCursor, history: History): Prefill {
-	// Once the lifter has spoken there is nothing to offer, and a blank they made is a blank.
-	// A completed set counts as spoken even without the flag: records written before `entered`
-	// existed hold logged numbers, and the offer for those is what they hold, not the carry.
-	if (cursor.set.entered === true || cursor.set.completed) {
+export function prefillFor(cursor: SetCursor, history: History, meta?: Exercise): Prefill {
+	if (spoken(cursor.set)) {
 		return { weight: cursor.set.weight, reps: cursor.set.reps };
+	}
+
+	if (cursor.set.type === 'warmup') {
+		const ramp = rampFor(cursor, history, meta);
+
+		return ramp === null ? { weight: null, reps: null } : { weight: ramp.weight, reps: ramp.reps };
 	}
 
 	const recalled = hintFor(history, cursorKey(cursor), cursor.workingIndex) ?? {
@@ -280,10 +369,6 @@ export function parseWhole(raw: string): number | null {
 	const trimmed = raw.trim();
 
 	return WHOLE.test(trimmed) ? Number(trimmed) : null;
-}
-
-export function settle(value: number, min = 0, max = Infinity): number {
-	return Math.min(max, Math.max(min, Math.round(value * 100) / 100));
 }
 
 export function canCommit(weight: number | null, reps: number | null): boolean {
@@ -422,6 +507,54 @@ export function addSet(workout: Workout, exerciseId: string, id: string): Workou
 	exercise.sets.push(set);
 
 	return set;
+}
+
+export function setSetType(workout: Workout, setId: string, type: SetType): boolean {
+	const cursor = cursorFor(workout, setId);
+
+	if (cursor === null) {
+		return false;
+	}
+
+	cursor.set.type = type;
+
+	return true;
+}
+
+export function addWarmup(workout: Workout, exerciseId: string, id: string): WorkoutSet | null {
+	const exercise = exerciseIn(workout, exerciseId);
+
+	if (exercise === null) {
+		return null;
+	}
+
+	const set = blankSet(id, exercise.grip);
+
+	set.type = 'warmup';
+
+	const at = exercise.sets.findIndex((candidate) => candidate.type !== 'warmup');
+
+	exercise.sets.splice(at === -1 ? exercise.sets.length : at, 0, set);
+
+	return set;
+}
+
+export function setExerciseNote(workout: Workout, exerciseId: string, text: string): boolean {
+	const exercise = exerciseIn(workout, exerciseId);
+
+	if (exercise === null) {
+		return false;
+	}
+
+	const note = text.trim();
+
+	if (note === '') {
+		delete exercise.note;
+	} else {
+		exercise.note = note;
+	}
+
+	return true;
 }
 
 /**

@@ -6,6 +6,7 @@ import {
 	addExercise,
 	addExerciseTo,
 	addSet,
+	addWarmup,
 	advanceFrom,
 	canCommit,
 	clearSet,
@@ -27,11 +28,15 @@ import {
 	parseEntry,
 	parseWhole,
 	prefillFor,
+	rampFor,
+	rampLabel,
 	rateSet,
 	removeExercise,
 	removeSet,
 	repeatFrom,
 	replaceExercise,
+	setExerciseNote,
+	setSetType,
 	settle,
 	splitEntry,
 	supersetWith,
@@ -39,6 +44,7 @@ import {
 	untouched
 } from '$lib/domain/workout';
 import type {
+	History,
 	Prefill,
 	SetCursor,
 	SwapMode,
@@ -1647,5 +1653,248 @@ describe('copy-on-repeat', () => {
 
 	test('an empty start repeats as an empty start', () => {
 		expect(repeatFrom(freshWorkout(5000), 9000, mint('r')).templateId).toBeNull();
+	});
+});
+
+describe('setSetType', () => {
+	test('turning set 1 into a warmup makes set 2 the new set 1', () => {
+		const workout = freshWorkout(0);
+
+		expect(setSetType(workout, 'bench-1', 'warmup')).toBe(true);
+
+		expect(at(workout, 'bench-1').workingIndex).toBe(-1);
+		expect(at(workout, 'bench-2').workingIndex).toBe(0);
+		expect(at(workout, 'bench-4').workingIndex).toBe(2);
+	});
+
+	test('and turning it back numbers it again, the sets under it shifting back', () => {
+		const workout = freshWorkout(0);
+
+		setSetType(workout, 'bench-1', 'warmup');
+		setSetType(workout, 'bench-1', 'normal');
+
+		expect(at(workout, 'bench-1').workingIndex).toBe(0);
+		expect(at(workout, 'bench-4').workingIndex).toBe(3);
+	});
+
+	test('drop and failure stay working sets, numbered and recalled like any other', () => {
+		const workout = freshWorkout(0);
+
+		setSetType(workout, 'bench-3', 'drop');
+		setSetType(workout, 'bench-4', 'failure');
+
+		expect(at(workout, 'bench-3').workingIndex).toBe(2);
+		expect(at(workout, 'bench-4').workingIndex).toBe(3);
+		expect(prefillOf(workout, 'bench-4')).toEqual({ weight: 77.5, reps: 8 });
+	});
+
+	test('a set that is not there changes nothing', () => {
+		expect(setSetType(freshWorkout(0), 'nope', 'warmup')).toBe(false);
+	});
+});
+
+describe('addWarmup', () => {
+	test('lands in front of the working sets, after the warmup already there', () => {
+		const workout = freshWorkout(0);
+		const set = addWarmup(workout, 'we-bench', 'bench-w2');
+
+		expect(set).toMatchObject({ type: 'warmup' });
+		expect(idsOf(workout).slice(0, 4)).toEqual(['bench-w', 'bench-w2', 'bench-1', 'bench-2']);
+		expect(at(workout, 'bench-1').workingIndex).toBe(0);
+	});
+
+	test('the cursor walks the warmups before the working sets', () => {
+		const workout = freshWorkout(0);
+		addWarmup(workout, 'we-incline', 'incline-w1');
+		addWarmup(workout, 'we-incline', 'incline-w2');
+
+		expect(idOf(advanceFrom(workout, 'bench-4'))).toBe('incline-w1');
+		expect(idOf(advanceFrom(workout, 'incline-w1'))).toBe('incline-w2');
+		expect(idOf(advanceFrom(workout, 'incline-w2'))).toBe('incline-1');
+	});
+
+	test('in a superset every leg warms up ahead of the first round', () => {
+		const workout = superset(freshWorkout(0));
+		addWarmup(workout, 'we-b', 'b-w');
+
+		expect(idsOf(workout).slice(-6)).toEqual(['b-w', 'a-1', 'b-1', 'a-2', 'b-2', 'a-3']);
+	});
+
+	test('takes the grip the exercise is on, and an exercise of only warmups takes one at the end', () => {
+		const workout = freshWorkout(0);
+		const exercise = workout.entries[3].exercises[0];
+		exercise.grip = 'neutral';
+
+		for (const set of exercise.sets) {
+			set.type = 'warmup';
+		}
+
+		const set = addWarmup(workout, 'we-pecdeck', 'pecdeck-w');
+
+		expect(set).toMatchObject({ grip: 'neutral' });
+		expect(exercise.sets.at(-1)).toMatchObject({ id: 'pecdeck-w' });
+	});
+
+	test('an exercise that is not there takes nothing', () => {
+		expect(addWarmup(freshWorkout(0), 'nope', 'x')).toBeNull();
+	});
+});
+
+describe('setExerciseNote', () => {
+	test('keeps the note trimmed, and an empty one leaves no key behind', () => {
+		const workout = freshWorkout(0);
+		const exercise = workout.entries[0].exercises[0];
+
+		expect(setExerciseNote(workout, 'we-bench', '  Seat 5, pins on 3  ')).toBe(true);
+		expect(exercise.note).toBe('Seat 5, pins on 3');
+
+		setExerciseNote(workout, 'we-bench', '   ');
+
+		expect('note' in exercise).toBe(false);
+	});
+
+	test('an exercise that is not there takes nothing', () => {
+		expect(setExerciseNote(freshWorkout(0), 'nope', 'hi')).toBe(false);
+	});
+
+	test('a repeat leaves the note behind with the day it was about', () => {
+		const past = freshWorkout(5000);
+		completeAll(past);
+		setExerciseNote(past, 'we-bench', 'Left shoulder');
+
+		const next = repeatFrom(past, 9000, mint('r'));
+
+		expect(next.entries.some((entry) => entry.exercises.some((e) => 'note' in e))).toBe(false);
+	});
+});
+
+// Every warmup on the exercise replaced by `count` fresh ones, ids `<key>-w1`… in order.
+function warmingUp(workout: Workout, index: number, key: string, count: number): string[] {
+	const exercise = workout.entries[index].exercises[0];
+
+	exercise.sets = exercise.sets.filter((set) => set.type !== 'warmup');
+
+	const ids = Array.from({ length: count }, (_, i) => `${key}-w${i + 1}`);
+
+	for (const id of ids) {
+		addWarmup(workout, exercise.id, id);
+	}
+
+	return ids;
+}
+
+function rampOf(workout: Workout, setId: string, recall: History = history): Prefill {
+	const cursor = at(workout, setId);
+
+	return prefillFor(cursor, recall, metaOf(cursor));
+}
+
+describe('the warmup ramp', () => {
+	test('one warmup is half the first working set, for eight', () => {
+		const workout = freshWorkout(0);
+		const [w1] = warmingUp(workout, 0, 'bench', 1);
+
+		expect(rampOf(workout, w1)).toEqual({ weight: 40, reps: 8 });
+	});
+
+	test('three climb to ~85 %, rounded down to the jumps a bar takes', () => {
+		const workout = freshWorkout(0);
+		const ids = warmingUp(workout, 0, 'bench', 3);
+
+		expect(ids.map((id) => rampOf(workout, id))).toEqual([
+			{ weight: 40, reps: 8 },
+			{ weight: 55, reps: 5 },
+			{ weight: 67.5, reps: 3 }
+		]);
+	});
+
+	test('adding them one at a time leaves the ones above where they were', () => {
+		const workout = freshWorkout(0);
+		const [w1] = warmingUp(workout, 0, 'bench', 1);
+		const before = rampOf(workout, w1);
+
+		addWarmup(workout, 'we-bench', 'bench-w2');
+		addWarmup(workout, 'we-bench', 'bench-w3');
+
+		expect(rampOf(workout, w1)).toEqual(before);
+		expect(rampOf(workout, 'bench-w2')).toEqual({ weight: 55, reps: 5 });
+	});
+
+	test('a fourth goes in underneath, on the empty bar', () => {
+		const workout = freshWorkout(0);
+		const ids = warmingUp(workout, 0, 'bench', 4);
+		const cursor = at(workout, ids[0]);
+		const ramp = rampFor(cursor, history, metaOf(cursor));
+
+		expect(ids.map((id) => rampOf(workout, id).weight)).toEqual([20, 40, 55, 67.5]);
+		expect(ramp).toMatchObject({ reps: 10, bar: true });
+		expect(ramp === null ? null : rampLabel(ramp, metaOf(cursor))).toBe('Empty bar');
+	});
+
+	test('without a bar the light rung is ~30 %, and dumbbells round to the pairs a rack holds', () => {
+		const workout = freshWorkout(0);
+		const ids = warmingUp(workout, 1, 'incline', 4);
+
+		expect(ids.map((id) => rampOf(workout, id).weight)).toEqual([9, 14, 20, 24]);
+	});
+
+	test('climbs to what set 1 itself says once the lifter has said it', () => {
+		const workout = freshWorkout(0);
+		const [w1] = warmingUp(workout, 0, 'bench', 1);
+
+		draftSet(workout, 'bench-1', { weight: 100, reps: 5 });
+
+		expect(rampOf(workout, w1)).toEqual({ weight: 50, reps: 8 });
+	});
+
+	test('names its rung as the card says it', () => {
+		const workout = freshWorkout(0);
+		const [w1] = warmingUp(workout, 0, 'bench', 1);
+		const cursor = at(workout, w1);
+		const ramp = rampFor(cursor, history, metaOf(cursor));
+
+		expect(ramp === null ? null : rampLabel(ramp, metaOf(cursor))).toBe('50 % of 80 kg');
+	});
+
+	test('on an unloaded pull-up the body is the whole of it and the reps taper alone', () => {
+		const workout = freshWorkout(0);
+		workout.entries[3].exercises[0].exerciseId = 'pull-up';
+		const ids = warmingUp(workout, 3, 'pull', 2);
+		const recall: History = { 'pull-up': [{ weight: 0, reps: 10, rpe: null }] };
+		const cursor = at(workout, ids[0]);
+		const ramp = rampFor(cursor, recall, metaOf(cursor));
+
+		expect(ids.map((id) => rampOf(workout, id, recall))).toEqual([
+			{ weight: 0, reps: 8 },
+			{ weight: 0, reps: 5 }
+		]);
+		expect(ramp === null ? undefined : rampLabel(ramp, metaOf(cursor))).toBeNull();
+	});
+
+	test('nothing to climb towards leaves the warmup blank', () => {
+		const workout = freshWorkout(0);
+		const [w1] = warmingUp(workout, 0, 'bench', 1);
+
+		const cursor = at(workout, w1);
+
+		expect(rampOf(workout, w1, {})).toEqual({ weight: null, reps: null });
+		expect(rampFor(cursor, {}, metaOf(cursor))).toBeNull();
+	});
+
+	test('a warmup the lifter has spoken for is its own, and a working set has no ramp', () => {
+		const workout = freshWorkout(0);
+
+		expect(rampOf(workout, 'bench-w')).toEqual({ weight: 40, reps: 10 });
+		expect(rampFor(at(workout, 'bench-1'), history)).toBeNull();
+	});
+
+	test('the offer is never written into the set', () => {
+		const workout = freshWorkout(0);
+		const [w1] = warmingUp(workout, 0, 'bench', 1);
+
+		rampOf(workout, w1);
+
+		expect(at(workout, w1).set).toMatchObject({ weight: null, reps: null, completed: false });
+		expect('entered' in at(workout, w1).set).toBe(false);
 	});
 });

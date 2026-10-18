@@ -210,6 +210,27 @@ export function lastGripsFrom(workouts: FinishedWorkout[]): LastGrips {
 	return out;
 }
 
+// A session that said nothing leaves the note before it standing: only a newer note replaces it.
+export type LastNotes = Record<string, string | undefined>;
+
+export function lastNotesFrom(workouts: FinishedWorkout[]): LastNotes {
+	const out: LastNotes = {};
+
+	for (const workout of workouts.toSorted((a, b) => a.startedAt - b.startedAt)) {
+		for (const entry of workout.entries) {
+			for (const exercise of entry.exercises) {
+				const note = exercise.note === undefined ? '' : exercise.note.trim();
+
+				if (note !== '') {
+					out[exercise.exerciseId] = note;
+				}
+			}
+		}
+	}
+
+	return out;
+}
+
 const RECENT_SESSIONS = 10;
 
 const SHELF = 8;

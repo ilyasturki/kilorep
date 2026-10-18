@@ -3,6 +3,7 @@ import { settleGrip } from '$lib/domain/grip';
 import {
 	addExercise as insertExercise,
 	addSet as appendSet,
+	addWarmup as insertWarmup,
 	advanceFrom,
 	clearSet,
 	commitSet,
@@ -19,12 +20,14 @@ import {
 	removeSet as dropSet,
 	replaceExercise,
 	setExerciseGrip as gripExercise,
+	setExerciseNote as noteExercise,
 	setSetArms as armSet,
 	setSetGrip as gripSet,
+	setSetType as typeSet,
 	splitEntry,
 	supersetWith
 } from '$lib/domain/workout';
-import type { Arms, History, SwapMode, Workout } from '$lib/domain/workout';
+import type { Arms, History, SetType, SwapMode, Workout } from '$lib/domain/workout';
 import type { Pick } from '$lib/exercises/picker';
 import type { LastGrips } from '$lib/store/derive';
 
@@ -149,6 +152,26 @@ export class WorkoutSession {
 		if (set !== null) {
 			this.#focus(set.id);
 		}
+	}
+
+	// A warmup put in front of sets already logged is a correction, and taking the cursor back
+	// to it would end the rest those sets earned the moment it was logged.
+	public addWarmup(exerciseId: string): void {
+		const exercise = cursors(this.workout).find((c) => c.exercise.id === exerciseId)?.exercise;
+		const untouched = exercise !== undefined && !exercise.sets.some((set) => set.completed);
+		const set = insertWarmup(this.workout, exerciseId, crypto.randomUUID());
+
+		if (set !== null && untouched) {
+			this.#focus(set.id);
+		}
+	}
+
+	public setNote(exerciseId: string, text: string): void {
+		noteExercise(this.workout, exerciseId, text);
+	}
+
+	public setSetType(setId: string, type: SetType): void {
+		typeSet(this.workout, setId, type);
 	}
 
 	public addExercises(picks: Pick[], after?: string): void {

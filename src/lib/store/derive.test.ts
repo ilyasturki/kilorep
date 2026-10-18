@@ -9,6 +9,7 @@ import {
 	heaviestFrom,
 	historyFrom,
 	lastGripsFrom,
+	lastNotesFrom,
 	lastPerformedFrom,
 	narrowTo,
 	pastSessionsFrom,
@@ -214,6 +215,39 @@ describe('lastGripsFrom', () => {
 		const empty = workout(100, leg('triceps-pushdown', [], 'bar'));
 
 		expect(lastGripsFrom([empty])['triceps-pushdown']).toBeUndefined();
+	});
+});
+
+function noted(entry: WorkoutEntry, note: string): WorkoutEntry {
+	entry.exercises[0].note = note;
+
+	return entry;
+}
+
+describe('lastNotesFrom', () => {
+	it('hands the next session the last note written on the exercise', () => {
+		const later = noted(leg('bench-press', [{ weight: 80, reps: 8 }]), 'Seat 5');
+		const earlier = noted(leg('bench-press', [{ weight: 80, reps: 8 }]), 'Seat 4');
+		const notes = lastNotesFrom([workout(200, later), workout(100, earlier)]);
+
+		expect(notes['bench-press']).toBe('Seat 5');
+	});
+
+	it('keeps a note standing through a session that said nothing', () => {
+		const said = noted(leg('bench-press', [{ weight: 80, reps: 8 }]), 'Left shoulder');
+		const silent = leg('bench-press', [{ weight: 82.5, reps: 8 }]);
+		const notes = lastNotesFrom([workout(100, said), workout(200, silent)]);
+
+		expect(notes['bench-press']).toBe('Left shoulder');
+	});
+
+	it('takes the later of two notes in one session, and says nothing of an unnoted exercise', () => {
+		const first = noted(leg('bench-press', [{ weight: 80, reps: 8 }]), 'First go');
+		const second = noted(leg('bench-press', [{ weight: 70, reps: 10 }]), 'Back-off');
+		const notes = lastNotesFrom([workout(100, first, second)]);
+
+		expect(notes['bench-press']).toBe('Back-off');
+		expect(notes.squat).toBeUndefined();
 	});
 });
 
