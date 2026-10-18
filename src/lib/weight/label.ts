@@ -1,4 +1,5 @@
 import { daysBetween } from '$lib/domain/bodyweight';
+import type { RangeStats } from '$lib/domain/bodyweight';
 import { countedDays } from '$lib/format/when';
 
 // UTC throughout: `Date.parse` reads a date-only string as UTC midnight, so a
@@ -33,18 +34,26 @@ export function formatMonth(month: string): string {
 	return monthYear.format(Date.parse(`${month}-01`));
 }
 
-export function formatMonthMeta(average: number, change: number | null): string {
-	const avg = `avg ${(Math.round(average * 10) / 10).toFixed(1)}`;
+const tenth = (kg: number): string => (Math.round(kg * 10) / 10).toFixed(1);
 
-	if (change === null) {
-		return avg;
-	}
-
+function signed(change: number): string {
 	const rounded = Math.round(change * 10) / 10;
 
 	if (rounded === 0) {
-		return `${avg} · ±0.0`;
+		return '±0.0';
 	}
 
-	return `${avg} · ${rounded > 0 ? '+' : '−'}${Math.abs(rounded).toFixed(1)}`;
+	return `${rounded > 0 ? '+' : '−'}${tenth(Math.abs(rounded))}`;
+}
+
+export function formatMonthMeta(average: number, change: number | null): string {
+	const avg = `avg ${tenth(average)}`;
+
+	return change === null ? avg : `${avg} · ${signed(change)}`;
+}
+
+export function formatRangeStats({ change, lowest, highest }: RangeStats): string {
+	const extremes = `low ${tenth(lowest.kg)} · high ${tenth(highest.kg)}`;
+
+	return change === null ? extremes : `${signed(change)} kg · ${extremes}`;
 }

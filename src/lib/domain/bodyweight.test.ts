@@ -9,6 +9,7 @@ import {
 	localDateOf,
 	monthGroups,
 	rangeStart,
+	rangeStats,
 	rollingAverage,
 	weeklyRate,
 	windowed
@@ -244,5 +245,43 @@ describe('monthGroups', () => {
 		]);
 
 		expect(groups.map((group) => group.month)).toEqual(['2026-08', '2025-08']);
+	});
+});
+
+describe('rangeStats', () => {
+	const dots = [
+		{ date: '2026-08-01', kg: 80.2 },
+		{ date: '2026-08-02', kg: 79.4 },
+		{ date: '2026-08-03', kg: 80.8 },
+		{ date: '2026-08-04', kg: 79.6 }
+	];
+
+	test('the change runs along the smoothed line, first point to last', () => {
+		const line = rollingAverage(dots);
+		const stats = rangeStats(dots, line);
+
+		expect(stats).not.toBeNull();
+		expect(stats === null ? null : stats.change).toBeCloseTo(line[3].kg - line[0].kg);
+	});
+
+	test('the extremes are weigh-ins, not averages, and keep their day', () => {
+		expect(rangeStats(dots, rollingAverage(dots))).toMatchObject({
+			lowest: { date: '2026-08-02', kg: 79.4 },
+			highest: { date: '2026-08-03', kg: 80.8 }
+		});
+	});
+
+	test('a single weigh-in has extremes but no change', () => {
+		const one = [{ date: '2026-08-01', kg: 80 }];
+
+		expect(rangeStats(one, rollingAverage(one))).toEqual({
+			change: null,
+			lowest: one[0],
+			highest: one[0]
+		});
+	});
+
+	test('an empty range states nothing', () => {
+		expect(rangeStats([], [])).toBeNull();
 	});
 });

@@ -3,10 +3,16 @@
 	import { parseDate } from '@internationalized/date';
 
 	import type { BodyweightEntry, ChartRange } from '$lib/domain/bodyweight';
-	import { inRange, localDateOf, rangeStart, rollingAverage } from '$lib/domain/bodyweight';
+	import {
+		inRange,
+		localDateOf,
+		rangeStart,
+		rangeStats,
+		rollingAverage
+	} from '$lib/domain/bodyweight';
 	import { syncSoon } from '$lib/sync/client';
 	import EntryRowMenu from '$lib/weight/EntryRowMenu.svelte';
-	import { formatSheetDay } from '$lib/weight/label';
+	import { formatRangeStats, formatSheetDay } from '$lib/weight/label';
 	import LogList from '$lib/weight/LogList.svelte';
 	import TrendChart from '$lib/weight/TrendChart.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
@@ -104,6 +110,7 @@
 	const chartFrom = $derived(rangeStart(entries, today, range));
 	const chartDots = $derived(inRange(entries, today, range));
 	const chartLine = $derived(inRange(rollingAverage(entries), today, range));
+	const chartStats = $derived(rangeStats(chartDots, chartLine));
 
 	let sheetOpen = $state(false);
 	let sheetFixed = $state(false);
@@ -292,6 +299,12 @@
 						from={chartFrom}
 						range={SPOKEN[range]}
 					/>
+
+					{#if chartStats !== null}
+						<p class="px-1 text-sm font-bold text-ink-faint tabular-nums">
+							{formatRangeStats(chartStats)}
+						</p>
+					{/if}
 				{:else}
 					<p class="px-3 py-8 text-center text-md font-bold text-ink-faint">
 						Nothing logged in this range.

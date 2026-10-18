@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest';
 
-import { formatLogDay, formatMonth, formatMonthMeta, formatSheetDay } from '$lib/weight/label';
+import {
+	formatLogDay,
+	formatMonth,
+	formatMonthMeta,
+	formatRangeStats,
+	formatSheetDay
+} from '$lib/weight/label';
 
 const today = '2026-08-05';
 
@@ -57,5 +63,23 @@ describe('formatMonthMeta', () => {
 	test('a month that did not move says so — a +0.0 reads as a gain', () => {
 		expect(formatMonthMeta(82.4, 0)).toBe('avg 82.4 · ±0.0');
 		expect(formatMonthMeta(82.4, -0.02)).toBe('avg 82.4 · ±0.0');
+	});
+});
+
+describe('formatRangeStats', () => {
+	const lowest = { date: '2026-08-02', kg: 79.42 };
+	const highest = { date: '2026-08-03', kg: 80.8 };
+
+	test('the change first, signed, then the range it moved through', () => {
+		expect(formatRangeStats({ change: -1.24, lowest, highest })).toBe(
+			'−1.2 kg · low 79.4 · high 80.8'
+		);
+		expect(formatRangeStats({ change: 0.66, lowest, highest })).toBe(
+			'+0.7 kg · low 79.4 · high 80.8'
+		);
+	});
+
+	test('a range too short to move states only its extremes', () => {
+		expect(formatRangeStats({ change: null, lowest, highest })).toBe('low 79.4 · high 80.8');
 	});
 });

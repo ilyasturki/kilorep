@@ -108,6 +108,41 @@ export function inRange(
 	return entries.filter((entry) => entry.date >= from && entry.date <= today);
 }
 
+export type RangeStats = {
+	change: number | null;
+	lowest: BodyweightEntry;
+	highest: BodyweightEntry;
+};
+
+// `change` reads the smoothed line, the extremes the weigh-ins themselves.
+export function rangeStats(dots: BodyweightEntry[], line: BodyweightEntry[]): RangeStats | null {
+	const [first] = dots;
+
+	if (first === undefined) {
+		return null;
+	}
+
+	let lowest = first;
+	let highest = first;
+
+	for (const entry of dots) {
+		if (entry.kg < lowest.kg) {
+			lowest = entry;
+		}
+
+		if (entry.kg > highest.kg) {
+			highest = entry;
+		}
+	}
+
+	const start = line.at(0);
+	const end = line.at(-1);
+	const change =
+		start === undefined || end === undefined || line.length < 2 ? null : end.kg - start.kg;
+
+	return { change, lowest, highest };
+}
+
 // `change` compares averages against the previous group that has entries,
 // not the previous calendar month — skipped months are not a null.
 export type MonthGroup = {
