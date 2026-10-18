@@ -134,7 +134,13 @@ type Listed = { matched: number; returned: number; workouts: WorkoutRow[] };
 
 type Logged = {
 	logged?: { date: string; kg: number };
+	version?: number;
 	replaced?: { date: string; kg: number } | null;
+	error?: string;
+};
+
+type Unlogged = {
+	deleted?: { date: string; kg: number };
 	error?: string;
 };
 
@@ -144,7 +150,7 @@ type Weights = {
 	returned: number;
 	latest: { date: string; kg: number } | null;
 	weeklyRateKg: number | null;
-	entries: { date: string; kg: number; average7: number }[];
+	entries: { date: string; kg: number; average7: number; version: number }[];
 };
 
 /** A live MCP connection over the same transport the route builds, handshake and all. */
@@ -413,6 +419,7 @@ describe('the surface', () => {
 
 		expect(listed.tools.map((tool) => tool.name).toSorted()).toEqual([
 			'bodyweight',
+			'delete_bodyweight',
 			'delete_plan',
 			'delete_workout',
 			'edit_workout',
@@ -717,6 +724,78 @@ describe('log_bodyweight', () => {
 	});
 });
 
+describe('delete_bodyweight', () => {
+	test('tombstones the day, so it leaves the series and syncs out as deleted', async () => {
+		seed(weighIn('2026-08-19', 79), weighIn('2026-08-20', 78.4));
+
+		const send = await connect();
+		const before = await callTool<Weights>(send, 'bodyweight');
+		const [, day] = before.entries;
+
+		const gone = await callTool<Unlogged>(send, 'delete_bodyweight', {
+			date: day.date,
+			version: day.version
+		});
+
+		expect(gone.deleted).toEqual({ date: '2026-08-20', kg: 78.4 });
+
+		const after = await callTool<Weights>(send, 'bodyweight');
+
+		expect(after.entries.map((entry) => entry.date)).toEqual(['2026-08-19']);
+
+		const pulled = syncExchange(db, userId, { watermark: 0, push: [] });
+		const tombstone = pulled.records.find((record) => record.id === 'bodyweight-2026-08-20');
+
+		expect(tombstone).toMatchObject({ deletedAt: expect.any(Number) as number });
+	});
+
+	test('refuses a version the day has moved past', async () => {
+		const send = await connect();
+		const first = await callTool<Logged>(send, 'log_bodyweight', { kg: 78.4, date: '2026-08-20' });
+		await callTool<Logged>(send, 'log_bodyweight', { kg: 78.9, date: '2026-08-20' });
+
+		const refused = await callTool<Unlogged>(send, 'delete_bodyweight', {
+			date: '2026-08-20',
+			version: first.version
+		});
+
+		expect(refused.error).toMatch(/changed since you read it/u);
+
+		const weights = await callTool<Weights>(send, 'bodyweight');
+
+		expect(weights.entries).toHaveLength(1);
+	});
+
+	test('names a day with nothing logged rather than tombstoning it', async () => {
+		const send = await connect();
+		const missing = await callTool<Unlogged>(send, 'delete_bodyweight', {
+			date: '2026-08-20',
+			version: 1
+		});
+
+		expect(missing.error).toBe('no weigh-in on 2026-08-20');
+		expect(syncExchange(db, userId, { watermark: 0, push: [] }).records).toHaveLength(0);
+	});
+
+	test('a deleted day can be logged again', async () => {
+		const send = await connect();
+		const logged = await callTool<Logged>(send, 'log_bodyweight', { kg: 78.4, date: '2026-08-20' });
+
+		await callTool<Unlogged>(send, 'delete_bodyweight', {
+			date: '2026-08-20',
+			version: logged.version
+		});
+
+		await callTool<Logged>(send, 'log_bodyweight', { kg: 79.1, date: '2026-08-20' });
+
+		const weights = await callTool<Weights>(send, 'bodyweight');
+
+		expect(weights.entries.map(({ date, kg }) => ({ date, kg }))).toEqual([
+			{ date: '2026-08-20', kg: 79.1 }
+		]);
+	});
+});
+
 describe('one lifter, one library', () => {
 	test('never reads another account records', async () => {
 		const stranger = await createUser(db, 'stranger@example.com', 'a-long-enough-password');
@@ -846,7 +925,7 @@ describe('bodyweight', () => {
 		const weights = await callTool<Weights>(send, 'bodyweight', { from: '2026-08-08' });
 
 		// 8 Aug averages 2–8 Aug (81…87 → 84). Windowing first would leave it averaging itself, 87.
-		expect(weights.entries[0]).toEqual({ date: '2026-08-08', kg: 87, average7: 84 });
+		expect(weights.entries[0]).toMatchObject({ date: '2026-08-08', kg: 87, average7: 84 });
 		expect(weights.matched).toBe(3);
 		expect(weights.logged).toBe(10);
 	});
@@ -895,7 +974,8 @@ describe('a write that can be observed', () => {
 		const after = await callTool<Weights>(send, 'bodyweight');
 
 		expect(after.logged).toBe(1);
-		expect(after.entries).toEqual([{ date: '2026-08-20', kg: 78.4, average7: 78.4 }]);
+		expect(after.entries).toHaveLength(1);
+		expect(after.entries[0]).toMatchObject({ date: '2026-08-20', kg: 78.4, average7: 78.4 });
 	});
 
 	test('names nothing displaced when the day was empty', async () => {
