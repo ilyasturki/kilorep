@@ -17,7 +17,7 @@
 		},
 		{
 			name: 'Yours',
-			body: 'MIT open source. Sync through kilorep.com or your own server, and let an agent read and log your training over MCP.'
+			body: 'MIT open source. Export it all as JSON or CSV, sync through kilorep.com or your own server, and let an agent read and log your training over MCP.'
 		}
 	];
 

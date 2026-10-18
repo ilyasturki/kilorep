@@ -10,7 +10,7 @@ The phone app is Android only for now. MIT licensed.
 
 Download the APK from the [latest release](https://github.com/ilyasturki/kilorep/releases/latest) and open it on the phone. Android asks once to allow installs from your browser or file manager. Later releases install over it and keep your data.
 
-The app starts local. Nothing leaves the phone until you sign in to a server in Settings, under Server.
+The app starts local. Nothing leaves the phone until you sign in to a server in Settings, under Server. Settings, under Data, exports everything as JSON or a per-set CSV, on the phone with no server, and imports a JSON backup.
 
 ## kilorep.com
 
