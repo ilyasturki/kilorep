@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { catalogById } from '$lib/catalog';
-import { addedLabel, bestLabel, ordinal, setFigures, setLabel } from '$lib/exercises/label';
+import { bestLabel, ordinal, setFigures, setLabel } from '$lib/exercises/label';
 
 describe('setLabel', () => {
 	test('a loaded lift prints what was on the bar', () => {
@@ -55,15 +55,6 @@ describe('bestLabel', () => {
 		expect(bestLabel(catalogById['pull-up'], { weight: 0, reps: 12, rpe: null })).toBe(
 			'Most reps 12'
 		);
-	});
-});
-
-describe('addedLabel', () => {
-	test('a weight column never reads 0 on a body-weight movement', () => {
-		expect(addedLabel(catalogById['pull-up'], 0)).toBe('body');
-		expect(addedLabel(catalogById['pull-up'], 5)).toBe('+5');
-		expect(addedLabel(catalogById['bench-press'], 0)).toBe('0');
-		expect(addedLabel(catalogById['bench-press'], 80)).toBe('80');
 	});
 });
 

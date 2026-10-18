@@ -49,15 +49,6 @@ export function bestLabel(exercise: Exercise, set: PerformedSet): string {
 	return `Heaviest ${setLabel(exercise, set)}`;
 }
 
-/** A weight column's cell: `setLabel`'s rule for one number, `body` where nothing was added. */
-export function addedLabel(exercise: Exercise, weight: number): string {
-	if (bodyweightShareOf(exercise) === 0) {
-		return String(weight);
-	}
-
-	return weight === 0 ? 'body' : `+${weight}`;
-}
-
 /**
  * A set split for a row's columns, by the rule `setLabel` follows. `load` reads in kilograms and
  * is `null` where the body is the whole load, so the row reads `8 reps`; `–` marks a blank.

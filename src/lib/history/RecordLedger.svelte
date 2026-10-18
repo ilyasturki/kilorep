@@ -3,7 +3,7 @@
 	import { scaleName, shownExertion } from '$lib/domain/exertion';
 	import { gripLabel } from '$lib/domain/grip';
 	import type { SetCursor } from '$lib/domain/workout';
-	import { addedLabel, loadModeNote } from '$lib/exercises/label';
+	import { loadModeNote, setFigures } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import { setNote } from '$lib/workout/groups';
@@ -68,7 +68,7 @@
 			</span>
 
 			<span class="{cell} {num}">
-				{set.weight === null ? '–' : addedLabel(meta, set.weight)}
+				{setFigures(meta, set.weight, set.reps).load ?? ''}
 			</span>
 			<span class="{cell} {strayed ? 'font-extrabold text-accent-text' : num}">
 				{show(set.reps)}

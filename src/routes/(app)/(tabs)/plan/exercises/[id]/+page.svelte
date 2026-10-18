@@ -17,12 +17,12 @@
 	import EstimatedMax from '$lib/exercises/EstimatedMax.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import {
-		addedLabel,
 		lastSetLabel,
 		lastSinceLabel,
 		loadLabel,
 		loadModeNote,
-		ordinal
+		ordinal,
+		setFigures
 	} from '$lib/exercises/label';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import RestDurationField from '$lib/settings/RestDurationField.svelte';
@@ -530,8 +530,7 @@
 								<!-- The badge names the day and the chip names the set that earned it: on a
 								     day whose heaviest single is not its best estimate, the two land apart. -->
 								{@const claimed = set === pr?.set ? 'pr' : set === best?.set ? 'best' : null}
-								<!-- `setLabel`'s rule in two weights: `10 reps` where nothing was added. -->
-								{@const bare = carries && set.weight === 0}
+								{@const figures = setFigures(exercise, set.weight, set.reps)}
 
 								<!-- The heavier claim is filled and the other is ringed. `surface-2` was the
 								     first try and it inverts by theme: lighter than `sunken` on a white card,
@@ -544,7 +543,7 @@
 									]}
 								>
 									<span class="text-md font-extrabold tracking-tight">
-										{bare ? set.reps : addedLabel(exercise, set.weight)}
+										{figures.load ?? figures.reps}
 									</span>
 									<span
 										class={[
@@ -556,7 +555,7 @@
 													: 'text-ink-faint'
 										]}
 									>
-										{bare ? 'reps' : `×${set.reps}`}
+										{figures.load === null ? 'reps' : `×${figures.reps}`}
 									</span>
 								</span>
 							{/each}
