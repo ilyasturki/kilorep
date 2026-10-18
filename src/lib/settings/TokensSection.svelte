@@ -3,6 +3,7 @@
 
 	import { createToken, renameToken, revokeToken } from '$lib/api/auth';
 	import { ApiError, apiBase } from '$lib/api/client';
+	import { claudeCommand, mcpServersJson } from '$lib/settings/mcp';
 	import Section from '$lib/settings/Section.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
@@ -22,7 +23,7 @@
 
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-	let copied = $state(false);
+	let copied = $state<'token' | 'command' | 'json' | null>(null);
 
 	// The token is shown once and the address is needed every time, so the address lives here
 	// rather than beside it. `apiBase` and not `location.origin`: on the phone the server is
@@ -52,7 +53,7 @@
 		try {
 			const { token, credential } = await createToken(trimmed);
 			minted = { token, label: credential.label };
-			copied = false;
+			copied = null;
 			createOpen = false;
 			label = '';
 
@@ -64,14 +65,19 @@
 		createPending = false;
 	}
 
-	async function copyMinted() {
-		if (minted === null) {
-			return;
-		}
+	const setup = $derived(
+		minted === null || endpoint === null
+			? null
+			: {
+					command: claudeCommand(endpoint, minted.token),
+					json: mcpServersJson(endpoint, minted.token)
+				}
+	);
 
+	async function copy(what: 'token' | 'command' | 'json', text: string) {
 		try {
-			await navigator.clipboard.writeText(minted.token);
-			copied = true;
+			await navigator.clipboard.writeText(text);
+			copied = what;
 		} catch {
 			/* empty */
 		}
@@ -141,6 +147,8 @@
 </script>
 
 {#if minted !== null}
+	{@const secret = minted.token}
+
 	<div class="flex flex-col gap-2 rounded-2xl border border-line bg-surface px-4 py-3">
 		<p class="text-sm font-bold text-ink-muted">
 			The token for “{minted.label}”. Copy it now — it is shown this once and stored only as a hash.
@@ -149,11 +157,35 @@
 		<code class="rounded-xl bg-surface-2 px-3 py-2 text-sm break-all">{minted.token}</code>
 
 		<div class="flex gap-2">
-			<Button variant="chrome" caps onclick={copyMinted}>
-				{copied ? 'COPIED' : 'COPY'}
+			<Button variant="chrome" caps onclick={() => void copy('token', secret)}>
+				{copied === 'token' ? 'COPIED' : 'COPY'}
 			</Button>
 			<Button variant="chrome" caps onclick={() => (minted = null)}>DONE</Button>
 		</div>
+
+		{#if setup !== null}
+			<div class="flex flex-col gap-2 pt-2">
+				<div class="flex items-center justify-between gap-3">
+					<span class="label-caps">Claude Code</span>
+					<Button variant="chrome" caps onclick={() => void copy('command', setup.command)}>
+						{copied === 'command' ? 'COPIED' : 'COPY'}
+					</Button>
+				</div>
+				<code class="rounded-xl bg-surface-2 px-3 py-2 text-sm break-all">{setup.command}</code>
+			</div>
+
+			<div class="flex flex-col gap-2 pt-2">
+				<div class="flex items-center justify-between gap-3">
+					<span class="label-caps">Other clients · JSON</span>
+					<Button variant="chrome" caps onclick={() => void copy('json', setup.json)}>
+						{copied === 'json' ? 'COPIED' : 'COPY'}
+					</Button>
+				</div>
+				<pre class="overflow-x-auto rounded-xl bg-surface-2 px-3 py-2 text-sm"><code
+						>{setup.json}</code
+					></pre>
+			</div>
+		{/if}
 	</div>
 {/if}
 
