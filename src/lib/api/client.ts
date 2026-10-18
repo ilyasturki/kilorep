@@ -117,6 +117,22 @@ export async function checkServer(base: string): Promise<void> {
 	}
 }
 
+// Null when the server cannot say: one older than the field, or one out of reach.
+export async function serverVersion(base: string): Promise<string | null> {
+	try {
+		const response = await fetch(new URL('/api/health', base));
+		const payload: unknown = await response.json();
+
+		if (typeof payload === 'object' && payload !== null && 'version' in payload) {
+			return typeof payload.version === 'string' ? payload.version : null;
+		}
+	} catch {
+		/* empty */
+	}
+
+	return null;
+}
+
 export type RequestOptions = {
 	method?: string;
 	body?: unknown;

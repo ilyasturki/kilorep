@@ -3,6 +3,7 @@
 
 	import { logout } from '$lib/api/auth';
 	import { apiBase, deviceToken, setApiBase } from '$lib/api/client';
+	import AboutSection from '$lib/settings/AboutSection.svelte';
 	import AccountSection from '$lib/settings/AccountSection.svelte';
 	import DangerSection from '$lib/settings/DangerSection.svelte';
 	import DataSection from '$lib/settings/DataSection.svelte';
@@ -132,6 +133,8 @@
 	{/if}
 
 	<DataSection userId={data.user?.id ?? null} />
+
+	<AboutSection {server} />
 
 	{#if data.user}
 		<DangerSection user={data.user} ondeleted={afterDelete} />

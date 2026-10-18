@@ -13,6 +13,7 @@ export const GET: RequestHandler = () => {
 
 		return json({
 			ok: true,
+			version: import.meta.env.APP_VERSION,
 			database: { reachable: true },
 			migrations: { applied: appliedMigrationCount(db) }
 		});
