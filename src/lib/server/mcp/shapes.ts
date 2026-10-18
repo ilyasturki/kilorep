@@ -84,6 +84,12 @@ const GRIP = z
 		'which grip, attachment or handle — one of the ids the exercise’s `grips` axis lists; omit for its default. Recorded on the set; history, hints and bests read across every grip'
 	);
 
+const OPTIONAL = z
+	.boolean()
+	.describe(
+		'true for an exercise the session may skip: the phone passes it by unless tapped, and leaving it out is never a deviation from the plan; omit for a required one'
+	);
+
 const ARMS = z
 	.enum(['both', 'one'])
 	.describe(
@@ -180,6 +186,7 @@ export const PERFORMED_EXERCISE = z.object({
 		.describe(
 			'the catalogue id the plan had in this slot, when this exercise was swapped in for it; omit when it is what was planned'
 		),
+	optional: OPTIONAL.optional(),
 	sets: z.array(PERFORMED_SET).min(1).max(30)
 });
 
@@ -236,6 +243,10 @@ export function workoutEntriesOf(items: PerformedInput[]): WorkoutEntry[] {
 			exercise.plannedAs = planned;
 		}
 
+		if (item.optional === true) {
+			exercise.optional = true;
+		}
+
 		return exercise;
 	});
 }
@@ -245,6 +256,7 @@ export const PLANNED_EXERCISE = z.object({
 	group: GROUP,
 	restSeconds: REST.optional(),
 	grip: GRIP.optional(),
+	optional: OPTIONAL.optional(),
 	sets: z
 		.array(z.number().int().min(1).max(100).nullable())
 		.min(1)
@@ -270,6 +282,10 @@ export function templateEntriesOf(items: PlannedInput[]): TemplateEntry[] {
 
 		if (grip !== undefined) {
 			exercise.grip = grip;
+		}
+
+		if (item.optional === true) {
+			exercise.optional = true;
 		}
 
 		return exercise;

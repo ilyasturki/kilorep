@@ -311,7 +311,12 @@ type PlanRow = {
 	exercises: PlanTree | null;
 };
 
-type PlanTree = { exerciseId: string; group?: number; sets: (number | null)[] }[];
+type PlanTree = {
+	exerciseId: string;
+	group?: number;
+	optional?: boolean;
+	sets: (number | null)[];
+}[];
 
 type Plans = {
 	plans: PlanRow[];
@@ -354,11 +359,12 @@ type WorkoutDetail = {
 	startedAt: string;
 	minutes: number;
 	totals: { exercises: number; completedSets: number; volumeKg: number };
-	drift: { unplanned: string[]; missing: string[] } | null;
+	drift: { unplanned: string[]; missing: string[]; reordered?: boolean } | null;
 	exercises: {
 		exerciseId: string;
 		plannedAs?: string;
 		group?: number;
+		optional?: boolean;
 		drift?: { added: number; removed: number; retargeted: number };
 		sets: SetRow[];
 	}[];
@@ -1075,6 +1081,31 @@ describe('writing a plan', () => {
 		expect(rows.map((row) => row.group)).toEqual([1, 1, undefined]);
 	});
 
+	test('an optional exercise is said with a flag, reads back with it, and writes back unchanged', async () => {
+		const saved = await once<Saved>('save_plan', {
+			name: 'Push',
+			exercises: [
+				{ exerciseId: 'bench-press', sets: [8, 8] },
+				{ exerciseId: 'dip', optional: true, sets: [10] }
+			]
+		});
+
+		const read = await once<Plans>('plans');
+		const rows = read.plans[0].exercises ?? [];
+
+		expect(rows.map((row) => row.optional)).toEqual([undefined, true]);
+
+		await once<Saved>('save_plan', {
+			id: saved.id,
+			version: read.plans[0].version,
+			exercises: rows.map(({ exerciseId, optional, sets }) => ({ exerciseId, optional, sets }))
+		});
+
+		const again = await once<Plans>('plans');
+
+		expect((again.plans[0].exercises ?? []).map((row) => row.optional)).toEqual([undefined, true]);
+	});
+
 	test('archiving retires a plan without taking the name it lends old sessions', async () => {
 		seed(
 			plan({ id: 'p1', name: 'Push A', exercises: ['bench-press'] }),
@@ -1294,6 +1325,63 @@ describe('one session in detail', () => {
 		expect(detail.exercises[0].drift).toEqual({ added: 1, removed: 0, retargeted: 0 });
 		expect(detail.totals.completedSets).toBe(5);
 		expect(detail.minutes).toBe(60);
+	});
+
+	test('an optional exercise left out is not missing, and a new order is named', async () => {
+		const planned = plan({ id: 'p1', name: 'Push', exercises: ['bench-press', 'dip', 'squat'] });
+
+		Object.assign(
+			(planned.payload as { entries: { exercises: Record<string, unknown>[] }[] }).entries[1]
+				.exercises[0],
+			{ optional: true }
+		);
+
+		seed(
+			planned,
+			session({
+				id: 'w1',
+				startedAt: NOW - DAY,
+				templateId: 'p1',
+				exercises: [
+					{ exerciseId: 'squat', sets: [{ weight: 100, reps: 5, plannedReps: 8 }] },
+					{ exerciseId: 'bench-press', sets: [{ weight: 80, reps: 8, plannedReps: 8 }] }
+				]
+			})
+		);
+
+		const detail = await once<WorkoutDetail>('workout', { id: 'w1' });
+
+		expect(detail.drift).toEqual({ unplanned: [], missing: [], reordered: true });
+	});
+
+	test('a session logged with an optional exercise keeps the flag through an edit', async () => {
+		const wrote = await once<Wrote>('log_workout', {
+			date: '2026-08-18',
+			startedAt: '18:30',
+			minutes: 55,
+			exercises: [
+				{ exerciseId: 'bench-press', sets: [{ weight: 80, reps: 8 }] },
+				{ exerciseId: 'dip', optional: true, sets: [{ weight: 0, reps: 10 }] }
+			]
+		});
+
+		const before = await once<WorkoutDetail>('workout', { id: wrote.id ?? '' });
+
+		expect(before.exercises.map((row) => row.optional)).toEqual([undefined, true]);
+
+		await once<Wrote>('edit_workout', {
+			id: wrote.id,
+			version: before.version,
+			exercises: before.exercises.map(({ exerciseId, optional, sets }) => ({
+				exerciseId,
+				optional,
+				sets
+			}))
+		});
+
+		const after = await once<WorkoutDetail>('workout', { id: wrote.id ?? '' });
+
+		expect(after.exercises.map((row) => row.optional)).toEqual([undefined, true]);
 	});
 
 	test('hands out the version an edit has to quote', async () => {

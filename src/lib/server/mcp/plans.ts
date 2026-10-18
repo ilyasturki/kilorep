@@ -18,7 +18,8 @@ function plannedRows(template: Template): Record<string, unknown>[] {
 		exerciseId: exercise.exerciseId,
 		name: nameOf(exercise.exerciseId),
 		sets: exercise.sets.map((set) => set.plannedReps),
-		grip: exercise.grip
+		grip: exercise.grip,
+		optional: exercise.optional === true ? true : undefined
 	}));
 }
 

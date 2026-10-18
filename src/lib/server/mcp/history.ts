@@ -72,7 +72,8 @@ function performedRows(workout: Workout, drift: Drift | null): Record<string, un
 				plannedReps: set.plannedReps,
 				grip: gripLabel(meta, set.grip),
 				arms: set.arms === 'one' ? 'one' : undefined
-			}))
+			})),
+			optional: exercise.optional === true ? true : undefined
 		};
 
 		const moved = drift === null ? undefined : drift.matched[exercise.id];
@@ -82,7 +83,8 @@ function performedRows(workout: Workout, drift: Drift | null): Record<string, un
 				added: moved.added,
 				removed: moved.removed,
 				retargeted: moved.retargeted,
-				grip: moved.grip === null ? undefined : (gripLabel(meta, moved.grip) ?? moved.grip)
+				grip: moved.grip === null ? undefined : (gripLabel(meta, moved.grip) ?? moved.grip),
+				instead: moved.instead ?? undefined
 			};
 		}
 
@@ -127,7 +129,9 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 					? null
 					: {
 							unplanned: exerciseIdsOf(workout.entries, drift.unplanned),
-							missing: drift.missing
+							missing: drift.missing,
+							reordered: drift.reordered || undefined,
+							regrouped: drift.regrouped || undefined
 						},
 			exercises: performedRows(workout, drift)
 		};
