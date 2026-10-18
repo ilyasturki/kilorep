@@ -71,6 +71,22 @@ export type Snapshot = RestState & {
 	activeSetId: string | null;
 };
 
+/** Everything a backup carries: the live records as stored, and the session in flight. */
+export type StoreContents = {
+	records: WireRecord[];
+	session: unknown;
+};
+
+/**
+ * `kept` counts the records already here at the same or a newer stamp. A session is `kept`
+ * out when one is running here, or when its workout is already a record — finished or deleted.
+ */
+export type ImportOutcome = {
+	written: number;
+	kept: number;
+	session: 'restored' | 'kept' | 'none';
+};
+
 const WATERMARK_KEY = 'watermark';
 const SNAPSHOT_KEY = 'active-session';
 const OWNER_KEY = 'owner';
@@ -563,6 +579,78 @@ export class Store {
 
 	public async clearSnapshot(): Promise<void> {
 		await this.db.delete('meta', SNAPSHOT_KEY);
+	}
+
+	// As stored, never folded: a backup restores what was written, not what the screen reads.
+	public async exportContents(): Promise<StoreContents> {
+		const tx = this.db.transaction(['records', 'meta'], 'readonly');
+		const records = await tx.objectStore('records').getAll();
+		const session = await tx.objectStore('meta').get(SNAPSHOT_KEY);
+
+		await tx.done;
+
+		return {
+			records: records
+				.filter((record) => record.deletedAt === null)
+				.map(({ id, kind, updatedAt, deletedAt, payload }) => ({
+					id,
+					kind,
+					updatedAt,
+					deletedAt,
+					payload
+				})),
+			session: isSnapshot(session) ? session : null
+		};
+	}
+
+	/**
+	 * Last-write-wins against what is here, as the server decides a push: a tie keeps the local
+	 * record. What lands is dirty, so it syncs like any local write. Nothing is deleted.
+	 */
+	public async importContents(contents: StoreContents, now: number): Promise<ImportOutcome> {
+		const tx = this.db.transaction(['records', 'meta'], 'readwrite');
+		const records = tx.objectStore('records');
+		const meta = tx.objectStore('meta');
+
+		let written = 0;
+
+		for (const record of contents.records) {
+			const local = await records.get(record.id);
+
+			if (local !== undefined && record.updatedAt <= local.updatedAt) {
+				continue;
+			}
+
+			await records.put({
+				id: record.id,
+				kind: record.kind,
+				updatedAt: record.updatedAt,
+				deletedAt: record.deletedAt,
+				payload: record.payload,
+				dirty: true
+			});
+			written += 1;
+		}
+
+		let session: ImportOutcome['session'] = 'none';
+
+		if (isSnapshot(contents.session)) {
+			const finished = await records.get(contents.session.workout.id);
+			const running = isSnapshot(await meta.get(SNAPSHOT_KEY));
+
+			if (finished === undefined && !running) {
+				await meta.put(contents.session, SNAPSHOT_KEY);
+				session = 'restored';
+			} else {
+				session = 'kept';
+			}
+		}
+
+		await tx.done;
+
+		await this.dropMainVariants(now);
+
+		return { written, kept: contents.records.length - written, session };
 	}
 
 	public async dirtyRecords(): Promise<WireRecord[]> {

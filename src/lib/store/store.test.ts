@@ -10,6 +10,7 @@ import type { WireRecord } from '$lib/sync/protocol';
 import { openDatabase } from './db.ts';
 import { frequentFrom } from './derive.ts';
 import { Store } from './store.ts';
+import type { Snapshot } from './store.ts';
 
 let counter = 0;
 
@@ -1187,5 +1188,125 @@ describe('changing hands', () => {
 		expect(await store.listWorkouts()).toEqual([]);
 		expect(await store.owner()).toBeNull();
 		expect(await store.claimOwner('user-b')).toBe(true);
+	});
+});
+
+const snapshotOf = (w: Workout): Snapshot => ({
+	workout: w,
+	activeSetId: null,
+	rest: null,
+	muted: false,
+	dismissed: null
+});
+
+const benched = (id: string, at: number, weight: number): unknown =>
+	finished(workout(id, at, 'bench-press', [{ weight, reps: 5 }]), at);
+
+describe('backup contents', () => {
+	it('exports the live records as stored, without the sync flag or the tombstones', async () => {
+		const chinUps = workout('w1', 100, 'chin-up', [{ weight: 0, reps: 8 }]);
+
+		await store.applyRemote([
+			wire('w1', 10, finished(chinUps, 200)),
+			wire('w2', 20, benched('w2', 300, 80), 'workout', 20)
+		]);
+		await store.saveBodyweight({ date: '2026-08-01', kg: 80 }, 30);
+
+		const { records, session } = await store.exportContents();
+
+		expect(records.map((record) => record.id).toSorted()).toEqual(['bodyweight-2026-08-01', 'w1']);
+		expect(records.every((record) => !('dirty' in record))).toBe(true);
+		expect(records.find((record) => record.id === 'w1')).toMatchObject({
+			payload: { entries: [{ exercises: [{ exerciseId: 'chin-up' }] }] }
+		});
+		expect(session).toBeNull();
+	});
+
+	it('exports the session in flight', async () => {
+		const snapshot = snapshotOf(workout('live', 500, 'bench-press', [{ weight: 60, reps: 5 }]));
+
+		await store.saveSnapshot(snapshot);
+
+		const { session } = await store.exportContents();
+
+		expect(session).toEqual(snapshot);
+	});
+
+	it('takes an imported record that is newer, keeps a local one as new or newer', async () => {
+		await store.applyRemote([
+			wire('older', 10, benched('older', 100, 80)),
+			wire('tie', 20, benched('tie', 200, 80)),
+			wire('newer', 30, benched('newer', 300, 80))
+		]);
+
+		const outcome = await store.importContents(
+			{
+				records: [
+					wire('older', 11, benched('older', 100, 90)),
+					wire('tie', 20, benched('tie', 200, 90)),
+					wire('newer', 29, benched('newer', 300, 90)),
+					wire('fresh', 40, benched('fresh', 400, 90))
+				],
+				session: null
+			},
+			1000
+		);
+
+		expect(outcome).toEqual({ written: 2, kept: 2, session: 'none' });
+
+		const workouts = await store.listWorkouts();
+		const dirty = await store.dirtyRecords();
+
+		expect(
+			Object.fromEntries(workouts.map((w) => [w.id, w.entries[0].exercises[0].sets[0].weight]))
+		).toEqual({ older: 90, tie: 80, newer: 80, fresh: 90 });
+		expect(dirty.map((record) => record.id).toSorted()).toEqual(['fresh', 'older']);
+	});
+
+	it('leaves a record deleted after the backup was made deleted', async () => {
+		await store.applyRemote([wire('gone', 10, benched('gone', 100, 80))]);
+		await store.deleteWorkout('gone', 50);
+
+		const outcome = await store.importContents(
+			{ records: [wire('gone', 10, benched('gone', 100, 80))], session: null },
+			1000
+		);
+
+		expect(outcome.written).toBe(0);
+		expect(await store.getWorkout('gone')).toBeNull();
+	});
+
+	it('restores the session only where none runs and its workout is not a record', async () => {
+		const backed = snapshotOf(workout('backed', 500, 'bench-press', [{ weight: 60, reps: 5 }]));
+		const other = snapshotOf(workout('other', 600, 'bench-press', [{ weight: 70, reps: 5 }]));
+
+		const into = async (session: Snapshot): Promise<string> => {
+			const outcome = await store.importContents({ records: [], session }, 1000);
+
+			return outcome.session;
+		};
+
+		expect(await into(backed)).toBe('restored');
+		expect(await store.loadSnapshot()).toEqual(backed);
+
+		expect(await into(other)).toBe('kept');
+		expect(await store.loadSnapshot()).toMatchObject({ workout: { id: 'backed' } });
+
+		await store.clearSnapshot();
+		await store.finishWorkout(other.workout, 700);
+
+		expect(await into(other)).toBe('kept');
+		expect(await store.loadSnapshot()).toBeNull();
+	});
+
+	it('drops a retired main variant the backup carried', async () => {
+		await store.importContents(
+			{ records: [wire('main-variant:row', 10, { id: 'row' }, 'preference')], session: null },
+			1000
+		);
+
+		const { records } = await store.exportContents();
+
+		expect(records).toEqual([]);
 	});
 });
