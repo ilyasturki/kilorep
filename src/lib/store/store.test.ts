@@ -1299,6 +1299,15 @@ describe('backup contents', () => {
 		expect(await store.loadSnapshot()).toBeNull();
 	});
 
+	it('keeps the session out when one is open in memory without a snapshot', async () => {
+		const backed = snapshotOf(workout('backed', 500, 'bench-press', [{ weight: 60, reps: 5 }]));
+
+		const outcome = await store.importContents({ records: [], session: backed }, 1000, true);
+
+		expect(outcome.session).toBe('kept');
+		expect(await store.loadSnapshot()).toBeNull();
+	});
+
 	it('drops a retired main variant the backup carried', async () => {
 		await store.importContents(
 			{ records: [wire('main-variant:row', 10, { id: 'row' }, 'preference')], session: null },

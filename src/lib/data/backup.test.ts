@@ -351,6 +351,28 @@ describe('the backup file', () => {
 			{
 				records: [
 					{
+						id: 'bodyweight-yesterday',
+						kind: 'bodyweight',
+						updatedAt: 1,
+						deletedAt: null,
+						payload: { date: 'yesterday', kg: 80 }
+					}
+				]
+			},
+			{
+				records: [
+					{
+						id: 'w1',
+						kind: 'workout',
+						updatedAt: 1,
+						deletedAt: null,
+						payload: { id: 'w1', startedAt: 1e20, finishedAt: 1, entries: [] }
+					}
+				]
+			},
+			{
+				records: [
+					{
 						id: 'p',
 						kind: 'template',
 						updatedAt: 1,

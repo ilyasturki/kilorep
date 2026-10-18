@@ -12,6 +12,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Sheet from '$lib/ui/Sheet.svelte';
+	import { activeWorkout } from '$lib/workout/active.svelte';
 
 	let { userId }: { userId: string | null } = $props();
 
@@ -120,7 +121,16 @@
 		done = '';
 		failure = '';
 
-		const read = readBackup(await file.text());
+		let text: string;
+
+		try {
+			text = await file.text();
+		} catch {
+			failure = 'could not read the file';
+			return;
+		}
+
+		const read = readBackup(text);
 
 		if (!read.ok) {
 			failure = REFUSALS[read.reason];
@@ -148,7 +158,7 @@
 	}
 
 	async function confirmImport() {
-		if (offered === null) {
+		if (offered === null || pending !== null) {
 			return;
 		}
 
@@ -159,7 +169,11 @@
 
 		try {
 			const store = await getStore();
-			const outcome = await store.importContents(contents, Date.now());
+			const outcome = await store.importContents(
+				contents,
+				Date.now(),
+				activeWorkout.session !== null
+			);
 
 			done = outcomeLine(outcome);
 
@@ -199,7 +213,11 @@
 		<ListRow
 			title={pending === 'import' ? 'Importing…' : 'Import a backup'}
 			description="From a JSON export. Nothing here is deleted"
-			onclick={() => picker?.click()}
+			onclick={() => {
+				if (pending === null) {
+					picker?.click();
+				}
+			}}
 			chevron={false}
 		/>
 

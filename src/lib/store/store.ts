@@ -71,16 +71,12 @@ export type Snapshot = RestState & {
 	activeSetId: string | null;
 };
 
-/** Everything a backup carries: the live records as stored, and the session in flight. */
 export type StoreContents = {
 	records: WireRecord[];
 	session: unknown;
 };
 
-/**
- * `kept` counts the records already here at the same or a newer stamp. A session is `kept`
- * out when one is running here, or when its workout is already a record — finished or deleted.
- */
+// `kept` counts local records, tombstones included, that were as new or newer.
 export type ImportOutcome = {
 	written: number;
 	kept: number;
@@ -601,11 +597,13 @@ export class Store {
 		};
 	}
 
-	/**
-	 * Last-write-wins against what is here, as the server decides a push: a tie keeps the local
-	 * record. What lands is dirty, so it syncs like any local write. Nothing is deleted.
-	 */
-	public async importContents(contents: StoreContents, now: number): Promise<ImportOutcome> {
+	// A tie keeps the local record, as the server decides a push.
+	public async importContents(
+		contents: StoreContents,
+		now: number,
+		// A session open in memory has no snapshot until its first exercise.
+		sessionOpen = false
+	): Promise<ImportOutcome> {
 		const tx = this.db.transaction(['records', 'meta'], 'readwrite');
 		const records = tx.objectStore('records');
 		const meta = tx.objectStore('meta');
@@ -634,7 +632,7 @@ export class Store {
 
 		if (isSnapshot(contents.session)) {
 			const finished = await records.get(contents.session.workout.id);
-			const running = isSnapshot(await meta.get(SNAPSHOT_KEY));
+			const running = sessionOpen || isSnapshot(await meta.get(SNAPSHOT_KEY));
 
 			if (finished === undefined && !running) {
 				await meta.put(contents.session, SNAPSHOT_KEY);

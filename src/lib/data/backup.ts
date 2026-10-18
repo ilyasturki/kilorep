@@ -1,7 +1,7 @@
 import { bodyweightId, localDateOf } from '$lib/domain/bodyweight';
 import type { StoreContents } from '$lib/store/store';
 import type { RecordKind, WireRecord } from '$lib/sync/protocol';
-import { isWireRecord } from '$lib/sync/protocol';
+import { isShape, isWireRecord } from '$lib/sync/protocol';
 
 const BACKUP_KIND = 'kilorep-backup';
 
@@ -51,13 +51,15 @@ export function backupName(now: number): string {
 
 type Check = (value: unknown) => boolean;
 
-function isShape(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 const isText: Check = (value) => typeof value === 'string';
 
 const isTime: Check = (value) => typeof value === 'number' && Number.isFinite(value);
+
+// 8.64e15 ms is the widest instant a Date can hold; past it every date reads as Invalid Date.
+const isMoment: Check = (value) => isTime(value) && Math.abs(Number(value)) <= 8.64e15;
+
+const isLocalDate: Check = (value) =>
+	isText(value) && /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/u.test(String(value));
 
 // Absent passes: a field a reader can do without is one an older build may never have written.
 const isCount: Check = (value) => value === undefined || value === null || isTime(value);
@@ -96,7 +98,7 @@ function isWorkout(value: unknown): value is Record<string, unknown> & { id: str
 		isShape(value) &&
 		isText(value.id) &&
 		(value.templateId === undefined || isTextOrNull(value.templateId)) &&
-		isTime(value.startedAt) &&
+		isMoment(value.startedAt) &&
 		isTree(value.entries, isWorkoutSet)
 	);
 }
@@ -112,7 +114,7 @@ const isPayloadOf: Record<RecordKind, (record: WireRecord) => boolean> = {
 		isTree(payload.entries, isTemplateSet),
 	bodyweight: ({ id, payload }) =>
 		isShape(payload) &&
-		isText(payload.date) &&
+		isLocalDate(payload.date) &&
 		id === bodyweightId(String(payload.date)) &&
 		isTime(payload.kg),
 	preference: ({ payload }) => isShape(payload)
@@ -155,10 +157,7 @@ function summaryOf(contents: StoreContents): BackupSummary {
 	return summary;
 }
 
-/**
- * A backup as it will be written, or why it will not be: the whole file reads or none of it does,
- * so a garbled record never lands half a restore. Tombstones carry nothing to restore and are left.
- */
+// All or nothing, so a garbled record never lands half a restore; tombstones are left out.
 export function readBackup(text: string): BackupRead {
 	let parsed: unknown;
 

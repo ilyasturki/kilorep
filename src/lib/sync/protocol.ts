@@ -34,7 +34,7 @@ function isRecordKind(value: unknown): value is RecordKind {
 	return typeof value === 'string' && kinds.includes(value);
 }
 
-function isShape(value: unknown): value is Record<string, unknown> {
+export function isShape(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
