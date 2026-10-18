@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { kin, sections, similarTo } from '$lib/exercises/browse';
-import type { Equipment, Exercise, Muscle } from '$lib/domain/exercise';
+import type { Equipment, Exercise, Muscle, Pattern } from '$lib/domain/exercise';
 
 function ex(
 	id: string,
@@ -40,6 +40,14 @@ const squat = ex('squat', 'Squat', 'Barbell', 'Quads');
 const pool = [bench, closeGrip, incline, floor, dbBench, dbIncline, overhead, fly, pecDeck, squat];
 
 const idsOf = (result: Exercise[]): string[] => result.map((e) => e.id);
+
+function shaped(exercise: Exercise, pattern: Pattern): Exercise {
+	const copy = structuredClone(exercise);
+
+	copy.pattern = pattern;
+
+	return copy;
+}
 
 describe('sections', () => {
 	test('a family shelves under its parent, empty muscles are absent', () => {
@@ -99,6 +107,28 @@ describe('similarTo', () => {
 			'floor-press',
 			'incline-bench',
 			'db-incline'
+		]);
+	});
+
+	test('past the family, the same movement leads: a press stands in for a press, not a fly', () => {
+		const chestPress = shaped(
+			ex('machine-chest-press', 'Machine Chest Press', 'Machine', 'Chest'),
+			'horizontal-press'
+		);
+		const presses = [
+			chestPress,
+			shaped(pecDeck, 'fly'),
+			shaped(fly, 'fly'),
+			shaped(dbBench, 'horizontal-press'),
+			shaped(floor, 'horizontal-press'),
+			shaped(overhead, 'vertical-press')
+		];
+
+		expect(idsOf(similarTo(presses, chestPress))).toEqual([
+			'db-bench',
+			'floor-press',
+			'pec-deck',
+			'cable-fly'
 		]);
 	});
 

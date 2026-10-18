@@ -64,14 +64,21 @@ export function similarTo(pool: Exercise[], exercise: Exercise, limit = 6): Exer
 			return -1;
 		}
 
-		return candidate.equipment === exercise.equipment ? 1 : 2;
+		return exercise.pattern !== undefined && candidate.pattern === exercise.pattern ? 1 : 2;
 	};
+
+	const rack = (candidate: Exercise): number => (candidate.equipment === exercise.equipment ? 0 : 1);
 
 	return pool
 		.filter((candidate) => candidate.id !== exercise.id)
 		.map((candidate) => ({ candidate, tier: tier(candidate) }))
 		.filter((scored) => scored.tier !== -1)
-		.toSorted((a, b) => a.tier - b.tier || byName(a.candidate, b.candidate))
+		.toSorted(
+			(a, b) =>
+				a.tier - b.tier ||
+				rack(a.candidate) - rack(b.candidate) ||
+				byName(a.candidate, b.candidate)
+		)
 		.slice(0, limit)
 		.map((scored) => scored.candidate);
 }
