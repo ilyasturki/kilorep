@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures.ts';
-import { addExercise, logSet, startEmpty } from '../helpers.ts';
+import { addExercise, bounds, logSet, startEmpty } from '../helpers.ts';
 
 import { drag, exerciseBlock, menuItem, onDesk, setRow } from './support.ts';
 
@@ -89,19 +89,9 @@ test('logged rows carry their leg’s letter, and rounds part', async ({ page })
 		return;
 	}
 
-	const box = async (mark: RegExp): Promise<{ top: number; bottom: number }> => {
-		const found = await setRow(block, mark).boundingBox();
-
-		if (found === null) {
-			throw new Error(`no row for ${mark.source}`);
-		}
-
-		return { top: found.y, bottom: found.y + found.height };
-	};
-
-	const a1 = await box(/^set A1 /u);
-	const b1 = await box(/^set B1 /u);
-	const a2 = await box(/^set A2 /u);
+	const a1 = await bounds(setRow(block, /^set A1 /u));
+	const b1 = await bounds(setRow(block, /^set B1 /u));
+	const a2 = await bounds(setRow(block, /^set A2 /u));
 
 	expect(a2.top - b1.bottom).toBeGreaterThan(b1.top - a1.bottom);
 });

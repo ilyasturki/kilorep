@@ -1,6 +1,9 @@
 import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
+import { bounds } from '../helpers.ts';
+import type { Point } from '../helpers.ts';
+
 export function onDesk(page: Page): boolean {
 	const viewport = page.viewportSize();
 
@@ -46,21 +49,15 @@ export async function exerciseAction(page: Page, name: string, action: string): 
 	await menuItem(page, action).click();
 }
 
-type Point = { x: number; y: number };
-
 async function centreOf(target: Locator): Promise<Point> {
-	const box = await target.boundingBox();
+	const { top, bottom, left, right } = await bounds(target);
 
-	if (box === null) {
-		throw new Error('nothing there to touch');
-	}
-
-	return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+	return { x: (left + right) / 2, y: (top + bottom) / 2 };
 }
 
-// A finger rather than the mouse: its pointer is captured by what it lands on, so the release
-// still reaches the row when a sheet opened over it mid-press.
-async function finger(page: Page, path: Point[], held?: Locator): Promise<void> {
+// Touch events, not the harness's mouse `finger`: a touch's pointer is captured by what it lands
+// on, so the release still reaches the row when a sheet opened over it mid-press.
+async function touchAlong(page: Page, path: Point[], held?: Locator): Promise<void> {
 	const cdp = await page.context().newCDPSession(page);
 	const [start, ...moves] = path;
 
@@ -80,7 +77,7 @@ async function finger(page: Page, path: Point[], held?: Locator): Promise<void> 
 
 /** Holds a finger down until what the hold opens is on screen. */
 export async function longPress(page: Page, target: Locator, opens: Locator): Promise<void> {
-	await finger(page, [await centreOf(target)], opens);
+	await touchAlong(page, [await centreOf(target)], opens);
 }
 
 /** A finger dragged from the middle of `target` by `dx`, `dy`, in even steps. */
@@ -88,7 +85,7 @@ export async function drag(page: Page, target: Locator, dx: number, dy: number):
 	const from = await centreOf(target);
 	const steps = 16;
 
-	await finger(
+	await touchAlong(
 		page,
 		Array.from({ length: steps + 1 }, (_, at) => ({
 			x: from.x + (dx * at) / steps,
