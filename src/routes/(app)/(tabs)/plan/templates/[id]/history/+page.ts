@@ -1,10 +1,13 @@
 import { error } from '@sveltejs/kit';
 
 import { getStore } from '$lib/store/store';
+import { RECORDS_DEP } from '$lib/sync/client';
 
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ params }) => {
+export const load: PageLoad = async ({ params, depends }) => {
+	depends(RECORDS_DEP);
+
 	const store = await getStore();
 
 	const [template, workouts] = await Promise.all([

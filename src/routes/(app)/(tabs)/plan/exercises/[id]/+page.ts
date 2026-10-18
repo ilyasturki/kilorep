@@ -5,10 +5,13 @@ import { settleGrip } from '$lib/domain/grip';
 import { plansWith, startable } from '$lib/domain/template';
 import { foldedHref } from '$lib/exercises/link';
 import { getStore } from '$lib/store/store';
+import { RECORDS_DEP } from '$lib/sync/client';
 
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ params, url }) => {
+export const load: PageLoad = async ({ params, url, depends }) => {
+	depends(RECORDS_DEP);
+
 	// A slug that became a grip keeps its address and forwards it: the entry is gone from the
 	// browse list, not from the web, and an old bookmark should land where the sets went, on the
 	// grip they became. The query rides along — it carries where `‹` walks back to.

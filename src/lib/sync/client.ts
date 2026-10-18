@@ -31,6 +31,9 @@ function stallFor(status: number): SyncStall {
 	return 'unreachable';
 }
 
+// Depended on by the loads that only read the store; an editor's load stays off it, or a pull would drop its draft.
+export const RECORDS_DEP = 'kilorep:records';
+
 const pullListeners = new Set<(records: WireRecord[]) => void>();
 
 /** Records another device wrote, once they are in the store: for state held outside a load. */

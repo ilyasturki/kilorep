@@ -29,7 +29,11 @@
 	let { data }: PageProps = $props();
 
 	// svelte-ignore state_referenced_locally
-	const templates = $state(data.templates);
+	let templates = $state(data.templates);
+
+	$effect.pre(() => {
+		templates = data.templates;
+	});
 
 	const active = $derived(templates.filter((t) => !isArchived(t)).toSorted(byRank));
 

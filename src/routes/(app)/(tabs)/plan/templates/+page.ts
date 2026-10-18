@@ -1,9 +1,12 @@
 import { lastDoneByTemplate } from '$lib/domain/rotation';
 import { getStore } from '$lib/store/store';
+import { RECORDS_DEP } from '$lib/sync/client';
 
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async () => {
+export const load: PageLoad = async ({ depends }) => {
+	depends(RECORDS_DEP);
+
 	const store = await getStore();
 
 	// The ledger's TRAINED column and the rotation's own line are the same question asked

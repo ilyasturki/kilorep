@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidate, invalidateAll } from '$app/navigation';
 
 	import { logout } from '$lib/api/auth';
 	import HandoverSheet from '$lib/app/HandoverSheet.svelte';
@@ -8,6 +8,7 @@
 	import { createAppBarSlot } from '$lib/nav/bar.svelte';
 	import { slideNavigation } from '$lib/nav/transitions';
 	import { getStore } from '$lib/store/store';
+	import { RECORDS_DEP, onPulled } from '$lib/sync/client';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 
 	import type { LayoutProps } from './$types';
@@ -24,6 +25,8 @@
 	const account = $derived(data.user?.id ?? null);
 
 	$effect(() => wireSyncTriggers(account));
+
+	$effect(() => onPulled(() => void invalidate(RECORDS_DEP)));
 
 	let handoverOpen = $state(false);
 

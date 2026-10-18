@@ -72,8 +72,11 @@
 	// The chip value standing for All. Never a grip: it narrows nothing and no set can hold it.
 	const ALL = '*';
 
+	// A pull re-runs the load with the same grip: settling on the value keeps a tapped chip.
+	const asked = $derived(data.grip);
+
 	// `null` is All. Reset by navigation, so a neighbour's grip never lands on this exercise.
-	let chip = $derived<string | null>(data.grip);
+	let chip = $derived<string | null>(asked);
 
 	const muscles = $derived(chip === null ? exercise.muscles : musclesOf(exercise, chip));
 

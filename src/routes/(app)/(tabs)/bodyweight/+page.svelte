@@ -33,7 +33,11 @@
 	let { data }: PageProps = $props();
 
 	// svelte-ignore state_referenced_locally
-	const entries = $state(data.entries);
+	let entries = $state(data.entries);
+
+	$effect.pre(() => {
+		entries = data.entries;
+	});
 
 	const today = localDateOf(new Date());
 

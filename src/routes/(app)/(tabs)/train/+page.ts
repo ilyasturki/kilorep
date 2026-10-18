@@ -1,11 +1,13 @@
 import { historyFrom, lastGripsFrom } from '$lib/store/derive';
 import { getStore } from '$lib/store/store';
+import { RECORDS_DEP } from '$lib/sync/client';
 import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ depends }) => {
 	depends(SESSION_DEP);
+	depends(RECORDS_DEP);
 
 	const store = await getStore();
 
