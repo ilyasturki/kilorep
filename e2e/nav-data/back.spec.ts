@@ -78,6 +78,9 @@ async function watch(page: Page, what: 'title' | 'slide'): Promise<() => Promise
 
 test.use({ seeded: true });
 
+// A seeded launch and up to seven navigations, which a loaded runner takes past the default 30 s.
+test.describe.configure({ timeout: 60_000 });
+
 for (const via of ['‹', 'system'] as const) {
 	test.describe(`back by ${via}`, () => {
 		test('a workout opened from Progress walks back to History, then Progress', async ({
