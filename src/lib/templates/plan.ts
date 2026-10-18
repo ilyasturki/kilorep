@@ -69,16 +69,7 @@ export function templateTitle(template: Template): string {
 	return template.name.trim() === '' ? 'Untitled' : template.name;
 }
 
-/**
- * Why this plan and not another, in the few words a caps header holds.
- *
- * It rides the header rather than the card because the card is already three lines of what
- * the plan *is*, and a fourth line of why it was picked competes with them for a width a
- * phone does not have. Up there it has a row to itself and nothing to truncate against.
- *
- * A rotation of one has to say something other than "after itself", which is true and reads
- * as a bug; a rotation nobody has trained yet has no step to report at all.
- */
+/** A rotation of one says "again": "after itself" is true and reads as a bug. */
 export function rotationLine(next: NextUp): string {
 	if (next.after === null) {
 		return 'first in your rotation';

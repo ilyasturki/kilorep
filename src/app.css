@@ -1062,6 +1062,17 @@ html[data-nav='pop']::view-transition-old(page) {
 	}
 }
 
+/* A card standing over the lists beside it. A shadow vanishes into the dark canvas, so dark takes a rung up the depth ramp. */
+@utility card-raised {
+	border-radius: var(--radius-2xl);
+	background-color: var(--surface);
+	@apply shadow-lg;
+
+	@media (prefers-color-scheme: dark) {
+		background-color: var(--surface-2);
+	}
+}
+
 /* A picture of a caret — the real one is in the input the ruler covers. `steps(1)`: a fading caret
    reads as deleting. */
 @utility caret-band {

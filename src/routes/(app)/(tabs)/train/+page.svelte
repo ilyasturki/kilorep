@@ -6,7 +6,7 @@
 	import { lastDoneByTemplate, nextUp } from '$lib/domain/rotation';
 	import { drawableMark, startable, startFrom } from '$lib/domain/template';
 	import { cursors, firstUncompleted } from '$lib/domain/workout';
-	import { formatSince, lastDoneLine } from '$lib/history/label';
+	import { elapsedLabel, trainedWhen } from '$lib/history/label';
 	import { openedFrom } from '$lib/nav/bar.svelte';
 	import { restamp } from '$lib/nav/stack.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
@@ -18,6 +18,7 @@
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import Cards from '$lib/ui/icons/Cards.svelte';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
+	import Play from '$lib/ui/icons/Play.svelte';
 	import Plus from '$lib/ui/icons/Plus.svelte';
 	import Stack from '$lib/ui/icons/Stack.svelte';
 
@@ -53,19 +54,19 @@
 
 	const running = $derived(activeWorkout.session);
 
-	const runningTitle = $derived.by(() => {
-		if (running === null) {
-			return '';
-		}
-
-		const template = data.templates.find((t) => t.id === running.workout.templateId);
-
-		return template === undefined ? 'Workout' : templateTitle(template);
-	});
+	const runningPlan = $derived(
+		running === null ? undefined : data.templates.find((t) => t.id === running.workout.templateId)
+	);
 
 	const runningSets = $derived(running === null ? [] : cursors(running.workout));
 
-	const now = Date.now();
+	let now = $state(Date.now());
+
+	$effect(() => {
+		const clock = setInterval(() => (now = Date.now()), 30_000);
+
+		return () => clearInterval(clock);
+	});
 
 	const plans = $derived(startable(data.templates));
 
@@ -84,8 +85,8 @@
 	// tap from either screen rather than a list on the way to the editor.
 	const blank = openedFrom(`/plan/templates/${crypto.randomUUID()}`, '/train');
 
-	function doneAt(template: Template): number | null {
-		return lastDone[template.id] ?? null;
+	function trained(template: Template) {
+		return trainedWhen(lastDone[template.id] ?? null, now);
 	}
 
 	// The launcher's Train shortcut, arriving as a request to press the START below rather
@@ -127,32 +128,62 @@
 	<title>Train | Kilorep</title>
 </svelte:head>
 
+<svelte:document onvisibilitychange={() => (now = Date.now())} />
+
+{#snippet doors()}
+	<div class="list-group">
+		{#if next !== null}
+			{#snippet cards()}
+				<span class="grid size-8 place-items-center"><Cards size={20} /></span>
+			{/snippet}
+
+			<ListRow
+				title="All templates"
+				href={openedFrom('/plan/templates', '/train')}
+				leading={cards}
+			/>
+		{/if}
+
+		{#snippet clock()}
+			<span class="grid size-8 place-items-center"><ClockCounterClockwise size={20} /></span>
+		{/snippet}
+
+		<ListRow title="History" href={openedFrom('/history', '/train')} leading={clock} />
+	</div>
+{/snippet}
+
+{#snippet hero(label: string, aside: string, plan: Template | undefined, lines: string[])}
+	<div class="flex flex-col gap-2">
+		<p class="flex min-w-0 items-baseline gap-2">
+			<span class="shrink-0 label-caps text-accent-text">{label}</span>
+			<span class="line-clamp-2 text-base font-bold text-ink-muted">{aside}</span>
+		</p>
+
+		<div class="flex items-start gap-3">
+			<TemplateMark mark={plan === undefined ? null : drawableMark(plan)} />
+
+			<div class="flex min-w-0 flex-1 flex-col gap-0.5">
+				<span class="truncate text-xl font-extrabold tracking-tight text-ink">
+					{plan === undefined ? 'Workout' : templateTitle(plan)}
+				</span>
+				{#each lines as line, at (at)}
+					<span
+						class={[
+							'truncate font-bold',
+							at === 0 ? 'text-md text-ink-muted' : 'text-sm text-ink-faint'
+						]}
+					>
+						{line}
+					</span>
+				{/each}
+			</div>
+		</div>
+	</div>
+{/snippet}
+
 <main class="min-h-0 flex-1 overflow-y-auto">
-	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
-		{#if running !== null}
-			<!-- One card and no START buttons: a second workout on top of a running one is not a
-			     thing this screen may offer, and the way back into the session should be the
-			     biggest thing on it. -->
-			<section class="flex flex-col gap-2">
-				<h2 class="px-3 label-caps">In progress</h2>
-
-				<div class="flex flex-col gap-4 rounded-2xl bg-surface p-3">
-					<div class="flex min-w-0 flex-col gap-0.5 px-1">
-						<span class="truncate text-xl font-extrabold tracking-tight text-ink">
-							{runningTitle}
-						</span>
-						<span class="truncate text-md font-bold text-ink-muted">
-							{runningSets.filter((c) => c.set.completed).length} of {runningSets.length} sets logged
-						</span>
-					</div>
-
-					<Button variant="commit" caps class="w-full" href="/train/live">RESUME</Button>
-				</div>
-			</section>
-		{:else if next === null}
-			<!-- No plan is next, because there is no rotation to be next in. The card that used to
-			     stand here said "Next up: Empty workout", which is not a rotation reporting a
-			     position but a screen keeping its shape after its subject left. -->
+	{#if running === null && next === null}
+		<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
 			<EmptyState
 				title="No plans yet"
 				description="Build one in Plan and the rotation puts it here, under your thumb."
@@ -162,119 +193,105 @@
 				{/snippet}
 				{#snippet action()}
 					<div class="mx-auto flex w-full max-w-xs flex-col gap-2">
-						<Button variant="commit" compact href={blank}>New plan</Button>
+						<Button variant="commit" compact href={blank}>
+							<Plus size={20} />
+							New plan
+						</Button>
 						<Button variant="secondary" compact onclick={() => void startEmpty()}>
 							Start an empty workout
 						</Button>
 					</div>
 				{/snippet}
 			</EmptyState>
-		{:else}
-			{@const nextMark = drawableMark(next.plan)}
 
-			<section class="flex flex-col gap-2">
-				<!-- The rotation's arithmetic rides up here rather than in the card: the card is
-				     already three lines about the plan, and a fourth about why it was picked would
-				     compete with them for a width a phone does not have. Clamped rather than
-				     truncated, because a long plan name loses its whole tail to one line and the
-				     name is the half of this that says anything; two lines is where it stops
-				     pushing the card down the screen. -->
-				<h2 class="line-clamp-2 px-3 label-caps">Next up · {rotationLine(next)}</h2>
-
-				<div class="flex flex-col gap-4 rounded-2xl bg-surface p-3">
-					<div class="flex items-start gap-3 px-1">
-						{#if nextMark !== null}
-							<TemplateMark mark={nextMark} />
-						{/if}
-
-						<div class="flex min-w-0 flex-1 flex-col gap-0.5">
-							<span class="truncate text-xl font-extrabold tracking-tight text-ink">
-								{templateTitle(next.plan)}
-							</span>
-							<span class="truncate text-md font-bold text-ink-muted">
-								{planLine(next.plan, catalogById)}
-							</span>
-							<span class="truncate text-sm font-bold text-ink-faint">
-								{planMeta(next.plan)} · {lastDoneLine(doneAt(next.plan), now)}
-							</span>
-						</div>
-					</div>
-
-					<Button
-						variant="commit"
-						caps
-						class="w-full"
-						onclick={() => void startTemplate(next.plan)}
-					>
-						START
-					</Button>
-				</div>
-			</section>
-
-			<section class="flex flex-col gap-2">
-				<h2 class="px-3 label-caps">Or start</h2>
-
-				<div class="list-group">
-					{#each rest as template (template.id)}
-						{@const mark = drawableMark(template)}
-						{@const since = doneAt(template)}
-
-						{#snippet tile()}
-							{#if mark !== null}
-								<TemplateMark {mark} />
-							{/if}
-						{/snippet}
-
-						<ListRow
-							title={templateTitle(template)}
-							meta={planLine(template, catalogById)}
-							stacked
-							chevron={false}
-							leading={mark === null ? undefined : tile}
-							onclick={() => void startTemplate(template)}
-						>
-							{#snippet trailing()}
-								{since === null ? 'New' : formatSince(since, now)}
-							{/snippet}
-						</ListRow>
-					{/each}
-
-					{#snippet plus()}
-						<Plus size={20} />
-					{/snippet}
-
-					<ListRow
-						title="Empty workout"
-						weight="bold"
-						chevron={false}
-						leading={plus}
-						onclick={() => void startEmpty()}
-					/>
-				</div>
-			</section>
-		{/if}
-
-		<div class="list-group">
-			<!-- All templates is dropped while the rotation is empty: the empty state above is
-			     already this screen's door to Plan, and a row leading to a list of nothing is the
-			     second glance saying what the first one said. -->
-			{#if next !== null}
-				{#snippet cards()}
-					<Cards size={20} />
-				{/snippet}
-
-				<ListRow
-					title="All templates"
-					href={openedFrom('/plan/templates', '/train')}
-					leading={cards}
-				/>
-			{/if}
-
-			{#snippet clock()}
-				<ClockCounterClockwise size={20} />
-			{/snippet}
-
-			<ListRow title="History" href={openedFrom('/history', '/train')} leading={clock} />
+			{@render doors()}
 		</div>
-	</div>
+	{:else}
+		<div
+			class="column-board flex min-h-full flex-col gap-5 px-3 pt-3 lg:flex-row-reverse
+				lg:items-start lg:gap-6 lg:pb-4"
+		>
+			<div class="flex min-w-0 flex-col gap-5 lg:flex-1">
+				{#if running === null && next !== null}
+					<section class="flex flex-col gap-2">
+						<h2 class="px-3 label-caps">Start another</h2>
+
+						<div class="list-group">
+							{#each rest as template (template.id)}
+								{#snippet tile()}
+									<TemplateMark mark={drawableMark(template)} />
+								{/snippet}
+
+								<ListRow
+									title={templateTitle(template)}
+									meta={planLine(template, catalogById)}
+									stacked
+									chevron={false}
+									leading={tile}
+									onclick={() => void startTemplate(template)}
+								>
+									{#snippet trailing()}
+										{trained(template).short}
+									{/snippet}
+								</ListRow>
+							{/each}
+
+							{#snippet well()}
+								<span class="size-8 rounded-lg border-[1.5px] border-dashed border-line"></span>
+							{/snippet}
+
+							<ListRow
+								title="Empty workout"
+								meta="Add exercises as you go"
+								stacked
+								chevron={false}
+								leading={well}
+								onclick={() => void startEmpty()}
+							/>
+						</div>
+					</section>
+				{/if}
+
+				{@render doors()}
+			</div>
+
+			<section
+				class="sticky bottom-0 -mx-3 mt-auto bg-canvas px-3 pt-1 pb-4 lg:static lg:mx-0
+					lg:mt-0 lg:flex-1 lg:p-0"
+			>
+				<div class="flex flex-col gap-4 card-raised p-3">
+					{#if running !== null}
+						{@render hero(
+							'In progress',
+							elapsedLabel(running.workout.startedAt, now),
+							runningPlan,
+							[
+								`${runningSets.filter((c) => c.set.completed).length} of ${runningSets.length} sets logged`
+							]
+						)}
+
+						<Button variant="commit" caps class="w-full" href="/train/live">
+							<Play size={24} />
+							RESUME
+						</Button>
+					{:else if next !== null}
+						{@render hero('Next up', rotationLine(next), next.plan, [
+							planLine(next.plan, catalogById),
+							`${planMeta(next.plan)} · ${trained(next.plan).long}`
+						])}
+
+						<Button
+							variant="commit"
+							caps
+							class="w-full"
+							onclick={() => void startTemplate(next.plan)}
+						>
+							<Play size={24} />
+							START
+						</Button>
+					{/if}
+				</div>
+			</section>
+		</div>
+	{/if}
 </main>
