@@ -27,7 +27,7 @@ Restart the server after every source change:
 
 ```sh
 # kill the vite process, then
-BUILD_TARGET=app bunx vite dev --port 5188 --strictPort --force
+DATABASE_PATH=$SCRATCH/verify.db bun run dev -- --port 4599 --strictPort
 ```
 
 ## Settings, and anything else the phone owns, needs the app build
