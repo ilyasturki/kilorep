@@ -202,7 +202,8 @@
 
 		settleFigure();
 
-		if (!editor.dirty) {
+		// Every back, the browser's too, reaches the editor as an overlay through the root layout.
+		if (!editor.dirty || navigation.type === 'popstate') {
 			return;
 		}
 
@@ -210,11 +211,7 @@
 
 		const to = navigation.to?.url;
 
-		if (navigation.type === 'popstate') {
-			const { delta } = navigation;
-
-			pending = () => history.go(delta);
-		} else if (navigation.type === 'leave' || to === undefined) {
+		if (navigation.type === 'leave' || to === undefined) {
 			return;
 		} else if (navigation.willUnload) {
 			pending = () => location.assign(to);
