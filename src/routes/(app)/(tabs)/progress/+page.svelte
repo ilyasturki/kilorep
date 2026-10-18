@@ -12,6 +12,7 @@
 		weeklyWork
 	} from '$lib/domain/progress';
 	import { setLabel } from '$lib/exercises/label';
+	import { openedFrom } from '$lib/nav/bar.svelte';
 	import Sparkline from '$lib/progress/Sparkline.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
@@ -244,7 +245,7 @@
 							{#each prs.slice(0, PR_ROWS) as pr (pr.exerciseId)}
 								<ListRow
 									title={nameOf(pr.exerciseId)}
-									href="/plan/exercises/{pr.exerciseId}"
+									href={openedFrom(`/plan/exercises/${pr.exerciseId}`, '/progress')}
 									chevron={false}
 									dense
 								>
@@ -278,7 +279,7 @@
 										{#each prs.slice(PR_ROWS) as pr (pr.exerciseId)}
 											<ListRow
 												title={nameOf(pr.exerciseId)}
-												href="/plan/exercises/{pr.exerciseId}"
+												href={openedFrom(`/plan/exercises/${pr.exerciseId}`, '/progress')}
 												chevron={false}
 												dense
 											>
@@ -309,7 +310,7 @@
 							{#each liftRows as row (row.exerciseId)}
 								<ListRow
 									title={nameOf(row.exerciseId)}
-									href="/plan/exercises/{row.exerciseId}"
+									href={openedFrom(`/plan/exercises/${row.exerciseId}`, '/progress')}
 									chevron={false}
 									dense
 								>

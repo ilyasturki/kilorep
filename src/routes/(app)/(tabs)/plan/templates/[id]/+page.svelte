@@ -2,6 +2,7 @@
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { goto, invalidate } from '$app/navigation';
+	import { page } from '$app/state';
 
 	import { catalogById } from '$lib/catalog';
 	import {
@@ -306,6 +307,8 @@
 	// screen, and two open at once puts the second one's fields off the bottom again.
 	let openLegId = $state<string | null>(null);
 
+	const here = $derived(`${page.url.pathname}${page.url.search}`);
+
 	fillAppBar(() => ({ title, action: deskActions }));
 </script>
 
@@ -453,6 +456,7 @@
 				{:else}
 					<PlanLedger
 						{entries}
+						from={here}
 						onoptions={options}
 						onsets={(id, count) => setSetCount(template, id, count, () => crypto.randomUUID())}
 						onreps={(id, reps) => setExerciseReps(template, id, reps)}
@@ -514,6 +518,7 @@
 								{#snippet leg(leg, at)}
 									<PlanCard
 										meta={leg.meta}
+										from={here}
 										exercise={leg.exercise}
 										open={openLegId === leg.id}
 										rest={restSettings.current.enabled
@@ -603,6 +608,7 @@
 
 <PlanOptionsMenu
 	bind:open={optionsOpen}
+	from={here}
 	group={actingGroup}
 	superset={actingEntry !== null && actingEntry.superset}
 	anchor={optionsAnchor}

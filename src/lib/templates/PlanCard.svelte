@@ -36,6 +36,7 @@
 		onreps: (reps: number | null) => void;
 		onsetreps: (setId: string, reps: number | null) => void;
 		onrest: (seconds: number | null | undefined) => void;
+		from?: string;
 	};
 
 	let {
@@ -51,7 +52,8 @@
 		onsets,
 		onreps,
 		onsetreps,
-		onrest
+		onrest,
+		from
 	}: Props = $props();
 
 	const shape = $derived(planShape(exercise));
@@ -82,7 +84,7 @@
 		{#if open}
 			<h2 class="min-w-0 flex-1">
 				<a
-					href={exerciseHref(meta.id, exercise.grip)}
+					href={exerciseHref(meta.id, exercise.grip, from)}
 					class="flex min-w-0 press-sink flex-col rounded-lg px-1 py-0.5 focus-ring
 						hover:bg-hover pointer-fine:transition-[background-color] pointer-fine:duration-100
 						press:bg-surface-2"

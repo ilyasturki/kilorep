@@ -7,6 +7,7 @@
 	import { drawableMark, startable, startFrom } from '$lib/domain/template';
 	import { cursors, firstUncompleted } from '$lib/domain/workout';
 	import { formatSince, lastDoneLine } from '$lib/history/label';
+	import { openedFrom } from '$lib/nav/bar.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { planLine, planMeta, rotationLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
@@ -80,7 +81,7 @@
 
 	// The same address Templates offers its own empty state, so the way out of "no plans" is one
 	// tap from either screen rather than a list on the way to the editor.
-	const blank = `/plan/templates/${crypto.randomUUID()}`;
+	const blank = openedFrom(`/plan/templates/${crypto.randomUUID()}`, '/train');
 
 	function doneAt(template: Template): number | null {
 		return lastDone[template.id] ?? null;
@@ -260,14 +261,18 @@
 					<Cards size={20} />
 				{/snippet}
 
-				<ListRow title="All templates" href="/plan/templates" leading={cards} />
+				<ListRow
+					title="All templates"
+					href={openedFrom('/plan/templates', '/train')}
+					leading={cards}
+				/>
 			{/if}
 
 			{#snippet clock()}
 				<ClockCounterClockwise size={20} />
 			{/snippet}
 
-			<ListRow title="History" href="/history" leading={clock} />
+			<ListRow title="History" href={openedFrom('/history', '/train')} leading={clock} />
 		</div>
 	</div>
 </main>

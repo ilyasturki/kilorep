@@ -21,6 +21,7 @@
 		onbreak: () => void;
 		onremove: () => void;
 		ongrip: (grip: string) => void;
+		from?: string;
 	};
 
 	let {
@@ -32,7 +33,8 @@
 		onsuperset,
 		onbreak,
 		onremove,
-		ongrip
+		ongrip,
+		from
 	}: Props = $props();
 
 	const name = $derived(group === null ? 'Exercise' : group.meta.name);
@@ -56,7 +58,7 @@
 	{/if}
 
 	<MenuItem
-		href={group === null ? undefined : exerciseHref(group.meta.id, group.exercise.grip)}
+		href={group === null ? undefined : exerciseHref(group.meta.id, group.exercise.grip, from)}
 		onselect={() => (open = false)}
 	>
 		<Eye size={18} />

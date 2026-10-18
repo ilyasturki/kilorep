@@ -50,6 +50,7 @@
 		onrest: (entryId: string, seconds: number | null | undefined) => void;
 		oninsert: (entryId: string) => void;
 		onreorder: (entryId: string, index: number) => boolean;
+		from?: string;
 	};
 
 	let {
@@ -61,7 +62,8 @@
 		planDefault,
 		onrest,
 		oninsert,
-		onreorder
+		onreorder,
+		from
 	}: Props = $props();
 
 	// Whole entries move — a superset travels as one block — and the grip is the only handle:
@@ -161,7 +163,7 @@
 
 							<span class="flex min-w-0 items-baseline gap-2 py-1 pr-3">
 								<a
-									href={exerciseHref(leg.meta.id, leg.exercise.grip)}
+									href={exerciseHref(leg.meta.id, leg.exercise.grip, from)}
 									class="truncate rounded-md text-md font-extrabold tracking-tight text-ink
 										focus-ring hover:underline"
 								>

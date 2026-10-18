@@ -52,9 +52,7 @@
 
 	fillAppBar(() => ({ title: exercise.name }));
 
-	// Passed on to the family links: a lifter who opened this page mid-session and walked from
-	// one variation to its neighbour is still one `‹` away from the set they left.
-	const cameFrom = $derived(page.url.searchParams.get('from'));
+	const here = $derived(`${page.url.pathname}${page.url.search}`);
 
 	const family = $derived(kin(catalog, exercise));
 
@@ -291,7 +289,7 @@
 		meta={lastSetLabel(entry, last)}
 		leading={thumb}
 		trailing={since === undefined ? undefined : recency}
-		href={openedFrom(`/plan/exercises/${entry.id}`, cameFrom)}
+		href={openedFrom(`/plan/exercises/${entry.id}`, here)}
 	/>
 {/snippet}
 
@@ -477,7 +475,11 @@
 						Add to this workout
 					</Button>
 				{:else if planned !== null}
-					<Button variant="secondary" class="w-full" href="/plan/templates/{planned.id}">
+					<Button
+						variant="secondary"
+						class="w-full"
+						href={openedFrom(`/plan/templates/${planned.id}`, here)}
+					>
 						Added to {templateTitle(planned)}
 					</Button>
 				{:else if data.plans.length > 0}
@@ -503,7 +505,7 @@
 					{@const gripped = gripsIn(session.sets)}
 
 					<a
-						href="/history/{session.workoutId}"
+						href={openedFrom(`/history/${session.workoutId}`, here)}
 						data-list-row
 						class={[
 							'flex press-sink flex-col gap-2 border-l-2 px-3 py-2.5 focus-ring',

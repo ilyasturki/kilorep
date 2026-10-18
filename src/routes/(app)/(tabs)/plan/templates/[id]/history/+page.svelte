@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { formatWhen, lastDoneLine, workoutMeta } from '$lib/history/label';
-	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { page } from '$app/state';
+
+	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
 	import { templateTitle } from '$lib/templates/plan';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -46,7 +48,11 @@
 			{#each sessions as workout (workout.id)}
 				{@const when = formatWhen(workout.startedAt, now)}
 
-				<ListRow title={when.long} meta={workoutMeta(workout)} href="/history/{workout.id}" />
+				<ListRow
+					title={when.long}
+					meta={workoutMeta(workout)}
+					href={openedFrom(`/history/${workout.id}`, `${page.url.pathname}${page.url.search}`)}
+				/>
 			{/each}
 		</section>
 	{/if}
