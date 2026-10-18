@@ -34,6 +34,24 @@ function substringRank(query: string, name: string, aliases: string[]): number {
 	return -1;
 }
 
+const wordsOf = (text: string): string[] => text.split(' ');
+
+/** Every word of the query starts a word somewhere, in any order: "bench machine". */
+function wordRank(words: string[], name: string, aliases: string[]): number {
+	const covers = (pool: string[]): boolean =>
+		words.every((word) => pool.some((candidate) => candidate.startsWith(word)));
+
+	if (covers(wordsOf(name))) {
+		return 5;
+	}
+
+	if (covers([...wordsOf(name), ...aliases.flatMap((alias) => wordsOf(alias))])) {
+		return 6;
+	}
+
+	return -1;
+}
+
 function editDistance(a: string, b: string): number {
 	let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
 
@@ -70,8 +88,16 @@ export function searchExercises(pool: Exercise[], query: string): Exercise[] {
 		aliases: exercise.aliases.map(normalize)
 	}));
 
+	const words = wordsOf(q);
+
+	const rankOf = (name: string, aliases: string[]): number => {
+		const rank = substringRank(q, name, aliases);
+
+		return rank === -1 && words.length > 1 ? wordRank(words, name, aliases) : rank;
+	};
+
 	const scored = entries
-		.map(({ exercise, name, aliases }) => ({ exercise, rank: substringRank(q, name, aliases) }))
+		.map(({ exercise, name, aliases }) => ({ exercise, rank: rankOf(name, aliases) }))
 		.filter((s) => s.rank !== -1);
 
 	if (scored.length > 0) {

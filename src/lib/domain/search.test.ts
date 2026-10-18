@@ -58,6 +58,35 @@ describe('the substring pass', () => {
 	});
 });
 
+describe('the word pass', () => {
+	const machines = [
+		ex('machine-bench-press', 'Machine Bench Press', ['lying chest press']),
+		ex('machine-chest-press', 'Machine Chest Press', ['chest press machine']),
+		ex('leg-press', 'Leg Press', ['sled press']),
+		ex('pec-deck', 'Pec Deck', ['chest fly machine'])
+	];
+
+	const found = (query: string): string[] => searchExercises(machines, query).map((e) => e.id);
+
+	test('the words of a query may come in any order, behind an alias that has them in order', () => {
+		expect(found('bench machine')).toEqual(['machine-bench-press']);
+		expect(found('press machine')).toEqual(['machine-chest-press', 'machine-bench-press']);
+	});
+
+	test('a word of the name and a word of an alias combine', () => {
+		expect(found('lying bench')).toEqual(['machine-bench-press']);
+	});
+
+	test('every word has to land, not just one', () => {
+		expect(found('press deck')).toEqual([]);
+	});
+
+	test('the name in order still outranks the words out of it', () => {
+		expect(ids('press bench')).toEqual(['bench-press']);
+		expect(found('machine bench')).toEqual(['machine-bench-press']);
+	});
+});
+
 describe('the fuzzy fallback', () => {
 	test('a typo is caught when substring finds nothing', () => {
 		expect(ids('bnech')).toEqual(['bench-press']);
