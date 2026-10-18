@@ -53,12 +53,17 @@
 		answer === 'open' && (offer === null || offer.changes.length > 0 || offer.swaps.length > 0)
 	);
 
+	let failed = $state(false);
+
 	async function act(run: () => Promise<void> | void, after: typeof answer) {
 		busy = true;
+		failed = false;
 
 		try {
 			await run();
 			answer = after;
+		} catch {
+			failed = true;
 		} finally {
 			busy = false;
 		}
@@ -76,7 +81,9 @@
 	>
 		<div class="flex flex-col gap-0.5 px-1">
 			{#if offer === null}
-				<h2 class="text-base font-extrabold text-ink">Not from a plan</h2>
+				<h2 class="text-base font-extrabold text-ink">
+					{workout.templateId === null ? 'Not from a plan' : 'Its plan was deleted'}
+				</h2>
 				<p class="text-sm font-bold text-ink-muted">
 					Save it as a new plan, at the end of your rotation.
 				</p>
@@ -131,5 +138,9 @@
 				Dismiss
 			</Button>
 		</div>
+
+		{#if failed}
+			<p role="alert" class="px-1 text-sm font-bold text-danger">Couldn't save. Try again.</p>
+		{/if}
 	</section>
 {/if}
