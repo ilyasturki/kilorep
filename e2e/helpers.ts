@@ -76,6 +76,16 @@ export async function logSet(page: Page, set: { kg?: number; reps?: number } = {
 		reps: page.getByRole('textbox', { name: 'reps' })
 	};
 
+	const commit = page.getByRole('main').getByRole('button', { name: /^Log \S+ × \d+$/u });
+
+	// A session just opened draws its tray or its ledger a moment after the address moves.
+	await expect(
+		typed.kg
+			.or(commit)
+			.or(page.getByRole('button', { name: 'Raise weight' }))
+			.first()
+	).toBeVisible();
+
 	if (await typed.kg.isVisible()) {
 		for (const field of ['kg', 'reps'] as const) {
 			const value = set[field];
@@ -89,8 +99,6 @@ export async function logSet(page: Page, set: { kg?: number; reps?: number } = {
 
 		return;
 	}
-
-	const commit = page.getByRole('main').getByRole('button', { name: /^Log \S+ × \d+$/u });
 
 	// A set with nothing offered draws no Log button until both numbers hold something.
 	if (!(await commit.isVisible())) {
