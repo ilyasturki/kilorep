@@ -248,6 +248,76 @@ export async function bounds(locator: Locator): Promise<Bounds> {
 	return { top: rect.y, bottom: rect.y + rect.height, left: rect.x, right: rect.x + rect.width };
 }
 
+export type Point = { x: number; y: number };
+
+export type Finger = {
+	down: (at: Point) => Promise<void>;
+	/** Travels to `to` over `ms`, a move every frame: what a drag's speed reads is `ms`, not the machine. */
+	move: (to: Point, ms?: number) => Promise<void>;
+	up: () => Promise<void>;
+	/** Presses, rolls by `roll` and lifts in one burst: as quick a tap as a wall clock can see. */
+	tap: (at: Point, roll: Point) => Promise<void>;
+};
+
+const FRAME_MS = 16;
+
+/**
+ * One pointer on the page, each event stamped on a clock of its own: Playwright's mouse sends a
+ * drag's moves back to back, which reads as a flick to anything that measures velocity.
+ */
+export async function finger(page: Page): Promise<Finger> {
+	const cdp = await page.context().newCDPSession(page);
+	let at = Date.now() / 1000;
+	let where: Point = { x: 0, y: 0 };
+
+	async function send(type: string, point: Point, buttons: number): Promise<void> {
+		await cdp.send('Input.dispatchMouseEvent', {
+			type,
+			x: point.x,
+			y: point.y,
+			button: 'left',
+			buttons,
+			clickCount: 1,
+			timestamp: at
+		});
+	}
+
+	return {
+		async down(point) {
+			where = point;
+			await send('mousePressed', point, 1);
+		},
+		async move(to, ms = 300) {
+			const from = where;
+			const steps = Math.max(1, Math.round(ms / FRAME_MS));
+
+			for (let step = 1; step <= steps; step += 1) {
+				at += ms / steps / 1000;
+				where = {
+					x: from.x + ((to.x - from.x) * step) / steps,
+					y: from.y + ((to.y - from.y) * step) / steps
+				};
+				await send('mouseMoved', where, 1);
+			}
+		},
+		async up() {
+			at += FRAME_MS / 1000;
+			await send('mouseReleased', where, 0);
+			await cdp.detach();
+		},
+		async tap(point, roll) {
+			const rolled = { x: point.x + roll.x, y: point.y + roll.y };
+
+			await Promise.all([
+				send('mousePressed', point, 1),
+				send('mouseMoved', rolled, 1),
+				send('mouseReleased', rolled, 0)
+			]);
+			where = rolled;
+		}
+	};
+}
+
 /** A theme colour (`--canvas`, `--accent`) as `getComputedStyle` reports one, to compare against. */
 export async function themeColor(page: Page, property: string): Promise<string> {
 	const color = await page.evaluate((name) => {
