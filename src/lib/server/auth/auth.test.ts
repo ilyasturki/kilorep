@@ -21,6 +21,7 @@ import {
 	findUserByGoogleSub,
 	issueToken,
 	listTokens,
+	renameToken,
 	resolveGoogleIdentity,
 	revokeOtherTokens,
 	revokeToken,
@@ -486,6 +487,28 @@ describe('token ownership', () => {
 		expect(resolveCredential(db, token)).not.toBeNull();
 
 		expect(revokeToken(db, yours.id, record.id)).toBe(true);
+	});
+
+	test('one account cannot rename another account credential', async () => {
+		const mine = await createUser(db, 'mine@example.com', PASSWORD);
+		const yours = await createUser(db, 'yours@example.com', PASSWORD);
+		const { record } = issueToken(db, yours.id, 'your phone', 'device');
+
+		expect(renameToken(db, mine.id, record.id, 'mine now')).toBeUndefined();
+		expect(listTokens(db, yours.id)[0].label).toBe('your phone');
+
+		expect(renameToken(db, yours.id, record.id, 'old phone')).toMatchObject({ label: 'old phone' });
+	});
+
+	test('a rename keeps the secret and trims the label as minting does', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+		const { token, record } = issueToken(db, user.id, 'MCP', 'api');
+
+		const renamed = renameToken(db, user.id, record.id, '  MCP on the desk  ');
+
+		expect(renamed).toMatchObject({ id: record.id, label: 'MCP on the desk', kind: 'api' });
+		expect(listTokens(db, user.id)[0].label).toBe('MCP on the desk');
+		expect(resolveCredential(db, token)).not.toBeNull();
 	});
 
 	test('lists only the caller own credentials', async () => {

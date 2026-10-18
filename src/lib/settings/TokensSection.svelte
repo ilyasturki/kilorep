@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 
-	import { createToken, revokeToken } from '$lib/api/auth';
+	import { createToken, renameToken, revokeToken } from '$lib/api/auth';
 	import { ApiError, apiBase } from '$lib/api/client';
 	import Section from '$lib/settings/Section.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -77,6 +77,46 @@
 		}
 	}
 
+	let held = $state<PublicToken | null>(null);
+	let heldOpen = $state(false);
+	let rename = $state('');
+	let renameError = $state('');
+	let renamePending = $state(false);
+
+	function hold(token: PublicToken) {
+		held = token;
+		rename = token.label;
+		renameError = '';
+		heldOpen = true;
+	}
+
+	async function saveRename() {
+		if (held === null) {
+			return;
+		}
+
+		renameError = '';
+
+		const trimmed = rename.trim();
+		if (trimmed === '') {
+			renameError = 'give the token a label';
+			return;
+		}
+
+		renamePending = true;
+
+		try {
+			await renameToken(held.id, trimmed);
+			heldOpen = false;
+
+			await invalidateAll();
+		} catch (error) {
+			renameError = error instanceof ApiError ? error.message : 'could not rename the token';
+		}
+
+		renamePending = false;
+	}
+
 	let revoking = $state<PublicToken | null>(null);
 	let revokeOpen = $state(false);
 	let revokeError = $state('');
@@ -90,6 +130,7 @@
 
 		try {
 			await revokeToken(revoking.id);
+			heldOpen = false;
 			await invalidateAll();
 		} catch (error) {
 			revokeError = error instanceof ApiError ? error.message : 'could not revoke the token';
@@ -129,21 +170,11 @@
 				meta={`${token.kind} · ${token.prefix}… · ${
 					token.lastUsedAt === null ? 'never used' : `last used ${day.format(token.lastUsedAt)}`
 				}`}
+				onclick={() => hold(token)}
 			>
 				{#snippet trailing()}
 					{#if token.current}
 						<Badge tone="accent">This session</Badge>
-					{:else}
-						<Button
-							variant="chrome"
-							caps
-							onclick={() => {
-								revoking = token;
-								revokeOpen = true;
-							}}
-						>
-							REVOKE
-						</Button>
 					{/if}
 				{/snippet}
 			</ListRow>
@@ -186,8 +217,37 @@
 	</div>
 </Sheet>
 
+<Sheet
+	bind:open={heldOpen}
+	title={held?.label ?? ''}
+	description={held?.current
+		? 'The one this device is signed in with.'
+		: 'Rename it, or revoke it to cut off whatever holds it.'}
+>
+	<div class="flex flex-col gap-5 pt-2">
+		<Input label="Label" name="label" bind:value={rename} error={renameError} />
+
+		<Button variant="secondary" disabled={renamePending} onclick={saveRename}>
+			{renamePending ? 'Saving…' : 'Rename'}
+		</Button>
+
+		{#if held !== null && !held.current}
+			<Button
+				variant="destructive"
+				onclick={() => {
+					revoking = held;
+					revokeOpen = true;
+				}}
+			>
+				Revoke
+			</Button>
+		{/if}
+	</div>
+</Sheet>
+
 <AlertDialog
 	bind:open={revokeOpen}
+	stacked={heldOpen}
 	title={`Revoke “${revoking?.label ?? ''}”?`}
 	description="Whatever holds this token loses access immediately. There is no undo."
 	confirmLabel="Revoke"

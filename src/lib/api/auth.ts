@@ -115,6 +115,16 @@ export async function createToken(label: string, fetch?: Fetch): Promise<MintedT
 	return minted;
 }
 
+export async function renameToken(id: string, label: string, fetch?: Fetch): Promise<PublicToken> {
+	const renamed = await request<PublicToken>(`/api/auth/tokens/${id}`, {
+		method: 'PATCH',
+		body: { label },
+		fetch
+	});
+
+	return renamed;
+}
+
 export async function revokeToken(id: string, fetch?: Fetch): Promise<void> {
 	await request<undefined>(`/api/auth/tokens/${id}`, { method: 'DELETE', fetch });
 }

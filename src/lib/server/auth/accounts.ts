@@ -217,6 +217,20 @@ export function listTokens(db: Database, userId: string): AuthToken[] {
 		.all();
 }
 
+export function renameToken(
+	db: Database,
+	userId: string,
+	tokenId: string,
+	label: string
+): AuthToken | undefined {
+	return db
+		.update(authTokens)
+		.set({ label: label.trim() })
+		.where(and(eq(authTokens.id, tokenId), eq(authTokens.userId, userId)))
+		.returning()
+		.get();
+}
+
 export function revokeToken(db: Database, userId: string, tokenId: string): boolean {
 	const removed = db
 		.delete(authTokens)
