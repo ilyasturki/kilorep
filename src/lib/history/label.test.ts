@@ -5,7 +5,9 @@ import {
 	completedSetCount,
 	exerciseCount,
 	formatSince,
+	elapsedLabel,
 	formatWhen,
+	trainedWhen,
 	workoutTitle
 } from '$lib/history/label';
 import type { Workout, WorkoutSet } from '$lib/domain/workout';
@@ -182,5 +184,41 @@ describe('formatWhen', () => {
 
 	test('a clock-skewed future timestamp reads as Today, never counts backwards', () => {
 		expect(formatWhen(at(2026, 8, 9), now).short).toBe('Today');
+	});
+});
+
+describe('trainedWhen', () => {
+	const DAY = 86_400_000;
+
+	test('a plan nobody trained says so at both widths', () => {
+		expect(trainedWhen(null, 0)).toEqual({ short: 'Never', long: 'Never trained' });
+	});
+
+	test('inside the day is today', () => {
+		expect(trainedWhen(0, DAY - 1)).toEqual({ short: 'Today', long: 'Trained today' });
+	});
+
+	test('the count is formatSince, read as an age', () => {
+		expect(trainedWhen(0, 3 * DAY)).toEqual({ short: '3d ago', long: 'Trained 3d ago' });
+		expect(trainedWhen(0, 21 * DAY)).toEqual({ short: '3w ago', long: 'Trained 3w ago' });
+		expect(trainedWhen(0, 90 * DAY)).toEqual({ short: '3mo ago', long: 'Trained 3mo ago' });
+	});
+});
+
+describe('elapsedLabel', () => {
+	const MIN = 60_000;
+
+	test('the first minute has no count', () => {
+		expect(elapsedLabel(0, 59_999)).toBe('Just started');
+	});
+
+	test('minutes, then hours and minutes', () => {
+		expect(elapsedLabel(0, 42 * MIN)).toBe('42 min');
+		expect(elapsedLabel(0, 60 * MIN)).toBe('1 h');
+		expect(elapsedLabel(0, 95 * MIN)).toBe('1 h 35 min');
+	});
+
+	test('a clock-skewed start reads as just started, never negative', () => {
+		expect(elapsedLabel(10 * MIN, 0)).toBe('Just started');
 	});
 });

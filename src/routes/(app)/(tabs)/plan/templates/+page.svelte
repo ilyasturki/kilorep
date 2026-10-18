@@ -6,7 +6,7 @@
 	import { nextUp } from '$lib/domain/rotation';
 	import { byRank, drawableMark, isArchived, reorder } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
-	import { formatSince } from '$lib/history/label';
+	import { trainedWhen } from '$lib/history/label';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import PlanTabs from '$lib/nav/PlanTabs.svelte';
 	import { syncSoon } from '$lib/sync/client';
@@ -96,7 +96,7 @@
 	     what it cannot say for itself is when this plan was last trained. -->
 	{#snippet trailing()}
 		<span class={done === undefined ? 'text-ink-faint' : 'text-ink-muted'}>
-			{done === undefined ? '—' : formatSince(done, now)}
+			{trainedWhen(done ?? null, now).short}
 		</span>
 
 		{#if draggable}

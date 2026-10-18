@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatWhen, lastDoneLine, workoutMeta } from '$lib/history/label';
+	import { formatWhen, trainedWhen, workoutMeta } from '$lib/history/label';
 	import { page } from '$app/state';
 
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
@@ -22,7 +22,7 @@
 	const line = $derived.by(() => {
 		const counted = sessions.length === 1 ? '1 session' : `${sessions.length} sessions`;
 
-		return `${counted} · ${lastDoneLine(sessions[0]?.startedAt ?? null, now)}`;
+		return `${counted} · ${trainedWhen(sessions[0]?.startedAt ?? null, now).long}`;
 	});
 
 	fillAppBar(() => ({ title }));

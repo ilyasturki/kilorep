@@ -10,7 +10,7 @@
 	import { catalogById } from '$lib/catalog';
 	import { drawableMark } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
-	import { formatSince } from '$lib/history/label';
+	import { trainedWhen } from '$lib/history/label';
 	import { planCounts, planLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
@@ -98,7 +98,7 @@
 		<span
 			class={['text-md font-extrabold', done === undefined ? 'text-ink-faint' : 'text-ink-muted']}
 		>
-			{done === undefined ? '—' : formatSince(done, now)}
+			{trainedWhen(done ?? null, now).short}
 		</span>
 
 		<span aria-hidden="true" class="text-center text-xl leading-none text-ink-faint">›</span>

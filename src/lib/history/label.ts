@@ -87,20 +87,31 @@ export function formatWhen(then: number, now: number): When {
 	return { short: date, long: `${weekday.format(then)}, ${date}` };
 }
 
-/**
- * A plan's recency as a line of prose rather than a trailing column.
- *
- * `formatWhen` heads its phrases for a column of their own; the first two are the only ones
- * that read wrong mid-sentence, and a date keeps its capitals wherever it sits.
- */
-export function lastDoneLine(then: number | null, now: number): string {
+export function trainedWhen(then: number | null, now: number): When {
 	if (then === null) {
-		return 'Never trained';
+		return { short: 'Never', long: 'Never trained' };
 	}
 
-	const { long } = formatWhen(then, now);
+	const since = formatSince(then, now);
 
-	return long === 'Today' || long === 'Yesterday'
-		? `Trained ${long.toLowerCase()}`
-		: `Trained ${long}`;
+	return since === 'today'
+		? { short: 'Today', long: 'Trained today' }
+		: { short: `${since} ago`, long: `Trained ${since} ago` };
+}
+
+export function elapsedLabel(startedAt: number, now: number): string {
+	const minutes = Math.max(0, Math.floor((now - startedAt) / 60_000));
+
+	if (minutes < 1) {
+		return 'Just started';
+	}
+
+	if (minutes < 60) {
+		return `${minutes} min`;
+	}
+
+	const hours = Math.floor(minutes / 60);
+	const rest = minutes % 60;
+
+	return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }
