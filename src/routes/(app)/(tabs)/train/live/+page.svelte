@@ -63,6 +63,9 @@
 	// handed straight back when the tray goes down.
 	let traySpan = $state(0);
 
+	// What of the tray still stands once it is lowered: the column keeps it below the list.
+	let trayPeek = $state(0);
+
 	const floor = $derived(trayOpen ? traySpan : 0);
 
 	let intent: 'jump' | 'advance' = 'advance';
@@ -867,13 +870,15 @@
 
 		{#if !desk && entries.length > 0}
 			{#if !trayOpen}
-				<!-- The home-indicator inset the lowered tray took down with it. -->
-				<div class="shrink-0 pb-safe-b"></div>
+				<!-- The peek the lowered tray leaves standing, its handle and the home-indicator
+				     inset under it. -->
+				<div class="shrink-0" style:height="{trayPeek}px"></div>
 			{/if}
 
 			<LiveTray
 				bind:open={trayOpen}
 				bind:span={traySpan}
+				bind:peek={trayPeek}
 				cursor={activeCursor}
 				meta={activeLeg?.meta}
 				note={activeCursor === null

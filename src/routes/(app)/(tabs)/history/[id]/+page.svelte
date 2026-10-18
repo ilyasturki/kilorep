@@ -114,6 +114,8 @@
 	// clear underneath, so the row it covers can still be scrolled out from under it.
 	let traySpan = $state(0);
 
+	let trayPeek = $state(0);
+
 	const floor = $derived(trayOpen ? traySpan : 0);
 
 	let unlockOpen = $state(false);
@@ -703,16 +705,17 @@
 
 		{#if !desk && entries.length > 0}
 			{#if !trayOpen}
-				<!-- The home-indicator inset the lowered tray took down with it. Nothing else
-				     stands here: the rest lives in the top bar.
+				<!-- The peek the lowered tray leaves standing, its handle and the home-indicator
+				     inset under it. Nothing else stands here: the rest lives in the top bar.
 				     Above the tray in the file but under it on screen — the tray is out of flow,
 				     so this is already standing where the tray uncovers it. -->
-				<div class="shrink-0 pb-safe-b"></div>
+				<div class="shrink-0" style:height="{trayPeek}px"></div>
 			{/if}
 
 			<LiveTray
 				bind:open={trayOpen}
 				bind:span={traySpan}
+				bind:peek={trayPeek}
 				cursor={activeCursor}
 				meta={activeLeg?.meta}
 				note={activeCursor === null

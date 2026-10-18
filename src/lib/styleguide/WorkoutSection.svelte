@@ -111,7 +111,10 @@
 </Card>
 
 <Card name="LiveTray" note="ActiveSet as a drawer over the bottom of the phone" tall>
-	<Frame label="drag the handle down, or tap it — the page is what raises it again" canvas>
+	<Frame
+		label="drag the handle down; a tap on it never lowers — lowered, tap or drag the peek"
+		canvas
+	>
 		<div class="relative h-[26rem] overflow-hidden">
 			<LiveTray
 				bind:open={trayOpen}
@@ -129,8 +132,8 @@
 		</div>
 	</Frame>
 	<span class={caption}>
-		it stands over the list rather than beside it — lowered, it slides off the bottom edge and what
-		it uncovers was already there
+		it stands over the list rather than beside it — lowered, it slides down to a peek of its handle,
+		and what it uncovers was already there
 	</span>
 	<Button variant="chrome" caps disabled={trayOpen} onclick={() => (trayOpen = true)}>
 		RAISE THE TRAY
