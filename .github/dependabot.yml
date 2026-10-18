@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Security updates only: npm_and_yarn can't update bun.lock, and 0 turns off version-update PRs.
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
