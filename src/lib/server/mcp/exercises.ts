@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 
-import { catalog } from '$lib/catalog';
 import { gripLabel } from '$lib/domain/grip';
 import { bodyweightShareOf, carriedOn } from '$lib/domain/load';
 import { REST_DEFAULT_ID, noteId, planRestId, restOverrideId } from '$lib/domain/preference';
@@ -13,7 +12,7 @@ import type { Workout } from '$lib/domain/workout';
 import type { Tools } from './context.ts';
 import type { ToolReply } from './format.ts';
 import { bestOf, failed, identify, iso, refused, reply, round, summarise } from './format.ts';
-import { exerciseOf, noSuchExercise } from './library.ts';
+import { noSuchExercise } from './library.ts';
 
 const SECONDS = z.number().int().min(MIN_REST_SECONDS).max(MAX_REST_SECONDS);
 
@@ -68,7 +67,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 		{
 			title: 'Search exercises',
 			description:
-				'Find exercises in the catalogue by name or alias. Omit the query to list the whole catalogue — which is fixed: it is the movements this app knows, it cannot be added to, and a movement absent from it is planned as the nearest one present. Use this to resolve a movement the lifter named in prose into the id every other tool takes. Rows carry identity only unless you ask for `detail`; one exercise’s history belongs to the `exercise` tool.',
+				'Find exercises by name or alias: the catalogue that ships with the app and the lifter’s own, marked `custom`, which they add in the app. Omit the query to list them all. Nothing here adds to either, and a movement absent from both is planned as the nearest one present. Use this to resolve a movement the lifter named in prose into the id every other tool takes. Rows carry identity only unless you ask for `detail`; one exercise’s history belongs to the `exercise` tool.',
 			inputSchema: z.object({
 				query: z.string().optional().describe('name or alias, fuzzy-matched; omit to list all'),
 				limit: z.number().int().min(1).max(100).default(20),
@@ -83,7 +82,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 			annotations: { readOnlyHint: true }
 		},
 		({ query, limit, trainedOnly, detail }) => {
-			const matched = searchExercises(catalog, query ?? '');
+			const matched = searchExercises(library.catalog().exercises, query ?? '');
 
 			// Asked for per exercise rather than up front: the whole history is derived to answer
 			// this, and the lean row — the default, and the reason this tool is called at all —
@@ -102,7 +101,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 				exercises: shown,
 				note:
 					pool.length === 0 && query !== undefined
-						? `nothing in the catalogue matches "${query}". The catalogue is fixed and cannot be added to — plan the nearest movement it does have.`
+						? `nothing matches "${query}". Exercises are added in the app, not here — plan the nearest movement there is, and say the lifter can add it in the app.`
 						: undefined
 			});
 		}
@@ -115,13 +114,15 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 			description:
 				'Everything the app knows about one exercise: its catalogue entry, the standing note, the rest duration in force, the raw personal best, the estimated-1RM trend and recent sessions set by set, each with the note said about the exercise that day. History and the best read across every grip; each set names the grip it was done with.',
 			inputSchema: z.object({
-				id: z.string().describe('catalogue id, e.g. "bench-press" — from search_exercises'),
+				id: z
+					.string()
+					.describe('exercise id, e.g. "bench-press" or a custom one — from search_exercises'),
 				sessions: z.number().int().min(0).max(50).default(8).describe('how many recent sessions')
 			}),
 			annotations: { readOnlyHint: true }
 		},
 		({ id, sessions: wanted }) => {
-			const exercise = exerciseOf(id);
+			const exercise = library.exercise(id);
 
 			if (exercise === undefined) {
 				return reply({ error: noSuchExercise(id) });
@@ -142,6 +143,8 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 				muscles: exercise.muscles,
 				variantOf: exercise.variantOf,
 				pattern: exercise.pattern,
+				custom: exercise.custom,
+				archived: exercise.archived,
 				// The one axis this movement varies on, if any: history and bests read across it,
 				// but a caller writing sets has to know which ids it may name.
 				grips:
@@ -181,13 +184,13 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 			description:
 				'The standing note on an exercise — the seat number, the grip, the pin that always sticks. It lives on the exercise’s own screen and is never shown while logging, so it is a reminder for next time rather than a cue mid-set. Empty text clears it.',
 			inputSchema: z.object({
-				id: z.string().describe('catalogue id — from search_exercises'),
+				id: z.string().describe('exercise id — from search_exercises'),
 				text: z.string().max(2000).describe('the note; pass "" to clear it')
 			}),
 			annotations: { idempotentHint: true }
 		},
 		({ id, text }) => {
-			if (exerciseOf(id) === undefined) {
+			if (library.exercise(id) === undefined) {
 				return reply({ error: noSuchExercise(id) });
 			}
 
@@ -281,7 +284,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 				return failed(outcome) ? refused(outcome) : reply({ default: next });
 			}
 
-			if (exerciseOf(exerciseId) === undefined) {
+			if (library.exercise(exerciseId) === undefined) {
 				return reply({ error: noSuchExercise(exerciseId) });
 			}
 

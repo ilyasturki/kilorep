@@ -531,7 +531,7 @@ describe('search_exercises', () => {
 		const missed = await once<Found>('search_exercises', { query: 'jefferson curl' });
 
 		expect(missed.matched).toBe(0);
-		expect(missed.note).toContain('cannot be added to');
+		expect(missed.note).toContain('added in the app');
 	});
 });
 
@@ -2079,5 +2079,146 @@ describe('notes and rest', () => {
 
 		// A read is a read: nothing stamped and nothing added, so nothing syncs behind it.
 		expect(syncExchange(db, userId, { watermark: 0, push: [] }).records).toEqual(written);
+	});
+});
+
+// What the app writes for a custom: a preference record under `exercise:`, its grips under `grip:`.
+function custom(id: string, name: string, archivedAt: number | null = null): WireRecord {
+	return {
+		id: `exercise:${id}`,
+		kind: 'preference',
+		updatedAt: NOW - 30 * DAY,
+		deletedAt: null,
+		payload: {
+			name,
+			equipment: 'Barbell',
+			loadMode: 'total',
+			muscles: { primary: 'Shoulders', secondary: ['Triceps'] },
+			variantOf: null,
+			archivedAt
+		}
+	};
+}
+
+function customGrip(id: string, exerciseId: string, label: string): WireRecord {
+	return {
+		id: `grip:${id}`,
+		kind: 'preference',
+		updatedAt: NOW - 30 * DAY,
+		deletedAt: null,
+		payload: { exerciseId, label, createdAt: NOW - 30 * DAY }
+	};
+}
+
+describe('the lifter’s own exercises', () => {
+	test('are searched beside the catalogue, and say they are the lifter’s', async () => {
+		seed(custom('custom_landmine01', 'Quokka Press'));
+
+		const found = await once<Found>('search_exercises', { query: 'quokka' });
+
+		expect(found.exercises).toEqual([
+			{
+				id: 'custom_landmine01',
+				name: 'Quokka Press',
+				equipment: 'Barbell',
+				primary: 'Shoulders',
+				custom: true
+			}
+		]);
+	});
+
+	test('an archived one is searched no more, but its history still reads', async () => {
+		seed(
+			custom('custom_gone0001', 'Wombat Press', NOW - DAY),
+			workout('w1', NOW - 3 * DAY, 'custom_gone0001', [{ weight: 40, reps: 8 }])
+		);
+
+		const found = await once<Found>('search_exercises', { query: 'wombat' });
+		const detail = await once<Detail & { archived?: boolean }>('exercise', {
+			id: 'custom_gone0001'
+		});
+
+		expect(found.matched).toBe(0);
+		expect(detail.archived).toBe(true);
+		expect(detail.trainedSessions).toBe(1);
+	});
+
+	test('log_workout takes a custom id, a custom grip with it, and counts it like any other', async () => {
+		seed(
+			custom('custom_landmine01', 'Landmine Press'),
+			customGrip('custom_onehand01', 'custom_landmine01', 'One hand')
+		);
+
+		const wrote = await once<Wrote>('log_workout', {
+			date: '2026-08-18',
+			exercises: [
+				{
+					exerciseId: 'custom_landmine01',
+					grip: 'custom_onehand01',
+					sets: [{ weight: 40, reps: 10 }]
+				}
+			]
+		});
+
+		expect(wrote.error).toBeUndefined();
+		expect(wrote.totals).toEqual({ exercises: 1, completedSets: 1, volumeKg: 400 });
+
+		const detail = await once<Detail>('exercise', { id: 'custom_landmine01' });
+
+		expect(detail.sessions[0].sets[0]).toMatchObject({ weight: 40, reps: 10, grip: 'One hand' });
+		expect(detail.grips!.values.map((value) => value.id)).toEqual([
+			'custom_standard',
+			'custom_onehand01'
+		]);
+
+		const listed = await once<Listed>('workouts');
+
+		expect(listed.workouts[0].title).toBe('Landmine Press');
+	});
+
+	test('a custom grip on a catalogue exercise is a grip a set may name', async () => {
+		seed(customGrip('custom_wide0001', 'bench-press', 'Wide'));
+
+		const wrote = await once<Wrote>('log_workout', {
+			date: '2026-08-18',
+			exercises: [
+				{ exerciseId: 'bench-press', grip: 'custom_wide0001', sets: [{ weight: 80, reps: 5 }] }
+			]
+		});
+
+		const detail = await once<WorkoutDetail>('workout', { id: wrote.id ?? '' });
+
+		expect(detail.exercises[0].sets[0]).toMatchObject({ grip: 'Wide' });
+	});
+
+	test('save_plan plans a custom by its id', async () => {
+		seed(custom('custom_landmine01', 'Landmine Press'));
+
+		const saved = await once<Saved>('save_plan', {
+			name: 'Shoulders',
+			exercises: [{ exerciseId: 'custom_landmine01', sets: [8, 8] }]
+		});
+
+		expect(saved.error).toBeUndefined();
+		expect(saved.exercises![0]).toMatchObject({ exerciseId: 'custom_landmine01' });
+	});
+
+	test('a custom id nobody made is refused, and the refusal says where customs come from', async () => {
+		const wrote = await once<Wrote>('log_workout', {
+			date: '2026-08-18',
+			exercises: [{ exerciseId: 'custom_nobody0001', sets: [{ weight: 40, reps: 10 }] }]
+		});
+
+		expect(wrote.error).toContain('custom_nobody0001');
+		expect(wrote.error).toContain('in the app');
+	});
+
+	test('the instructions no longer call the catalogue closed', async () => {
+		const send = await connect();
+		const tools = await send<{ tools: { name: string; description: string }[] }>('tools/list');
+		const search = tools.tools.find((tool) => tool.name === 'search_exercises');
+
+		expect(search!.description).toContain('the lifter’s own');
+		expect(search!.description).not.toContain('it cannot be added to');
 	});
 });

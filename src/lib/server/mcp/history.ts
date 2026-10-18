@@ -1,9 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 
-import { catalogById } from '$lib/catalog';
 import type { Drift } from '$lib/domain/drift';
-import type { Carried } from '$lib/domain/load';
 import { driftFrom, hasSetDrift } from '$lib/domain/drift';
 import { gripLabel } from '$lib/domain/grip';
 import { lastedOf, momentOf, retime } from '$lib/domain/retime';
@@ -24,7 +22,8 @@ import {
 	reply,
 	volumeOf
 } from './format.ts';
-import { nameOf, notInCatalogue, unknownIds } from './library.ts';
+import type { Library } from './library.ts';
+import { notInCatalogue } from './library.ts';
 import { PERFORMED_EXERCISE, flatRows, workoutEntriesOf } from './shapes.ts';
 
 const MINUTES = z
@@ -41,13 +40,17 @@ const MINUTES = z
  * them out would invite a caller to quote one back and believe it meant something. Supersets
  * survive the flattening as group numbers, which is the same shape the write tools take.
  */
-function performedRows(workout: Workout, drift: Drift | null): Record<string, unknown>[] {
+function performedRows(
+	workout: Workout,
+	drift: Drift | null,
+	library: Library
+): Record<string, unknown>[] {
 	return flatRows(workout.entries, (exercise) => {
-		const meta = catalogById[exercise.exerciseId];
+		const meta = library.exercise(exercise.exerciseId);
 
 		const row: Record<string, unknown> = {
 			exerciseId: exercise.exerciseId,
-			name: nameOf(exercise.exerciseId),
+			name: library.nameOf(exercise.exerciseId),
 			plannedAs: exercise.plannedAs,
 			note: exercise.note,
 			// Said only where it says something: most exercises have no grip axis at all, and
@@ -91,28 +94,33 @@ function exerciseIdsOf(entries: WorkoutEntry[], ids: string[]): string[] {
 	});
 }
 
-function totalsOf(workout: FinishedWorkout, carried: Carried): Record<string, number> {
+function volumeIn(workout: FinishedWorkout, library: Library): number {
+	return volumeOf(workout, library.carried(), (exerciseId) => library.loadFactorOf(exerciseId));
+}
+
+function totalsOf(workout: FinishedWorkout, library: Library): Record<string, number> {
 	return {
 		exercises: exerciseCount(workout),
 		completedSets: completedSetCount(workout),
-		volumeKg: volumeOf(workout, carried)
+		volumeKg: volumeIn(workout, library)
 	};
 }
 
 export function registerHistory(server: McpServer, { library, write }: Tools): void {
 	const detail = (workout: FinishedWorkout): Record<string, unknown> => {
 		const template = workout.templateId === null ? null : library.template(workout.templateId);
-		const drift = template === null ? null : driftFrom(workout, template, (id) => catalogById[id]);
+		const drift =
+			template === null ? null : driftFrom(workout, template, (id) => library.exercise(id));
 
 		return {
 			id: workout.id,
 			version: library.version(workout.id),
-			title: workoutTitle(workout, library.templates()),
+			title: workoutTitle(workout, library.templates(), library.catalog().byId),
 			templateId: workout.templateId,
 			startedAt: iso(workout.startedAt),
 			finishedAt: iso(workout.finishedAt),
 			minutes: Math.round(lastedOf(workout) / 60_000),
-			totals: totalsOf(workout, library.carried()),
+			totals: totalsOf(workout, library),
 			drift:
 				drift === null
 					? null
@@ -122,7 +130,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 							reordered: drift.reordered || undefined,
 							regrouped: drift.regrouped || undefined
 						},
-			exercises: performedRows(workout, drift)
+			exercises: performedRows(workout, drift, library)
 		};
 	};
 
@@ -154,13 +162,13 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				returned: Math.min(matched.length, limit),
 				workouts: matched.slice(0, limit).map((workout) => ({
 					id: workout.id,
-					title: workoutTitle(workout, templates),
+					title: workoutTitle(workout, templates, library.catalog().byId),
 					templateId: workout.templateId,
 					startedAt: iso(workout.startedAt),
 					finishedAt: iso(workout.finishedAt),
 					exercises: exerciseCount(workout),
 					sets: completedSetCount(workout),
-					volumeKg: volumeOf(workout, library.carried())
+					volumeKg: volumeIn(workout, library)
 				}))
 			});
 		}
@@ -205,7 +213,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 			annotations: { idempotentHint: false }
 		},
 		({ date, startedAt, minutes, templateId, exercises }) => {
-			const unknown = unknownIds(exercises);
+			const unknown = library.unknownIds(exercises);
 
 			if (unknown.length > 0) {
 				return reply({ error: notInCatalogue(unknown) });
@@ -221,7 +229,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				id: crypto.randomUUID(),
 				templateId: templateId ?? null,
 				startedAt: began,
-				entries: workoutEntriesOf(exercises),
+				entries: workoutEntriesOf(exercises, library.catalog().byId),
 				finishedAt: began + minutes * 60_000
 			};
 
@@ -240,7 +248,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				id: payload.id,
 				version: outcome.updatedAt,
 				startedAt: iso(payload.startedAt),
-				totals: totalsOf(payload, library.carried())
+				totals: totalsOf(payload, library)
 			});
 		}
 	);
@@ -274,7 +282,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 			}
 
 			if (exercises !== undefined) {
-				const unknown = unknownIds(exercises);
+				const unknown = library.unknownIds(exercises);
 
 				if (unknown.length > 0) {
 					return reply({ error: notInCatalogue(unknown) });
@@ -296,7 +304,10 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				id: stored.id,
 				templateId: templateId === undefined ? stored.templateId : templateId,
 				startedAt: span.startedAt,
-				entries: exercises === undefined ? stored.entries : workoutEntriesOf(exercises),
+				entries:
+					exercises === undefined
+						? stored.entries
+						: workoutEntriesOf(exercises, library.catalog().byId),
 				finishedAt: span.finishedAt
 			};
 
@@ -316,7 +327,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				version: outcome.updatedAt,
 				startedAt: iso(payload.startedAt),
 				minutes: Math.round(lastedOf(span) / 60_000),
-				totals: totalsOf(payload, library.carried())
+				totals: totalsOf(payload, library)
 			});
 		}
 	);
@@ -355,9 +366,9 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 			return reply({
 				deleted: {
 					id,
-					title: workoutTitle(stored, library.templates()),
+					title: workoutTitle(stored, library.templates(), library.catalog().byId),
 					startedAt: iso(stored.startedAt),
-					totals: totalsOf(stored, library.carried())
+					totals: totalsOf(stored, library)
 				}
 			});
 		}

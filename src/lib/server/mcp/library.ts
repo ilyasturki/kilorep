@@ -1,7 +1,9 @@
 import { and, eq, isNull } from 'drizzle-orm';
 
-import { catalogById } from '$lib/catalog';
+import { catalog as shipped } from '$lib/catalog';
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
+import type { Catalog } from '$lib/domain/custom';
+import { withCustoms } from '$lib/domain/custom';
 import type { Exercise } from '$lib/domain/exercise';
 import { loadFactor } from '$lib/domain/exercise';
 import type { Carried } from '$lib/domain/load';
@@ -157,7 +159,37 @@ export class Library {
 	 * fresh one per tool would throw that cache away between two numbers of the same answer.
 	 */
 	public carried(): Carried {
-		return this.once('carried', () => carriedFrom(this.bodyweight(), (id) => catalogById[id]));
+		return this.once('carried', () => carriedFrom(this.bodyweight(), (id) => this.exercise(id)));
+	}
+
+	/** The catalogue as this lifter has it: what ships, with their own exercises and grips. */
+	public catalog(): Catalog {
+		return this.once('catalog', () => withCustoms(shipped, this.preferences()));
+	}
+
+	public exercise(exerciseId: string): Exercise | undefined {
+		return this.catalog().byId[exerciseId];
+	}
+
+	/** An exercise's name, falling back to the id itself for one the catalogue no longer has. */
+	public nameOf(exerciseId: string): string {
+		const known = this.exercise(exerciseId);
+
+		return known === undefined ? exerciseId : known.name;
+	}
+
+	/** The ids in a written tree the catalogue has never heard of — the one gate every write shares. */
+	public unknownIds(exercises: { exerciseId: string }[]): string[] {
+		return exercises
+			.map((exercise) => exercise.exerciseId)
+			.filter((id) => this.exercise(id) === undefined);
+	}
+
+	/** Volume's multiplier, 1 for an id the catalogue has never heard of — not worth a throw. */
+	public loadFactorOf(exerciseId: string): number {
+		const known = this.exercise(exerciseId);
+
+		return loadFactor(known === undefined ? 'total' : known.loadMode);
 	}
 
 	private preferences(): Preference[] {
@@ -165,7 +197,7 @@ export class Library {
 	}
 
 	public sessions(): Record<string, PastSession[]> {
-		return this.once('sessions', () => sessionsByExercise(this.workouts()));
+		return this.once('sessions', () => sessionsByExercise(this.workouts(), this.catalog().byId));
 	}
 
 	public pastSessions(exerciseId: string): PastSession[] {
@@ -178,7 +210,9 @@ export class Library {
 	}
 
 	public lastPerformed(): LastPerformed {
-		return this.once('lastPerformed', () => lastPerformedFrom(this.workouts()));
+		return this.once('lastPerformed', () =>
+			lastPerformedFrom(this.workouts(), this.catalog().byId)
+		);
 	}
 
 	public restSettings(): RestSettings {
@@ -241,40 +275,12 @@ export class Library {
 	}
 }
 
-export function exerciseOf(exerciseId: string): Exercise | undefined {
-	return catalogById[exerciseId];
-}
-
-/** An exercise's name, falling back to the id itself for a slug the catalogue has folded away. */
-export function nameOf(exerciseId: string): string {
-	const known = catalogById[exerciseId];
-
-	return known === undefined ? exerciseId : known.name;
-}
-
-/** The ids in a written tree the catalogue has never heard of — the one gate every write shares. */
-export function unknownIds(exercises: { exerciseId: string }[]): string[] {
-	return exercises
-		.map((exercise) => exercise.exerciseId)
-		.filter((id) => catalogById[id] === undefined);
-}
-
 /** The refusal every miss against the catalogue gives back — one wording, not five that drift. */
 export function noSuchExercise(id: string): string {
-	return `no exercise "${id}" in the catalogue, which is fixed and cannot be added to — search_exercises lists every id there is`;
+	return `no exercise "${id}" — search_exercises lists every id there is, the lifter’s own included. Nothing here adds one: the lifter adds their own in the app`;
 }
 
 /** The same, for a written tree naming ids the catalogue does not have. */
 export function notInCatalogue(ids: string[]): string {
-	return `not in the catalogue: ${ids.join(', ')}. The catalogue is fixed and cannot be added to — plan the nearest movement it does have, or search_exercises for one.`;
-}
-
-/**
- * Volume's multiplier for an exercise, defaulting to 1 for an id the catalog has never
- * heard of — a folded-away slug or a build older than the entry, neither worth a throw.
- */
-export function loadFactorOf(exerciseId: string): number {
-	const known = catalogById[exerciseId];
-
-	return loadFactor(known === undefined ? 'total' : known.loadMode);
+	return `no such exercises: ${ids.join(', ')}. Nothing here adds one — the lifter adds their own in the app — so plan the nearest movement there is, or search_exercises for one.`;
 }

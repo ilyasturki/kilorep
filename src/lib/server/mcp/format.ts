@@ -9,7 +9,6 @@ import { rawPr } from '$lib/domain/stats';
 import type { Workout } from '$lib/domain/workout';
 
 import type { Library } from './library.ts';
-import { loadFactorOf } from './library.ts';
 import type { WriteOutcome } from './write.ts';
 
 export type ToolReply = { content: { type: 'text'; text: string }[] };
@@ -37,12 +36,16 @@ export function roundOrNull(value: number | null): number | null {
 	return value === null ? null : round(value);
 }
 
-export function volumeOf(workout: Workout, carried: Carried): number {
+export function volumeOf(
+	workout: Workout,
+	carried: Carried,
+	factorOf: (exerciseId: string) => number
+): number {
 	let kg = 0;
 
 	for (const entry of workout.entries) {
 		for (const exercise of entry.exercises) {
-			const factor = loadFactorOf(exercise.exerciseId);
+			const factor = factorOf(exercise.exerciseId);
 			const body = carried(exercise.exerciseId, workout.startedAt);
 
 			for (const set of exercise.sets) {
@@ -92,7 +95,8 @@ export function identify(exercise: Exercise): Record<string, unknown> {
 		name: exercise.name,
 		equipment: exercise.equipment,
 		primary: exercise.muscles.primary,
-		variantOf: exercise.variantOf
+		variantOf: exercise.variantOf,
+		custom: exercise.custom
 	};
 }
 

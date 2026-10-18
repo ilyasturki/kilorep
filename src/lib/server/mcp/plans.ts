@@ -7,16 +7,17 @@ import { nextUp } from '$lib/domain/rotation';
 
 import type { Tools } from './context.ts';
 import { VERSION, failed, iso, refused, reply } from './format.ts';
-import { nameOf, notInCatalogue, unknownIds } from './library.ts';
+import type { Library } from './library.ts';
+import { notInCatalogue } from './library.ts';
 import type { PlannedInput } from './shapes.ts';
 import { MARK, PLANNED_EXERCISE, doubledInGroup, flatRows, templateEntriesOf } from './shapes.ts';
 import type { Expectation, WriteRequest } from './write.ts';
 
 /** The planned tree, flattened into the shape save_plan takes back. */
-function plannedRows(template: Template): Record<string, unknown>[] {
+function plannedRows(template: Template, library: Library): Record<string, unknown>[] {
 	return flatRows(template.entries, (exercise) => ({
 		exerciseId: exercise.exerciseId,
-		name: nameOf(exercise.exerciseId),
+		name: library.nameOf(exercise.exerciseId),
 		sets: exercise.sets.map((set) => set.plannedReps),
 		grip: exercise.grip,
 		optional: exercise.optional === true ? true : undefined
@@ -37,7 +38,13 @@ type Edit = {
  * where the plan sits in the rotation, and a save that let a caller restate them would move
  * what trains next every time a plan was renamed. `order` moves only through reorder_plans.
  */
-function merged(stored: Template | null, id: string, now: number, edit: Edit): Template {
+function merged(
+	stored: Template | null,
+	id: string,
+	now: number,
+	edit: Edit,
+	library: Library
+): Template {
 	const next: Template = {
 		id,
 		name: '',
@@ -72,7 +79,7 @@ function merged(stored: Template | null, id: string, now: number, edit: Edit): T
 	}
 
 	if (edit.exercises !== undefined) {
-		next.entries = templateEntriesOf(edit.exercises);
+		next.entries = templateEntriesOf(edit.exercises, library.catalog().byId);
 	}
 
 	if (edit.archived !== undefined) {
@@ -101,7 +108,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 			lastTrained: lastDone === undefined ? null : iso(lastDone),
 			position: archived ? undefined : (positions.get(template.id) ?? null),
 			defaultRestSeconds: library.planRests()[template.id],
-			exercises: archived ? null : plannedRows(template)
+			exercises: archived ? null : plannedRows(template, library)
 		};
 	};
 
@@ -157,7 +164,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 		},
 		({ id, version, name, mark, exercises, archived }) => {
 			if (exercises !== undefined) {
-				const unknown = unknownIds(exercises);
+				const unknown = library.unknownIds(exercises);
 
 				if (unknown.length > 0) {
 					return reply({ error: notInCatalogue(unknown) });
@@ -184,7 +191,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 
 			const now = Date.now();
 			const planId = id ?? crypto.randomUUID();
-			const next = merged(stored, planId, now, { name, mark, exercises, archived });
+			const next = merged(stored, planId, now, { name, mark, exercises, archived }, library);
 
 			if (isBlank(next)) {
 				return reply({ error: 'a plan with no name and no exercises is never saved' });
@@ -213,7 +220,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 				version: outcome.updatedAt,
 				name: next.name,
 				archived: isArchived(next),
-				exercises: plannedRows(next)
+				exercises: plannedRows(next, library)
 			});
 		}
 	);
@@ -274,7 +281,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 
 				// Rebuilt through the same merge a save goes through, with nothing laid over it:
 				// the rank is the only field this call has any business changing.
-				const moved = merged(template, template.id, template.createdAt, {});
+				const moved = merged(template, template.id, template.createdAt, {}, library);
 
 				moved.order = rank;
 

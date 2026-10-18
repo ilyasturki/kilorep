@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
+import type { Exercise } from '$lib/domain/exercise';
 import { MAX_REST_SECONDS, MIN_REST_SECONDS } from '$lib/domain/rest';
-import { catalogById } from '$lib/catalog';
 import { settleGrip } from '$lib/domain/grip';
 import { MARK_COLOURS, MARK_ICONS } from '$lib/domain/template';
 import { foldedTo } from '$lib/store/fold';
@@ -199,7 +199,7 @@ export const PERFORMED_SET = z
 	);
 
 export const PERFORMED_EXERCISE = z.object({
-	exerciseId: z.string().describe('catalogue id — resolve prose through search_exercises first'),
+	exerciseId: z.string().describe('exercise id — resolve prose through search_exercises first'),
 	group: GROUP,
 	restSeconds: REST.optional(),
 	grip: GRIP.optional(),
@@ -208,7 +208,7 @@ export const PERFORMED_EXERCISE = z.object({
 		.max(80)
 		.optional()
 		.describe(
-			'the catalogue id the plan had in this slot, when this exercise was swapped in for it; omit when it is what was planned'
+			'the exercise id the plan had in this slot, when this exercise was swapped in for it; omit when it is what was planned'
 		),
 	optional: OPTIONAL.optional(),
 	sets: z.array(PERFORMED_SET).min(1).max(30),
@@ -223,9 +223,12 @@ export const PERFORMED_EXERCISE = z.object({
 
 export type PerformedInput = z.infer<typeof PERFORMED_EXERCISE>;
 
-export function workoutEntriesOf(items: PerformedInput[]): WorkoutEntry[] {
+export function workoutEntriesOf(
+	items: PerformedInput[],
+	catalog: Record<string, Exercise>
+): WorkoutEntry[] {
 	return entriesOf(items, (item) => {
-		const meta = catalogById[item.exerciseId];
+		const meta: Exercise | undefined = catalog[item.exerciseId];
 
 		const exercise: WorkoutExercise = {
 			id: mint(),
@@ -289,7 +292,7 @@ export function workoutEntriesOf(items: PerformedInput[]): WorkoutEntry[] {
 }
 
 export const PLANNED_EXERCISE = z.object({
-	exerciseId: z.string().describe('catalogue id — resolve prose through search_exercises first'),
+	exerciseId: z.string().describe('exercise id — resolve prose through search_exercises first'),
 	group: GROUP,
 	restSeconds: REST.optional(),
 	grip: GRIP.optional(),
@@ -303,7 +306,10 @@ export const PLANNED_EXERCISE = z.object({
 
 export type PlannedInput = z.infer<typeof PLANNED_EXERCISE>;
 
-export function templateEntriesOf(items: PlannedInput[]): TemplateEntry[] {
+export function templateEntriesOf(
+	items: PlannedInput[],
+	catalog: Record<string, Exercise>
+): TemplateEntry[] {
 	return entriesOf(items, (item) => {
 		const exercise: TemplateExercise = {
 			id: mint(),
@@ -315,7 +321,7 @@ export function templateEntriesOf(items: PlannedInput[]): TemplateEntry[] {
 			exercise.restSeconds = item.restSeconds;
 		}
 
-		const grip = settleGrip(catalogById[item.exerciseId], item.grip);
+		const grip = settleGrip(catalog[item.exerciseId], item.grip);
 
 		if (grip !== undefined) {
 			exercise.grip = grip;

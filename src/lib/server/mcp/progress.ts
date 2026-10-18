@@ -15,7 +15,6 @@ import {
 
 import type { Tools } from './context.ts';
 import { iso, reply, round, roundOrNull } from './format.ts';
-import { exerciseOf, loadFactorOf, nameOf } from './library.ts';
 
 /** The four weeks a personal best and a muscle count are read over, as on the Progress screen. */
 const RECENT = 4 * WEEK;
@@ -38,15 +37,16 @@ export function registerProgress(server: McpServer, { library }: Tools): void {
 			const workouts = library.workouts();
 			const sessions = library.sessions();
 			const carried = library.carried();
+			const factorOf = (exerciseId: string): number => library.loadFactorOf(exerciseId);
 
-			const work = weeklyWork(workouts, now, loadFactorOf, carried);
+			const work = weeklyWork(workouts, now, factorOf, carried);
 			const lastWeek = work.at(-1);
 			const habit = rollingConsistency(
 				workouts.map((workout) => workout.startedAt),
 				now
 			);
 
-			const lifts = mainLifts(sessions, now - TREND, loadFactorOf, carried).map((exerciseId) => {
+			const lifts = mainLifts(sessions, now - TREND, factorOf, carried).map((exerciseId) => {
 				const trend = estTrend(
 					sessions[exerciseId] ?? [],
 					now - TREND,
@@ -58,14 +58,14 @@ export function registerProgress(server: McpServer, { library }: Tools): void {
 
 				return {
 					exerciseId,
-					name: nameOf(exerciseId),
+					name: library.nameOf(exerciseId),
 					est1rm: last === undefined ? null : round(last.est),
 					deltaKg: round(moved),
 					sessions: trend.length
 				};
 			});
 
-			const muscles = muscleSets(workouts, now - RECENT, exerciseOf);
+			const muscles = muscleSets(workouts, now - RECENT, (id) => library.exercise(id));
 			// The card reads the last four weeks of the smoothed line, as the phone's does.
 			const smoothed = rollingAverage(library.bodyweight());
 			const line = windowed(smoothed, localDateOf(new Date()), 28);
@@ -83,7 +83,7 @@ export function registerProgress(server: McpServer, { library }: Tools): void {
 				strength: {
 					recentPrs: recentPrs(sessions, now - RECENT, carried).map((pr) => ({
 						exerciseId: pr.exerciseId,
-						name: nameOf(pr.exerciseId),
+						name: library.nameOf(pr.exerciseId),
 						kg: round(pr.load),
 						addedKg: pr.load === pr.set.weight ? undefined : pr.set.weight,
 						reps: pr.set.reps,
