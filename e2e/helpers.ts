@@ -270,7 +270,11 @@ export async function finger(page: Page): Promise<Finger> {
 	let at = Date.now() / 1000;
 	let where: Point = { x: 0, y: 0 };
 
-	async function send(type: string, point: Point, buttons: number): Promise<void> {
+	async function send(
+		type: 'mousePressed' | 'mouseMoved' | 'mouseReleased',
+		point: Point,
+		buttons: number
+	): Promise<void> {
 		await cdp.send('Input.dispatchMouseEvent', {
 			type,
 			x: point.x,
