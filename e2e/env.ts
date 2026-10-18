@@ -1,4 +1,3 @@
-import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -12,8 +11,8 @@ export const APP_URL = `http://localhost:${APP_PORT}`;
 
 export const APP_DIR = 'build/e2e-app';
 
-// Made once by the runner; its workers and the server inherit it, so a run shares one database.
-process.env.E2E_RUN_DIR ??= mkdtempSync(path.join(tmpdir(), 'kilorep-e2e-'));
+// Named once by the runner; its workers and the server inherit it, so a run shares one database.
+process.env.E2E_RUN_DIR ??= path.join(tmpdir(), `kilorep-e2e-${crypto.randomUUID()}`);
 
 export const RUN_DIR = process.env.E2E_RUN_DIR;
 
