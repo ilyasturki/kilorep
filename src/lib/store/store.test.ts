@@ -435,6 +435,18 @@ describe('templates', () => {
 		expect(stored).toMatchObject({ entries: [{ exercises: [{ optional: true }] }] });
 	});
 
+	it('says when a plan was last written, and nothing for one deleted or never saved', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		expect(await store.templateWrittenAt('t1')).toBe(150);
+
+		await store.saveTemplate(template('t1', 100, 'Push day A'), 250);
+		expect(await store.templateWrittenAt('t1')).toBe(250);
+
+		await store.deleteTemplate('t1', 300);
+		expect(await store.templateWrittenAt('t1')).toBeNull();
+		expect(await store.templateWrittenAt('nope')).toBeNull();
+	});
+
 	it('keeps kinds isolated in the shared records box', async () => {
 		await store.saveTemplate(template('t1', 100), 150);
 		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);

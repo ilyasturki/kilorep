@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 
 import { getStore } from '$lib/store/store';
+import { offerStands } from '$lib/templates/offer';
 
 import type { PageLoad } from './$types';
 
@@ -16,18 +17,22 @@ export const load: PageLoad = async ({ params }) => {
 	// has to be in the sheet before it can be picked.
 	const plan = workout.templateId ?? null;
 
-	const [templates, { lastPerformed, heaviest, frequent }, newestHere, answered] =
+	const [templates, { lastPerformed, heaviest, frequent }, newest, answered, planWrittenAt] =
 		await Promise.all([
 			store.listTemplates(),
 			store.pickerData(),
 			store.latestWorkout(plan ?? undefined),
-			store.answeredOffer(plan)
+			store.answeredOffer(plan),
+			plan === null ? null : store.templateWrittenAt(plan)
 		]);
 
-	// Only the newest session of a plan offers to change it, and only until it is answered.
 	const offer = {
 		templateId: plan,
-		open: answered !== workout.id && newestHere !== null && newestHere.id === workout.id
+		open: offerStands(workout, {
+			newest: newest === null ? null : newest.id,
+			answered,
+			planWrittenAt
+		})
 	};
 
 	return { store, workout, templates, lastPerformed, heaviest, frequent, offer };

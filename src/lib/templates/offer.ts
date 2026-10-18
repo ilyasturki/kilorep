@@ -2,6 +2,7 @@ import { catalogById } from '$lib/catalog';
 import type { PlanChange, PlanSwap } from '$lib/domain/drift';
 import type { Exercise } from '$lib/domain/exercise';
 import { gripLabel } from '$lib/domain/grip';
+import type { Workout } from '$lib/domain/workout';
 
 function nameOf(exerciseId: string): string {
 	const meta: Exercise | undefined = catalogById[exerciseId];
@@ -43,4 +44,19 @@ export function changesLine(changes: PlanChange[]): string {
 
 export function swapLabel(swap: PlanSwap): string {
 	return `Replace ${nameOf(swap.from)} with ${nameOf(swap.to)}`;
+}
+
+export type OfferState = {
+	newest: string | null;
+	answered: string | null;
+	planWrittenAt: number | null;
+};
+
+// A plan written since the session began was revisited after it: Update would undo that edit.
+export function offerStands(workout: Workout, state: OfferState): boolean {
+	return (
+		state.newest === workout.id &&
+		state.answered !== workout.id &&
+		(state.planWrittenAt === null || state.planWrittenAt <= workout.startedAt)
+	);
 }

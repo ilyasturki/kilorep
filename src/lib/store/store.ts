@@ -319,6 +319,14 @@ export class Store {
 		return template === null ? null : foldTemplate(template);
 	}
 
+	public async templateWrittenAt(id: string): Promise<number | null> {
+		const record = await this.db.get('records', id);
+
+		return record === undefined || record.kind !== 'template' || record.deletedAt !== null
+			? null
+			: record.updatedAt;
+	}
+
 	public async deleteTemplate(id: string, deletedAt: number): Promise<void> {
 		await this.tombstone(id, 'template', deletedAt);
 	}
