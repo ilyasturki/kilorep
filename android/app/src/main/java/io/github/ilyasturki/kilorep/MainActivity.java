@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         // Before `super`: the bridge reads the registry while it builds the WebView,
         // and a plugin registered after that is invisible to JS.
         registerPlugin(FeedbackPlugin.class);
+        registerPlugin(ExportPlugin.class);
 
         super.onCreate(savedInstanceState);
     }
