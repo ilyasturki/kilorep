@@ -4,7 +4,7 @@
 	import { estimated1Rm, loadForReps } from '$lib/domain/stats';
 	import type { PerformedSet } from '$lib/domain/workout';
 	import { loadLabel, loadUnitLabel } from '$lib/exercises/label';
-	import StepperField from '$lib/ui/StepperField.svelte';
+	import StepperField, { INTEGER } from '$lib/ui/StepperField.svelte';
 
 	type Props = {
 		exercise: Exercise;
@@ -63,7 +63,13 @@
 			recalled={seed?.weight ?? null}
 			{step}
 		/>
-		<StepperField label="reps" bind:value={reps} recalled={seed?.reps ?? null} step={1} />
+		<StepperField
+			label="reps"
+			bind:value={reps}
+			recalled={seed?.reps ?? null}
+			step={1}
+			entry={INTEGER}
+		/>
 	</div>
 
 	<!-- No estimate stated above the ladder: the 1RM rung is that number, and a screen that

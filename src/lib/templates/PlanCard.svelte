@@ -12,7 +12,7 @@
 	import { planShape, planSummary, targetNote } from '$lib/templates/plan';
 	import type { PlanRest } from '$lib/templates/plan';
 	import PlanRestField from '$lib/templates/PlanRestField.svelte';
-	import StepperField from '$lib/ui/StepperField.svelte';
+	import StepperField, { INTEGER } from '$lib/ui/StepperField.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import More from '$lib/ui/icons/More.svelte';
 	import Timer from '$lib/ui/icons/Timer.svelte';
@@ -177,6 +177,7 @@
 				recalled={shape.sets}
 				label="sets"
 				step={1}
+				entry={INTEGER}
 				min={1}
 				max={MAX_PLANNED_SETS}
 				ruler
@@ -189,6 +190,7 @@
 				recalled={shape.reps}
 				seed={PLANNED_REPS}
 				step={1}
+				entry={INTEGER}
 				min={1}
 				ruler
 				onchange={onreps}
@@ -245,6 +247,7 @@
 							recalled={set.plannedReps}
 							seed={PLANNED_REPS}
 							step={1}
+							entry={INTEGER}
 							min={1}
 							ruler
 							onchange={(reps) => onsetreps(set.id, reps)}

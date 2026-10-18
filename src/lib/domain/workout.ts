@@ -243,6 +243,18 @@ export function parseEntry(raw: string): number | null {
 	return ENTRY.test(trimmed) ? Number(trimmed.replace(',', '.')) : null;
 }
 
+const WHOLE = /^\d+$/u;
+
+export function isWholeDraft(raw: string): boolean {
+	return raw === '' || WHOLE.test(raw);
+}
+
+export function parseWhole(raw: string): number | null {
+	const trimmed = raw.trim();
+
+	return WHOLE.test(trimmed) ? Number(trimmed) : null;
+}
+
 export function settle(value: number, min = 0, max = Infinity): number {
 	return Math.min(max, Math.max(min, Math.round(value * 100) / 100));
 }

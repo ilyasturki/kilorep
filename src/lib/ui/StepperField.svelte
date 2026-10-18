@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { isEntryDraft, parseEntry, settle } from '$lib/domain/workout';
+	import { isEntryDraft, isWholeDraft, parseEntry, parseWhole, settle } from '$lib/domain/workout';
 
 	/**
 	 * How far one tap on an arm travels: a number where the ladder is uniform, a function
@@ -29,6 +29,13 @@
 		parse: parseEntry,
 		format: String,
 		inputmode: 'decimal'
+	};
+
+	export const INTEGER: Entry = {
+		draft: (raw) => (isWholeDraft(raw) ? raw : null),
+		parse: parseWhole,
+		format: String,
+		inputmode: 'numeric'
 	};
 </script>
 

@@ -18,12 +18,14 @@ import {
 	hintLabel,
 	insertedSetCount,
 	isEntryDraft,
+	isWholeDraft,
 	joinEntry,
 	markSet,
 	moveEntry,
 	moveExercise,
 	neverLogged,
 	parseEntry,
+	parseWhole,
 	prefillFor,
 	rateSet,
 	removeExercise,
@@ -1186,6 +1188,23 @@ describe('hintLabel', () => {
 		const cursor = at(freshWorkout(0), 'bench-4');
 
 		expect(hintLabel(history, cursor, metaOf(cursor), 'rpe')).toBe('77.5 × 7');
+	});
+});
+
+describe('whole entry', () => {
+	test('a rep count refuses the decimal point either way it is typed', () => {
+		expect(isWholeDraft('12')).toBe(true);
+		expect(isWholeDraft('')).toBe(true);
+		expect(isWholeDraft('8.')).toBe(false);
+		expect(isWholeDraft('8,5')).toBe(false);
+		expect(isWholeDraft('-')).toBe(false);
+	});
+
+	test('reads only whole numbers', () => {
+		expect(parseWhole(' 10 ')).toBe(10);
+		expect(parseWhole('')).toBeNull();
+		expect(parseWhole('7.5')).toBeNull();
+		expect(parseWhole('1e3')).toBeNull();
 	});
 });
 
