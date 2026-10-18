@@ -3,27 +3,21 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 // One id app-wide: rescheduling replaces the pending notification, never stacks.
 const REST_NOTIFICATION_ID = 1;
 
-let allowed: boolean | undefined;
-
+// Asked every time rather than remembered: a denial lifted in the system settings mid-session
+// must reach the next rest, and only `prompt` ever puts the question to the lifter.
 export async function ensureRestPermission(): Promise<boolean> {
-	if (allowed !== undefined) {
-		return allowed;
-	}
-
 	try {
 		const current = await LocalNotifications.checkPermissions();
 
 		const settled =
-			current.display === 'granted' || current.display === 'denied'
-				? current
-				: await LocalNotifications.requestPermissions();
+			current.display === 'prompt' || current.display === 'prompt-with-rationale'
+				? await LocalNotifications.requestPermissions()
+				: current;
 
-		allowed = settled.display === 'granted';
+		return settled.display === 'granted';
 	} catch {
-		allowed = false;
+		return false;
 	}
-
-	return allowed;
 }
 
 // `allowWhileIdle` needs `SCHEDULE_EXACT_ALARM` in the Android manifest; a past
