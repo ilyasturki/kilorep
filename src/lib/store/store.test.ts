@@ -317,6 +317,38 @@ describe('templates', () => {
 		expect(record).toMatchObject({ deletedAt: 300, updatedAt: 300 });
 	});
 
+	it('an edit never resurrects a deleted template, here or from another device', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		await store.deleteTemplate('t1', 300);
+		await store.applyRemote([wire('t2', 400, template('t2', 100), 'template', 400)]);
+		await store.acknowledge([
+			{ id: 't1', updatedAt: 300 },
+			{ id: 't2', updatedAt: 400 }
+		]);
+
+		await store.saveTemplate(template('t1', 100, 'Revived'), 500);
+		await store.saveTemplate(template('t2', 100, 'Revived'), 500);
+
+		expect(await store.listTemplates()).toEqual([]);
+		expect(await store.getTemplate('t1')).toBeNull();
+		expect(await store.dirtyRecords()).toEqual([]);
+	});
+
+	it('still saves a template under an id nothing has used', async () => {
+		await store.saveTemplate(template('fresh', 100), 150);
+
+		expect(await store.getTemplate('fresh')).toMatchObject({ id: 'fresh' });
+		expect(await store.templateDeleted('fresh')).toBe(false);
+	});
+
+	it('tells a deleted template from one that never existed', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		await store.deleteTemplate('t1', 300);
+
+		expect(await store.templateDeleted('t1')).toBe(true);
+		expect(await store.templateDeleted('never')).toBe(false);
+	});
+
 	it('keeps kinds isolated in the shared records box', async () => {
 		await store.saveTemplate(template('t1', 100), 150);
 		await store.finishWorkout(workout('w1', 100, 'bench-press', []), 200);

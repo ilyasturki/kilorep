@@ -275,7 +275,22 @@ export class Store {
 			archivedAt: template.archivedAt ?? null
 		};
 
-		await this.write(template.id, 'template', updatedAt, payload);
+		// An absent id is a plan being born; a tombstoned one is never revived by an edit.
+		const tx = this.db.transaction('records', 'readwrite');
+		const record = await tx.store.get(template.id);
+
+		if (record === undefined || record.kind !== 'template' || record.deletedAt === null) {
+			await tx.store.put({
+				id: template.id,
+				kind: 'template',
+				updatedAt,
+				deletedAt: null,
+				payload,
+				dirty: true
+			});
+		}
+
+		await tx.done;
 	}
 
 	public async listTemplates(): Promise<Template[]> {
@@ -292,6 +307,12 @@ export class Store {
 
 	public async deleteTemplate(id: string, deletedAt: number): Promise<void> {
 		await this.tombstone(id, 'template', deletedAt);
+	}
+
+	public async templateDeleted(id: string): Promise<boolean> {
+		const record = await this.db.get('records', id);
+
+		return record !== undefined && record.kind === 'template' && record.deletedAt !== null;
 	}
 
 	public async saveBodyweight(entry: BodyweightEntry, updatedAt: number): Promise<void> {
