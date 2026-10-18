@@ -82,7 +82,9 @@
 		const active = cursor.set.id === activeSetId;
 
 		if (cursor.set.completed) {
-			return active ? 'Editing' : (exertionLabel(cursor.set.rpe, exertionScale.current) ?? 'Logged');
+			return active
+				? 'Editing'
+				: (exertionLabel(cursor.set.rpe, exertionScale.current) ?? 'Logged');
 		}
 
 		return active ? 'Now' : null;
