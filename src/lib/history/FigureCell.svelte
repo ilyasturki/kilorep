@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decimal } from '$lib/format/locale';
 	import { tick } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
 
@@ -39,7 +40,7 @@
 		const input = event.currentTarget;
 
 		onbegin();
-		text = value === null ? '' : String(value);
+		text = value === null ? '' : decimal(value);
 
 		await tick();
 		input.select();
