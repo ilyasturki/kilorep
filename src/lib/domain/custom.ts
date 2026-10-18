@@ -1,5 +1,6 @@
 import type { Equipment, Exercise, Grip, GripAxis, LoadMode, MuscleTargets } from './exercise.ts';
 import { EQUIPMENT, LOAD_MODES, MUSCLES } from './exercise.ts';
+import { normalize } from './search.ts';
 
 // Preference records rather than a kind of their own: a server that predates customs 400s a
 // whole push holding an unknown kind, and syncs a preference it has never heard of unchanged.
@@ -121,6 +122,25 @@ export function settleDraft(draft: CustomDraft): CustomDraft {
 		},
 		variantOf: draft.variantOf
 	};
+}
+
+/** The exercise a new name would duplicate — by its name or by a spelling it answers to. */
+export function sameName(
+	pool: Exercise[],
+	name: string,
+	self: string | null
+): Exercise | undefined {
+	const wanted = normalize(name);
+
+	if (wanted === '') {
+		return undefined;
+	}
+
+	return pool.find(
+		(exercise) =>
+			exercise.id !== self &&
+			(normalize(exercise.name) === wanted || exercise.aliases.includes(wanted))
+	);
 }
 
 // Families are one level deep: naming a variant hangs the custom beside it, under its root.

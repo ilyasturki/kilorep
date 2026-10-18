@@ -669,8 +669,47 @@ export class Store {
 		await this.write(customGripId(gripId), 'preference', updatedAt, payload);
 	}
 
+	// Read-modify-write: a rename keeps the grip's place on the axis and never revives a deleted one.
+	public async renameCustomGrip(gripId: string, label: string, updatedAt: number): Promise<void> {
+		const tx = this.db.transaction('records', 'readwrite');
+		const record = await tx.store.get(customGripId(gripId));
+
+		if (
+			record !== undefined &&
+			record.deletedAt === null &&
+			isCustomGripPreference(record.payload)
+		) {
+			record.payload = Object.assign(record.payload, { label: label.trim() });
+			record.updatedAt = updatedAt;
+			record.dirty = true;
+			await tx.store.put(record);
+		}
+
+		await tx.done;
+	}
+
 	public async deleteCustomGrip(gripId: string, deletedAt: number): Promise<void> {
 		await this.tombstone(customGripId(gripId), 'preference', deletedAt);
+	}
+
+	/** Whether a finished session, a plan or the session in progress names this exercise. */
+	public async exerciseInUse(exerciseId: string): Promise<boolean> {
+		const [workouts, templates, snapshot] = await Promise.all([
+			this.listWorkouts(),
+			this.listTemplates(),
+			this.loadSnapshot()
+		]);
+
+		const trees: { entries: { exercises: { exerciseId: string }[] }[] }[] = [
+			...workouts,
+			...templates,
+			...(snapshot === null ? [] : [snapshot.workout])
+		];
+
+		return trees
+			.flatMap((tree) => tree.entries)
+			.flatMap((entry) => entry.exercises)
+			.some((exercise) => exercise.exerciseId === exerciseId);
 	}
 
 	public async saveSnapshot(snapshot: Snapshot): Promise<void> {

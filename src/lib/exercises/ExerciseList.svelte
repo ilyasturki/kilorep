@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sameName } from '$lib/domain/custom';
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Exercise, Muscle } from '$lib/domain/exercise';
 	import { countOf, sections } from '$lib/exercises/browse';
@@ -6,17 +7,20 @@
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
 	import type { LastPerformed } from '$lib/store/derive';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
+	import Plus from '$lib/ui/icons/Plus.svelte';
 	import { revealStart } from '$lib/ui/scroll';
 
 	type Props = {
 		query: string;
 		lastPerformed: LastPerformed;
+		oncreate: (name: string) => void;
 	};
 
-	let { query, lastPerformed }: Props = $props();
+	let { query, lastPerformed, oncreate }: Props = $props();
 
 	const now = Date.now();
 
@@ -27,6 +31,11 @@
 	const searching = $derived(query.trim() !== '');
 
 	const results = $derived(searchExercises(pool, query));
+
+	// Offered for what was typed, unless that name already belongs to an exercise.
+	const offer = $derived(
+		searching && sameName(pool, query, null) === undefined ? query.trim() : null
+	);
 
 	// svelte-ignore state_referenced_locally
 	let active = $state<Muscle>(browse[0].muscle);
@@ -136,9 +145,31 @@
 	/>
 {/snippet}
 
+{#snippet plus()}
+	<span class="grid size-11 shrink-0 place-items-center text-ink-faint"><Plus size={20} /></span>
+{/snippet}
+
+{#snippet offered()}
+	{#if offer !== null}
+		<div class="list-group text-left">
+			<ListRow
+				title="Create “{offer}”"
+				description="An exercise of your own"
+				leading={plus}
+				chevron={false}
+				onclick={() => oncreate(offer)}
+			/>
+		</div>
+	{/if}
+{/snippet}
+
 {#if searching}
 	{#if results.length === 0}
-		<EmptyState title="Nothing found" description="No exercise answers to that.">
+		<EmptyState
+			title="Nothing found"
+			description="No exercise answers to that."
+			action={offer === null ? undefined : offered}
+		>
 			{#snippet icon()}
 				<MagnifyingGlass size={24} />
 			{/snippet}
@@ -149,6 +180,8 @@
 				{@render row(exercise)}
 			{/each}
 		</div>
+
+		{@render offered()}
 	{/if}
 {:else}
 	<nav
@@ -203,4 +236,6 @@
 			</section>
 		{/each}
 	</div>
+
+	<AddRow label="New exercise" onclick={() => oncreate('')} />
 {/if}

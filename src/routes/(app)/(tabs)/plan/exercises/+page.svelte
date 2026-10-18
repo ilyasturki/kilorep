@@ -1,6 +1,10 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
+	import type { CustomDraft } from '$lib/domain/custom';
 	import type { Equipment } from '$lib/domain/exercise';
 	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
+	import CustomExerciseSheet from '$lib/exercises/CustomExerciseSheet.svelte';
 	import ExerciseLedger from '$lib/exercises/ExerciseLedger.svelte';
 	import type { LedgerSort } from '$lib/exercises/ExerciseLedger.svelte';
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
@@ -63,6 +67,20 @@
 	};
 
 	fillAppBar(() => ({ heading: halves }));
+
+	let createOpen = $state(false);
+	let createName = $state('');
+
+	function startCreate(name: string) {
+		createName = name;
+		createOpen = true;
+	}
+
+	async function create(draft: CustomDraft) {
+		const exercise = await exerciseCatalog.create(draft, data.user?.id ?? null);
+
+		await goto(`/plan/exercises/${exercise.id}`);
+	}
 </script>
 
 {#snippet halves()}
@@ -109,6 +127,7 @@
 			{sort}
 			lastPerformed={data.lastPerformed}
 			heaviest={data.heaviest}
+			oncreate={startCreate}
 		/>
 
 		<Menu bind:open={equipmentOpen} title="Filter by equipment" anchor={equipmentAnchor}>
@@ -127,6 +146,8 @@
 	{:else}
 		<SearchField label="Search exercises" bind:value={query} class="w-full" />
 
-		<ExerciseList {query} lastPerformed={data.lastPerformed} />
+		<ExerciseList {query} lastPerformed={data.lastPerformed} oncreate={startCreate} />
 	{/if}
 </main>
+
+<CustomExerciseSheet bind:open={createOpen} name={createName} onsave={create} />

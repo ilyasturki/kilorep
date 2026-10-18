@@ -44,5 +44,8 @@ export const load: PageLoad = async ({ params, url }) => {
 	const plans = startable(templates);
 	const programmedIn = plansWith(templates, exercise.id);
 
-	return { exercise, grip, past, lastPerformed, note, plans, programmedIn, bodyweight };
+	// Only a custom can be deleted, and whether anything names it decides how.
+	const named = exercise.custom === true && (await store.exerciseInUse(exercise.id));
+
+	return { exercise, grip, past, lastPerformed, note, plans, programmedIn, bodyweight, named };
 };

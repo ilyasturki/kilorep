@@ -11,6 +11,8 @@
 	import { Dialog } from 'bits-ui';
 	import { Drawer } from 'vaul-svelte';
 
+	import type { CustomDraft } from '$lib/domain/custom';
+	import { sameName } from '$lib/domain/custom';
 	import { MUSCLES } from '$lib/domain/exercise';
 	import type { Equipment, Exercise, Muscle } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
@@ -19,6 +21,7 @@
 	import { similarTo } from '$lib/exercises/browse';
 	import type { Family } from '$lib/exercises/browse';
 	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
+	import CustomExerciseForm from '$lib/exercises/CustomExerciseForm.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { bestLabel, lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
 	import type { Pick, PickerFilters } from '$lib/exercises/picker';
@@ -52,6 +55,8 @@
 		verb?: string;
 		lastPerformed: LastPerformed;
 		heaviest?: Heaviest;
+		/** Who an exercise made here syncs for. */
+		account: string | null;
 		onpick: (picks: Pick[]) => void;
 	};
 
@@ -67,6 +72,7 @@
 		verb = 'Add',
 		lastPerformed,
 		heaviest = {},
+		account,
 		onpick
 	}: Props = $props();
 
@@ -147,6 +153,13 @@
 
 	const empty = $derived(shelfShown.length === 0 && shownCount === 0);
 
+	// Offered for what was typed, unless that name already belongs to an exercise.
+	const offer = $derived(
+		searching && sameName(catalog, query, null) === undefined ? query.trim() : null
+	);
+
+	let creating = $state(false);
+
 	const presentIds = $derived(new Set(present));
 
 	const expanded = new SvelteSet<string>();
@@ -174,6 +187,7 @@
 		filtersOpen = false;
 		picks = [];
 		active = 0;
+		creating = false;
 		expanded.clear();
 	}
 
@@ -218,7 +232,14 @@
 		picks.length === 1 ? `${verb} 1 exercise` : `${verb} ${picks.length} exercises`
 	);
 
-	type Row = { key: string; exercise: Exercise; family: Family | null; parent: string | null };
+	type Row = {
+		key: string;
+		exercise: Exercise | null;
+		family: Family | null;
+		parent: string | null;
+	};
+
+	const CREATE = 'create';
 
 	const ordered = $derived<Row[]>([
 		...shelfShown.map((exercise) => ({
@@ -239,7 +260,8 @@
 						}))
 					: [])
 			])
-		)
+		),
+		...(offer === null ? [] : [{ key: CREATE, exercise: null, family: null, parent: null }])
 	]);
 
 	const activeKey = $derived(ordered[active]?.key);
@@ -304,7 +326,24 @@
 		}
 	}
 
+	function pickRow(row: Row) {
+		if (row.exercise === null) {
+			creating = true;
+		} else {
+			choose(row.exercise);
+		}
+	}
+
 	function onkeydown(event: KeyboardEvent) {
+		if (creating) {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				creating = false;
+			}
+
+			return;
+		}
+
 		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
 			event.preventDefault();
 			move(event.key === 'ArrowDown' ? 1 : -1);
@@ -316,7 +355,7 @@
 			if (event.metaKey || event.ctrlKey) {
 				commit();
 			} else if (ordered[active] !== undefined) {
-				choose(ordered[active].exercise);
+				pickRow(ordered[active]);
 			}
 		} else if (event.key === 'Escape') {
 			event.preventDefault();
@@ -331,6 +370,16 @@
 		} else if (event.key === 'Backspace' && query === '' && muscle !== '') {
 			muscle = '';
 		}
+	}
+
+	async function create(draft: CustomDraft) {
+		const exercise = await exerciseCatalog.create(draft, account);
+
+		creating = false;
+		choose(exercise);
+
+		await tick();
+		field?.focus();
 	}
 
 	// The drawer docks above the keyboard itself; see Sheet.svelte for why vaul's own
@@ -489,6 +538,55 @@
 	</div>
 {/snippet}
 
+{#snippet paletteCreate(name: string)}
+	{@const isActive = activeKey === CREATE}
+
+	<div class={['flex', isActive ? 'bg-hover' : 'hover:bg-hover']}>
+		<button
+			type="button"
+			data-active={isActive ? '' : undefined}
+			onclick={() => (creating = true)}
+			class="grid min-h-12 min-w-0 flex-1 grid-cols-[48px_minmax(0,1fr)] items-center text-left
+				text-ink-muted focus-ring-inset press:bg-surface-2"
+			{@attach press()}
+		>
+			<span class="flex justify-center"><Plus size={18} /></span>
+			<span class="truncate text-base font-bold">Create “{name}”</span>
+		</button>
+	</div>
+{/snippet}
+
+{#snippet trayCreate(name: string)}
+	<div class={group}>
+		<button
+			type="button"
+			onclick={() => (creating = true)}
+			data-ripple
+			class="flex min-h-row w-full items-center gap-3 px-3 py-2 text-left focus-ring-inset
+				press:bg-surface-2"
+			{@attach press()}
+		>
+			<span class="grid size-11 shrink-0 place-items-center text-ink-faint">
+				<Plus size={20} />
+			</span>
+			<span class="flex min-w-0 flex-1 flex-col">
+				<span class="truncate text-base font-extrabold text-ink">Create “{name}”</span>
+				<span class="truncate text-sm font-bold text-ink-faint">An exercise of your own</span>
+			</span>
+		</button>
+	</div>
+{/snippet}
+
+{#snippet form()}
+	<CustomExerciseForm
+		initial={null}
+		name={query}
+		saveLabel="Create"
+		onsave={create}
+		oncancel={() => (creating = false)}
+	/>
+{/snippet}
+
 {#snippet filterChips(pad: string)}
 	<div
 		class="flex shrink-0 [scrollbar-width:none] gap-2 overflow-x-auto {pad} [&::-webkit-scrollbar]:hidden"
@@ -548,110 +646,131 @@
 			>
 				<Dialog.Title class="sr-only">{title}</Dialog.Title>
 
-				<div class="flex min-h-15 shrink-0 items-center gap-3 border-b border-line-soft px-5">
-					<MagnifyingGlass size={20} class="shrink-0 text-ink-faint" />
+				{#if creating}
+					<div class="flex min-h-15 shrink-0 items-center gap-3 border-b border-line-soft px-5">
+						<span class="min-w-0 flex-1 title-panel">New exercise</span>
 
-					<input
-						bind:this={field}
-						bind:value={query}
-						placeholder={swap ? 'Search for a replacement' : 'Search exercises'}
-						aria-label={title}
-						autocomplete="off"
-						autocapitalize="off"
-						autocorrect="off"
-						spellcheck={false}
-						class="min-w-0 flex-1 border-none bg-transparent text-lg font-bold text-ink
-							outline-none placeholder:text-ink-faint"
-					/>
+						<kbd
+							class="shrink-0 rounded-md border border-b-2 border-line bg-surface px-1.5 text-xs
+								font-semibold text-ink-muted"
+						>
+							esc
+						</kbd>
+					</div>
 
-					<kbd
-						class="shrink-0 rounded-md border border-b-2 border-line bg-surface px-1.5 text-xs
-							font-semibold text-ink-muted"
-					>
-						esc
-					</kbd>
-				</div>
-
-				{#if swap && outgoing !== null}
-					<div
-						class="flex shrink-0 items-center gap-2.5 border-b border-line-soft bg-canvas px-5 py-2"
-					>
-						<span class="label-caps">Replacing</span>
-						<span class="text-md font-extrabold text-ink">{outgoing.name}</span>
-						<span class="text-sm font-bold tracking-numeral text-ink-faint">
-							{metaLine(outgoing)}
-						</span>
+					<div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+						{@render form()}
 					</div>
 				{:else}
-					<div class="flex shrink-0 flex-col gap-2 border-b border-line-soft py-2.5">
-						{@render filterChips('px-5')}
+					<div class="flex min-h-15 shrink-0 items-center gap-3 border-b border-line-soft px-5">
+						<MagnifyingGlass size={20} class="shrink-0 text-ink-faint" />
+
+						<input
+							bind:this={field}
+							bind:value={query}
+							placeholder={swap ? 'Search for a replacement' : 'Search exercises'}
+							aria-label={title}
+							autocomplete="off"
+							autocapitalize="off"
+							autocorrect="off"
+							spellcheck={false}
+							class="min-w-0 flex-1 border-none bg-transparent text-lg font-bold text-ink
+							outline-none placeholder:text-ink-faint"
+						/>
+
+						<kbd
+							class="shrink-0 rounded-md border border-b-2 border-line bg-surface px-1.5 text-xs
+							font-semibold text-ink-muted"
+						>
+							esc
+						</kbd>
 					</div>
-				{/if}
 
-				<div bind:this={list} class="min-h-0 flex-1 overflow-y-auto pb-1.5">
-					{#if empty}
-						{@render emptyState()}
+					{#if swap && outgoing !== null}
+						<div
+							class="flex shrink-0 items-center gap-2.5 border-b border-line-soft bg-canvas px-5 py-2"
+						>
+							<span class="label-caps">Replacing</span>
+							<span class="text-md font-extrabold text-ink">{outgoing.name}</span>
+							<span class="text-sm font-bold tracking-numeral text-ink-faint">
+								{metaLine(outgoing)}
+							</span>
+						</div>
+					{:else}
+						<div class="flex shrink-0 flex-col gap-2 border-b border-line-soft py-2.5">
+							{@render filterChips('px-5')}
+						</div>
 					{/if}
 
-					{#if shelfShown.length > 0 && shelf !== null}
-						<div class="px-5 pt-3.5 pb-1.5 label-caps">{shelf.title}</div>
+					<div bind:this={list} class="min-h-0 flex-1 overflow-y-auto pb-1.5">
+						{#if empty}
+							{@render emptyState()}
+						{/if}
 
-						{#each shelfShown as exercise (exercise.id)}
-							{@render paletteRow(exercise, `shelf:${exercise.id}`, null, false)}
-						{/each}
-					{/if}
+						{#if shelfShown.length > 0 && shelf !== null}
+							<div class="px-5 pt-3.5 pb-1.5 label-caps">{shelf.title}</div>
 
-					{#each groups as group (group.caption)}
-						{#if group.families.length > 0}
-							<div class="px-5 pt-3.5 pb-1.5 label-caps">{group.caption}</div>
-
-							{#each group.families as family (family.parent.id)}
-								{@render paletteRow(family.parent, `list:${family.parent.id}`, family, false)}
-
-								{#if expanded.has(family.parent.id)}
-									{#each family.variants as variant (variant.id)}
-										{@render paletteRow(variant, `list:${variant.id}`, null, true)}
-									{/each}
-								{/if}
+							{#each shelfShown as exercise (exercise.id)}
+								{@render paletteRow(exercise, `shelf:${exercise.id}`, null, false)}
 							{/each}
 						{/if}
-					{/each}
-				</div>
 
-				{#if swap}
-					<div class="flex shrink-0 items-center gap-4 border-t border-line-soft px-4 py-3">
-						<div class="min-w-0 flex-1">{@render compare()}</div>
+						{#each groups as group (group.caption)}
+							{#if group.families.length > 0}
+								<div class="px-5 pt-3.5 pb-1.5 label-caps">{group.caption}</div>
 
-						<Button variant="commit" compact disabled={chosen === null} onclick={commit}>
-							Swap exercise
-						</Button>
+								{#each group.families as family (family.parent.id)}
+									{@render paletteRow(family.parent, `list:${family.parent.id}`, family, false)}
+
+									{#if expanded.has(family.parent.id)}
+										{#each family.variants as variant (variant.id)}
+											{@render paletteRow(variant, `list:${variant.id}`, null, true)}
+										{/each}
+									{/if}
+								{/each}
+							{/if}
+						{/each}
+
+						{#if offer !== null}
+							<div class={[!empty && 'pt-1.5']}>{@render paletteCreate(offer)}</div>
+						{/if}
 					</div>
-				{:else if picks.length > 0}
-					<div class="flex shrink-0 items-center gap-2 border-t border-line-soft px-4 py-3">
-						<div
-							class="flex min-w-0 flex-1 [scrollbar-width:none] gap-2
-								overflow-x-auto [&::-webkit-scrollbar]:hidden"
-						>
-							{@render pickChips(true)}
-						</div>
 
-						<Button variant="commit" compact class="shrink-0" onclick={commit}>
-							{commitLabel}
-						</Button>
+					{#if swap}
+						<div class="flex shrink-0 items-center gap-4 border-t border-line-soft px-4 py-3">
+							<div class="min-w-0 flex-1">{@render compare()}</div>
+
+							<Button variant="commit" compact disabled={chosen === null} onclick={commit}>
+								Swap exercise
+							</Button>
+						</div>
+					{:else if picks.length > 0}
+						<div class="flex shrink-0 items-center gap-2 border-t border-line-soft px-4 py-3">
+							<div
+								class="flex min-w-0 flex-1 [scrollbar-width:none] gap-2
+								overflow-x-auto [&::-webkit-scrollbar]:hidden"
+							>
+								{@render pickChips(true)}
+							</div>
+
+							<Button variant="commit" compact class="shrink-0" onclick={commit}>
+								{commitLabel}
+							</Button>
+						</div>
+					{/if}
+
+					<div
+						class="flex shrink-0 justify-center gap-4 border-t border-line-soft px-5 py-2 text-xs
+						font-semibold text-ink-faint"
+					>
+						<span><kbd class={kbd}>↑</kbd> <kbd class={kbd}>↓</kbd> move</span>
+						<span><kbd class={kbd}>→</kbd> variants</span>
+						<span><kbd class={kbd}>↵</kbd> pick</span>
+						{#if !swap}
+							<span><kbd class={kbd}>⌘</kbd><kbd class={kbd}>↵</kbd> add & close</span>
+						{/if}
 					</div>
 				{/if}
-
-				<div
-					class="flex shrink-0 justify-center gap-4 border-t border-line-soft px-5 py-2 text-xs
-						font-semibold text-ink-faint"
-				>
-					<span><kbd class={kbd}>↑</kbd> <kbd class={kbd}>↓</kbd> move</span>
-					<span><kbd class={kbd}>→</kbd> variants</span>
-					<span><kbd class={kbd}>↵</kbd> pick</span>
-					{#if !swap}
-						<span><kbd class={kbd}>⌘</kbd><kbd class={kbd}>↵</kbd> add & close</span>
-					{/if}
-				</div>
 			</Dialog.Content>
 		</Dialog.Portal>
 	</Dialog.Root>
@@ -664,89 +783,99 @@
 				<Drawer.Handle class="mt-3" />
 
 				<div class="flex shrink-0 items-baseline justify-between gap-3 px-4 pt-3">
-					<Dialog.Title class="title-panel">{title}</Dialog.Title>
+					<Dialog.Title class="title-panel">{creating ? 'New exercise' : title}</Dialog.Title>
 
-					{#if !swap}
+					{#if !swap && !creating}
 						<span class="label-caps">{shownCount} of {catalog.length} shown</span>
 					{/if}
 				</div>
 
-				<div class="shrink-0 px-4 pt-2.5">
-					<SearchField
-						label={swap ? 'Search for a replacement' : 'Search exercises'}
-						placeholder={swap ? 'Search for a replacement' : 'Search'}
-						bind:value={query}
-					/>
-				</div>
-
-				{#if !swap}
-					<div class="flex shrink-0 flex-col gap-2.5 pt-2.5">
-						{@render filterChips('px-4')}
+				{#if creating}
+					<div class="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-4">
+						{@render form()}
 					</div>
-				{/if}
+				{:else}
+					<div class="shrink-0 px-4 pt-2.5">
+						<SearchField
+							label={swap ? 'Search for a replacement' : 'Search exercises'}
+							placeholder={swap ? 'Search for a replacement' : 'Search'}
+							bind:value={query}
+						/>
+					</div>
 
-				<!-- `[&>*]:shrink-0`: a flex column that scrolls must not let its cards compress to
-				     fit first — a group squeezed to nothing reads as missing, not as scrollable. -->
-				<div
-					bind:this={list}
-					class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pt-3 pb-4 [&>*]:shrink-0"
-				>
-					{#if empty}
-						{@render emptyState()}
-					{/if}
-
-					{#if shelfShown.length > 0 && shelf !== null}
-						<div class="label-caps">{shelf.title}</div>
-
-						<div class={group}>
-							{#each shelfShown as exercise (exercise.id)}
-								{@render trayRow(exercise, null, false)}
-							{/each}
+					{#if !swap}
+						<div class="flex shrink-0 flex-col gap-2.5 pt-2.5">
+							{@render filterChips('px-4')}
 						</div>
 					{/if}
 
-					{#each groups as group (group.caption)}
-						{#if group.families.length > 0}
-							<div class={['label-caps', shelfShown.length > 0 && 'pt-1.5']}>
-								{group.caption}
-							</div>
+					<!-- `[&>*]:shrink-0`: a flex column that scrolls must not let its cards compress to
+				     fit first — a group squeezed to nothing reads as missing, not as scrollable. -->
+					<div
+						bind:this={list}
+						class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pt-3 pb-4 [&>*]:shrink-0"
+					>
+						{#if empty}
+							{@render emptyState()}
+						{/if}
+
+						{#if shelfShown.length > 0 && shelf !== null}
+							<div class="label-caps">{shelf.title}</div>
 
 							<div class={group}>
-								{#each group.families as family (family.parent.id)}
-									{@render trayRow(family.parent, family, false)}
-
-									{#if expanded.has(family.parent.id)}
-										{#each family.variants as variant (variant.id)}
-											{@render trayRow(variant, null, true)}
-										{/each}
-									{/if}
+								{#each shelfShown as exercise (exercise.id)}
+									{@render trayRow(exercise, null, false)}
 								{/each}
 							</div>
 						{/if}
-					{/each}
-				</div>
 
-				<!-- Typing with nothing picked, the comparison has nothing to say and the keys have
+						{#each groups as group (group.caption)}
+							{#if group.families.length > 0}
+								<div class={['label-caps', shelfShown.length > 0 && 'pt-1.5']}>
+									{group.caption}
+								</div>
+
+								<div class={group}>
+									{#each group.families as family (family.parent.id)}
+										{@render trayRow(family.parent, family, false)}
+
+										{#if expanded.has(family.parent.id)}
+											{#each family.variants as variant (variant.id)}
+												{@render trayRow(variant, null, true)}
+											{/each}
+										{/if}
+									{/each}
+								</div>
+							{/if}
+						{/each}
+
+						{#if offer !== null}
+							{@render trayCreate(offer)}
+						{/if}
+					</div>
+
+					<!-- Typing with nothing picked, the comparison has nothing to say and the keys have
 				     already taken half the sheet; it comes back with the pick or the keys going down. -->
-				{#if swap && (!keysUp || chosen !== null)}
-					<div class="flex shrink-0 flex-col gap-2.5 border-t border-line-soft px-4 pt-3">
-						{@render compare()}
+					{#if swap && (!keysUp || chosen !== null)}
+						<div class="flex shrink-0 flex-col gap-2.5 border-t border-line-soft px-4 pt-3">
+							{@render compare()}
 
-						<Button variant="commit" class="w-full" disabled={chosen === null} onclick={commit}>
-							Swap exercise
-						</Button>
-					</div>
-				{:else if multiple && picks.length > 0}
-					<div class="flex shrink-0 flex-col gap-2.5 border-t border-line-soft px-4 pt-3">
-						<div
-							class="flex [scrollbar-width:none] gap-2
-								overflow-x-auto [&::-webkit-scrollbar]:hidden"
-						>
-							{@render pickChips(false)}
+							<Button variant="commit" class="w-full" disabled={chosen === null} onclick={commit}>
+								Swap exercise
+							</Button>
 						</div>
+					{:else if multiple && picks.length > 0}
+						<div class="flex shrink-0 flex-col gap-2.5 border-t border-line-soft px-4 pt-3">
+							<div
+								class="flex [scrollbar-width:none] gap-2
+								overflow-x-auto [&::-webkit-scrollbar]:hidden"
+							>
+								{@render pickChips(false)}
+							</div>
 
-						<Button variant="commit" class="w-full" onclick={commit}>{commitLabel}</Button>
-					</div>
+							<Button variant="commit" class="w-full" onclick={commit}>{commitLabel}</Button>
+						</div>
+					{/if}
 				{/if}
 			</Drawer.Content>
 		</Drawer.Portal>

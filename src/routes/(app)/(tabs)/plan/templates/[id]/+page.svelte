@@ -695,6 +695,7 @@
 
 <ExercisePickerSheet
 	bind:open={insertOpen}
+	account={data.user?.id ?? null}
 	title="Add exercise"
 	multiple
 	frequent={data.frequent}
@@ -706,6 +707,7 @@
 
 <ExercisePickerSheet
 	bind:open={swapOpen}
+	account={data.user?.id ?? null}
 	title="Swap exercise"
 	replacing={actingGroup === null ? null : actingGroup.meta}
 	{present}
@@ -717,6 +719,7 @@
 
 <ExercisePickerSheet
 	bind:open={supersetOpen}
+	account={data.user?.id ?? null}
 	title={actingEntry !== null && actingEntry.superset
 		? 'Add to superset'
 		: `Superset ${actingGroup === null ? 'exercise' : actingGroup.meta.name} with…`}

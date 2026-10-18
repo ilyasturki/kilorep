@@ -4,7 +4,7 @@
 
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
 	import { addressOf } from '$lib/nav/entries';
-	import { leaveFor } from '$lib/nav/go';
+	import { leave, leaveFor } from '$lib/nav/go';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { bodyweightShareOf, carriedFrom, carriedOn } from '$lib/domain/load';
 	import { restLabel } from '$lib/domain/rest';
@@ -13,8 +13,11 @@
 	import type { Template } from '$lib/domain/template';
 	import { gripLabel, musclesOf } from '$lib/domain/grip';
 	import type { PerformedSet } from '$lib/domain/workout';
+	import type { CustomDraft } from '$lib/domain/custom';
 	import { kin } from '$lib/exercises/browse';
 	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
+	import CustomExerciseSheet from '$lib/exercises/CustomExerciseSheet.svelte';
+	import GripSheet from '$lib/exercises/GripSheet.svelte';
 	import EstimatedMax from '$lib/exercises/EstimatedMax.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import {
@@ -34,6 +37,7 @@
 	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
+	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
@@ -44,6 +48,7 @@
 	import Tooltip from '$lib/ui/Tooltip.svelte';
 	import { press } from '$lib/ui/press';
 	import Pencil from '$lib/ui/icons/Pencil.svelte';
+	import Plus from '$lib/ui/icons/Plus.svelte';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
 
@@ -162,6 +167,40 @@
 	}
 
 	const live = $derived(activeWorkout.session);
+
+	const account = $derived(data.user?.id ?? null);
+
+	let gripsOpen = $state(false);
+
+	const ownGrips = $derived((axis?.values ?? []).some((value) => value.custom === true));
+
+	let editOpen = $state(false);
+	let deleteAsk = $state(false);
+
+	const stated = $derived<CustomDraft>({
+		name: exercise.name,
+		equipment: exercise.equipment,
+		loadMode: exercise.loadMode,
+		muscles: exercise.muscles,
+		variantOf: exercise.variantOf ?? null
+	});
+
+	// Named by history, a plan or the session running, a custom is archived rather than erased.
+	const named = $derived(
+		data.named ||
+			(live !== null &&
+				live.workout.entries.some((entry) =>
+					entry.exercises.some((leg) => leg.exerciseId === exercise.id)
+				))
+	);
+
+	async function removeCustom() {
+		const outcome = await exerciseCatalog.remove(exercise.id, account);
+
+		if (outcome === 'deleted') {
+			await leave('/plan/exercises');
+		}
+	}
 
 	let planOpen = $state(false);
 	let planned = $state<Template | null>(null);
@@ -304,6 +343,21 @@
 {/snippet}
 
 <main class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-4">
+	{#if exercise.archived === true}
+		<section class="flex flex-col gap-3 rounded-2xl bg-surface p-3">
+			<p class="text-md font-bold text-ink-faint">
+				Deleted. Its history stays here, and nothing offers it until it is back.
+			</p>
+
+			<Button
+				variant="secondary"
+				onclick={() => void exerciseCatalog.restore(exercise.id, account)}
+			>
+				Restore
+			</Button>
+		</section>
+	{/if}
+
 	<header class="flex flex-col gap-2">
 		<div class="flex items-center justify-between gap-4 px-1">
 			<div class="flex min-w-0 flex-col gap-2">
@@ -341,24 +395,43 @@
 				<!-- The scrollport clips what leans out of it, and the selected chip's ring and focus
 				     outline both do: without the room the first chip loses its left stroke. Padding
 				     back out by the same 6px keeps the row flush with the label above. -->
-				<ChipGroup
-					layout="row"
-					class="-mx-1.5 px-1.5"
-					label={axis.label}
-					bind:value={
-						() => chip ?? ALL,
-						(next) => {
-							if (typeof next === 'string' && next !== '') {
-								chip = next === ALL ? null : next;
+				<div class="flex items-center gap-2">
+					<ChipGroup
+						layout="row"
+						class="-mx-1.5 min-w-0 flex-1 px-1.5"
+						label={axis.label}
+						bind:value={
+							() => chip ?? ALL,
+							(next) => {
+								if (typeof next === 'string' && next !== '') {
+									chip = next === ALL ? null : next;
+								}
 							}
 						}
-					}
-				>
-					<Chip value={ALL}>All</Chip>
-					{#each axis.values as value (value.id)}
-						<Chip value={value.id}>{value.label}</Chip>
-					{/each}
-				</ChipGroup>
+					>
+						<Chip value={ALL}>All</Chip>
+						{#each axis.values as value (value.id)}
+							<Chip value={value.id}>{value.label}</Chip>
+						{/each}
+					</ChipGroup>
+
+					<button
+						type="button"
+						aria-label={ownGrips
+							? `Edit your ${axis.label.toLowerCase()}s`
+							: `Add a ${axis.label.toLowerCase()}`}
+						onclick={() => (gripsOpen = true)}
+						class="grid min-h-chip w-12 shrink-0 place-items-center rounded-xl border-[1.5px]
+						border-dashed border-line text-ink-muted focus-ring press:bg-surface-2"
+						{@attach press()}
+					>
+						{#if ownGrips}
+							<Pencil size={16} />
+						{:else}
+							<Plus size={16} />
+						{/if}
+					</button>
+				</div>
 			</div>
 		{/if}
 
@@ -434,6 +507,12 @@
 		{/if}
 	</section>
 
+	{#if axis === undefined && exercise.archived !== true}
+		<section class="-mt-2 flex flex-col px-3">
+			<AddRow label="Add grip" onclick={() => (gripsOpen = true)} />
+		</section>
+	{/if}
+
 	{#if programmedIn.length > 0}
 		<section class="flex flex-col gap-2">
 			<h2 class="px-3 label-caps">Programmed in</h2>
@@ -506,7 +585,9 @@
 					</p>
 				</div>
 
-				{#if live !== null}
+				{#if exercise.archived === true}
+					<!-- Nothing to add it to: it is offered nowhere until it is restored. -->
+				{:else if live !== null}
 					<Button variant="secondary" class="w-full" onclick={() => void addToWorkout()}>
 						Add to this workout
 					</Button>
@@ -614,4 +695,45 @@
 			</div>
 		{/if}
 	</section>
+
+	{#if exercise.custom === true && exercise.archived !== true}
+		<section class="flex gap-2 px-3">
+			<Button variant="secondary" class="flex-1" onclick={() => (editOpen = true)}>
+				Edit exercise
+			</Button>
+			<Button variant="destructive" class="flex-1" onclick={() => (deleteAsk = true)}>
+				Delete
+			</Button>
+		</section>
+	{/if}
 </main>
+
+<GripSheet
+	bind:open={gripsOpen}
+	{exercise}
+	{account}
+	onremove={(gripId) => {
+		if (chip === gripId) {
+			chip = null;
+		}
+	}}
+/>
+
+{#if exercise.custom === true}
+	<CustomExerciseSheet
+		bind:open={editOpen}
+		self={exercise.id}
+		initial={stated}
+		onsave={(next) => exerciseCatalog.edit(exercise.id, next, account)}
+	/>
+
+	<AlertDialog
+		bind:open={deleteAsk}
+		title="Delete {exercise.name}?"
+		description={named
+			? 'It leaves your lists. The sessions and plans that hold it keep it, under this name.'
+			: 'Nothing has been logged on it and no plan holds it, so it goes for good.'}
+		confirmLabel="Delete"
+		onconfirm={() => void removeCustom()}
+	/>
+{/if}

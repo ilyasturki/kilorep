@@ -8,6 +8,7 @@ import {
 	isCustomId,
 	isCustomRecord,
 	newCustomId,
+	sameName,
 	settleDraft,
 	withCustoms
 } from '$lib/domain/custom';
@@ -200,5 +201,18 @@ describe('settleDraft', () => {
 			muscles: { primary: 'Shoulders', secondary: ['Chest', 'Triceps'] },
 			variantOf: null
 		});
+	});
+});
+
+describe('sameName', () => {
+	test('finds the entry a name or a spelling it answers to already belongs to', () => {
+		expect(sameName(catalog, '  bench   PRESS ', null)!.id).toBe('bench-press');
+		expect(sameName(catalog, 'flat bench', null)!.id).toBe('bench-press');
+		expect(sameName(catalog, 'Tate Press', null)).toBeUndefined();
+		expect(sameName(catalog, '   ', null)).toBeUndefined();
+	});
+
+	test('an exercise renamed to its own name is no duplicate of itself', () => {
+		expect(sameName(catalog, 'Bench Press', 'bench-press')).toBeUndefined();
 	});
 });

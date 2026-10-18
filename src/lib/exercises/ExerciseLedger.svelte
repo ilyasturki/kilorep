@@ -7,6 +7,7 @@
 </script>
 
 <script lang="ts">
+	import { sameName } from '$lib/domain/custom';
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Equipment, Exercise } from '$lib/domain/exercise';
 	import { countOf, sections } from '$lib/exercises/browse';
@@ -14,8 +15,11 @@
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, setLabel } from '$lib/exercises/label';
 	import type { Heaviest, LastPerformed } from '$lib/store/derive';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
+	import ListRow from '$lib/ui/ListRow.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
+	import Plus from '$lib/ui/icons/Plus.svelte';
 	import { press } from '$lib/ui/press';
 
 	type Props = {
@@ -24,9 +28,10 @@
 		sort: LedgerSort;
 		lastPerformed: LastPerformed;
 		heaviest: Heaviest;
+		oncreate: (name: string) => void;
 	};
 
-	let { query, equipment, sort, lastPerformed, heaviest }: Props = $props();
+	let { query, equipment, sort, lastPerformed, heaviest, oncreate }: Props = $props();
 
 	const now = Date.now();
 
@@ -64,6 +69,12 @@
 	});
 
 	const banded = $derived(flat === null ? sections(pool) : []);
+
+	const offer = $derived(
+		searching && sameName(exerciseCatalog.current.exercises, query, null) === undefined
+			? query.trim()
+			: null
+	);
 </script>
 
 {#snippet row(exercise: Exercise, variant = false)}
@@ -156,7 +167,11 @@
 	</div>
 
 	{#if searching && flat !== null && flat.length === 0}
-		<EmptyState title="Nothing found" description="No exercise answers to that.">
+		<EmptyState
+			title="Nothing found"
+			description="No exercise answers to that."
+			action={offer === null ? undefined : offered}
+		>
 			{#snippet icon()}
 				<MagnifyingGlass size={24} />
 			{/snippet}
@@ -190,4 +205,28 @@
 			{/if}
 		</div>
 	{/if}
+
+	{#if offer !== null && flat !== null && flat.length > 0}
+		{@render offered()}
+	{:else if !searching}
+		<AddRow label="New exercise" onclick={() => oncreate('')} />
+	{/if}
 </div>
+
+{#snippet offered()}
+	{#if offer !== null}
+		<div class="list-group text-left">
+			<ListRow
+				title="Create “{offer}”"
+				description="An exercise of your own"
+				leading={plus}
+				chevron={false}
+				onclick={() => oncreate(offer)}
+			/>
+		</div>
+	{/if}
+{/snippet}
+
+{#snippet plus()}
+	<span class="grid size-11 shrink-0 place-items-center text-ink-faint"><Plus size={20} /></span>
+{/snippet}

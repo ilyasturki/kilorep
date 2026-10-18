@@ -1022,6 +1022,7 @@
 
 	<ExercisePickerSheet
 		bind:open={insertOpen}
+		account={data.user?.id ?? null}
 		title="Add exercise"
 		multiple
 		frequent={data.frequent}
@@ -1033,6 +1034,7 @@
 
 	<ExercisePickerSheet
 		bind:open={swapOpen}
+		account={data.user?.id ?? null}
 		title="Swap exercise"
 		replacing={actingLeg === null ? null : actingLeg.meta}
 		{present}
@@ -1052,6 +1054,7 @@
 
 	<ExercisePickerSheet
 		bind:open={supersetOpen}
+		account={data.user?.id ?? null}
 		title="Superset {actingLeg === null ? 'exercise' : actingLeg.meta.name} with…"
 		multiple
 		verb="Superset"
