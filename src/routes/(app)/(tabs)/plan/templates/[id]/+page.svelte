@@ -17,6 +17,7 @@
 		replaceExercise,
 		setExerciseGrip,
 		setEntryRest,
+		setExerciseOptional,
 		setExerciseReps,
 		setPlannedReps,
 		setSetCount,
@@ -618,6 +619,11 @@
 	onbreak={breakSuperset}
 	onremove={removePlanned}
 	ongrip={gripPick}
+	onoptional={(optional) => {
+		if (acting !== null) {
+			setExerciseOptional(template, acting, optional);
+		}
+	}}
 />
 
 <AlertDialog

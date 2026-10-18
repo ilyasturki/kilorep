@@ -12,7 +12,7 @@
 
 	import { catalogById } from '$lib/catalog';
 	import { restAfter } from '$lib/domain/rest';
-	import { canCommit, prefillFor } from '$lib/domain/workout';
+	import { canCommit, prefillFor, tally } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
 	import type { Arms, SwapMode } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
@@ -646,9 +646,9 @@
 		removing = null;
 	}
 
-	const owed = $derived(allCursors.filter((cursor) => !cursor.set.completed).length);
-
-	const logged = $derived(allCursors.filter((cursor) => cursor.set.completed).length);
+	const { owed, logged } = $derived(
+		session === null ? { owed: 0, logged: 0 } : tally(session.workout)
+	);
 
 	// FINISH keeps a workout and discards one, and which it does is `hasLoggedSets` — a predicate
 	// the screen never mentions. So the prompt names the act rather than the button: a session
@@ -737,7 +737,7 @@
 	}
 
 	fillAppBar(() => ({
-		title: allCursors.length === 0 ? null : `${logged} of ${allCursors.length} sets`,
+		title: allCursors.length === 0 ? null : `${logged} of ${logged + owed} sets`,
 		leading: overviewButton,
 		action: finish
 	}));
@@ -921,7 +921,7 @@
 					? null
 					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
 				history={data.history}
-				total={allCursors.length}
+				total={logged + owed}
 				oncommit={logSet}
 				ondraft={(weight, reps) => {
 					if (session.activeSetId !== null) {

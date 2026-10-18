@@ -9,6 +9,7 @@
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import { setFigures } from '$lib/exercises/label';
 	import AddRow from '$lib/ui/AddRow.svelte';
+	import Badge from '$lib/ui/Badge.svelte';
 	import { smallMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
 	import { setNote, statusOf } from '$lib/workout/groups';
@@ -60,6 +61,8 @@
 	// rather than taking a row of its own: it is read on the way past, and changed by a press
 	// on the same heading, which is where the options for this exercise already live.
 	const setup = $derived([meta.equipment, gripLabel(meta, grip)].filter(Boolean).join(' · '));
+
+	const optional = $derived(cursors[0]?.exercise.optional === true);
 
 	function offerOf(cursor: SetCursor): { weight: number | null; reps: number | null } {
 		return prefillFor(cursor, history);
@@ -124,6 +127,9 @@
 					{meta.name}
 				</span>
 				<span class="min-w-0 shrink-[2] truncate text-sm font-bold text-ink-faint">{setup}</span>
+				{#if optional}
+					<span class="shrink-0 self-center"><Badge>Optional</Badge></span>
+				{/if}
 			</button>
 		</h2>
 	</div>

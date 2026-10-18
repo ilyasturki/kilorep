@@ -13,6 +13,7 @@
 	import { planShape, planSummary, targetNote } from '$lib/templates/plan';
 	import type { PlanRest } from '$lib/templates/plan';
 	import PlanRestField from '$lib/templates/PlanRestField.svelte';
+	import Badge from '$lib/ui/Badge.svelte';
 	import StepperField, { INTEGER } from '$lib/ui/StepperField.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import More from '$lib/ui/icons/More.svelte';
@@ -79,6 +80,15 @@
 	const panelId = $props.id();
 </script>
 
+{#snippet name()}
+	<span class="flex min-w-0 items-center gap-2">
+		<span class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</span>
+		{#if exercise.optional === true}
+			<span class="shrink-0"><Badge>Optional</Badge></span>
+		{/if}
+	</span>
+{/snippet}
+
 <section class="flex flex-col gap-2 rounded-2xl bg-surface p-3">
 	<div class="flex items-center gap-1">
 		{#if open}
@@ -90,7 +100,7 @@
 						press:bg-surface-2"
 					{@attach press(() => onoptions)}
 				>
-					<span class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</span>
+					{@render name()}
 					{#if setup}
 						<span class="truncate text-sm font-bold text-ink-faint">{setup}</span>
 					{/if}
@@ -120,7 +130,7 @@
 					{@attach press(() => onoptions)}
 				>
 					<span class="flex min-w-0 flex-1 flex-col">
-						<span class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</span>
+						{@render name()}
 						{#if setup}
 							<span class="truncate text-sm font-bold text-ink-faint">{setup}</span>
 						{/if}

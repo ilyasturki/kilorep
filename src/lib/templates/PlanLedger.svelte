@@ -182,6 +182,15 @@
 										Superset
 									</span>
 								{/if}
+
+								{#if leg.exercise.optional === true}
+									<span
+										class="shrink-0 rounded-full bg-surface-2 px-2 text-xs font-extrabold
+											text-ink-muted"
+									>
+										Optional
+									</span>
+								{/if}
 							</span>
 
 							<!-- One rest per entry, on the row that closes the round: a superset rests

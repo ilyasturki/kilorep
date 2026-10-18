@@ -5,6 +5,7 @@
 	import type { Planned } from '$lib/templates/plan';
 	import Menu from '$lib/ui/Menu.svelte';
 	import MenuItem from '$lib/ui/MenuItem.svelte';
+	import Switch from '$lib/ui/Switch.svelte';
 	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
 	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import ArrowsSplit from '$lib/ui/icons/ArrowsSplit.svelte';
@@ -22,6 +23,7 @@
 		onremove: () => void;
 		ongrip: (grip: string) => void;
 		from?: string;
+		onoptional: (optional: boolean) => void;
 	};
 
 	let {
@@ -34,7 +36,8 @@
 		onbreak,
 		onremove,
 		ongrip,
-		from
+		from,
+		onoptional
 	}: Props = $props();
 
 	const name = $derived(group === null ? 'Exercise' : group.meta.name);
@@ -54,6 +57,15 @@
 				open = false;
 				ongrip(grip);
 			}}
+		/>
+	{/if}
+
+	{#if group !== null}
+		<Switch
+			label="Optional"
+			description="Skipped unless you tap it"
+			bind:checked={() => group.exercise.optional === true, onoptional}
+			class="px-1"
 		/>
 	{/if}
 

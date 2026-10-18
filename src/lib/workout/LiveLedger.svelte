@@ -239,6 +239,14 @@
 										Superset
 									</span>
 								{/if}
+								{#if leg.cursors[0]?.exercise.optional === true}
+									<span
+										class="shrink-0 rounded-full bg-surface-2 px-2 text-xs font-extrabold
+									text-ink-muted"
+									>
+										Optional
+									</span>
+								{/if}
 							</span>
 							<span class="text-center text-xs font-extrabold text-ink-faint">
 								{done}/{leg.cursors.length}
