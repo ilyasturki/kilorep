@@ -71,21 +71,37 @@ export async function addExercise(page: Page, name: string): Promise<void> {
  * otherwise: typed into the tray on a phone, stepped on the desk ledger.
  */
 export async function logSet(page: Page, set: { kg?: number; reps?: number } = {}): Promise<void> {
-	const tray = page.getByRole('button', { name: 'Log set', exact: true });
+	const typed = {
+		kg: page.getByRole('textbox', { name: 'kg' }),
+		reps: page.getByRole('textbox', { name: 'reps' })
+	};
 
-	if (await tray.isVisible()) {
-		if (set.kg !== undefined) {
-			await page.getByRole('textbox', { name: 'kg' }).fill(String(set.kg));
+	if (await typed.kg.isVisible()) {
+		for (const field of ['kg', 'reps'] as const) {
+			const value = set[field];
+
+			if (value !== undefined) {
+				await typed[field].fill(String(value));
+				await typed[field].blur();
+			}
 		}
-		if (set.reps !== undefined) {
-			await page.getByRole('textbox', { name: 'reps' }).fill(String(set.reps));
-		}
-		await tray.click();
+		await page.getByRole('button', { name: 'Log set', exact: true }).click();
 
 		return;
 	}
 
 	const commit = page.getByRole('main').getByRole('button', { name: /^Log \S+ × \d+$/u });
+
+	// A set with nothing offered draws no Log button until both numbers hold something.
+	if (!(await commit.isVisible())) {
+		if (set.kg === undefined || set.reps === undefined) {
+			throw new Error('a set with nothing offered needs both kg and reps');
+		}
+
+		await page.getByRole('button', { name: 'Raise weight' }).click();
+		await page.getByRole('button', { name: 'Raise reps' }).click();
+		await expect(commit).toBeVisible();
+	}
 
 	for (let step = 0; step < 200; step += 1) {
 		const label = (await commit.getAttribute('aria-label')) ?? '';
