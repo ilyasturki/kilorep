@@ -401,6 +401,17 @@
 						</div>
 					{/each}
 				</div>
+				<div class="flex flex-wrap items-center gap-5">
+					{#each marks as mark (mark.status)}
+						<div class="flex flex-col items-center gap-1.5">
+							<SetMark status={mark.status} index={mark.index ?? 2} leg="B" />
+							<span class={caption}>leg="B"</span>
+						</div>
+					{/each}
+				</div>
+				<span class={caption}>
+					a superset's marks carry the leg's letter in every state, done included
+				</span>
 			</Card>
 
 			<Card name="Badge">
