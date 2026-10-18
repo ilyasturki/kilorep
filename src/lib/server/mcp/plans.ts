@@ -9,7 +9,7 @@ import type { Tools } from './context.ts';
 import { VERSION, failed, iso, refused, reply } from './format.ts';
 import { nameOf, notInCatalogue, unknownIds } from './library.ts';
 import type { PlannedInput } from './shapes.ts';
-import { MARK, PLANNED_EXERCISE, flatRows, templateEntriesOf } from './shapes.ts';
+import { MARK, PLANNED_EXERCISE, doubledInGroup, flatRows, templateEntriesOf } from './shapes.ts';
 import type { Expectation, WriteRequest } from './write.ts';
 
 /** The planned tree, flattened into the shape save_plan takes back. */
@@ -161,6 +161,14 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 
 				if (unknown.length > 0) {
 					return reply({ error: notInCatalogue(unknown) });
+				}
+
+				const doubled = doubledInGroup(exercises);
+
+				if (doubled.length > 0) {
+					return reply({
+						error: `a superset cannot hold an exercise twice: ${doubled.join(', ')}. Give it more sets instead.`
+					});
 				}
 			}
 

@@ -77,6 +77,28 @@ function entriesOf<T extends Grouped, E>(
 	return entries;
 }
 
+/** Exercises a group names twice — a superset of a movement with itself, which a plan refuses. */
+export function doubledInGroup(items: (Grouped & { exerciseId: string })[]): string[] {
+	const seen = new Set<string>();
+	const doubled = new Set<string>();
+
+	for (const { group, exerciseId } of items) {
+		if (group === undefined) {
+			continue;
+		}
+
+		const key = `${group}:${exerciseId}`;
+
+		if (seen.has(key)) {
+			doubled.add(exerciseId);
+		}
+
+		seen.add(key);
+	}
+
+	return [...doubled];
+}
+
 const GRIP = z
 	.string()
 	.max(40)

@@ -1108,6 +1108,34 @@ describe('writing a plan', () => {
 		expect((again.plans[0].exercises ?? []).map((row) => row.optional)).toEqual([undefined, true]);
 	});
 
+	test('refuses a superset of an exercise with itself, and saves nothing', async () => {
+		const saved = await once<Saved>('save_plan', {
+			name: 'Arms',
+			exercises: [
+				{ exerciseId: 'barbell-curl', group: 1, sets: [10] },
+				{ exerciseId: 'barbell-curl', group: 1, sets: [8] }
+			]
+		});
+
+		const listed = await once<Plans>('plans');
+
+		expect(saved.error).toContain('cannot hold an exercise twice: barbell-curl');
+		expect(listed.plans).toEqual([]);
+	});
+
+	test('the same exercise twice in a plan is fine apart', async () => {
+		const saved = await once<Saved>('save_plan', {
+			name: 'Arms',
+			exercises: [
+				{ exerciseId: 'barbell-curl', group: 1, sets: [10] },
+				{ exerciseId: 'triceps-pushdown', group: 1, sets: [10] },
+				{ exerciseId: 'barbell-curl', sets: [15] }
+			]
+		});
+
+		expect(saved.error).toBeUndefined();
+	});
+
 	test('archiving retires a plan without taking the name it lends old sessions', async () => {
 		seed(
 			plan({ id: 'p1', name: 'Push A', exercises: ['bench-press'] }),
