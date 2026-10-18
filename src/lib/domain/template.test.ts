@@ -622,6 +622,10 @@ describe('a superset rests once per round', () => {
 	});
 });
 
+function legsOf(template: Template): string[][] {
+	return template.entries.map((entry) => entry.exercises.map((exercise) => exercise.exerciseId));
+}
+
 describe('leaving a superset', () => {
 	function trio(): Template {
 		const template = blankTemplate('t1', 100);
@@ -634,9 +638,6 @@ describe('leaving a superset', () => {
 
 		return template;
 	}
-
-	const legsOf = (template: Template) =>
-		template.entries.map((entry) => entry.exercises.map((exercise) => exercise.exerciseId));
 
 	test('one leg steps out behind the entry and the rest stay joined', () => {
 		const template = trio();
