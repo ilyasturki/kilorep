@@ -31,7 +31,7 @@
 
 	const name = $derived(template === null ? '' : templateTitle(template));
 
-	const when = new Intl.DateTimeFormat(undefined, {
+	const when = new Intl.DateTimeFormat('en-GB', {
 		weekday: 'short',
 		day: 'numeric',
 		month: 'short'
@@ -109,7 +109,7 @@
 			{#if offer === null}
 				<Button
 					variant="primary"
-					class="flex-1"
+					class="flex-1 sm:flex-none"
 					disabled={busy}
 					onclick={() => onsave !== undefined && void act(onsave, 'dismissed')}
 				>
@@ -118,7 +118,7 @@
 			{:else}
 				<Button
 					variant="primary"
-					class="min-w-0 flex-1"
+					class="min-w-0 flex-1 sm:flex-none"
 					disabled={busy || (offer.changes.length === 0 && chosen.length === 0)}
 					onclick={() =>
 						onupdate !== undefined && void act(() => onupdate($state.snapshot(chosen)), 'updated')}
