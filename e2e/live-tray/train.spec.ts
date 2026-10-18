@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures.ts';
-import { bounds, logSet, startPlan, themeColor } from '../helpers.ts';
+import { bounds, logSet, readStore, startPlan, themeColor } from '../helpers.ts';
 
 test.use({ seeded: true });
 
@@ -117,6 +117,48 @@ test('a running session takes the card, and its minutes keep up', async ({
 
 	await resume.click();
 	await page.waitForURL('**/train/live');
+});
+
+test('the running card draws the plan’s mark beside its name', async ({
+	page,
+	account: _account
+}) => {
+	await page.goto('/plan/templates');
+	await page
+		.getByRole('main')
+		.getByRole('link', { name: /^Push Day/u })
+		.first()
+		.click();
+	await page.getByRole('button', { name: 'Pick a template icon' }).click();
+
+	const icons = page.getByRole('dialog').getByRole('group', { name: 'Icon' });
+	const icon = icons.getByRole('radio').or(icons.getByRole('button')).first();
+	const glyph = (await icon.locator('path').first().getAttribute('d')) ?? '';
+	expect(glyph).not.toBe('');
+	await icon.click();
+	await page.keyboard.press('Escape');
+
+	await expect
+		.poll(async () => {
+			const { records } = await readStore(page);
+
+			return records.some(
+				(record) =>
+					record.kind === 'template' &&
+					JSON.stringify(record.payload).includes('"Push Day"') &&
+					JSON.stringify(record.payload).includes('"mark"')
+			);
+		})
+		.toBe(true);
+
+	await startPlan(page, 'Push Day');
+	await page.goto('/train');
+
+	const card = page
+		.getByRole('main')
+		.locator('section', { has: page.getByRole('link', { name: 'RESUME' }) });
+	await expect(card.getByText('Push Day', { exact: true })).toBeVisible();
+	await expect(card.locator(`path[d="${glyph}"]`)).toBeVisible();
 });
 
 test('the launcher shortcut resumes a running session rather than starting another', async ({
