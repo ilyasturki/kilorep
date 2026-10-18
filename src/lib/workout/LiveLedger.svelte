@@ -273,9 +273,9 @@
 									? 'text-ink'
 									: 'text-ink-faint'}
 							{@const shownRpe = exertionLabel(cursor.set.rpe, scale)}
-							{@const load = selected
-								? show(offer.weight)
-								: setFigures(leg.meta, offer.weight, offer.reps).load}
+							{@const load =
+								setFigures(leg.meta, offer.weight, offer.reps).load ??
+								(selected ? show(offer.weight) : null)}
 
 							<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 							<div
