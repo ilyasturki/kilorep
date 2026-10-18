@@ -9,6 +9,7 @@ import {
 	planShape,
 	planSummary,
 	rotationLine,
+	roundsLabel,
 	steppedRest,
 	targetNote,
 	templateTitle
@@ -245,5 +246,26 @@ describe('rest as a plan shows it', () => {
 	test('plus out of off lands where the rest would be without it', () => {
 		expect(steppedRest({ seconds: null, stated: true, fallback: 90 }, 1, 120)).toBe(90);
 		expect(steppedRest({ seconds: null, stated: false, fallback: null }, 1, 120)).toBe(120);
+	});
+});
+
+describe('roundsLabel', () => {
+	function sets(exerciseId: string, count: number): Planned {
+		const lifted = leg(exerciseId);
+
+		lifted.exercise.sets = Array.from({ length: count }, (_, i) => ({
+			id: `${exerciseId}-${i}`,
+			plannedReps: null
+		}));
+
+		return lifted;
+	}
+
+	test('a ragged superset runs as many rounds as its longest leg', () => {
+		expect(roundsLabel([sets('bench-press', 3), sets('cable-fly', 4)])).toBe('4 rounds');
+	});
+
+	test('one round is said once', () => {
+		expect(roundsLabel([sets('bench-press', 1), sets('cable-fly', 1)])).toBe('1 round');
 	});
 });

@@ -24,20 +24,21 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 
 	import { gripLabel } from '$lib/domain/grip';
-	import { roundLeg } from '$lib/domain/rest';
 	import { MAX_PLANNED_SETS, PLANNED_REPS } from '$lib/domain/template';
 	import { loadModeNote } from '$lib/exercises/label';
 	import { exerciseHref } from '$lib/exercises/link';
 	import { restSettings } from '$lib/settings/rest.svelte';
-	import { entryRest, planShape } from '$lib/templates/plan';
+	import { entryRest, planShape, roundsLabel } from '$lib/templates/plan';
 	import type { Planned, PlannedEntry } from '$lib/templates/plan';
 	import PlanRestField from '$lib/templates/PlanRestField.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
+	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import More from '$lib/ui/icons/More.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import { press } from '$lib/ui/press';
+	import { legLetter } from '$lib/workout/groups';
 
 	type Props = {
 		entries: PlannedEntry[];
@@ -49,6 +50,8 @@
 		planDefault: number | null | undefined;
 		onrest: (entryId: string, seconds: number | null | undefined) => void;
 		oninsert: (entryId: string) => void;
+		/** Adds a leg into this superset. */
+		onsuperset: (entryId: string) => void;
 		onreorder: (entryId: string, index: number) => boolean;
 		from?: string;
 	};
@@ -62,6 +65,7 @@
 		planDefault,
 		onrest,
 		oninsert,
+		onsuperset,
 		onreorder,
 		from
 	}: Props = $props();
@@ -104,6 +108,20 @@
 	</button>
 {/snippet}
 
+{#snippet handle(entryId: string)}
+	<span
+		role="presentation"
+		aria-hidden="true"
+		onpointerdown={(e) => drag.handleDown(e, entryId)}
+		onpointermove={(e) => drag.move(e)}
+		onpointerup={(e) => drag.up(e)}
+		onpointercancel={(e) => drag.up(e)}
+		class="grid h-full cursor-grab touch-none place-items-center text-ink-faint select-none"
+	>
+		<DotsSixVertical size={18} />
+	</span>
+{/snippet}
+
 <div class="flex flex-col gap-2.5">
 	<!-- `px-px` matches the card's 1px border below, so these labels sit on the same grid
 	     tracks as the columns they name. -->
@@ -136,29 +154,65 @@
 					style:transition={drag.settlingId === entry.id && slide > 0 ? SETTLE : null}
 					class={['flex flex-col', lifted && 'bg-surface shadow-lg']}
 				>
-					{#each entry.legs as leg (leg.id)}
+					{#snippet rest()}
+						<!-- One rest per entry: a superset rests after each round, not between legs. -->
+						<span class="flex items-center justify-center">
+							{#if !restSettings.current.enabled}
+								<span class="text-base font-extrabold text-ink-faint">—</span>
+							{:else}
+								<PlanRestField
+									dense
+									rest={entryRest(entry.legs, restSettings.current, planDefault)}
+									subject={entry.superset
+										? `after each round of ${entry.title}`
+										: `after ${entry.title}`}
+									onchange={(seconds) => onrest(entry.id, seconds)}
+								/>
+							{/if}
+						</span>
+					{/snippet}
+
+					{#if entry.superset}
+						<div class={[cols, 'min-h-11 bg-canvas', at > 0 && 'border-t border-line-soft']}>
+							{@render handle(entry.id)}
+
+							<span class="flex min-w-0 items-baseline gap-2 py-1 pr-3">
+								<span class="shrink-0 label-caps text-accent-text">Superset</span>
+								<span class="truncate text-sm font-bold text-ink-faint">
+									{roundsLabel(entry.legs)}
+								</span>
+							</span>
+
+							{@render rest()}
+
+							<span></span>
+							<span></span>
+							<span></span>
+						</div>
+					{/if}
+
+					{#each entry.legs as leg, legAt (leg.id)}
 						{@const shape = planShape(leg.exercise)}
 						{@const ramp = shape.kind === 'range' || shape.kind === 'mixed'}
 						{@const shown = ramp || opened.includes(leg.id)}
 						{@const setup = setupOf(leg)}
-						{@const closes = leg.id === roundLeg(entry.legs).id}
 
-						<div class={[cols, 'min-h-11 bg-canvas', at > 0 && 'border-t border-line-soft']}>
-							{#if leg.id === entry.legs[0].id}
+						<div
+							class={[
+								cols,
+								'min-h-11 bg-canvas',
+								(at > 0 || entry.superset) && 'border-t border-line-soft'
+							]}
+						>
+							{#if entry.superset}
 								<span
-									role="presentation"
+									class="grid place-items-center text-md font-extrabold text-accent-text"
 									aria-hidden="true"
-									onpointerdown={(e) => drag.handleDown(e, entry.id)}
-									onpointermove={(e) => drag.move(e)}
-									onpointerup={(e) => drag.up(e)}
-									onpointercancel={(e) => drag.up(e)}
-									class="grid h-full cursor-grab touch-none place-items-center
-										text-ink-faint select-none"
 								>
-									<DotsSixVertical size={18} />
+									{legLetter(legAt)}
 								</span>
 							{:else}
-								<span></span>
+								{@render handle(entry.id)}
 							{/if}
 
 							<span class="flex min-w-0 items-baseline gap-2 py-1 pr-3">
@@ -174,15 +228,6 @@
 									<span class="truncate text-sm font-bold text-ink-faint">{setup}</span>
 								{/if}
 
-								{#if entry.superset}
-									<span
-										class="shrink-0 rounded-full bg-accent-soft px-2 text-xs font-extrabold
-											text-accent-text"
-									>
-										Superset
-									</span>
-								{/if}
-
 								{#if leg.exercise.optional === true}
 									<span
 										class="shrink-0 rounded-full bg-surface-2 px-2 text-xs font-extrabold
@@ -193,22 +238,11 @@
 								{/if}
 							</span>
 
-							<!-- One rest per entry, on the row that closes the round: a superset rests
-							     after its last leg, not between them. -->
-							<span class="flex items-center justify-center">
-								{#if !restSettings.current.enabled}
-									<span class="text-base font-extrabold text-ink-faint">—</span>
-								{:else if closes}
-									<PlanRestField
-										dense
-										rest={entryRest(entry.legs, restSettings.current, planDefault)}
-										subject={entry.superset
-											? `after each round of ${entry.title}`
-											: `after ${leg.meta.name}`}
-										onchange={(seconds) => onrest(entry.id, seconds)}
-									/>
-								{/if}
-							</span>
+							{#if entry.superset}
+								<span></span>
+							{:else}
+								{@render rest()}
+							{/if}
 
 							<span class="flex items-center justify-center gap-1.5">
 								{@render arm(
@@ -327,7 +361,13 @@
 
 					<div class={[cols, 'min-h-9 border-t border-line-soft bg-surface']}>
 						<span></span>
-						<span class="col-span-4 flex items-center py-1">
+						<span class="col-span-4 flex items-center gap-4 py-1">
+							{#if entry.superset}
+								<button type="button" onclick={() => onsuperset(entry.id)} class={foot}>
+									<ArrowsMerge size={15} />
+									Add to superset
+								</button>
+							{/if}
 							<button type="button" onclick={() => oninsert(entry.id)} class={foot}>
 								<StackPlus size={15} />
 								Exercise

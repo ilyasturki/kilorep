@@ -139,6 +139,13 @@ export function setsLabel(count: number): string {
 	return count === 1 ? '1 set' : `${count} sets`;
 }
 
+// A ragged superset runs as many rounds as its longest leg.
+export function roundsLabel(legs: Planned[]): string {
+	const rounds = Math.max(...legs.map((leg) => leg.exercise.sets.length));
+
+	return rounds === 1 ? '1 round' : `${rounds} rounds`;
+}
+
 export function exercisesLabel(count: number): string {
 	return count === 1 ? '1 exercise' : `${count} exercises`;
 }

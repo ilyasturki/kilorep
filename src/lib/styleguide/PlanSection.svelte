@@ -19,6 +19,7 @@
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { entryRest, plannedEntries, planDefaultRest } from '$lib/templates/plan';
+	import { legLetter } from '$lib/workout/groups';
 
 	type Props = { onoptions: (anchor: HTMLElement) => void };
 
@@ -36,6 +37,8 @@
 	const exercise = $derived(cardPlan.entries[0].exercises[0]);
 
 	const cardEntry = $derived(plannedEntries(cardPlan, catalogById)[0]);
+
+	const superEntry = $derived(plannedEntries(cardPlan, catalogById)[2]);
 
 	const entries = $derived(plannedEntries(template, catalogById));
 
@@ -63,8 +66,6 @@
 				{exercise}
 				{open}
 				rest={entryRest(cardEntry.legs, restSettings.current)}
-				round={false}
-				restShown
 				onrest={(seconds) => setEntryRest(cardPlan, cardEntry.id, seconds)}
 				ontoggle={() => (open = !open)}
 				{onoptions}
@@ -72,6 +73,25 @@
 				onreps={(reps) => setExerciseReps(cardPlan, exercise.id, reps)}
 				onsetreps={(setId, reps) => setPlannedReps(cardPlan, setId, reps)}
 			/>
+		</div>
+	</Frame>
+	<Frame label="lettered — a superset's legs are rows of its card, which states the round's rest">
+		<div class="m-3 list-group">
+			{#each superEntry.legs as leg, at (leg.id)}
+				<PlanCard
+					meta={leg.meta}
+					exercise={leg.exercise}
+					letter={legLetter(at)}
+					open={false}
+					rest={null}
+					onrest={noop}
+					ontoggle={noop}
+					{onoptions}
+					onsets={noop}
+					onreps={noop}
+					onsetreps={noop}
+				/>
+			{/each}
 		</div>
 	</Frame>
 </Card>
@@ -111,13 +131,15 @@
 				planDefault={undefined}
 				onrest={(entryId, seconds) => setEntryRest(template, entryId, seconds)}
 				oninsert={() => {}}
+				onsuperset={() => {}}
 				onreorder={(entryId, index) => moveEntry(template, entryId, index)}
 			/>
 		</div>
 	</Frame>
 	<span class={caption}>
 		one row per exercise — per-set rows only where the targets differ, or where the caret opens
-		them; one rest per entry, on the row that closes a superset's round
+		them; a superset gets a header row holding its one rest per round, lettered legs, and a footer
+		that adds into it
 	</span>
 </Card>
 

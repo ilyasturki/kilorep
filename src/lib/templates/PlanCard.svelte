@@ -25,12 +25,13 @@
 		exercise: TemplateExercise;
 		grip?: Snippet;
 		open: boolean;
-		/** The entry's rest; null where rest is off in Settings and there is nothing to plan. */
+		/**
+		 * The exercise's rest; null where there is nothing to plan here — rest off in Settings, or
+		 * a superset leg, whose rest is the round's and stated once on the superset.
+		 */
 		rest: PlanRest | null;
-		/** A superset leg: its rest is the round's, shared with the other legs. */
-		round: boolean;
-		/** Whether the closed row states the rest — once per superset, on the leg that closes it. */
-		restShown: boolean;
+		/** A superset leg's letter. Lettered, the card is a row of the superset's `list-group`. */
+		letter?: string;
 		ontoggle: () => void;
 		onoptions: (anchor: HTMLElement) => void;
 		onsets: (count: number) => void;
@@ -46,8 +47,7 @@
 		grip,
 		open,
 		rest,
-		round,
-		restShown,
+		letter,
 		ontoggle,
 		onoptions,
 		onsets,
@@ -81,15 +81,18 @@
 </script>
 
 {#snippet name()}
-	<span class="flex min-w-0 items-center gap-2">
+	<span class="flex min-w-0 items-baseline gap-2">
+		{#if letter !== undefined}
+			<span class="shrink-0 text-md font-extrabold text-accent-text">{letter}</span>
+		{/if}
 		<span class="truncate text-lg font-extrabold tracking-tight text-ink">{meta.name}</span>
 		{#if exercise.optional === true}
-			<span class="shrink-0"><Badge>Optional</Badge></span>
+			<span class="shrink-0 self-center"><Badge>Optional</Badge></span>
 		{/if}
 	</span>
 {/snippet}
 
-<section class="flex flex-col gap-2 rounded-2xl bg-surface p-3">
+<section class={['flex flex-col gap-2 p-3', letter === undefined && 'rounded-2xl bg-surface']}>
 	<div class="flex items-center gap-1">
 		{#if open}
 			<h2 class="min-w-0 flex-1">
@@ -141,7 +144,7 @@
 							{planSummary(exercise)}
 						</span>
 
-						{#if rest !== null && restShown}
+						{#if rest !== null}
 							<span
 								class={[
 									'flex items-center gap-1 text-sm font-bold tabular-nums',
@@ -232,15 +235,9 @@
 
 		{#if rest !== null}
 			<div class="flex items-center gap-2 pl-1">
-				<span class="min-w-0 flex-1 truncate label-caps">
-					{round ? 'Rest per round' : 'Rest'}
-				</span>
+				<span class="min-w-0 flex-1 truncate label-caps">Rest</span>
 
-				<PlanRestField
-					{rest}
-					subject={round ? `after each round with ${meta.name}` : `after ${meta.name}`}
-					onchange={onrest}
-				/>
+				<PlanRestField {rest} subject="after {meta.name}" onchange={onrest} />
 			</div>
 		{/if}
 

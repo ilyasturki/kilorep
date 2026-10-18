@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { goto, invalidate } from '$app/navigation';
@@ -11,6 +12,7 @@
 		drawableMark,
 		isArchived,
 		isBlank,
+		leaveEntry,
 		moveEntry,
 		moveExercise,
 		PLANNED_SET_COUNT,
@@ -26,7 +28,6 @@
 		startFrom,
 		supersetWith
 	} from '$lib/domain/template';
-	import { roundLeg } from '$lib/domain/rest';
 	import { firstUncompleted } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
@@ -36,7 +37,14 @@
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import MarkPickerSheet from '$lib/templates/MarkPickerSheet.svelte';
-	import { entryRest, plannedEntries, planDefaultRest, planMeta } from '$lib/templates/plan';
+	import {
+		entryRest,
+		plannedEntries,
+		planDefaultRest,
+		planMeta,
+		roundsLabel
+	} from '$lib/templates/plan';
+	import type { Planned } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanLedger from '$lib/templates/PlanLedger.svelte';
 	import PlanOffer from '$lib/templates/PlanOffer.svelte';
@@ -44,9 +52,9 @@
 	import PlanRestField from '$lib/templates/PlanRestField.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
-	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
-	import { entryOf, legOf, shelfOf } from '$lib/workout/groups';
+	import { entryOf, legLetter, legOf, shelfOf } from '$lib/workout/groups';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
@@ -55,6 +63,7 @@
 	import { deskViewport } from '$lib/ui/viewport';
 	import Archive from '$lib/ui/icons/Archive.svelte';
 	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
+	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
 	import Plus from '$lib/ui/icons/Plus.svelte';
@@ -238,6 +247,36 @@
 		}
 
 		acting = null;
+	}
+
+	// The picker opened from a superset's own add row: what it picks joins that superset.
+	function supersetInto(entryId: string) {
+		const entry = entries.find((candidate) => candidate.id === entryId);
+
+		if (entry !== undefined) {
+			acting = entry.legs[0].id;
+			supersetOpen = true;
+		}
+	}
+
+	function leaveSuperset() {
+		if (acting !== null) {
+			leaveEntry(template, acting, () => crypto.randomUUID());
+			acting = null;
+		}
+	}
+
+	const actingLegIndex = $derived(
+		actingEntry === null || acting === null
+			? -1
+			: actingEntry.legs.findIndex((leg) => leg.id === acting)
+	);
+
+	function moveLeg(towards: -1 | 1) {
+		if (acting !== null) {
+			moveExercise(template, acting, towards);
+			acting = null;
+		}
 	}
 
 	function breakSuperset() {
@@ -520,6 +559,7 @@
 						planDefault={planRest}
 						onrest={(entryId, seconds) => setEntryRest(template, entryId, seconds)}
 						oninsert={openInsert}
+						onsuperset={supersetInto}
 						onreorder={(entryId, index) => moveEntry(template, entryId, index)}
 					/>
 
@@ -562,39 +602,70 @@
 							</span>
 						{/snippet}
 
+						{#snippet card(leg: Planned, letter?: string, grip?: Snippet)}
+							<PlanCard
+								meta={leg.meta}
+								from={here}
+								exercise={leg.exercise}
+								{letter}
+								open={openLegId === leg.id}
+								rest={restSettings.current.enabled && !entry.superset
+									? entryRest(entry.legs, restSettings.current, planRest)
+									: null}
+								onrest={(seconds) => setEntryRest(template, entry.id, seconds)}
+								ontoggle={() => (openLegId = openLegId === leg.id ? null : leg.id)}
+								onoptions={(anchor) => options(leg.id, anchor)}
+								onsets={(count) => setSetCount(template, leg.id, count, () => crypto.randomUUID())}
+								onreps={(reps) => setExerciseReps(template, leg.id, reps)}
+								onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
+								{grip}
+							/>
+						{/snippet}
+
 						<div
 							style:transform={lifted ? `translateY(${drag.offset}px) scale(1.01)` : null}
 							style:transition={settling && !prefersReducedMotion.current ? SETTLE : null}
 							class={['relative flex flex-col gap-2', lifted && 'shadow-lg']}
 						>
-							<EntryStack
-								legs={entry.legs}
-								superset={entry.superset}
-								onswap={(leg) => moveExercise(template, leg.id, -1)}
-								swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
-							>
-								{#snippet leg(leg, at)}
-									<PlanCard
-										meta={leg.meta}
-										from={here}
-										exercise={leg.exercise}
-										open={openLegId === leg.id}
-										rest={restSettings.current.enabled
-											? entryRest(entry.legs, restSettings.current, planRest)
-											: null}
-										round={entry.superset}
-										restShown={leg.id === roundLeg(entry.legs).id}
-										onrest={(seconds) => setEntryRest(template, entry.id, seconds)}
-										ontoggle={() => (openLegId = openLegId === leg.id ? null : leg.id)}
-										onoptions={(anchor) => options(leg.id, anchor)}
-										onsets={(count) =>
-											setSetCount(template, leg.id, count, () => crypto.randomUUID())}
-										onreps={(reps) => setExerciseReps(template, leg.id, reps)}
-										onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
-										grip={at === 0 ? handle : undefined}
+							{#if entry.superset}
+								<section class="flex flex-col list-group">
+									<div class="flex min-h-11 items-center gap-1 pr-1 pl-4">
+										<h2 class="flex min-w-0 flex-1 items-baseline gap-2">
+											<span class="shrink-0 label-caps text-accent-text">Superset</span>
+											<span class="truncate text-sm font-bold text-ink-faint">
+												{roundsLabel(entry.legs)}
+											</span>
+										</h2>
+
+										{@render handle()}
+									</div>
+
+									{#each entry.legs as leg, at (leg.id)}
+										{@render card(leg, legLetter(at))}
+									{/each}
+
+									{#if restSettings.current.enabled}
+										<div class="flex items-center gap-2 py-2 pr-3 pl-4">
+											<span class="min-w-0 flex-1 truncate label-caps">Rest per round</span>
+
+											<PlanRestField
+												rest={entryRest(entry.legs, restSettings.current, planRest)}
+												subject="after each round of {entry.title}"
+												onchange={(seconds) => setEntryRest(template, entry.id, seconds)}
+											/>
+										</div>
+									{/if}
+
+									<AddRow
+										flush
+										label="Add to superset"
+										icon={ArrowsMerge}
+										onclick={() => supersetInto(entry.id)}
 									/>
-								{/snippet}
-							</EntryStack>
+								</section>
+							{:else}
+								{@render card(entry.legs[0], undefined, handle)}
+							{/if}
 						</div>
 					</div>
 				{/each}
@@ -646,7 +717,9 @@
 
 <ExercisePickerSheet
 	bind:open={supersetOpen}
-	title="Superset {actingGroup === null ? 'exercise' : actingGroup.meta.name} with…"
+	title={actingEntry !== null && actingEntry.superset
+		? 'Add to superset'
+		: `Superset ${actingGroup === null ? 'exercise' : actingGroup.meta.name} with…`}
 	multiple
 	verb="Superset"
 	pinned={supersetShelf}
@@ -672,7 +745,14 @@
 	anchor={optionsAnchor}
 	onswap={() => (swapOpen = true)}
 	onsuperset={() => (supersetOpen = true)}
-	onbreak={breakSuperset}
+	onbreak={actingEntry !== null && actingEntry.legs.length > 2 ? breakSuperset : undefined}
+	onleave={leaveSuperset}
+	onahead={actingLegIndex > 0 ? () => moveLeg(-1) : undefined}
+	onbehind={actingEntry !== null &&
+	actingLegIndex >= 0 &&
+	actingLegIndex < actingEntry.legs.length - 1
+		? () => moveLeg(1)
+		: undefined}
 	onremove={removePlanned}
 	ongrip={gripPick}
 	onoptional={(optional) => {
