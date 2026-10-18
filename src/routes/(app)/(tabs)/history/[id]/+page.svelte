@@ -1,19 +1,22 @@
 <script lang="ts">
-	import { tick } from 'svelte';
-	import { flip } from 'svelte/animate';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
+	import { parseDate } from '@internationalized/date';
+	import type { DateValue } from '@internationalized/date';
 
 	import { catalogById } from '$lib/catalog';
+	import { localDateOf } from '$lib/domain/bodyweight';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
 	import { applyDrift, driftFrom, hasDrift, hasSetDrift } from '$lib/domain/drift';
 	import type { SetDrift } from '$lib/domain/drift';
+	import { lastedOf, timeOf } from '$lib/domain/retime';
 	import { isArchived, rankAfter, startable, templateFrom } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
-	import { canCommit, firstUncompleted, prefillFor, untouched } from '$lib/domain/workout';
+	import { untouched } from '$lib/domain/workout';
+	import type { Arms, SetType, SwapMode, WorkoutExercise } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
-	import type { Arms, History, SetType, SwapMode, WorkoutExercise } from '$lib/domain/workout';
-	import { workoutTitle } from '$lib/history/label';
+	import { RecordEditor } from '$lib/history/editor.svelte';
+	import { lastedLabel, workoutTitle } from '$lib/history/label';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import RecordLedger from '$lib/history/RecordLedger.svelte';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
@@ -22,32 +25,25 @@
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
 	import { barIcon } from '$lib/nav/chrome';
 	import { leave } from '$lib/nav/go';
-	import { bottomDock } from '$lib/nav/dock.svelte';
-	import { pageSlide } from '$lib/nav/transitions';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { syncSoon } from '$lib/sync/client';
-	import { entriesWithMeta, entryOf, legName, legOf, setNote, shelfOf } from '$lib/workout/groups';
-	import { WorkoutSession } from '$lib/workout/session.svelte';
-	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
+	import { entriesWithMeta, entryOf, legOf, shelfOf } from '$lib/workout/groups';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import ExertionDialog from '$lib/workout/ExertionDialog.svelte';
-	import SwapSetsDialog from '$lib/workout/SwapSetsDialog.svelte';
-	import LiveLedger from '$lib/workout/LiveLedger.svelte';
-	import LiveTray from '$lib/workout/LiveTray.svelte';
 	import NoteSheet from '$lib/workout/NoteSheet.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
+	import SwapSetsDialog from '$lib/workout/SwapSetsDialog.svelte';
+	import AddRow from '$lib/ui/AddRow.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import DatePicker from '$lib/ui/DatePicker.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
-	import { mediumMs, smallMs } from '$lib/ui/motion';
 	import { registerOverlay } from '$lib/ui/overlays';
-	import { revealNearest } from '$lib/ui/scroll';
 	import { deskViewport } from '$lib/ui/viewport';
 	import ClockCounterClockwise from '$lib/ui/icons/ClockCounterClockwise.svelte';
 	import More from '$lib/ui/icons/More.svelte';
 	import Pencil from '$lib/ui/icons/Pencil.svelte';
-	import Stack from '$lib/ui/icons/Stack.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import { press } from '$lib/ui/press';
 
@@ -58,89 +54,124 @@
 	// svelte-ignore state_referenced_locally
 	const workout = $state(data.workout);
 
-	// Derived from the workout rather than handed down by the load: linking it to a plan is a
-	// write to `templateId`, and the title, the drift and the sheet's own mark read it back.
+	// Every edit lands in this draft; Save writes it once, and dropping it is Discard.
+	let editor = $state<RecordEditor | null>(null);
+
+	const editing = $derived(editor !== null);
+
+	const shown = $derived(editor === null ? workout : editor.draft);
+
 	// `??`, not `=== null`: records written before `templateId` existed lack the key.
 	const template = $derived(
-		data.templates.find((candidate) => candidate.id === (workout.templateId ?? null)) ?? null
+		data.templates.find((candidate) => candidate.id === (shown.templateId ?? null)) ?? null
 	);
 
 	// Archived plans last rather than absent: a session imported from a retired plan is
 	// exactly the one that needs naming.
 	const plans = $derived([...startable(data.templates), ...data.templates.filter(isArchived)]);
 
-	const title = $derived(workoutTitle(workout, template === null ? [] : [template]));
+	const title = $derived(workoutTitle(shown, template === null ? [] : [template]));
 	const drift = $derived(
-		template === null ? null : driftFrom(workout, template, (id) => catalogById[id])
+		template === null ? null : driftFrom(shown, template, (id) => catalogById[id])
 	);
 
-	const entries = $derived(entriesWithMeta(workout, catalogById));
+	const entries = $derived(entriesWithMeta(shown, catalogById));
 
-	let mounted = false;
+	const address = $derived(`/history/${workout.id}`);
 
-	$effect(() => {
-		// Read before the gate, so every leaf is tracked on every run.
-		const snapshot = $state.snapshot(workout);
+	const desk = $derived(deskViewport.current);
 
-		if (!mounted) {
-			mounted = true;
+	const when = new Intl.DateTimeFormat('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric'
+	});
+
+	const lasted = $derived(lastedLabel(lastedOf(shown)));
+
+	const startedOn = $derived(localDateOf(new Date(shown.startedAt)));
+
+	const day = $derived(parseDate(startedOn));
+
+	function moveTo(picked: DateValue | undefined) {
+		if (picked !== undefined) {
+			editor?.moveTo(picked.toString());
+		}
+	}
+
+	function begin() {
+		editor ??= new RecordEditor($state.snapshot(workout));
+	}
+
+	function stop() {
+		editor = null;
+	}
+
+	// A figure being typed into holds its number until it lets go of focus: anything that
+	// reads the draft lets go of it first.
+	function settleFigure() {
+		const focused = document.activeElement;
+
+		if (focused instanceof HTMLInputElement && focused.dataset.figure !== undefined) {
+			focused.blur();
+		}
+	}
+
+	async function save() {
+		settleFigure();
+
+		const draft = editor;
+
+		if (draft === null) {
+			return;
+		}
+
+		editor = null;
+		Object.assign(workout, draft.record());
+
+		if ((await draft.save(data.store, Date.now())) && data.user) {
+			syncSoon(data.user.id);
+		}
+	}
+
+	let leaveOpen = $state(false);
+
+	// Where a navigation the dialog stopped was going, carried on once Discard is confirmed.
+	let pending: (() => void) | null = null;
+
+	function discard() {
+		settleFigure();
+
+		if (editor === null || !editor.dirty) {
+			stop();
 
 			return;
 		}
 
-		void data.store.updateWorkout(snapshot, Date.now());
-
-		if (data.user) {
-			syncSoon(data.user.id);
-		}
-	});
-
-	// The record predates today's lifting, so nothing here may read it: no last-time hints, no
-	// prefilled offers shaped by later sessions — the numbers on screen are the record's own.
-	const NO_HISTORY: History = {};
-
-	// Editing IS a session: the same holder the live screen drives, resumed over this record's
-	// own state proxy, so every mutation lands in the workout the page already persists.
-	// Read through the derived alias — a plain `let` never narrows inside the template.
-	let held = $state<WorkoutSession | null>(null);
-
-	const session = $derived(held);
-
-	const editing = $derived(session !== null);
-
-	const desk = $derived(deskViewport.current);
-
-	// Whether the tray stands over the bottom edge. Lowered by its handle, to hand the height
-	// back to the record; raised by a set tapped or a set logged. No rest is owed for a set
-	// lifted weeks ago, so the third way in on the live screen has nothing to say here.
-	let trayOpen = $state(true);
-
-	// The tray stands over the record rather than beside it; this is the floor the list keeps
-	// clear underneath, so the row it covers can still be scrolled out from under it.
-	let traySpan = $state(0);
-
-	let trayPeek = $state(0);
-
-	const floor = $derived(trayOpen ? traySpan : 0);
-
-	let unlockOpen = $state(false);
-
-	function startEditing() {
-		pageSlide('push', () => {
-			// The editor opens standing, however it was left the last time this record was one.
-			trayOpen = true;
-
-			held = new WorkoutSession(NO_HISTORY, {
-				workout,
-				activeSetId: firstUncompleted(workout)?.set.id ?? null
-			});
-		});
+		pending = null;
+		leaveOpen = true;
 	}
 
-	function stopEditing() {
-		pageSlide('pop', () => {
-			held = null;
-		});
+	function drop() {
+		stop();
+
+		const go = pending;
+
+		pending = null;
+		go?.();
+	}
+
+	let release: (() => void) | null = null;
+
+	// Back stops editing, as it closes a sheet. Asking first, it has to stand as an overlay
+	// again: the stack popped it before calling here.
+	function back() {
+		discard();
+
+		if (editor !== null) {
+			release = registerOverlay(back);
+		}
 	}
 
 	$effect(() => {
@@ -148,90 +179,41 @@
 			return;
 		}
 
-		return registerOverlay(stopEditing);
-	});
-
-	$effect(() => {
-		bottomDock.claimed = editing;
+		release = registerOverlay(back);
 
 		return () => {
-			bottomDock.claimed = false;
+			release?.();
+			release = null;
 		};
 	});
 
-	async function settle() {
-		await tick();
-
-		const holder = document.querySelector('[data-active-set]');
-
-		if (holder instanceof HTMLElement) {
-			revealNearest(holder);
-		}
-	}
-
-	$effect(() => {
-		if (session === null || session.activeSetId === null) {
+	// Back itself is the overlay's to answer; this catches the links and jumps that would
+	// leave a draft behind.
+	beforeNavigate((navigation) => {
+		if (editor === null) {
 			return;
 		}
 
-		void settle();
+		settleFigure();
+
+		if (!editor.dirty || navigation.type === 'popstate') {
+			return;
+		}
+
+		navigation.cancel();
+
+		const to = navigation.to?.url;
+
+		if (navigation.type !== 'leave' && to !== undefined) {
+			pending = () => void goto(to);
+			leaveOpen = true;
+		}
 	});
 
-	function jumpTo(setId: string) {
-		trayOpen = true;
-		session?.select(setId);
-	}
-
-	const allCursors = $derived(entries.flatMap((entry) => entry.cursors));
-
-	const activeLeg = $derived(
-		entries
-			.flatMap((entry) => entry.legs)
-			.find((leg) => leg.cursors.some((c) => c.set.id === session?.activeSetId)) ?? null
-	);
-
-	const activeCursor = $derived(
-		activeLeg?.cursors.find((c) => c.set.id === session?.activeSetId) ?? null
-	);
-
-	const activeEntry = $derived(entryOf(entries, activeLeg?.id ?? null));
-
-	function logSet(weight: number, reps: number) {
-		session?.commit(weight, reps);
-	}
-
-	function quickLog(setId: string, weight: number, reps: number) {
-		// A set logged by swipe is the one way to work with the tray down, and the set it hands
-		// over to is the tray's business — so logging one asks for it back.
-		trayOpen = true;
-		session?.quickLog(setId, weight, reps);
-	}
-
-	function draftActive(weight: number | null, reps: number | null) {
-		if (session !== null && session.activeSetId !== null) {
-			session.draft(session.activeSetId, weight, reps);
-		}
-	}
-
-	function rateActive(rpe: number | null) {
-		if (session !== null && session.activeSetId !== null) {
-			session.rate(session.activeSetId, rpe);
-		}
-	}
-
-	const slide = $derived(smallMs());
-
 	let insertOpen = $state(false);
-	let insertAfter = $state<string | null>(null);
-
-	function insertFrom(entryId: string | null) {
-		insertAfter = entryId;
-		insertOpen = true;
-	}
 
 	function insertPicks(picks: Pick[]) {
-		session?.addExercises(picks, insertAfter ?? undefined);
-		insertAfter = null;
+		editor?.session.addExercises(picks);
 	}
 
 	let exerciseOpen = $state(false);
@@ -251,7 +233,7 @@
 	);
 
 	const present = $derived(
-		workout.entries.flatMap((entry) => entry.exercises.map((e) => e.exerciseId))
+		shown.entries.flatMap((entry) => entry.exercises.map((e) => e.exerciseId))
 	);
 
 	let exerciseAnchor = $state<HTMLElement | null>(null);
@@ -263,46 +245,20 @@
 	}
 
 	function gripExercise(grip: string) {
-		if (session === null || acting === null) {
+		if (editor === null || acting === null) {
 			return;
 		}
 
-		session.setExerciseGrip(acting, grip);
+		editor.session.setExerciseGrip(acting, grip);
 		acting = null;
-	}
-
-	function warmUpActing() {
-		if (session === null || acting === null) {
-			return;
-		}
-
-		session.addWarmup(acting);
-		acting = null;
-	}
-
-	let noteOpen = $state(false);
-	let noting = $state<string | null>(null);
-
-	const notingLeg = $derived(legOf(entries, noting));
-
-	function noteActing() {
-		noting = acting;
-		noteOpen = true;
-		acting = null;
-	}
-
-	function saveNote(text: string) {
-		if (session !== null && noting !== null) {
-			session.setNote(noting, text);
-		}
 	}
 
 	function moveActing(to: number) {
-		if (session === null || actingEntry === null) {
+		if (editor === null || actingEntry === null) {
 			return;
 		}
 
-		session.moveEntry(actingEntry.id, to);
+		editor.session.moveEntry(actingEntry.id, to);
 		acting = null;
 	}
 
@@ -318,14 +274,14 @@
 	let swapAsk = $state(false);
 
 	function swapPick([pick]: Pick[]) {
-		if (session === null || acting === null || actingLeg === null || pick === undefined) {
+		if (editor === null || acting === null || actingLeg === null || pick === undefined) {
 			return;
 		}
 
 		const logged = actingLeg.cursors.filter((cursor) => cursor.set.completed).length;
 
 		if (logged === 0) {
-			session.swapExercise(acting, pick, 'delete');
+			editor.session.swapExercise(acting, pick, 'delete');
 			acting = null;
 
 			return;
@@ -342,38 +298,64 @@
 	}
 
 	function swapChosen(mode: SwapMode) {
-		if (session === null || swapping === null) {
+		if (editor === null || swapping === null) {
 			return;
 		}
 
-		session.swapExercise(swapping.exerciseId, swapping.pick, mode);
+		editor.session.swapExercise(swapping.exerciseId, swapping.pick, mode);
 		acting = null;
 	}
 
 	function supersetPicks(picks: Pick[]) {
-		if (session === null || actingEntry === null) {
+		if (editor === null || actingEntry === null) {
 			return;
 		}
 
-		session.superset(actingEntry.id, picks);
+		editor.session.superset(actingEntry.id, picks);
 		acting = null;
 	}
 
 	function breakSuperset() {
-		if (session === null || actingEntry === null) {
+		if (editor === null || actingEntry === null) {
 			return;
 		}
 
-		session.breakSuperset(actingEntry.id);
+		editor.session.breakSuperset(actingEntry.id);
 		acting = null;
 	}
 
-	function leaveSuperset() {
-		if (session === null || acting === null) {
+	function warmUpActing() {
+		if (editor === null || acting === null) {
 			return;
 		}
 
-		session.leaveSuperset(acting);
+		editor.session.addWarmup(acting);
+		acting = null;
+	}
+
+	let noteOpen = $state(false);
+	let noting = $state<string | null>(null);
+
+	const notingLeg = $derived(legOf(entries, noting));
+
+	function noteActing() {
+		noting = acting;
+		noteOpen = true;
+		acting = null;
+	}
+
+	function saveNote(text: string) {
+		if (editor !== null && noting !== null) {
+			editor.session.setNote(noting, text);
+		}
+	}
+
+	function leaveSuperset() {
+		if (editor === null || acting === null) {
+			return;
+		}
+
+		editor.session.leaveSuperset(acting);
 		acting = null;
 	}
 
@@ -384,20 +366,20 @@
 	);
 
 	function moveLeg(towards: -1 | 1) {
-		if (session === null || acting === null) {
+		if (editor === null || acting === null) {
 			return;
 		}
 
-		session.moveExercise(acting, towards);
+		editor.session.moveExercise(acting, towards);
 		acting = null;
 	}
 
 	function removeExercise() {
-		if (session === null || acting === null) {
+		if (editor === null || acting === null) {
 			return;
 		}
 
-		session.removeExercise(acting);
+		editor.session.removeExercise(acting);
 		acting = null;
 	}
 
@@ -423,114 +405,16 @@
 		optionsOpen = true;
 	}
 
-	function gripSet(grip: string) {
-		if (session !== null && optionsSetId !== null) {
-			session.setSetGrip(optionsSetId, grip);
+	// Each of these acts on the set the sheet was opened on, which outlives the sheet.
+	function onOptionsSet(act: (editor: RecordEditor, setId: string) => void) {
+		if (editor !== null && optionsSetId !== null) {
+			act(editor, optionsSetId);
 		}
 	}
 
-	// Desktop only: the phone's tray already carries its own custom entry in the picker.
 	let exertionOpen = $state(false);
 
-	function rateSet(rpe: number | null) {
-		if (session !== null && optionsSetId !== null) {
-			session.rate(optionsSetId, rpe);
-		}
-	}
-
-	function armSet(arms: Arms) {
-		if (session !== null && optionsSetId !== null) {
-			session.setSetArms(optionsSetId, arms);
-		}
-	}
-
-	function typeSet(type: SetType) {
-		if (session !== null && optionsSetId !== null) {
-			session.setSetType(optionsSetId, type);
-		}
-	}
-
-	function unlogSet() {
-		if (session === null || optionsSetId === null) {
-			return;
-		}
-
-		session.unlogSet(optionsSetId);
-		optionsSetId = null;
-	}
-
-	function clearSet() {
-		if (session === null || optionsSetId === null) {
-			return;
-		}
-
-		session.clear(optionsSetId);
-		optionsSetId = null;
-	}
-
-	function removeSet() {
-		if (session === null || optionsSetId === null) {
-			return;
-		}
-
-		session.removeSet(optionsSetId);
-		optionsSetId = null;
-	}
-
-	// The gesture pair the rows carry, same as the live screen: rightward takes a log back,
-	// leftward takes the row out — and only a logged row is worth stopping to ask about.
-	function unlogFrom(setId: string) {
-		session?.unlogSet(setId);
-		trayOpen = true;
-	}
-
-	// Frozen at the ask, like the options sheets: the dialog reads this after the set is gone.
-	let removing = $state<{ id: string; title: string; lost: string } | null>(null);
-	let removingOpen = $state(false);
-
-	function removeFrom(setId: string) {
-		if (session === null) {
-			return;
-		}
-
-		const cursor = allCursors.find((c) => c.set.id === setId);
-
-		if (cursor === undefined) {
-			return;
-		}
-
-		if (!cursor.set.completed) {
-			session.removeSet(setId);
-
-			return;
-		}
-
-		removing = {
-			id: setId,
-			title: cursor.workingIndex < 0 ? 'Remove warmup?' : `Remove set ${cursor.workingIndex + 1}?`,
-			lost: `${cursor.set.weight} × ${cursor.set.reps} goes with it, and nothing in the app can put it back.`
-		};
-
-		removingOpen = true;
-	}
-
-	function removeConfirmed() {
-		if (session === null || removing === null) {
-			return;
-		}
-
-		session.removeSet(removing.id);
-		removing = null;
-	}
-
-	const when = new Intl.DateTimeFormat('en-GB', {
-		weekday: 'short',
-		day: 'numeric',
-		month: 'short',
-		year: 'numeric'
-	});
-
-	function driftMarks(setDrift: SetDrift, meta: Exercise | undefined): string[] {
+	function badgeMarks(setDrift: SetDrift, meta: Exercise | undefined): string[] {
 		const marks: string[] = [];
 
 		if (setDrift.grip !== null) {
@@ -567,26 +451,7 @@
 			return ['Unplanned'];
 		}
 
-		return hasSetDrift(setDrift) ? driftMarks(setDrift, meta) : [];
-	}
-
-	// The ledger has no commit button of its own beyond the row checks, so Enter logs the
-	// highlighted set — but only from the page floor: a focused button or an open dialog
-	// answers Enter itself, and firing both would log a set behind the lifter's back.
-	function deskEnter(event: KeyboardEvent) {
-		if (!desk || event.key !== 'Enter' || event.target !== document.body) {
-			return;
-		}
-
-		if (session === null || activeCursor === null || activeLeg === null) {
-			return;
-		}
-
-		const offer = prefillFor(activeCursor, NO_HISTORY, activeLeg.meta);
-
-		if (canCommit(offer.weight, offer.reps)) {
-			logSet(offer.weight as number, offer.reps as number);
-		}
+		return hasSetDrift(setDrift) ? badgeMarks(setDrift, meta) : [];
 	}
 
 	let menuOpen = $state(false);
@@ -594,12 +459,16 @@
 
 	let linkOpen = $state(false);
 
-	function link(picked: Template) {
-		workout.templateId = picked.id;
-	}
+	// One tap and written at once, as Delete beside it is: the link is not part of the record's
+	// numbers, and opening a draft to change it would ask for a Save the lifter never meant.
+	async function relink(templateId: string | null) {
+		workout.templateId = templateId;
 
-	function unlink() {
-		workout.templateId = null;
+		await data.store.updateWorkout($state.snapshot(workout), Date.now());
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
 	}
 
 	// Read once: answering the offer changes what the load says, and the banner stays to say so.
@@ -696,11 +565,22 @@
 	fillAppBar(() => ({ title, action: actions }));
 </script>
 
-<svelte:window onkeydown={deskEnter} />
-
 {#snippet actions()}
 	{#if editing}
-		<Button variant="bar" caps onclick={stopEditing}>DONE</Button>
+		<div class="flex items-center gap-2">
+			<Button variant="bar" caps onclick={discard}>DISCARD</Button>
+
+			<button
+				type="button"
+				onclick={() => void save()}
+				class="inline-flex min-h-chrome press-sink items-center rounded-full bg-accent px-4
+					text-sm font-extrabold tracking-caps text-on-accent focus-ring hover:bg-accent-hover
+					press:[filter:var(--accent-press)]"
+				{@attach press()}
+			>
+				SAVE
+			</button>
+		</div>
 	{:else}
 		<div class="flex items-center gap-1">
 			{#if desk}
@@ -709,7 +589,7 @@
 				<button
 					type="button"
 					aria-label="Edit this workout"
-					onclick={() => (unlockOpen = true)}
+					onclick={begin}
 					class={barIcon}
 					{@attach press()}
 				>
@@ -737,178 +617,85 @@
 	<title>{title} | Kilorep</title>
 </svelte:head>
 
-{#if session === null}
-	<main class="min-h-0 flex-1 overflow-y-auto">
-		<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-6">
-			<p class="px-1 text-md font-bold text-ink-faint">
-				{when.format(workout.startedAt)}
-				{#if drift !== null && !hasDrift(drift)}· as planned{/if}
-			</p>
+<main class="min-h-0 flex-1 overflow-y-auto">
+	<div class="column-content flex min-h-full flex-col gap-5 px-3 pt-3 pb-6">
+		<p class="px-1 text-md font-bold text-ink-faint">
+			{when.format(shown.startedAt)} · {timeOf(shown.startedAt)}
+			{#if lasted !== null}· {lasted}{/if}
+			{#if drift !== null && !hasDrift(drift)}· as planned{/if}
+		</p>
 
-			{#if offering}
-				<PlanOffer
-					{workout}
-					{template}
-					where="record"
-					onupdate={updatePlan}
-					onsave={saveAsPlan}
-					ondismiss={dismissOffer}
-				/>
-			{/if}
+		{#if offering && !editing}
+			<PlanOffer
+				{workout}
+				{template}
+				where="record"
+				onupdate={updatePlan}
+				onsave={saveAsPlan}
+				ondismiss={dismissOffer}
+			/>
+		{/if}
 
-			<div class="flex flex-1 flex-col gap-3">
-				{#if entries.length === 0}
-					<div class="flex flex-1 flex-col justify-center">
-						<EmptyState
-							title="Nothing in this workout"
-							description="Every exercise has been removed."
-						>
-							{#snippet icon()}
-								<ClockCounterClockwise size={24} />
-							{/snippet}
-						</EmptyState>
-					</div>
-				{:else}
-					{#each entries as entry (entry.id)}
-						<RecordLedger
-							legs={entry.legs}
-							cursors={entry.cursors}
-							badges={(leg) => badgesFor(leg.cursors[0]?.exercise, leg.meta)}
-							instead={(leg) => {
-								const planned = drift?.matched[leg.id]?.instead;
+		{#if editing}
+			<!-- The day moves and the hour stays, the session as long as it ever was. -->
+			<DatePicker label="Date" maxToday class="px-1" bind:value={() => day, moveTo} />
+		{/if}
 
-								return planned === undefined || planned === null
-									? undefined
-									: (catalogById[planned]?.name ?? planned);
-							}}
-						/>
-					{/each}
-				{/if}
-
-				{#if drift !== null && drift.missing.length > 0}
-					<section class="flex flex-col gap-1 rounded-2xl border border-dashed border-line p-3">
-						<h2 class="px-1 label-caps text-ink-faint">Planned, not done</h2>
-						{#each drift.missing as exerciseId, slot (slot)}
-							<p class="px-1 text-md font-bold text-ink-muted">
-								{catalogById[exerciseId]?.name ?? exerciseId}
-							</p>
-						{/each}
-					</section>
-				{/if}
-			</div>
-		</div>
-	</main>
-{:else}
-	<!-- `relative` because the tray stands inside this box rather than under it, and
-	     `overflow-hidden` so a lowered tray leaves the screen instead of the document. -->
-	<div class="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-		<main class="min-h-0 flex-1 [scrollbar-gutter:stable] overflow-y-auto py-3 pb-6">
+		<div class="flex flex-1 flex-col gap-3">
 			{#if entries.length === 0}
-				<div class="mx-auto flex min-h-full w-full max-w-xl flex-col gap-7 px-3">
-					<EmptyState title="Nothing in this workout" description="Add an exercise to log sets.">
+				<div class="flex flex-1 flex-col justify-center">
+					<EmptyState
+						title="Nothing in this workout"
+						description={editing
+							? 'Add the exercises it held.'
+							: 'Every exercise has been removed.'}
+					>
 						{#snippet icon()}
-							<Stack size={24} />
-						{/snippet}
-						{#snippet action()}
-							<Button variant="commit" onclick={() => insertFrom(null)}>
-								<StackPlus size={20} />
-								Add exercise
-							</Button>
+							<ClockCounterClockwise size={24} />
 						{/snippet}
 					</EmptyState>
 				</div>
-			{:else if desk}
-				<div class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4">
-					<LiveLedger
-						{entries}
-						history={NO_HISTORY}
-						activeSetId={session.activeSetId}
-						from="/history/{workout.id}"
-						onselect={jumpTo}
-						onquick={quickLog}
-						oncommit={logSet}
-						ondraft={draftActive}
-						onrate={rateActive}
-						onadd={(entryId) => session.addRound(entryId)}
-						oninsert={insertFrom}
+			{:else}
+				{#each entries as entry (entry.id)}
+					<RecordLedger
+						legs={entry.legs}
+						cursors={entry.cursors}
+						badges={(leg) => badgesFor(leg.cursors[0]?.exercise, leg.meta)}
+						instead={(leg) => {
+							const planned = drift?.matched[leg.id]?.instead;
+
+							return planned === undefined || planned === null
+								? undefined
+								: (catalogById[planned]?.name ?? planned);
+						}}
+						from={address}
+						{editing}
+						onbegin={begin}
+						onfigure={(setId, which, value) => editor?.figure(setId, which, value)}
 						onoptions={options}
 						onexercise={exerciseOptions}
-						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
+						onadd={() => editor?.session.addRound(entry.id)}
 					/>
-				</div>
-			{:else}
-				<div class="mx-auto flex w-full max-w-xl flex-col gap-5 px-3">
-					{#each entries as entry (entry.id)}
-						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-3">
-							<ExerciseBlock
-								legs={entry.legs}
-								cursors={entry.cursors}
-								history={NO_HISTORY}
-								activeSetId={session.activeSetId}
-								{floor}
-								onselect={jumpTo}
-								onquick={quickLog}
-								onunlog={unlogFrom}
-								onremove={removeFrom}
-								onadd={() => session.addRound(entry.id)}
-								oninsert={() => insertFrom(entry.id)}
-								onoptions={options}
-								onexercise={exerciseOptions}
-							/>
-						</div>
+				{/each}
+			{/if}
+
+			{#if editing}
+				<AddRow label="Add exercise" icon={StackPlus} onclick={() => (insertOpen = true)} />
+			{/if}
+
+			{#if drift !== null && drift.missing.length > 0}
+				<section class="flex flex-col gap-1 rounded-2xl border border-dashed border-line p-3">
+					<h2 class="px-1 label-caps text-ink-faint">Planned, not done</h2>
+					{#each drift.missing as exerciseId, slot (slot)}
+						<p class="px-1 text-md font-bold text-ink-muted">
+							{catalogById[exerciseId]?.name ?? exerciseId}
+						</p>
 					{/each}
-				</div>
+				</section>
 			{/if}
-
-			{#if !desk && entries.length > 0}
-				<!-- The floor the tray covers, kept clear inside the scroller and handed back on
-				     the tray's own curve, so the two read as one movement. -->
-				<div
-					aria-hidden="true"
-					class={[
-						mediumMs() > 0 && 'transition-[height] duration-(--dur-medium) ease-(--ease-medium)'
-					]}
-					style="height: {floor}px"
-				></div>
-			{/if}
-		</main>
-
-		{#if !desk && entries.length > 0}
-			{#if !trayOpen}
-				<!-- The peek the lowered tray leaves standing, its handle and the home-indicator
-				     inset under it. Nothing else stands here: the rest lives in the top bar.
-				     Above the tray in the file but under it on screen — the tray is out of flow,
-				     so this is already standing where the tray uncovers it. -->
-				<div class="shrink-0" style:height="{trayPeek}px"></div>
-			{/if}
-
-			<LiveTray
-				bind:open={trayOpen}
-				bind:span={traySpan}
-				bind:peek={trayPeek}
-				cursor={activeCursor}
-				meta={activeLeg?.meta}
-				leg={activeEntry === null || activeLeg === null ? null : legName(activeEntry, activeLeg.id)}
-				note={activeCursor === null
-					? null
-					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
-				history={NO_HISTORY}
-				total={allCursors.length}
-				hints={false}
-				finishLabel="DONE"
-				oncommit={logSet}
-				ondraft={draftActive}
-				onrate={rateActive}
-				onoptions={(anchor) => {
-					if (session.activeSetId !== null) {
-						options(session.activeSetId, anchor);
-					}
-				}}
-				onfinish={stopEditing}
-			/>
-		{/if}
+		</div>
 	</div>
-{/if}
+</main>
 
 <ExercisePickerSheet
 	bind:open={insertOpen}
@@ -957,14 +744,15 @@
 	group={actingLeg}
 	superset={actingEntry !== null && actingEntry.superset}
 	anchor={exerciseAnchor}
-	from="/history/{workout.id}"
+	from={address}
+	undoable
 	onswap={() => (swapOpen = true)}
 	onsuperset={() => (supersetOpen = true)}
 	onbreak={actingEntry !== null && actingEntry.legs.length > 2 ? breakSuperset : undefined}
 	onleave={leaveSuperset}
 	onaddset={() => {
 		if (acting !== null) {
-			session?.addSet(acting);
+			editor?.session.addSet(acting);
 		}
 	}}
 	onahead={actingLegIndex > 0 ? () => moveLeg(-1) : undefined}
@@ -987,7 +775,7 @@
 	bind:open={exertionOpen}
 	scale={exertionScale.current}
 	value={optionsCursor?.set.rpe ?? null}
-	onapply={rateSet}
+	onapply={(rpe) => onOptionsSet((draft, setId) => draft.session.rate(setId, rpe))}
 />
 
 <WorkoutOptionsMenu
@@ -996,7 +784,7 @@
 	anchor={menuAnchor}
 	linked={template !== null}
 	onrepeat={desk ? undefined : () => void repeat()}
-	onedit={desk ? undefined : () => (unlockOpen = true)}
+	onedit={desk ? undefined : begin}
 	onlink={() => (linkOpen = true)}
 	onsave={template === null ? () => void saveAsPlan() : undefined}
 	ondelete={() => (deleteOpen = true)}
@@ -1007,8 +795,8 @@
 	title={template === null ? 'Link to a plan' : 'Change plan'}
 	templates={plans}
 	currentId={template === null ? null : template.id}
-	onpick={link}
-	onclear={template === null ? undefined : unlink}
+	onpick={(picked: Template) => void relink(picked.id)}
+	onclear={template === null ? undefined : () => void relink(null)}
 />
 
 <SetOptionsMenu
@@ -1017,13 +805,15 @@
 	meta={optionsGroup?.meta}
 	anchor={optionsAnchor}
 	removable={optionsGroup !== null && optionsGroup.cursors.length > 1}
-	onunlog={unlogSet}
-	onclear={clearSet}
-	onremove={removeSet}
-	ongrip={gripSet}
-	onarms={armSet}
-	ontype={typeSet}
-	onexertion={desk ? () => (exertionOpen = true) : undefined}
+	undoable
+	onunlog={() => onOptionsSet((draft, setId) => draft.unlog(setId))}
+	onlog={() => onOptionsSet((draft, setId) => draft.log(setId))}
+	onclear={() => onOptionsSet((draft, setId) => draft.session.clear(setId))}
+	onremove={() => onOptionsSet((draft, setId) => draft.session.removeSet(setId))}
+	ongrip={(grip) => onOptionsSet((draft, setId) => draft.session.setSetGrip(setId, grip))}
+	onarms={(arms: Arms) => onOptionsSet((draft, setId) => draft.session.setSetArms(setId, arms))}
+	ontype={(type: SetType) => onOptionsSet((draft, setId) => draft.session.setSetType(setId, type))}
+	onexertion={() => (exertionOpen = true)}
 />
 
 <NoteSheet
@@ -1034,12 +824,11 @@
 />
 
 <AlertDialog
-	bind:open={unlockOpen}
-	title="Edit this record?"
-	description="Changes land in history, hints and records as you make them, on every device."
-	confirmLabel="Edit"
-	confirmVariant="primary"
-	onconfirm={startEditing}
+	bind:open={leaveOpen}
+	title="Discard your changes?"
+	description="The workout stays as it was before you started editing."
+	confirmLabel="Discard"
+	onconfirm={drop}
 />
 
 <AlertDialog
@@ -1048,14 +837,6 @@
 	description="Its sets leave history, hints and records for good, on every device."
 	confirmLabel="Delete"
 	onconfirm={() => void deleteWorkout()}
-/>
-
-<AlertDialog
-	bind:open={removingOpen}
-	title={removing?.title ?? 'Remove set?'}
-	description={removing?.lost}
-	confirmLabel="Remove"
-	onconfirm={removeConfirmed}
 />
 
 <AlertDialog

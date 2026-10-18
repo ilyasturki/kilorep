@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { armsOf } from '$lib/domain/workout';
+	import { armsOf, canCommit } from '$lib/domain/workout';
 	import type { Arms, SetCursor, SetType } from '$lib/domain/workout';
 	import { singleArmable } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
@@ -14,6 +14,7 @@
 	import MenuItem from '$lib/ui/MenuItem.svelte';
 	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
 	import Backspace from '$lib/ui/icons/Backspace.svelte';
+	import Check from '$lib/ui/icons/Check.svelte';
 	import Gauge from '$lib/ui/icons/Gauge.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
@@ -24,12 +25,15 @@
 		anchor?: HTMLElement | null;
 		removable: boolean;
 		onunlog?: () => void;
+		onlog?: () => void;
 		onclear?: () => void;
 		onremove: () => void;
 		ongrip?: (grip: string) => void;
 		onarms?: (arms: Arms) => void;
 		ontype?: (type: SetType) => void;
 		onexertion?: () => void;
+		/** A draft's edit, which Discard takes back: nothing to ask before it. */
+		undoable?: boolean;
 	};
 
 	let {
@@ -39,12 +43,14 @@
 		anchor = null,
 		removable,
 		onunlog,
+		onlog,
 		onclear,
 		onremove,
 		ongrip,
 		onarms,
 		ontype,
-		onexertion
+		onexertion,
+		undoable = false
 	}: Props = $props();
 
 	let confirming = $state(false);
@@ -84,6 +90,12 @@
 		view.cursor !== null && (view.cursor.set.weight !== null || view.cursor.set.reps !== null)
 	);
 
+	const loggable = $derived(
+		view.cursor !== null &&
+			!view.cursor.set.completed &&
+			canCommit(view.cursor.set.weight, view.cursor.set.reps)
+	);
+
 	const gripped = $derived(hasGrips(view.meta) && ongrip !== undefined);
 
 	const arms = $derived(view.cursor === null ? 'both' : armsOf(view.cursor.set));
@@ -91,7 +103,7 @@
 	function remove() {
 		open = false;
 
-		if (logged) {
+		if (logged && !undoable) {
 			confirming = true;
 			return;
 		}
@@ -104,6 +116,11 @@
 		onunlog?.();
 	}
 
+	function log() {
+		open = false;
+		onlog?.();
+	}
+
 	function rate() {
 		open = false;
 		onexertion?.();
@@ -114,7 +131,7 @@
 	function clear() {
 		open = false;
 
-		if (logged) {
+		if (logged && !undoable) {
 			wiping = true;
 			return;
 		}
@@ -152,6 +169,11 @@
 		<MenuItem onselect={unlog}>
 			<ArrowCounterClockwise size={18} />
 			Unlog set
+		</MenuItem>
+	{:else if loggable && onlog !== undefined}
+		<MenuItem onselect={log}>
+			<Check size={18} />
+			Log set
 		</MenuItem>
 	{/if}
 

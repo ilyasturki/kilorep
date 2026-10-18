@@ -7,6 +7,7 @@ import {
 	formatSince,
 	elapsedLabel,
 	formatWhen,
+	lastedLabel,
 	trainedWhen,
 	workoutTitle
 } from '$lib/history/label';
@@ -220,5 +221,19 @@ describe('elapsedLabel', () => {
 
 	test('a clock-skewed start reads as just started, never negative', () => {
 		expect(elapsedLabel(10 * MIN, 0)).toBe('Just started');
+	});
+});
+
+describe('lastedLabel', () => {
+	test('minutes under the hour, hours and minutes past it', () => {
+		expect(lastedLabel(45 * 60_000)).toBe('45 min');
+		expect(lastedLabel(72 * 60_000)).toBe('1 h 12 min');
+		expect(lastedLabel(120 * 60_000)).toBe('2 h');
+		expect(lastedLabel(59.6 * 60_000)).toBe('1 h');
+	});
+
+	test('a length of nothing says nothing', () => {
+		expect(lastedLabel(0)).toBeNull();
+		expect(lastedLabel(20_000)).toBeNull();
 	});
 });

@@ -4,7 +4,6 @@
 	import { page } from '$app/state';
 
 	import { covers, isActive, navTabs } from '$lib/nav/bar.svelte';
-	import { bottomDock } from '$lib/nav/dock.svelte';
 	import { press } from '$lib/ui/press';
 
 	import type { LayoutProps, Snapshot } from './$types';
@@ -61,7 +60,7 @@
 
 	<!-- The live screen keeps the whole bottom edge: its tray is the working surface there,
 	     and a tab bar under it would be one more chrome row between the lifter and the set. -->
-	{#if !covers(page.url.pathname, '/train/live') && !bottomDock.claimed}
+	{#if !covers(page.url.pathname, '/train/live')}
 		<nav
 			aria-label="Main"
 			class="vt-tabbar shrink-0 border-t border-line-soft bg-surface px-1 pb-safe-b lg:hidden"

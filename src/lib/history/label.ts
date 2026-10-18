@@ -99,13 +99,7 @@ export function trainedWhen(then: number | null, now: number): When {
 		: { short: `${since} ago`, long: `Trained ${since} ago` };
 }
 
-export function elapsedLabel(startedAt: number, now: number): string {
-	const minutes = Math.max(0, Math.floor((now - startedAt) / 60_000));
-
-	if (minutes < 1) {
-		return 'Just started';
-	}
-
+function minutesLabel(minutes: number): string {
 	if (minutes < 60) {
 		return `${minutes} min`;
 	}
@@ -114,4 +108,17 @@ export function elapsedLabel(startedAt: number, now: number): string {
 	const rest = minutes % 60;
 
 	return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
+export function elapsedLabel(startedAt: number, now: number): string {
+	const minutes = Math.max(0, Math.floor((now - startedAt) / 60_000));
+
+	return minutes < 1 ? 'Just started' : minutesLabel(minutes);
+}
+
+/** How long a session took, or null where the record holds no length worth saying. */
+export function lastedLabel(lasted: number): string | null {
+	const minutes = Math.round(lasted / 60_000);
+
+	return minutes < 1 ? null : minutesLabel(minutes);
 }

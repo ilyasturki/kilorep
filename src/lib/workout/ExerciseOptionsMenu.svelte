@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { hasGrips } from '$lib/domain/grip';
+	import { hasGrips, settleGrip } from '$lib/domain/grip';
 	import { exerciseHref } from '$lib/exercises/link';
 	import type { Group } from '$lib/workout/groups';
 	import GripField from '$lib/workout/GripField.svelte';
@@ -44,6 +44,8 @@
 		onleave?: () => void;
 		onahead?: () => void;
 		onbehind?: () => void;
+		/** A draft's edit, which Discard takes back: nothing to ask before it. */
+		undoable?: boolean;
 	};
 
 	let {
@@ -64,7 +66,8 @@
 		onaddset,
 		onleave,
 		onahead,
-		onbehind
+		onbehind,
+		undoable = false
 	}: Props = $props();
 
 	let confirmingRemove = $state(false);
@@ -121,7 +124,7 @@
 	const gripped = $derived(hasGrips(meta) && ongrip !== undefined);
 
 	const details = $derived(
-		meta === undefined ? null : exerciseHref(meta.id, view.group?.grip, from)
+		meta === undefined ? null : exerciseHref(meta.id, settleGrip(meta, view.group?.grip), from)
 	);
 
 	const logged = $derived(
@@ -143,7 +146,7 @@
 	function remove() {
 		open = false;
 
-		if (logged > 0) {
+		if (logged > 0 && !undoable) {
 			confirmingRemove = true;
 			return;
 		}
