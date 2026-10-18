@@ -2,7 +2,8 @@ import type { Locator, Page } from '@playwright/test';
 
 import { catalog } from '../../src/lib/catalog.ts';
 import { expect, test } from '../fixtures.ts';
-import { addExercise, finish, logSet, startEmpty } from '../helpers.ts';
+import type { Bounds } from '../helpers.ts';
+import { addExercise, bounds, finish, logSet, startEmpty } from '../helpers.ts';
 
 function sheetNamed(page: Page, name: string): Locator {
 	return page.getByRole('dialog', { name, exact: true });
@@ -47,10 +48,11 @@ function row(sheet: Locator, name: string): Locator {
 async function settledBox(sheet: Locator): Promise<{ x: number; y: number; width: number }> {
 	await expect(sheet).toBeVisible();
 	let last = '';
+	let settled: Bounds | undefined;
 	await expect
 		.poll(async () => {
-			const box = await sheet.boundingBox();
-			const now = JSON.stringify(box);
+			settled = await bounds(sheet);
+			const now = JSON.stringify(settled);
 			const still = now === last;
 			last = now;
 
@@ -58,9 +60,11 @@ async function settledBox(sheet: Locator): Promise<{ x: number; y: number; width
 		})
 		.toBe(true);
 
-	const { x, y, width } = JSON.parse(last) as { x: number; y: number; width: number };
+	if (settled === undefined) {
+		throw new Error('the sheet never settled');
+	}
 
-	return { x, y, width };
+	return { x: settled.left, y: settled.top, width: settled.right - settled.left };
 }
 
 test.describe('the search sheet as the field takes focus', () => {

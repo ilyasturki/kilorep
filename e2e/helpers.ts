@@ -246,6 +246,11 @@ export async function syncNow(page: Page): Promise<void> {
 
 export type Bounds = { top: number; bottom: number; left: number; right: number };
 
+// Chromium lays out in 1/64 px; a transform or a fractional scroll leaves float noise around that grid.
+export function onGrid(px: number): number {
+	return Math.round(px * 64) / 64;
+}
+
 /** Where `locator` sits on the screen; throws while it is not laid out. */
 export async function bounds(locator: Locator): Promise<Bounds> {
 	const rect = await locator.boundingBox();
@@ -254,7 +259,12 @@ export async function bounds(locator: Locator): Promise<Bounds> {
 		throw new Error(`${locator.toString()} is not on the screen`);
 	}
 
-	return { top: rect.y, bottom: rect.y + rect.height, left: rect.x, right: rect.x + rect.width };
+	return {
+		top: onGrid(rect.y),
+		bottom: onGrid(rect.y + rect.height),
+		left: onGrid(rect.x),
+		right: onGrid(rect.x + rect.width)
+	};
 }
 
 export type Point = { x: number; y: number };

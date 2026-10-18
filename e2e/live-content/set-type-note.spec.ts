@@ -94,7 +94,7 @@ test('a session note opens on its field and stays however the sheet closes', asy
 	let opened: string | null = null;
 	await expect
 		.poll(async () => {
-			const box = JSON.stringify(await sheet.boundingBox());
+			const box = JSON.stringify(await bounds(sheet));
 			const still = box === opened;
 			opened = box;
 
@@ -103,7 +103,7 @@ test('a session note opens on its field and stays however the sheet closes', asy
 		.toBe(true);
 
 	await page.keyboard.type('Seat at 5');
-	expect(JSON.stringify(await sheet.boundingBox())).toBe(opened);
+	expect(JSON.stringify(await bounds(sheet))).toBe(opened);
 
 	await (onDesk(page)
 		? page.keyboard.press('Escape')

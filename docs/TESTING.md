@@ -265,7 +265,10 @@ server* state above, reachable at last.
   completed. It writes grips and slugs as given, so a session logged before
   a grip retired or an entry folded can be planted as it was stored.
 - `bounds(locator)` is where a locator sits, `{ top, bottom, left, right }`,
-  for the specs that are about layout. `themeColor(page, '--accent')` reads a
+  for the specs that are about layout. Each edge is rounded to Chromium's 1/64
+  px layout grid, so a 44 px target compares as 44 rather than 43.9999; measure
+  through it rather than `boundingBox()`, and pass a `getBoundingClientRect`
+  sum through `onGrid` before comparing it. `themeColor(page, '--accent')` reads a
   theme colour back the way `getComputedStyle` reports one, to compare a
   control's colour against.
 - `finger(page)` is one pointer whose every event carries its own timestamp:

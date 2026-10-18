@@ -3,7 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 import type { Template } from '../../src/lib/domain/template.ts';
 
 import { expect, test } from '../fixtures.ts';
-import { logSet, startPlan } from '../helpers.ts';
+import { bounds, logSet, startPlan } from '../helpers.ts';
 import { plantRecords } from '../plant.ts';
 
 import { held } from './records.ts';
@@ -75,8 +75,8 @@ async function colour(locator: Locator): Promise<string> {
 }
 
 async function boxes(field: Rest): Promise<unknown[]> {
-	const shorten = await field.shorten.boundingBox();
-	const lengthen = await field.lengthen.boundingBox();
+	const shorten = await bounds(field.shorten);
+	const lengthen = await bounds(field.lengthen);
 
 	return [shorten, lengthen];
 }
@@ -264,7 +264,7 @@ test.describe('p2 · name in the bar, and the Plan segment', { tag: '@phone' }, 
 		const main = page.getByRole('main');
 		const segment = page.getByRole('banner').getByRole('toolbar', { name: 'Plan' });
 		await expect(segment.getByRole('link', { name: 'Exercises' })).toBeVisible();
-		const before = await segment.boundingBox();
+		const before = await bounds(segment);
 
 		const first = main.getByRole('link').first();
 		await expect(first).toBeInViewport();
@@ -273,6 +273,6 @@ test.describe('p2 · name in the bar, and the Plan segment', { tag: '@phone' }, 
 		await expect(first).not.toBeInViewport();
 
 		await expect(segment).toBeInViewport();
-		expect(await segment.boundingBox()).toEqual(before);
+		expect(await bounds(segment)).toEqual(before);
 	});
 });

@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures.ts';
-import { bounds, finish, logSet, readStore, startPlan, themeColor } from '../helpers.ts';
+import { bounds, finish, logSet, onGrid, readStore, startPlan, themeColor } from '../helpers.ts';
 
 test.use({ seeded: true });
 
@@ -237,7 +237,7 @@ test('the rest controls keep SKIP clear of turning rest off, and REST OFF comes 
 
 			return off.getBoundingClientRect().top - slip.getBoundingClientRect().bottom;
 		});
-		expect(gap).toBeGreaterThanOrEqual(24);
+		expect(onGrid(gap)).toBeGreaterThanOrEqual(24);
 	}
 
 	const before = await remaining(page);
