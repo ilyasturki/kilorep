@@ -7,19 +7,22 @@
 
 <script lang="ts">
 	import { tick } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { Dialog } from 'bits-ui';
 	import { Drawer } from 'vaul-svelte';
 
 	import { catalog, catalogById } from '$lib/catalog';
 	import { MUSCLES } from '$lib/domain/exercise';
 	import type { Equipment, Exercise, Muscle } from '$lib/domain/exercise';
+	import { gripLabel } from '$lib/domain/grip';
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { MatchRange } from '$lib/domain/search';
-	import { sections, similarTo } from '$lib/exercises/browse';
+	import { similarTo } from '$lib/exercises/browse';
+	import type { Family } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { bestLabel, lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
-	import type { PickerFilters } from '$lib/exercises/picker';
-	import { shownCaption, shownExercises } from '$lib/exercises/picker';
+	import type { Pick, PickerFilters } from '$lib/exercises/picker';
+	import { gripNamed, pickerGroups, pickOf } from '$lib/exercises/picker';
 	import type { Heaviest, LastPerformed } from '$lib/store/derive';
 	import Button from '$lib/ui/Button.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
@@ -27,6 +30,7 @@
 	import { drawerSlop } from '$lib/ui/drawer-slop';
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
+	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
 	import Plus from '$lib/ui/icons/Plus.svelte';
@@ -42,11 +46,14 @@
 		replacing?: Exercise | null;
 		frequent?: string[];
 		pinned?: { title: string; exercises: Exercise[] } | null;
+		/** The exercises already in the session or plan, marked where they are listed. */
+		present?: string[];
+		presentLabel?: string;
 		multiple?: boolean;
 		verb?: string;
 		lastPerformed: LastPerformed;
 		heaviest?: Heaviest;
-		onpick: (exerciseIds: string[]) => void;
+		onpick: (picks: Pick[]) => void;
 	};
 
 	let {
@@ -55,6 +62,8 @@
 		replacing = null,
 		frequent = [],
 		pinned = null,
+		present = [],
+		presentLabel = 'Added',
 		multiple = false,
 		verb = 'Add',
 		lastPerformed,
@@ -68,7 +77,19 @@
 
 	const now = Date.now();
 
-	const swap = $derived(replacing !== null);
+	// Held through the exit: the swap the sheet closes on clears `replacing`, and the sheet would
+	// turn into the add sheet while it is still sliding out.
+	let held: Exercise | null = null;
+
+	const outgoing = $derived.by(() => {
+		if (open) {
+			held = replacing;
+		}
+
+		return held;
+	});
+
+	const swap = $derived(outgoing !== null);
 
 	let query = $state('');
 	let muscle = $state('');
@@ -78,7 +99,6 @@
 	const EQUIPMENT = [...new Set(catalog.map((exercise) => exercise.equipment))];
 
 	const searching = $derived(query.trim() !== '');
-	const chipped = $derived(muscle !== '' || equipment !== '');
 
 	const filters = $derived<PickerFilters>({
 		query,
@@ -87,12 +107,12 @@
 	});
 
 	const mainPool = $derived(
-		replacing === null ? catalog : catalog.filter((exercise) => exercise.id !== replacing.id)
+		outgoing === null ? catalog : catalog.filter((exercise) => exercise.id !== outgoing.id)
 	);
 
 	const shelf = $derived.by(() => {
-		if (replacing !== null) {
-			return { title: 'Similar', exercises: similarTo(catalog, replacing) };
+		if (outgoing !== null) {
+			return { title: 'Similar', exercises: similarTo(catalog, outgoing) };
 		}
 
 		if (pinned !== null) {
@@ -110,33 +130,37 @@
 	// a shelf of misses while a filter never blanks it.
 	const shelfShown = $derived(shelf === null ? [] : searchExercises(shelf.exercises, query));
 
-	const groups = $derived.by((): { caption: string; exercises: Exercise[] }[] => {
-		if (searching || chipped) {
-			return [
-				{
-					caption: searching ? 'All matches' : shownCaption(filters),
-					exercises: shownExercises(mainPool, filters)
-				}
-			];
-		}
+	const groups = $derived(pickerGroups(mainPool, filters, swap ? shelfShown : []));
 
-		return sections(mainPool).map((section) => ({
-			caption: section.muscle,
-			exercises: section.families.flatMap((family) => [family.parent, ...family.variants])
-		}));
-	});
-
-	const shownCount = $derived(groups.reduce((count, group) => count + group.exercises.length, 0));
+	const shownCount = $derived(
+		groups.reduce(
+			(count, group) =>
+				count + group.families.reduce((sum, family) => sum + 1 + family.variants.length, 0),
+			0
+		)
+	);
 
 	const empty = $derived(shelfShown.length === 0 && shownCount === 0);
 
-	let picks = $state<string[]>([]);
+	const presentIds = $derived(new Set(present));
+
+	const expanded = new SvelteSet<string>();
+
+	function toggle(familyId: string) {
+		if (expanded.has(familyId)) {
+			expanded.delete(familyId);
+		} else {
+			expanded.add(familyId);
+		}
+	}
+
+	let picks = $state<Pick[]>([]);
 
 	let active = $state(0);
 
-	const picked = $derived(new Set(picks));
+	const picked = $derived(new Set(picks.map((pick) => pick.exerciseId)));
 
-	const chosen = $derived(swap && picks.length > 0 ? catalogById[picks[0]] : null);
+	const chosen = $derived(swap && picks.length > 0 ? catalogById[picks[0].exerciseId] : null);
 
 	function reset() {
 		query = '';
@@ -145,26 +169,28 @@
 		filtersOpen = false;
 		picks = [];
 		active = 0;
+		expanded.clear();
 	}
 
 	function choose(exercise: Exercise) {
+		const pick = pickOf(exercise, query);
+
 		if (swap) {
-			picks = picks[0] === exercise.id ? [] : [exercise.id];
+			picks = picks[0]?.exerciseId === exercise.id ? [] : [pick];
 
 			return;
 		}
 
 		if (!multiple) {
-			onpick([exercise.id]);
-			reset();
+			onpick([pick]);
 			open = false;
 
 			return;
 		}
 
-		picks = picks.includes(exercise.id)
-			? picks.filter((id) => id !== exercise.id)
-			: [...picks, exercise.id];
+		picks = picked.has(exercise.id)
+			? picks.filter((kept) => kept.exerciseId !== exercise.id)
+			: [...picks, pick];
 	}
 
 	function commit() {
@@ -173,12 +199,12 @@
 		}
 
 		onpick(picks);
-		reset();
 		open = false;
 	}
 
-	$effect(() => {
-		if (!open) {
+	// On the way in rather than the way out, so the exit still shows what was picked.
+	$effect.pre(() => {
+		if (open) {
 			reset();
 		}
 	});
@@ -187,10 +213,27 @@
 		picks.length === 1 ? `${verb} 1 exercise` : `${verb} ${picks.length} exercises`
 	);
 
-	const ordered = $derived([
-		...shelfShown.map((exercise) => ({ key: `shelf:${exercise.id}`, exercise })),
+	type Row = { key: string; exercise: Exercise; family: Family | null; parent: string | null };
+
+	const ordered = $derived<Row[]>([
+		...shelfShown.map((exercise) => ({
+			key: `shelf:${exercise.id}`,
+			exercise,
+			family: null,
+			parent: null
+		})),
 		...groups.flatMap((group) =>
-			group.exercises.map((exercise) => ({ key: `list:${exercise.id}`, exercise }))
+			group.families.flatMap((family) => [
+				{ key: `list:${family.parent.id}`, exercise: family.parent, family, parent: null },
+				...(expanded.has(family.parent.id)
+					? family.variants.map((exercise) => ({
+							key: `list:${exercise.id}`,
+							exercise,
+							family: null,
+							parent: family.parent.id
+						}))
+					: [])
+			])
 		)
 	]);
 
@@ -220,18 +263,46 @@
 		void reveal();
 	}
 
-	const MUSCLE_CYCLE = ['', ...MUSCLES];
+	function unfold(row: Row, opening: boolean) {
+		if (row.parent !== null && !opening) {
+			expanded.delete(row.parent);
+			active = ordered.findIndex((other) => other.key === `list:${row.parent}`);
+		} else if (row.family !== null && row.family.variants.length > 0) {
+			if (opening) {
+				expanded.add(row.family.parent.id);
+			} else {
+				expanded.delete(row.family.parent.id);
+			}
+		}
 
-	function cycleMuscle(delta: number) {
-		const at = MUSCLE_CYCLE.indexOf(muscle);
+		void reveal();
+	}
 
-		muscle = MUSCLE_CYCLE[(at + delta + MUSCLE_CYCLE.length) % MUSCLE_CYCLE.length];
+	let field = $state<HTMLInputElement | null>(null);
+
+	// The caret keeps the arrows it can use: right only once it stands past the last letter,
+	// left only in an empty field.
+	function sideways(event: KeyboardEvent) {
+		const row = ordered[active];
+		const opening = event.key === 'ArrowRight';
+		const free = opening ? field?.selectionStart === query.length : query === '';
+
+		if (!free || row === undefined) {
+			return;
+		}
+
+		if (row.parent !== null || (row.family?.variants.length ?? 0) > 0) {
+			event.preventDefault();
+			unfold(row, opening);
+		}
 	}
 
 	function onkeydown(event: KeyboardEvent) {
 		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
 			event.preventDefault();
 			move(event.key === 'ArrowDown' ? 1 : -1);
+		} else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+			sideways(event);
 		} else if (event.key === 'Enter') {
 			event.preventDefault();
 
@@ -240,9 +311,6 @@
 			} else if (ordered[active] !== undefined) {
 				choose(ordered[active].exercise);
 			}
-		} else if (event.key === 'Tab') {
-			event.preventDefault();
-			cycleMuscle(event.shiftKey ? -1 : 1);
 		} else if (event.key === 'Escape') {
 			event.preventDefault();
 
@@ -257,8 +325,6 @@
 			muscle = '';
 		}
 	}
-
-	let field = $state<HTMLInputElement | null>(null);
 
 	// The drawer docks above the keyboard itself; see Sheet.svelte for why vaul's own
 	// `repositionInputs` is not that.
@@ -305,6 +371,19 @@
 
 		return parts.length === 0 ? 'Never trained' : parts.join(' · ');
 	}
+
+	function pickName(pick: Pick): string {
+		const exercise = catalogById[pick.exerciseId];
+		const grip = gripLabel(exercise, pick.grip);
+
+		if (exercise === undefined) {
+			return pick.exerciseId;
+		}
+
+		return pick.grip === undefined || grip === undefined
+			? exercise.name
+			: `${exercise.name} · ${grip}`;
+	}
 </script>
 
 {#snippet name(exercise: Exercise, match: MatchRange | null)}
@@ -318,10 +397,33 @@
 	{/if}
 {/snippet}
 
-{#snippet variantBadge()}
+{#snippet badge(label: string)}
 	<span class="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 label-caps text-ink-muted">
-		Variant
+		{label}
 	</span>
+{/snippet}
+
+{#snippet badges(exercise: Exercise)}
+	{@const named = searching ? gripNamed(exercise, query) : undefined}
+
+	{#if searching && exercise.variantOf !== undefined}
+		{@render badge('Variant')}
+	{/if}
+
+	{#if named !== undefined}
+		{@render badge(gripLabel(exercise, named) ?? named)}
+	{/if}
+
+	{#if presentIds.has(exercise.id)}
+		{@render badge(presentLabel)}
+	{/if}
+{/snippet}
+
+{#snippet elbow()}
+	<span
+		aria-hidden="true"
+		class="mb-2.5 ml-1 size-3 shrink-0 rounded-bl-md border-b-2 border-l-2 border-line-soft"
+	></span>
 {/snippet}
 
 {#snippet mark(isPicked: boolean)}
@@ -340,14 +442,39 @@
 	</span>
 {/snippet}
 
+{#snippet expander(family: Family | null, klass: string)}
+	{#if family !== null && family.variants.length > 0}
+		{@const unfolded = expanded.has(family.parent.id)}
+
+		<button
+			type="button"
+			aria-expanded={unfolded}
+			aria-label="{unfolded ? 'Hide' : 'Show'} {family.variants.length} variants of {family.parent
+				.name}"
+			onclick={() => toggle(family.parent.id)}
+			class={[
+				'flex shrink-0 items-center justify-center gap-1 text-sm font-extrabold',
+				'text-ink-muted focus-ring-inset press:bg-surface-2',
+				klass
+			]}
+			{@attach press()}
+		>
+			{family.variants.length}
+			<CaretDown size={14} class={unfolded ? 'rotate-180' : undefined} />
+		</button>
+	{:else}
+		<span aria-hidden="true" class={['shrink-0', klass]}></span>
+	{/if}
+{/snippet}
+
 {#snippet compare()}
 	<div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2.5">
 		<div class="flex min-w-0 flex-col">
 			<span class="label-caps">Current</span>
-			<span class="truncate text-sm font-extrabold text-ink">{replacing?.name}</span>
-			{#if replacing !== null}
+			<span class="truncate text-sm font-extrabold text-ink">{outgoing?.name}</span>
+			{#if outgoing !== null}
 				<span class="truncate text-xs font-bold tracking-numeral text-ink-faint">
-					{swapLine(replacing)}
+					{swapLine(outgoing)}
 				</span>
 			{/if}
 		</div>
@@ -356,10 +483,10 @@
 
 		<div class="flex min-w-0 flex-col text-right">
 			<span class="label-caps text-accent-text">Swap to</span>
-			{#if chosen === null}
+			{#if chosen === null || chosen === undefined}
 				<span class="truncate text-sm font-bold text-ink-faint">Pick a replacement</span>
 			{:else}
-				<span class="truncate text-sm font-extrabold text-ink">{chosen.name}</span>
+				<span class="truncate text-sm font-extrabold text-ink">{pickName(picks[0])}</span>
 				<span class="truncate text-xs font-bold tracking-numeral text-ink-faint">
 					{swapLine(chosen)}
 				</span>
@@ -373,6 +500,49 @@
 		<MagnifyingGlass size={24} class="text-ink-faint" />
 		<span class="text-md font-bold text-ink-faint">No exercise answers to that.</span>
 	</div>
+{/snippet}
+
+{#snippet filterChips(pad: string)}
+	<div
+		class="flex shrink-0 [scrollbar-width:none] gap-2 overflow-x-auto {pad} [&::-webkit-scrollbar]:hidden"
+	>
+		{#if muscle !== ''}
+			{@render clearChip(muscle, () => (muscle = ''))}
+		{/if}
+
+		{#if equipment !== ''}
+			{@render clearChip(equipment, () => (equipment = ''))}
+		{/if}
+
+		<button
+			type="button"
+			aria-expanded={filtersOpen}
+			onclick={() => (filtersOpen = !filtersOpen)}
+			class="flex min-h-chip shrink-0 items-center gap-1.5 rounded-xl
+				border-[1.5px] border-dashed border-line px-3.5 text-md font-bold
+				text-ink-muted focus-ring"
+			{@attach press()}
+		>
+			<Plus size={14} />
+			Filter
+		</button>
+	</div>
+
+	{#if filtersOpen}
+		<div class="flex shrink-0 flex-col gap-2 {pad}">
+			<ChipGroup bind:value={muscle} layout="row" label="Filter by muscle">
+				{#each MUSCLES as option (option)}
+					<Chip value={option}>{option}</Chip>
+				{/each}
+			</ChipGroup>
+
+			<ChipGroup bind:value={equipment} layout="row" label="Filter by equipment">
+				{#each EQUIPMENT as option (option)}
+					<Chip value={option}>{option}</Chip>
+				{/each}
+			</ChipGroup>
+		</div>
+	{/if}
 {/snippet}
 
 {#if wideViewport.current}
@@ -393,20 +563,6 @@
 
 				<div class="flex min-h-15 shrink-0 items-center gap-3 border-b border-line-soft px-5">
 					<MagnifyingGlass size={20} class="shrink-0 text-ink-faint" />
-
-					{#if muscle !== ''}
-						<button
-							type="button"
-							aria-label="Clear {muscle} filter"
-							onclick={() => (muscle = '')}
-							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-accent-soft px-2
-								text-sm font-extrabold text-accent-text focus-ring"
-							{@attach press()}
-						>
-							{muscle}
-							<span aria-hidden="true" class="text-md font-bold opacity-70">×</span>
-						</button>
-					{/if}
 
 					<input
 						bind:this={field}
@@ -429,15 +585,19 @@
 					</kbd>
 				</div>
 
-				{#if swap && replacing !== null}
+				{#if swap && outgoing !== null}
 					<div
 						class="flex shrink-0 items-center gap-2.5 border-b border-line-soft bg-canvas px-5 py-2"
 					>
 						<span class="label-caps">Replacing</span>
-						<span class="text-md font-extrabold text-ink">{replacing.name}</span>
+						<span class="text-md font-extrabold text-ink">{outgoing.name}</span>
 						<span class="text-sm font-bold tracking-numeral text-ink-faint">
-							{metaLine(replacing)}
+							{metaLine(outgoing)}
 						</span>
+					</div>
+				{:else}
+					<div class="flex shrink-0 flex-col gap-2 border-b border-line-soft py-2.5">
+						{@render filterChips('px-5')}
 					</div>
 				{/if}
 
@@ -450,16 +610,22 @@
 						<div class="px-5 pt-3.5 pb-1.5 label-caps">{shelf.title}</div>
 
 						{#each shelfShown as exercise (exercise.id)}
-							{@render paletteRow(exercise, `shelf:${exercise.id}`)}
+							{@render paletteRow(exercise, `shelf:${exercise.id}`, null, false)}
 						{/each}
 					{/if}
 
 					{#each groups as group (group.caption)}
-						{#if group.exercises.length > 0}
+						{#if group.families.length > 0}
 							<div class="px-5 pt-3.5 pb-1.5 label-caps">{group.caption}</div>
 
-							{#each group.exercises as exercise (exercise.id)}
-								{@render paletteRow(exercise, `list:${exercise.id}`)}
+							{#each group.families as family (family.parent.id)}
+								{@render paletteRow(family.parent, `list:${family.parent.id}`, family, false)}
+
+								{#if expanded.has(family.parent.id)}
+									{#each family.variants as variant (variant.id)}
+										{@render paletteRow(variant, `list:${variant.id}`, null, true)}
+									{/each}
+								{/if}
 							{/each}
 						{/if}
 					{/each}
@@ -493,8 +659,8 @@
 						font-semibold text-ink-faint"
 				>
 					<span><kbd class={kbd}>↑</kbd> <kbd class={kbd}>↓</kbd> move</span>
+					<span><kbd class={kbd}>→</kbd> variants</span>
 					<span><kbd class={kbd}>↵</kbd> pick</span>
-					<span><kbd class={kbd}>⇥</kbd> filter muscle</span>
 					{#if !swap}
 						<span><kbd class={kbd}>⌘</kbd><kbd class={kbd}>↵</kbd> add & close</span>
 					{/if}
@@ -518,17 +684,17 @@
 					{/if}
 				</div>
 
-				{#if swap && replacing !== null}
+				{#if swap && outgoing !== null}
 					<div class="shrink-0 px-4 pt-2.5">
 						<div class="flex items-center gap-3 rounded-2xl bg-canvas p-3">
 							<span class="size-11 shrink-0">
-								<ExerciseIllustration id={replacing.id} name={replacing.name} class="size-full" />
+								<ExerciseIllustration id={outgoing.id} name={outgoing.name} class="size-full" />
 							</span>
 							<div class="flex min-w-0 flex-col">
 								<span class="label-caps">Replacing</span>
-								<span class="truncate text-base font-extrabold text-ink">{replacing.name}</span>
+								<span class="truncate text-base font-extrabold text-ink">{outgoing.name}</span>
 								<span class="truncate text-sm font-bold tracking-numeral text-ink-faint">
-									{metaLine(replacing)}
+									{metaLine(outgoing)}
 								</span>
 							</div>
 						</div>
@@ -544,47 +710,9 @@
 				</div>
 
 				{#if !swap}
-					<div
-						class="flex shrink-0 [scrollbar-width:none] gap-2 overflow-x-auto px-4
-							pt-2.5 [&::-webkit-scrollbar]:hidden"
-					>
-						{#if muscle !== ''}
-							{@render clearChip(muscle, () => (muscle = ''))}
-						{/if}
-
-						{#if equipment !== ''}
-							{@render clearChip(equipment, () => (equipment = ''))}
-						{/if}
-
-						<button
-							type="button"
-							aria-expanded={filtersOpen}
-							onclick={() => (filtersOpen = !filtersOpen)}
-							class="flex min-h-chip shrink-0 items-center gap-1.5 rounded-xl
-								border-[1.5px] border-dashed border-line px-3.5 text-md font-bold
-								text-ink-muted focus-ring"
-							{@attach press()}
-						>
-							<Plus size={14} />
-							Filter
-						</button>
+					<div class="flex shrink-0 flex-col gap-2.5 pt-2.5">
+						{@render filterChips('px-4')}
 					</div>
-
-					{#if filtersOpen}
-						<div class="flex shrink-0 flex-col gap-2 px-4 pt-2.5">
-							<ChipGroup bind:value={muscle} layout="row" label="Filter by muscle">
-								{#each MUSCLES as option (option)}
-									<Chip value={option}>{option}</Chip>
-								{/each}
-							</ChipGroup>
-
-							<ChipGroup bind:value={equipment} layout="row" label="Filter by equipment">
-								{#each EQUIPMENT as option (option)}
-									<Chip value={option}>{option}</Chip>
-								{/each}
-							</ChipGroup>
-						</div>
-					{/if}
 				{/if}
 
 				<!-- `[&>*]:shrink-0`: a flex column that scrolls must not let its cards compress to
@@ -601,20 +729,26 @@
 
 						<div class={group}>
 							{#each shelfShown as exercise (exercise.id)}
-								{@render trayRow(exercise)}
+								{@render trayRow(exercise, null, false)}
 							{/each}
 						</div>
 					{/if}
 
 					{#each groups as group (group.caption)}
-						{#if group.exercises.length > 0}
+						{#if group.families.length > 0}
 							<div class={['label-caps', shelfShown.length > 0 && 'pt-1.5']}>
 								{group.caption}
 							</div>
 
 							<div class={group}>
-								{#each group.exercises as exercise (exercise.id)}
-									{@render trayRow(exercise)}
+								{#each group.families as family (family.parent.id)}
+									{@render trayRow(family.parent, family, false)}
+
+									{#if expanded.has(family.parent.id)}
+										{#each family.variants as variant (variant.id)}
+											{@render trayRow(variant, null, true)}
+										{/each}
+									{/if}
 								{/each}
 							</div>
 						{/if}
@@ -646,7 +780,7 @@
 	</Drawer.Root>
 {/if}
 
-{#snippet paletteRow(exercise: Exercise, key: string)}
+{#snippet paletteRow(exercise: Exercise, key: string, family: Family | null, variant: boolean)}
 	{@const session = lastPerformed[exercise.id]}
 	{@const last = lastSetLabel(exercise, session)}
 	{@const since = lastSinceLabel(session, now)}
@@ -654,111 +788,140 @@
 	{@const isActive = key === activeKey}
 	{@const match = searching ? matchRange(exercise.name, query) : null}
 
-	<button
-		type="button"
-		data-active={isActive ? '' : undefined}
-		aria-pressed={isPicked}
-		onclick={() => choose(exercise)}
-		class={[
-			'grid w-full grid-cols-[48px_minmax(0,1fr)_120px_120px_64px_44px] items-center',
-			'min-h-12 text-left focus-ring-inset',
-			isActive ? 'bg-hover' : 'hover:bg-hover press:bg-surface-2',
-			isPicked && swap && 'bg-accent-soft hover:bg-accent-soft'
-		]}
-		{@attach press()}
-	>
-		<span class="flex justify-center">
-			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-8" />
-		</span>
-
-		<span class="flex min-w-0 items-center gap-2 pr-2">
-			<span class="truncate text-base font-extrabold tracking-tight text-ink">
-				{@render name(exercise, match)}
+	<div class={['flex', isActive ? 'bg-hover' : 'hover:bg-hover']}>
+		<button
+			type="button"
+			data-active={isActive ? '' : undefined}
+			aria-pressed={isPicked}
+			onclick={() => choose(exercise)}
+			class={[
+				'grid min-w-0 flex-1 grid-cols-[48px_minmax(0,1fr)_120px_120px_64px_44px] items-center',
+				'min-h-12 text-left focus-ring-inset press:bg-surface-2',
+				isPicked && swap && 'bg-accent-soft'
+			]}
+			{@attach press()}
+		>
+			<span class="flex justify-center">
+				{#if !variant}
+					<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-8" />
+				{/if}
 			</span>
 
-			{#if exercise.variantOf !== undefined && (searching || chipped)}
-				{@render variantBadge()}
+			<span class="flex min-w-0 items-center gap-2 pr-2">
+				{#if variant}
+					{@render elbow()}
+				{/if}
+
+				<span
+					class={[
+						'truncate text-base tracking-tight text-ink',
+						variant ? 'font-bold' : 'font-extrabold'
+					]}
+				>
+					{@render name(exercise, match)}
+				</span>
+
+				{@render badges(exercise)}
+			</span>
+
+			<span class="truncate pr-2 text-sm font-semibold text-ink-muted">{exercise.equipment}</span>
+
+			{#if last === undefined}
+				<span class="text-md font-bold text-ink-faint">—</span>
+			{:else}
+				<span class="text-md font-bold tracking-numeral text-ink">{last}</span>
 			{/if}
-		</span>
 
-		<span class="truncate pr-2 text-sm font-semibold text-ink-muted">{exercise.equipment}</span>
+			<span
+				class={[
+					'text-md font-extrabold',
+					since === undefined ? 'text-ink-faint' : 'text-ink-muted'
+				]}
+			>
+				{since ?? '—'}
+			</span>
 
-		{#if last === undefined}
-			<span class="text-md font-bold text-ink-faint">—</span>
-		{:else}
-			<span class="text-md font-bold tracking-numeral text-ink">{last}</span>
-		{/if}
+			{@render mark(isPicked)}
+		</button>
 
-		<span
-			class={['text-md font-extrabold', since === undefined ? 'text-ink-faint' : 'text-ink-muted']}
-		>
-			{since ?? '—'}
-		</span>
-
-		{@render mark(isPicked)}
-	</button>
+		{@render expander(family, 'w-12')}
+	</div>
 {/snippet}
 
-{#snippet trayRow(exercise: Exercise)}
+{#snippet trayRow(exercise: Exercise, family: Family | null, variant: boolean)}
 	{@const session = lastPerformed[exercise.id]}
 	{@const since = lastSinceLabel(session, now)}
 	{@const isPicked = picked.has(exercise.id)}
 	{@const match = searching ? matchRange(exercise.name, query) : null}
 
-	<button
-		type="button"
-		aria-pressed={isPicked}
-		onclick={() => choose(exercise)}
-		data-ripple
-		class={[
-			'flex min-h-row w-full items-center gap-3 px-3 py-2 text-left focus-ring-inset',
-			'press:bg-surface-2',
-			isPicked && swap && 'bg-accent-soft'
-		]}
-		{@attach press()}
-	>
-		<span class="size-11 shrink-0">
-			<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-full" />
-		</span>
+	<div class="flex">
+		<button
+			type="button"
+			aria-pressed={isPicked}
+			onclick={() => choose(exercise)}
+			data-ripple
+			class={[
+				'flex min-h-row min-w-0 flex-1 items-center gap-3 py-2 text-left focus-ring-inset',
+				'press:bg-surface-2',
+				variant ? 'pr-3 pl-4' : 'px-3',
+				isPicked && swap && 'bg-accent-soft'
+			]}
+			{@attach press()}
+		>
+			{#if variant}
+				{@render elbow()}
+			{:else}
+				<span class="size-11 shrink-0">
+					<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-full" />
+				</span>
+			{/if}
 
-		<span class="flex min-w-0 flex-1 flex-col">
-			<span class="flex min-w-0 items-center gap-2">
-				<span class="truncate text-base font-extrabold tracking-tight text-ink">
-					{@render name(exercise, match)}
+			<span class="flex min-w-0 flex-1 flex-col">
+				<span class="flex min-w-0 items-center gap-2">
+					<span
+						class={[
+							'truncate text-base tracking-tight text-ink',
+							variant ? 'font-bold' : 'font-extrabold'
+						]}
+					>
+						{@render name(exercise, match)}
+					</span>
+
+					{@render badges(exercise)}
 				</span>
 
-				{#if exercise.variantOf !== undefined && (searching || chipped)}
-					{@render variantBadge()}
-				{/if}
+				<span class="truncate text-sm font-bold tracking-numeral text-ink-faint">
+					{metaLine(exercise)}
+				</span>
 			</span>
 
-			<span class="truncate text-sm font-bold tracking-numeral text-ink-faint">
-				{metaLine(exercise)}
+			<span
+				class={[
+					'shrink-0 text-md font-extrabold',
+					since === undefined ? 'text-ink-faint' : 'text-ink-muted'
+				]}
+			>
+				{since ?? '—'}
 			</span>
-		</span>
 
-		<span
-			class={[
-				'shrink-0 text-md font-extrabold',
-				since === undefined ? 'text-ink-faint' : 'text-ink-muted'
-			]}
-		>
-			{since ?? '—'}
-		</span>
+			{@render mark(isPicked)}
+		</button>
 
-		{@render mark(isPicked)}
-	</button>
+		{#if family !== null && family.variants.length > 0}
+			{@render expander(family, 'w-12 border-l border-line-soft')}
+		{/if}
+	</div>
 {/snippet}
 
 {#snippet pickChips(wide: boolean)}
-	{#each picks as id (id)}
-		{@const pick = catalogById[id]}
+	{#each picks as pick (pick.exerciseId)}
+		{@const exercise = catalogById[pick.exerciseId]}
 
-		{#if pick !== undefined}
+		{#if exercise !== undefined}
 			<button
 				type="button"
-				aria-label="Remove {pick.name}"
-				onclick={() => (picks = picks.filter((kept) => kept !== id))}
+				aria-label="Remove {pickName(pick)}"
+				onclick={() => (picks = picks.filter((kept) => kept.exerciseId !== pick.exerciseId))}
 				class={[
 					'flex shrink-0 items-center rounded-[10px] bg-sunken text-sm font-bold text-ink-muted',
 					'focus-ring',
@@ -767,9 +930,9 @@
 				{@attach press()}
 			>
 				<span class={wide ? 'size-5.5' : 'size-6'}>
-					<ExerciseIllustration id={pick.id} name={pick.name} class="size-full" />
+					<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-full" />
 				</span>
-				<span class={['truncate', wide ? 'max-w-36' : 'max-w-22']}>{pick.name}</span>
+				<span class={['truncate', wide ? 'max-w-36' : 'max-w-22']}>{pickName(pick)}</span>
 				<span aria-hidden="true" class="text-md">×</span>
 			</button>
 		{/if}

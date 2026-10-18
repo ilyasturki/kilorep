@@ -11,7 +11,8 @@
 	import { isArchived, startable } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
 	import { canCommit, firstUncompleted, prefillFor } from '$lib/domain/workout';
-	import type { Arms, History } from '$lib/domain/workout';
+	import type { Pick } from '$lib/exercises/picker';
+	import type { Arms, History, SwapMode } from '$lib/domain/workout';
 	import { workoutTitle } from '$lib/history/label';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import RecordLedger from '$lib/history/RecordLedger.svelte';
@@ -29,6 +30,7 @@
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
 	import ExertionDialog from '$lib/workout/ExertionDialog.svelte';
+	import SwapSetsDialog from '$lib/workout/SwapSetsDialog.svelte';
 	import LiveLedger from '$lib/workout/LiveLedger.svelte';
 	import LiveTray from '$lib/workout/LiveTray.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
@@ -222,8 +224,8 @@
 		insertOpen = true;
 	}
 
-	function insertPicks(exerciseIds: string[]) {
-		session?.addExercises(exerciseIds, insertAfter ?? undefined);
+	function insertPicks(picks: Pick[]) {
+		session?.addExercises(picks, insertAfter ?? undefined);
 		insertAfter = null;
 	}
 
@@ -241,6 +243,10 @@
 
 	const supersetShelf = $derived(
 		actingEntry === null ? null : shelfOf(entries, actingEntry.id, 'In this workout')
+	);
+
+	const present = $derived(
+		workout.entries.flatMap((entry) => entry.exercises.map((e) => e.exerciseId))
 	);
 
 	let exerciseAnchor = $state<HTMLElement | null>(null);
@@ -269,21 +275,56 @@
 		acting = null;
 	}
 
-	function swapPick(catalogId: string) {
-		if (session === null || acting === null) {
+	// Frozen at the pick, like the options sheets: the dialog reads it after the picker closes.
+	let swapping = $state<{
+		exerciseId: string;
+		pick: Pick;
+		from: string;
+		to: string;
+		logged: number;
+	} | null>(null);
+
+	let swapAsk = $state(false);
+
+	function swapPick([pick]: Pick[]) {
+		if (session === null || acting === null || actingLeg === null || pick === undefined) {
 			return;
 		}
 
-		session.swapExercise(acting, catalogId);
+		const logged = actingLeg.cursors.filter((cursor) => cursor.set.completed).length;
+
+		if (logged === 0) {
+			session.swapExercise(acting, pick, 'delete');
+			acting = null;
+
+			return;
+		}
+
+		swapping = {
+			exerciseId: acting,
+			pick,
+			from: actingLeg.meta.name,
+			to: catalogById[pick.exerciseId]?.name ?? pick.exerciseId,
+			logged
+		};
+		swapAsk = true;
+	}
+
+	function swapChosen(mode: SwapMode) {
+		if (session === null || swapping === null) {
+			return;
+		}
+
+		session.swapExercise(swapping.exerciseId, swapping.pick, mode);
 		acting = null;
 	}
 
-	function supersetPicks(exerciseIds: string[]) {
+	function supersetPicks(picks: Pick[]) {
 		if (session === null || actingEntry === null) {
 			return;
 		}
 
-		session.superset(actingEntry.id, exerciseIds);
+		session.superset(actingEntry.id, picks);
 		acting = null;
 	}
 
@@ -744,6 +785,8 @@
 	title="Add exercise"
 	multiple
 	frequent={data.frequent}
+	{present}
+	presentLabel="In workout"
 	lastPerformed={data.lastPerformed}
 	onpick={insertPicks}
 />
@@ -752,9 +795,19 @@
 	bind:open={swapOpen}
 	title="Swap exercise"
 	replacing={actingLeg === null ? null : actingLeg.meta}
+	{present}
+	presentLabel="In workout"
 	lastPerformed={data.lastPerformed}
 	heaviest={data.heaviest}
-	onpick={([id]) => swapPick(id)}
+	onpick={swapPick}
+/>
+
+<SwapSetsDialog
+	bind:open={swapAsk}
+	from={swapping?.from ?? ''}
+	to={swapping?.to ?? ''}
+	logged={swapping?.logged ?? 0}
+	onchoose={swapChosen}
 />
 
 <ExercisePickerSheet
@@ -763,6 +816,8 @@
 	multiple
 	verb="Superset"
 	pinned={supersetShelf}
+	{present}
+	presentLabel="In workout"
 	lastPerformed={data.lastPerformed}
 	onpick={supersetPicks}
 />

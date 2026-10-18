@@ -172,23 +172,35 @@ export const MAX_PLANNED_SETS = 12;
 export const PLANNED_REPS = 8;
 
 const blankExercise =
-	(catalogId: string) =>
-	(ids: ExerciseIds): TemplateExercise => ({
-		id: ids.exercise,
-		exerciseId: catalogId,
-		sets: ids.sets.map((id) => ({ id, plannedReps: null }))
-	});
+	(catalogId: string, grip?: string) =>
+	(ids: ExerciseIds): TemplateExercise => {
+		const exercise: TemplateExercise = {
+			id: ids.exercise,
+			exerciseId: catalogId,
+			sets: ids.sets.map((id) => ({ id, plannedReps: null }))
+		};
+
+		if (grip !== undefined) {
+			exercise.grip = grip;
+		}
+
+		return exercise;
+	};
 
 export function addExercise(
 	template: Template,
 	exerciseId: string,
-	ids: NewExerciseIds
+	ids: NewExerciseIds,
+	grip?: string
 ): TemplateEntry | null {
 	if (ids.sets.length === 0) {
 		return null;
 	}
 
-	const entry: TemplateEntry = { id: ids.entry, exercises: [blankExercise(exerciseId)(ids)] };
+	const entry: TemplateEntry = {
+		id: ids.entry,
+		exercises: [blankExercise(exerciseId, grip)(ids)]
+	};
 
 	template.entries.push(entry);
 
@@ -204,10 +216,12 @@ export function addExerciseTo(
 	return addToTree(template, entryId, ids, blankExercise(catalogId));
 }
 
+// The old grip goes with the old exercise: its id names a value of another axis, or of none.
 export function replaceExercise(
 	template: Template,
 	exerciseId: string,
-	catalogId: string
+	catalogId: string,
+	grip?: string
 ): boolean {
 	const exercise = exerciseIn(template, exerciseId);
 
@@ -216,6 +230,12 @@ export function replaceExercise(
 	}
 
 	exercise.exerciseId = catalogId;
+
+	if (grip === undefined) {
+		delete exercise.grip;
+	} else {
+		exercise.grip = grip;
+	}
 
 	return true;
 }
@@ -378,12 +398,13 @@ export function supersetWith(
 	template: Template,
 	entryId: string,
 	catalogId: string,
-	ids: ExerciseIds
+	ids: ExerciseIds,
+	grip?: string
 ): boolean {
 	const entry = template.entries.find((candidate) => candidate.id === entryId);
 	const round = entry === undefined ? undefined : roundLeg(entry.exercises).restSeconds;
 
-	if (!supersetWithTree(template, entryId, catalogId, ids, blankExercise(catalogId))) {
+	if (!supersetWithTree(template, entryId, catalogId, ids, blankExercise(catalogId, grip))) {
 		return false;
 	}
 

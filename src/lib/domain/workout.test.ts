@@ -36,7 +36,14 @@ import {
 	splitEntry,
 	supersetWith
 } from '$lib/domain/workout';
-import type { Prefill, SetCursor, Workout, WorkoutSet } from '$lib/domain/workout';
+import type {
+	Prefill,
+	SetCursor,
+	SwapMode,
+	Workout,
+	WorkoutExercise,
+	WorkoutSet
+} from '$lib/domain/workout';
 import type { Exercise } from '$lib/domain/exercise';
 
 // The real entries, so the grip axis a hint is keyed by is the one the app would read.
@@ -642,48 +649,197 @@ describe('removeSet', () => {
 	});
 });
 
-describe('replaceExercise', () => {
-	const ids = { exercise: 'we-row', sets: ['row-1', 'row-2', 'row-3'] };
+let minted = 0;
 
-	test('keeps the slot and changes what is performed in it', () => {
+function swap(
+	workout: Workout,
+	exerciseId: string,
+	catalogId: string,
+	mode: SwapMode = 'delete',
+	grip?: string
+): WorkoutExercise | null {
+	return replaceExercise(workout, exerciseId, catalogId, mode, () => `m-${++minted}`, grip);
+}
+
+function swapped(...args: Parameters<typeof swap>): WorkoutExercise {
+	const exercise = swap(...args);
+
+	if (exercise === null) {
+		throw new Error('the swap was refused');
+	}
+
+	return exercise;
+}
+
+describe('replaceExercise', () => {
+	test('keeps the slot and the leg, and changes what is performed in it', () => {
 		const workout = freshWorkout(0);
-		const exercise = replaceExercise(workout, 'we-incline', 'barbell-row', ids);
+		const exercise = swapped(workout, 'we-incline', 'barbell-row');
 
 		expect(workout.entries[1].exercises[0]).toBe(exercise);
+		expect(exercise.id).toBe('we-incline');
 		expect(workout.entries[1].id).toBe('entry-2');
 		expect(orderOf(workout)).toEqual(['bench-press', 'barbell-row', 'cable-fly', 'pec-deck']);
 	});
 
-	test('the sets are the incoming exercise, blank — nothing is carried across', () => {
+	test('the plan comes across: targets, set types and rest, on the same set ids', () => {
+		const workout = freshWorkout(0);
+		workout.entries[0].exercises[0].restSeconds = 150;
+
+		const exercise = swapped(workout, 'we-bench', 'dumbbell-bench-press');
+
+		expect(exercise.restSeconds).toBe(150);
+		expect(exercise.sets.map((s) => s.id)).toEqual([
+			'bench-w',
+			'bench-1',
+			'bench-2',
+			'bench-3',
+			'bench-4'
+		]);
+		expect(exercise.sets.map((s) => s.type)).toEqual([
+			'warmup',
+			'normal',
+			'normal',
+			'normal',
+			'normal'
+		]);
+		expect(exercise.sets.map((s) => s.plannedReps)).toEqual([null, 8, 8, 8, 8]);
+	});
+
+	test('numbers typed on a set still to do were meant for the other lift', () => {
+		const workout = freshWorkout(0);
+		draftSet(workout, 'incline-1', { weight: 30, reps: 10 });
+
+		swap(workout, 'we-incline', 'barbell-row', 'move');
+
+		expect(at(workout, 'incline-1').set).toEqual(openSet('incline-1', null));
+	});
+
+	test('move: logged sets keep their numbers on the new exercise', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 80, 8);
+		rateSet(workout, 'bench-1', 8);
+
+		const exercise = swapped(workout, 'we-bench', 'dumbbell-bench-press', 'move');
+
+		expect(exercise.sets.filter((s) => s.completed).map((s) => [s.id, s.weight, s.reps])).toEqual(
+			[
+				['bench-w', 40, 10],
+				['bench-1', 80, 8]
+			]
+		);
+		expect(at(workout, 'bench-1').set.rpe).toBe(8);
+		expect(at(workout, 'bench-2').set).toEqual(openSet('bench-2', 8));
+	});
+
+	test('keep: the logged sets stay, the rest start the new exercise right behind them', () => {
+		const workout = freshWorkout(0);
+		workout.entries[0].exercises[0].restSeconds = 150;
+		commitSet(workout, 'bench-1', 80, 8);
+
+		const exercise = swapped(workout, 'we-bench', 'dumbbell-bench-press', 'keep');
+
+		expect(orderOf(workout)).toEqual([
+			'bench-press',
+			'dumbbell-bench-press',
+			'incline-dumbbell-press',
+			'cable-fly',
+			'pec-deck'
+		]);
+		expect(workout.entries[0].exercises[0].sets.map((s) => s.id)).toEqual(['bench-w', 'bench-1']);
+		expect(workout.entries[1].exercises[0]).toBe(exercise);
+		expect(exercise.sets.map((s) => s.id)).toEqual(['bench-2', 'bench-3', 'bench-4']);
+		expect(exercise.sets.map((s) => s.plannedReps)).toEqual([8, 8, 8]);
+		expect(exercise.restSeconds).toBe(150);
+		expect(exercise.plannedAs).toBe('bench-press');
+		expect(workout.entries[0].exercises[0].plannedAs).toBeUndefined();
+	});
+
+	test('keep with every set logged starts the new exercise on the same shape, fresh', () => {
+		const workout = freshWorkout(0);
+		completeAll(workout);
+
+		const exercise = swapped(workout, 'we-incline', 'barbell-row', 'keep');
+
+		expect(workout.entries[1].exercises[0].sets.every((s) => s.completed)).toBe(true);
+		expect(exercise.sets).toHaveLength(3);
+		expect(exercise.sets.every((s) => !s.completed && s.weight === null)).toBe(true);
+		expect(exercise.sets.map((s) => s.id)).not.toContain('incline-1');
+	});
+
+	test('delete: what was logged is gone, the plan is not', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 80, 8);
+
+		const exercise = swapped(workout, 'we-bench', 'dumbbell-bench-press', 'delete');
+
+		expect(exercise.sets).toHaveLength(5);
+		expect(exercise.sets.some((s) => s.completed || s.weight !== null)).toBe(false);
+		expect(orderOf(workout)[0]).toBe('dumbbell-bench-press');
+	});
+
+	test('with nothing logged, keep and move are the same swap as delete', () => {
+		const shapes = (['move', 'keep', 'delete'] as const).map((mode) => {
+			const workout = freshWorkout(0);
+
+			swap(workout, 'we-incline', 'barbell-row', mode);
+
+			return workout;
+		});
+
+		expect(shapes[0]).toEqual(shapes[2]);
+		expect(shapes[1]).toEqual(shapes[2]);
+	});
+
+	test('the leg remembers what was planned, through a second swap and back', () => {
+		const workout = freshWorkout(0);
+
+		swap(workout, 'we-incline', 'barbell-row');
+		expect(workout.entries[1].exercises[0].plannedAs).toBe('incline-dumbbell-press');
+
+		swap(workout, 'we-incline', 'dumbbell-row');
+		expect(workout.entries[1].exercises[0].plannedAs).toBe('incline-dumbbell-press');
+
+		swap(workout, 'we-incline', 'incline-dumbbell-press');
+		expect('plannedAs' in workout.entries[1].exercises[0]).toBe(false);
+	});
+
+	test('the grip is the new exercise’s, on the leg and every set, logged or not', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'incline-1', 30, 10);
-		replaceExercise(workout, 'we-incline', 'barbell-row', ids);
 
-		expect(idsOf(workout)).not.toContain('incline-1');
-		expect(idsOf(workout).slice(5, 8)).toEqual(['row-1', 'row-2', 'row-3']);
-		expect(at(workout, 'row-1').set).toEqual(openSet('row-1', null));
+		swap(workout, 'we-incline', 'pull-up', 'move', 'underhand');
+
+		const leg = workout.entries[1].exercises[0];
+
+		expect(leg.grip).toBe('underhand');
+		expect(leg.sets.map((s) => s.grip)).toEqual(['underhand', 'underhand', 'underhand']);
+
+		swap(workout, 'we-incline', 'barbell-row', 'move');
+
+		expect('grip' in workout.entries[1].exercises[0]).toBe(false);
+		expect(workout.entries[1].exercises[0].sets.some((s) => 'grip' in s)).toBe(false);
 	});
 
-	test('zero sets is refused, and the slot it would have emptied is left alone', () => {
+	test('the same exercise, or an unknown leg, is refused and changes nothing', () => {
 		const workout = freshWorkout(0);
+		const before = structuredClone(workout);
 
-		expect(
-			replaceExercise(workout, 'we-incline', 'barbell-row', { exercise: 'we-row', sets: [] })
-		).toBeNull();
-		expect(orderOf(workout)[1]).toBe('incline-dumbbell-press');
-	});
-
-	test('an unknown exercise is refused rather than silently ignored', () => {
-		expect(replaceExercise(freshWorkout(0), 'nope', 'barbell-row', ids)).toBeNull();
+		expect(swap(workout, 'we-incline', 'incline-dumbbell-press')).toBeNull();
+		expect(swap(workout, 'nope', 'barbell-row')).toBeNull();
+		expect(workout).toEqual(before);
 	});
 
 	test('the other leg of a superset is untouched', () => {
 		const workout = superset(freshWorkout(0));
 		commitSet(workout, 'b-1', 12, 15);
 
-		replaceExercise(workout, 'we-a', 'barbell-row', ids);
+		swap(workout, 'we-a', 'barbell-row');
 
-		expect(workout.entries[1].exercises.map((e) => e.id)).toEqual(['we-row', 'we-b']);
+		expect(workout.entries[1].exercises.map((e) => e.exerciseId)).toEqual([
+			'barbell-row',
+			'pec-deck'
+		]);
 		expect(at(workout, 'b-1').set.completed).toBe(true);
 	});
 });
@@ -1366,6 +1522,18 @@ describe('copy-on-repeat', () => {
 
 		expect(exercises.map((e) => e.restSeconds)).toEqual([195, null, undefined, undefined]);
 		expect('restSeconds' in exercises[2]).toBe(false);
+	});
+
+	test('a swapped leg still stands in for the plan it repeats', () => {
+		const past = freshWorkout(5000);
+		past.templateId = 't1';
+		past.entries[1].exercises[0].exerciseId = 'barbell-row';
+		past.entries[1].exercises[0].plannedAs = 'incline-dumbbell-press';
+
+		const next = repeatFrom(past, 9000, mint('r'));
+
+		expect(next.entries[1].exercises[0].plannedAs).toBe('incline-dumbbell-press');
+		expect('plannedAs' in next.entries[0].exercises[0]).toBe(false);
 	});
 
 	test('an empty start repeats as an empty start', () => {

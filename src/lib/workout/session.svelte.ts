@@ -24,7 +24,8 @@ import {
 	splitEntry,
 	supersetWith
 } from '$lib/domain/workout';
-import type { Arms, History, Workout } from '$lib/domain/workout';
+import type { Arms, History, SwapMode, Workout } from '$lib/domain/workout';
+import type { Pick } from '$lib/exercises/picker';
 import type { LastGrips } from '$lib/store/derive';
 
 export type Resume = {
@@ -59,17 +60,18 @@ export class WorkoutSession {
 	}
 
 	/**
-	 * The grip an exercise opens on here: the one it was last worked with, else the default.
+	 * The grip an exercise opens on here: the one picked, else the one it was last worked
+	 * with, else the default.
 	 *
 	 * `undefined` for an exercise with no axis, which is most of them, and the sets it makes
 	 * then carry no grip at all.
 	 */
-	#opening(catalogId: string): string | undefined {
-		return settleGrip(catalogById[catalogId], this.grips[catalogId]);
+	#opening(pick: Pick): string | undefined {
+		return settleGrip(catalogById[pick.exerciseId], pick.grip ?? this.grips[pick.exerciseId]);
 	}
 
-	#setCount(catalogId: string): number {
-		return insertedSetCount(this.history, catalogId);
+	#setCount(pick: Pick): number {
+		return insertedSetCount(this.history, pick.exerciseId);
 	}
 
 	public get finished(): boolean {
@@ -149,23 +151,23 @@ export class WorkoutSession {
 		}
 	}
 
-	public addExercises(exerciseIds: string[], after?: string): void {
+	public addExercises(picks: Pick[], after?: string): void {
 		let first: string | null = null;
 		let anchor = after;
 
-		for (const exerciseId of exerciseIds) {
-			const count = this.#setCount(exerciseId);
+		for (const pick of picks) {
+			const count = this.#setCount(pick);
 
 			const entry = insertExercise(
 				this.workout,
-				exerciseId,
+				pick.exerciseId,
 				{
 					entry: crypto.randomUUID(),
 					exercise: crypto.randomUUID(),
 					sets: Array.from({ length: count }, () => crypto.randomUUID())
 				},
 				anchor,
-				this.#opening(exerciseId)
+				this.#opening(pick)
 			);
 
 			if (entry === null) {
@@ -181,19 +183,19 @@ export class WorkoutSession {
 		}
 	}
 
-	public superset(entryId: string, exerciseIds: string[]): void {
-		for (const exerciseId of exerciseIds) {
-			const count = this.#setCount(exerciseId);
+	public superset(entryId: string, picks: Pick[]): void {
+		for (const pick of picks) {
+			const count = this.#setCount(pick);
 
 			supersetWith(
 				this.workout,
 				entryId,
-				exerciseId,
+				pick.exerciseId,
 				{
 					exercise: crypto.randomUUID(),
 					sets: Array.from({ length: count }, () => crypto.randomUUID())
 				},
-				this.#opening(exerciseId)
+				this.#opening(pick)
 			);
 		}
 
@@ -232,26 +234,28 @@ export class WorkoutSession {
 		armSet(this.workout, setId, arms);
 	}
 
-	public swapExercise(exerciseId: string, catalogId: string): void {
+	public swapExercise(exerciseId: string, pick: Pick, mode: SwapMode): void {
 		const active = this.activeSetId === null ? null : cursorFor(this.workout, this.activeSetId);
 		const held = active === null || active.exercise.id === exerciseId;
-
-		const count = this.#setCount(catalogId);
 
 		const exercise = replaceExercise(
 			this.workout,
 			exerciseId,
-			catalogId,
-			{
-				exercise: crypto.randomUUID(),
-				sets: Array.from({ length: count }, () => crypto.randomUUID())
-			},
-			this.#opening(catalogId)
+			pick.exerciseId,
+			mode,
+			() => crypto.randomUUID(),
+			this.#opening(pick)
 		);
 
-		if (exercise !== null && held) {
-			this.#focus(exercise.sets[0].id);
+		if (exercise === null || !held) {
+			return;
 		}
+
+		const next =
+			exercise.sets.find((set) => !set.completed)?.id ??
+			(active === null ? null : (firstUncompleted(this.workout)?.set.id ?? null));
+
+		this.#focus(next);
 	}
 
 	public removeExercise(exerciseId: string): void {

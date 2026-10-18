@@ -25,6 +25,7 @@
 	} from '$lib/domain/template';
 	import { roundLeg } from '$lib/domain/rest';
 	import { firstUncompleted } from '$lib/domain/workout';
+	import type { Pick } from '$lib/exercises/picker';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
@@ -136,15 +137,16 @@
 
 	const setIds = () => Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID());
 
-	function plan(exerciseIds: string[]) {
+	function plan(picks: Pick[]) {
 		let after = insertAfter;
 
-		for (const exerciseId of exerciseIds) {
-			const entry = addExercise(template, exerciseId, {
-				entry: crypto.randomUUID(),
-				exercise: crypto.randomUUID(),
-				sets: setIds()
-			});
+		for (const pick of picks) {
+			const entry = addExercise(
+				template,
+				pick.exerciseId,
+				{ entry: crypto.randomUUID(), exercise: crypto.randomUUID(), sets: setIds() },
+				pick.grip
+			);
 
 			if (entry === null || after === null) {
 				continue;
@@ -185,10 +187,10 @@
 		optionsOpen = true;
 	}
 
-	// `acting` is not cleared after a swap: the picker's `replacing` still reads it.
-	function swapPick(exerciseId: string) {
-		if (acting !== null) {
-			replaceExercise(template, acting, exerciseId);
+	function swapPick([pick]: Pick[]) {
+		if (acting !== null && pick !== undefined) {
+			replaceExercise(template, acting, pick.exerciseId, pick.grip);
+			acting = null;
 		}
 	}
 
@@ -209,16 +211,23 @@
 		actingEntry === null ? null : shelfOf(entries, actingEntry.id, 'In this plan')
 	);
 
-	function supersetPicks(exerciseIds: string[]) {
+	const present = $derived(
+		template.entries.flatMap((entry) => entry.exercises.map((e) => e.exerciseId))
+	);
+
+	function supersetPicks(picks: Pick[]) {
 		if (actingEntry === null) {
 			return;
 		}
 
-		for (const exerciseId of exerciseIds) {
-			supersetWith(template, actingEntry.id, exerciseId, {
-				exercise: crypto.randomUUID(),
-				sets: setIds()
-			});
+		for (const pick of picks) {
+			supersetWith(
+				template,
+				actingEntry.id,
+				pick.exerciseId,
+				{ exercise: crypto.randomUUID(), sets: setIds() },
+				pick.grip
+			);
 		}
 
 		acting = null;
@@ -554,6 +563,8 @@
 	title="Add exercise"
 	multiple
 	frequent={data.frequent}
+	{present}
+	presentLabel="In plan"
 	lastPerformed={data.lastPerformed}
 	onpick={plan}
 />
@@ -562,9 +573,11 @@
 	bind:open={swapOpen}
 	title="Swap exercise"
 	replacing={actingGroup === null ? null : actingGroup.meta}
+	{present}
+	presentLabel="In plan"
 	lastPerformed={data.lastPerformed}
 	heaviest={data.heaviest}
-	onpick={([id]) => swapPick(id)}
+	onpick={swapPick}
 />
 
 <ExercisePickerSheet
@@ -573,6 +586,8 @@
 	multiple
 	verb="Superset"
 	pinned={supersetShelf}
+	{present}
+	presentLabel="In plan"
 	lastPerformed={data.lastPerformed}
 	onpick={supersetPicks}
 />

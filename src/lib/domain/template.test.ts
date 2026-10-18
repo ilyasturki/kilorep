@@ -168,6 +168,33 @@ describe('planning exercises', () => {
 		expect(orderOf(template)).toEqual(['bench-press']);
 	});
 
+	test('a swap leaves the old grip behind, and plans the one it names', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'pull-up', 3);
+		setExerciseGrip(template, 'pull-up-node', catalogById['pull-up'], 'underhand');
+
+		replaceExercise(template, 'pull-up-node', 'lat-pulldown');
+
+		expect('grip' in template.entries[0].exercises[0]).toBe(false);
+
+		replaceExercise(template, 'pull-up-node', 'pull-up', 'neutral');
+
+		expect(template.entries[0].exercises[0].grip).toBe('neutral');
+	});
+
+	test('an added or supersetted exercise plans the grip it was picked with', () => {
+		const template = blankTemplate('t1', 100);
+
+		addExercise(template, 'pull-up', { entry: 'e1', exercise: 'x1', sets: ['s1'] }, 'underhand');
+		supersetWith(template, 'e1', 'lat-pulldown', { exercise: 'x2', sets: ['s2'] }, 'close');
+		addExercise(template, 'bench-press', { entry: 'e2', exercise: 'x3', sets: ['s3'] });
+
+		const [first, second, third] = template.entries.flatMap((entry) => entry.exercises);
+
+		expect([first.grip, second.grip]).toEqual(['underhand', 'close']);
+		expect('grip' in third).toBe(false);
+	});
+
 	test('the same exercise may be planned twice, swapped into or added', () => {
 		const template = blankTemplate('t1', 100);
 		plan(template, 'bench-press', 3);

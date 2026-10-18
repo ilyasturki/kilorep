@@ -48,7 +48,6 @@
 		onmovedown
 	}: Props = $props();
 
-	let confirmingSwap = $state(false);
 	let confirmingRemove = $state(false);
 
 	// What the menu shows freezes the moment it closes: every action shuts it before it runs,
@@ -89,14 +88,9 @@
 			: `${logged} logged sets go with it, and nothing in the app can put them back.`
 	);
 
+	// What becomes of logged sets is asked once the replacement is known, by name.
 	function swap() {
 		open = false;
-
-		if (logged > 0) {
-			confirmingSwap = true;
-			return;
-		}
-
 		onswap();
 	}
 
@@ -178,14 +172,6 @@
 		Remove exercise
 	</MenuItem>
 </Menu>
-
-<AlertDialog
-	bind:open={confirmingSwap}
-	title="Swap {name}?"
-	description={lost}
-	confirmLabel="Swap"
-	onconfirm={onswap}
-/>
 
 <AlertDialog
 	bind:open={confirmingRemove}

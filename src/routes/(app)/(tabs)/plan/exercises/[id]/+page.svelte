@@ -173,7 +173,9 @@
 		const store = await getStore();
 
 		// The workout screen's autosave effect is not mounted, so the write is this page's.
-		session.addExercises([exercise.id]);
+		session.addExercises([
+			chip === null ? { exerciseId: exercise.id } : { exerciseId: exercise.id, grip: chip }
+		]);
 		persistSession(store, session);
 
 		await goto('/train/live');
@@ -182,11 +184,16 @@
 	async function addToPlan(template: Template) {
 		const store = await getStore();
 
-		addExercise(template, exercise.id, {
-			entry: crypto.randomUUID(),
-			exercise: crypto.randomUUID(),
-			sets: Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID())
-		});
+		addExercise(
+			template,
+			exercise.id,
+			{
+				entry: crypto.randomUUID(),
+				exercise: crypto.randomUUID(),
+				sets: Array.from({ length: PLANNED_SET_COUNT }, () => crypto.randomUUID())
+			},
+			chip ?? undefined
+		);
 
 		await store.saveTemplate(template, Date.now());
 

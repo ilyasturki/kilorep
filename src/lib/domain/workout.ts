@@ -68,6 +68,8 @@ export type WorkoutExercise = {
 	restSeconds?: number | null;
 	// The grip new sets here inherit. What was performed is on the sets themselves.
 	grip?: string;
+	// The exerciseId a swap took this leg's place from; absent on a leg that is what was planned.
+	plannedAs?: string;
 };
 
 export type WorkoutEntry = {
@@ -503,32 +505,100 @@ export function addExercise(
 	return entry;
 }
 
+export type SwapMode = 'move' | 'keep' | 'delete';
+
+function regrip(set: WorkoutSet, grip: string | undefined): WorkoutSet {
+	if (grip === undefined) {
+		delete set.grip;
+	} else {
+		set.grip = grip;
+	}
+
+	return set;
+}
+
+// Typed numbers on a set still to do were meant for the other lift.
+function reopened(set: WorkoutSet, grip: string | undefined, id = set.id): WorkoutSet {
+	const fresh = blankSet(id, grip);
+
+	fresh.type = set.type;
+	fresh.plannedReps = set.plannedReps;
+
+	return fresh;
+}
+
+function standIn(leg: WorkoutExercise, catalogId: string): string | undefined {
+	const planned = leg.plannedAs ?? leg.exerciseId;
+
+	return planned === catalogId ? undefined : planned;
+}
+
 export function replaceExercise(
 	workout: Workout,
 	exerciseId: string,
 	catalogId: string,
-	ids: ExerciseIds,
+	mode: SwapMode,
+	mint: () => string,
 	grip?: string
 ): WorkoutExercise | null {
-	if (ids.sets.length === 0) {
+	const at = workout.entries.findIndex((entry) => entry.exercises.some((e) => e.id === exerciseId));
+	const leg = at === -1 ? undefined : workout.entries[at].exercises.find((e) => e.id === exerciseId);
+
+	if (leg === undefined || leg.exerciseId === catalogId) {
 		return null;
 	}
 
-	for (const entry of workout.entries) {
-		const at = entry.exercises.findIndex((e) => e.id === exerciseId);
+	const plannedAs = standIn(leg, catalogId);
+	const done = leg.sets.filter((set) => set.completed);
 
-		if (at === -1) {
-			continue;
+	if (mode === 'keep' && done.length > 0) {
+		const todo = leg.sets.filter((set) => !set.completed);
+
+		const moved: WorkoutExercise = {
+			id: mint(),
+			exerciseId: catalogId,
+			sets:
+				todo.length > 0
+					? todo.map((set) => reopened(set, grip))
+					: done.map((set) => reopened(set, grip, mint()))
+		};
+
+		if (leg.restSeconds !== undefined) {
+			moved.restSeconds = leg.restSeconds;
 		}
 
-		const exercise = blankExercise(catalogId, grip)(ids);
+		if (grip !== undefined) {
+			moved.grip = grip;
+		}
 
-		entry.exercises[at] = exercise;
+		if (plannedAs !== undefined) {
+			moved.plannedAs = plannedAs;
+		}
 
-		return exercise;
+		leg.sets = done;
+		workout.entries.splice(at + 1, 0, { id: mint(), exercises: [moved] });
+
+		return moved;
 	}
 
-	return null;
+	leg.sets = leg.sets.map((set) =>
+		mode === 'move' && set.completed ? regrip(set, grip) : reopened(set, grip)
+	);
+	leg.exerciseId = catalogId;
+
+	if (grip === undefined) {
+		delete leg.grip;
+	} else {
+		leg.grip = grip;
+	}
+
+	if (plannedAs === undefined) {
+		delete leg.plannedAs;
+	} else {
+		leg.plannedAs = plannedAs;
+	}
+
+	return leg;
 }
 
 export function repeatFrom(past: Workout, startedAt: number, mint: () => string): Workout {
@@ -562,6 +632,10 @@ export function repeatFrom(past: Workout, startedAt: number, mint: () => string)
 
 			if (exercise.grip !== undefined) {
 				repeated.grip = exercise.grip;
+			}
+
+			if (exercise.plannedAs !== undefined) {
+				repeated.plannedAs = exercise.plannedAs;
 			}
 
 			exercises.push(repeated);
