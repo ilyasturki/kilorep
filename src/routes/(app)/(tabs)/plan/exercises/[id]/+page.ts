@@ -47,7 +47,3 @@ export const load: PageLoad = async ({ params, url }) => {
 
 	return { exercise, grip, past, lastPerformed, note, plans, programmedIn, bodyweight, named };
 };
-=======
-	return { exercise, grip, past, lastPerformed, note, plans, bodyweight, named };
->>>>>>> 510c0b4 (perf(exercises): ask whether a custom is named beside the other reads)
-};
