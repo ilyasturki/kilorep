@@ -2,6 +2,7 @@ import type { Exercise, LoadMode } from '$lib/domain/exercise';
 import { bodyweightShareOf, setLabel } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import { bestSet } from '$lib/domain/stats';
+import type { PerformedSet } from '$lib/domain/workout';
 import { formatSince } from '$lib/history/label';
 
 const LOAD_MODE_NOTES: Record<LoadMode, string> = {
@@ -38,6 +39,15 @@ export function loadLabel(kg: number): string {
 }
 
 export { setLabel } from '$lib/domain/load';
+
+/** The raw best under the name every screen gives it. */
+export function bestLabel(exercise: Exercise, set: PerformedSet): string {
+	if (bodyweightShareOf(exercise) > 0 && set.weight === 0) {
+		return `Most reps ${set.reps}`;
+	}
+
+	return `Heaviest ${setLabel(exercise, set)}`;
+}
 
 /** A weight column's cell: `setLabel`'s rule for one number, `body` where nothing was added. */
 export function addedLabel(exercise: Exercise, weight: number): string {

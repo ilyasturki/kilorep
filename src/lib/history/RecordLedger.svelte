@@ -3,7 +3,7 @@
 	import { scaleName, shownExertion } from '$lib/domain/exertion';
 	import { gripLabel } from '$lib/domain/grip';
 	import type { SetCursor } from '$lib/domain/workout';
-	import { loadModeNote } from '$lib/exercises/label';
+	import { addedLabel, loadModeNote } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import { setNote } from '$lib/workout/groups';
@@ -67,7 +67,9 @@
 				{warmup ? 'W' : cursor.workingIndex + 1}
 			</span>
 
-			<span class="{cell} {num}">{show(set.weight)}</span>
+			<span class="{cell} {num}">
+				{set.weight === null ? '–' : addedLabel(meta, set.weight)}
+			</span>
 			<span class="{cell} {strayed ? 'font-extrabold text-accent-text' : num}">
 				{show(set.reps)}
 			</span>

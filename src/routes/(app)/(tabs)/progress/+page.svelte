@@ -11,11 +11,12 @@
 		rollingConsistency,
 		weeklyWork
 	} from '$lib/domain/progress';
-	import { loadLabel } from '$lib/exercises/label';
+	import { setLabel } from '$lib/exercises/label';
 	import Sparkline from '$lib/progress/Sparkline.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
+	import Tooltip from '$lib/ui/Tooltip.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import ChartBar from '$lib/ui/icons/ChartBar.svelte';
 	import { press } from '$lib/ui/press';
@@ -69,6 +70,11 @@
 	const prs = $derived(recentPrs(data.sessions, since4, carried));
 
 	const PR_ROWS = 3;
+
+	const PR_NOTE =
+		'Each PR is a new Heaviest ever on that exercise, any grip, set in the last four weeks: ' +
+		'the most weight you have added, most reps at it. Where nothing was ever added, it is ' +
+		'Most reps. Your body weight is never ranked.';
 
 	let expanded = $state(false);
 	const panelId = $props.id();
@@ -229,7 +235,11 @@
 				{:else}
 					{#if prs.length > 0}
 						<div class="flex flex-col gap-1">
-							<h3 class="px-1 {WINDOW}">Last 4 weeks</h3>
+							<h3 class="px-1">
+								<Tooltip text={PR_NOTE}>
+									<span class={WINDOW}>Last 4 weeks</span>
+								</Tooltip>
+							</h3>
 
 							{#each prs.slice(0, PR_ROWS) as pr (pr.exerciseId)}
 								<ListRow
@@ -243,7 +253,7 @@
 									{/snippet}
 									{#snippet trailing()}
 										<span class={WINDOW}>{day.format(pr.date)}</span>
-										<span class="tabular-nums">{loadLabel(pr.load)} × {pr.set.reps}</span>
+										<span class="tabular-nums">{setLabel(catalogById[pr.exerciseId], pr.set)}</span>
 									{/snippet}
 								</ListRow>
 							{/each}
@@ -277,7 +287,9 @@
 												{/snippet}
 												{#snippet trailing()}
 													<span class={WINDOW}>{day.format(pr.date)}</span>
-													<span class="tabular-nums">{loadLabel(pr.load)} × {pr.set.reps}</span>
+													<span class="tabular-nums"
+														>{setLabel(catalogById[pr.exerciseId], pr.set)}</span
+													>
 												{/snippet}
 											</ListRow>
 										{/each}

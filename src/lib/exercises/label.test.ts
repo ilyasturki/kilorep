@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { catalogById } from '$lib/catalog';
-import { ordinal, setFigures, setLabel } from '$lib/exercises/label';
+import { addedLabel, bestLabel, ordinal, setFigures, setLabel } from '$lib/exercises/label';
 
 describe('setLabel', () => {
 	test('a loaded lift prints what was on the bar', () => {
@@ -38,6 +38,32 @@ describe('setFigures', () => {
 		expect(setFigures(catalogById['bench-press'], null, null)).toEqual({ load: '–', reps: '–' });
 		expect(setFigures(catalogById['pull-up'], null, 6)).toEqual({ load: '–', reps: '6' });
 		expect(setFigures(catalogById['push-up'], 0, null)).toEqual({ load: null, reps: '–' });
+	});
+});
+
+describe('bestLabel', () => {
+	test('the raw best is Heaviest wherever something was added', () => {
+		expect(bestLabel(catalogById['bench-press'], { weight: 100, reps: 3, rpe: null })).toBe(
+			'Heaviest 100 × 3'
+		);
+		expect(bestLabel(catalogById['pull-up'], { weight: 5, reps: 6, rpe: null })).toBe(
+			'Heaviest +5 × 6'
+		);
+	});
+
+	test('and Most reps where the belt was always empty, saying reps once', () => {
+		expect(bestLabel(catalogById['pull-up'], { weight: 0, reps: 12, rpe: null })).toBe(
+			'Most reps 12'
+		);
+	});
+});
+
+describe('addedLabel', () => {
+	test('a weight column never reads 0 on a body-weight movement', () => {
+		expect(addedLabel(catalogById['pull-up'], 0)).toBe('body');
+		expect(addedLabel(catalogById['pull-up'], 5)).toBe('+5');
+		expect(addedLabel(catalogById['bench-press'], 0)).toBe('0');
+		expect(addedLabel(catalogById['bench-press'], 80)).toBe('80');
 	});
 });
 

@@ -17,7 +17,7 @@
 	import type { MatchRange } from '$lib/domain/search';
 	import { sections, similarTo } from '$lib/exercises/browse';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
-	import { lastSetLabel, lastSinceLabel, setLabel } from '$lib/exercises/label';
+	import { bestLabel, lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
 	import type { PickerFilters } from '$lib/exercises/picker';
 	import { shownCaption, shownExercises } from '$lib/exercises/picker';
 	import type { Heaviest, LastPerformed } from '$lib/store/derive';
@@ -297,7 +297,7 @@
 
 		const parts = [
 			...(last === undefined ? [] : [`Last ${last}`]),
-			...(best === undefined ? [] : [`Best ${setLabel(exercise, best)}`])
+			...(best === undefined ? [] : [bestLabel(exercise, best)])
 		];
 
 		return parts.length === 0 ? 'Never trained' : parts.join(' · ');
