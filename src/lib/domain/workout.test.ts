@@ -680,6 +680,23 @@ function swapped(...args: Parameters<typeof swap>): WorkoutExercise {
 }
 
 describe('replaceExercise', () => {
+	test('a note stays with the lift it was written on, or with the logged sets moved across', () => {
+		const notes = (['move', 'keep', 'delete'] as const).map((mode) => {
+			const workout = freshWorkout(0);
+			setExerciseNote(workout, 'we-bench', 'Seat 5');
+
+			const exercise = swapped(workout, 'we-bench', 'dumbbell-bench-press', mode);
+
+			return [workout.entries[0].exercises[0].note, exercise.note];
+		});
+
+		expect(notes).toEqual([
+			['Seat 5', 'Seat 5'],
+			['Seat 5', undefined],
+			[undefined, undefined]
+		]);
+	});
+
 	test('keeps the slot and the leg, and changes what is performed in it', () => {
 		const workout = freshWorkout(0);
 		const exercise = swapped(workout, 'we-incline', 'barbell-row');

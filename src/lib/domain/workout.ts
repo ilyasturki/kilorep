@@ -745,6 +745,11 @@ export function replaceExercise(
 	);
 	leg.exerciseId = catalogId;
 
+	// A note is about the lift it was written on, and only logged sets moved across take it.
+	if (mode !== 'move' || done.length === 0) {
+		delete leg.note;
+	}
+
 	if (grip === undefined) {
 		delete leg.grip;
 	} else {
