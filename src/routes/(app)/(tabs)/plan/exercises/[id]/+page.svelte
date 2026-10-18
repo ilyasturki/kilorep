@@ -55,6 +55,8 @@
 
 	const here = $derived(addressOf(page.url));
 
+	const cameFrom = $derived(page.url.searchParams.get('from'));
+
 	const family = $derived(kin(catalog, exercise));
 
 	const axis = $derived(exercise.grips);
@@ -290,7 +292,7 @@
 		meta={lastSetLabel(entry, last)}
 		leading={thumb}
 		trailing={since === undefined ? undefined : recency}
-		href={openedFrom(`/plan/exercises/${entry.id}`, here)}
+		href={openedFrom(`/plan/exercises/${entry.id}`, cameFrom)}
 	/>
 {/snippet}
 
@@ -428,7 +430,8 @@
 	{#if family.length > 0}
 		<section class="flex flex-col gap-2">
 			<h2 class="px-3 label-caps">Variants</h2>
-			<div class="list-group">
+			<!-- A variant takes this one's place: both answer to the same back. -->
+			<div class="list-group" data-sveltekit-replacestate>
 				{#each family as variant (variant.id)}
 					{@render familyRow(variant)}
 				{/each}
