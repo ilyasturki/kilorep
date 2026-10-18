@@ -1,5 +1,9 @@
 node_modules
 
+# End-to-end runs: Playwright's HTML report, and the traces and screenshots of failed specs
+/playwright-report
+/test-results
+
 # Output
 .output
 .vercel

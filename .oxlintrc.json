@@ -227,7 +227,13 @@
 		},
 		{
 			// Build and tooling config: a default export is the contract.
-			"files": ["*.config.ts", "*.config.js", "svelte.config.js", "capacitor.config.ts"],
+			"files": [
+				"*.config.ts",
+				"*.config.js",
+				"svelte.config.js",
+				"capacitor.config.ts",
+				"e2e/teardown.ts"
+			],
 			"env": { "node": true, "browser": false },
 			"rules": {
 				"import/no-default-export": "off",
@@ -290,6 +296,24 @@
 				// The rule protects published modules from `require(esm)`. These are
 				// `node scripts/…` entry points, required by nothing.
 				"node/no-top-level-await": "off"
+			}
+		},
+		{
+			// The end-to-end suite. Node by the same argument as `scripts/`: `serve.ts` builds and
+			// starts the servers, the fixtures open the run's database to plant accounts, and the
+			// ports and the browser's path arrive through the environment.
+			"files": ["e2e/**"],
+			"env": { "node": true, "browser": false },
+			"rules": {
+				"import/no-nodejs-modules": "off",
+				"node/no-process-env": "off",
+				// `spawnSync` and `mkdtempSync` run before any test does; `waitForSync` is only named like one.
+				"node/no-sync": "off",
+				// The fixtures plant accounts with the server's own modules and the seed's content —
+				// the reach `tests/` has into `scripts/seed/`, for the same reason.
+				"import/no-relative-parent-imports": "off",
+				// `serve.ts` is an entry point: a build that failed ends the run with its exit code.
+				"unicorn/no-process-exit": "off"
 			}
 		},
 		{

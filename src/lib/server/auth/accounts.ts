@@ -40,7 +40,7 @@ export function listUsers(db: Database): User[] {
 	return db.select().from(users).orderBy(users.createdAt).all();
 }
 
-function insertUser(
+export function insertUser(
 	db: Database,
 	email: string,
 	passwordHash: string | null,

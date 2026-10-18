@@ -9,8 +9,11 @@ import pkg from './package.json' with { type: 'json' };
 
 const isAppBuild = process.env.BUILD_TARGET === 'app';
 
+// `cap sync` ships whatever sits in build/app, so the end-to-end suite's bundle goes elsewhere.
+const appOut = process.env.APP_OUT ?? 'build/app';
+
 const adapter = isAppBuild
-	? staticAdapter({ pages: 'build/app', assets: 'build/app', fallback: 'index.html' })
+	? staticAdapter({ pages: appOut, assets: appOut, fallback: 'index.html' })
 	: node({ out: 'build/server' });
 
 function stripDevRoutes(): Plugin {
