@@ -10,8 +10,10 @@ import {
 	NOTE_PREFIX,
 	REST_DEFAULT_ID,
 	isNotePreference,
+	isPlanRestPreference,
 	isRestDefaultPreference,
 	isRestOverridePreference,
+	planRestTemplate,
 	restOverrideExercise
 } from '$lib/domain/preference';
 import { defaultRestSettings } from '$lib/domain/rest';
@@ -199,6 +201,23 @@ export class Library {
 			}
 
 			return settings;
+		});
+	}
+
+	/** Each plan's own default rest, where it states one: seconds, or null for never. */
+	public planRests(): Record<string, number | null> {
+		return this.once('planRests', () => {
+			const out: Record<string, number | null> = {};
+
+			for (const { id, payload } of this.preferences()) {
+				const templateId = planRestTemplate(id);
+
+				if (templateId !== null && isPlanRestPreference(payload)) {
+					out[templateId] = payload.seconds;
+				}
+			}
+
+			return out;
 		});
 	}
 

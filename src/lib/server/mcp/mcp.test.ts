@@ -307,6 +307,7 @@ type PlanRow = {
 	archived: boolean;
 	position?: number | null;
 	lastTrained: string | null;
+	defaultRestSeconds?: number | null;
 	exercises: PlanTree | null;
 };
 
@@ -390,6 +391,7 @@ type Noted = { note?: string | null; replaced?: string | null; error?: string };
 type Rested = {
 	default?: { enabled: boolean; seconds: number };
 	exerciseId?: string;
+	planId?: string;
 	inherits?: boolean;
 	restSeconds?: number | null;
 	error?: string;
@@ -1727,6 +1729,58 @@ describe('notes and rest', () => {
 		const refused = await once<Rested>('set_rest', { seconds: null });
 
 		expect(refused.error).toContain('enabled: false');
+	});
+
+	test("a plan's default rest is written where the app reads it, and read back on the plan", async () => {
+		seed(plan({ id: 'push', name: 'Push', exercises: ['bench-press'] }));
+
+		const silent = await once<Plans>('plans');
+
+		expect(silent.plans[0]).not.toHaveProperty('defaultRestSeconds');
+
+		const set = await once<Rested>('set_rest', { planId: 'push', seconds: 90 });
+
+		expect(set).toEqual({ planId: 'push', inherits: false, restSeconds: 90 });
+
+		const timed = await once<Plans>('plans');
+
+		expect(timed.plans[0].defaultRestSeconds).toBe(90);
+
+		const stored = syncExchange(db, userId, { watermark: 0, push: [] }).records.find(
+			(record) => record.id === 'plan-rest:push'
+		);
+
+		expect(stored).toMatchObject({ kind: 'preference', deletedAt: null, payload: { seconds: 90 } });
+
+		await once<Rested>('set_rest', { planId: 'push', seconds: null });
+
+		const never = await once<Plans>('plans');
+
+		expect(never.plans[0].defaultRestSeconds).toBeNull();
+
+		const cleared = await once<Rested>('set_rest', { planId: 'push' });
+
+		expect(cleared).toEqual({ planId: 'push', inherits: true, restSeconds: 120 });
+
+		const inherits = await once<Plans>('plans');
+
+		expect(inherits.plans[0]).not.toHaveProperty('defaultRestSeconds');
+	});
+
+	test("a plan's default is refused for a plan that is not there, or beside an exercise", async () => {
+		seed(plan({ id: 'push', name: 'Push', exercises: ['bench-press'] }));
+
+		const missing = await once<Rested>('set_rest', { planId: 'nope', seconds: 90 });
+
+		expect(missing.error).toBe('no plan nope');
+
+		const mixed = await once<Rested>('set_rest', {
+			planId: 'push',
+			exerciseId: 'bench-press',
+			seconds: 90
+		});
+
+		expect(mixed.error).toContain('save_plan');
 	});
 
 	test('called with nothing at all it reads the default rather than writing one', async () => {

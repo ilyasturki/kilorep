@@ -4,16 +4,51 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { catalog } from '$lib/catalog';
 import { gripLabel } from '$lib/domain/grip';
 import { bodyweightShareOf, carriedOn } from '$lib/domain/load';
-import { REST_DEFAULT_ID, noteId, restOverrideId } from '$lib/domain/preference';
+import { REST_DEFAULT_ID, noteId, planRestId, restOverrideId } from '$lib/domain/preference';
 import { MAX_REST_SECONDS, MIN_REST_SECONDS, restSecondsFor } from '$lib/domain/rest';
 import { searchExercises } from '$lib/domain/search';
 import { estimated1Rm } from '$lib/domain/stats';
 
 import type { Tools } from './context.ts';
+import type { ToolReply } from './format.ts';
 import { bestOf, failed, identify, iso, refused, reply, round, summarise } from './format.ts';
 import { exerciseOf, noSuchExercise } from './library.ts';
 
 const SECONDS = z.number().int().min(MIN_REST_SECONDS).max(MAX_REST_SECONDS);
+
+function setPlanRest(
+	{ library, write }: Pick<Tools, 'library' | 'write'>,
+	planId: string,
+	seconds: number | null | undefined
+): ToolReply {
+	if (library.template(planId) === null) {
+		return reply({ error: `no plan ${planId}` });
+	}
+
+	const inherited = library.restSettings().seconds;
+
+	if (seconds === undefined && !Object.hasOwn(library.planRests(), planId)) {
+		return reply({ planId, inherits: true, restSeconds: inherited });
+	}
+
+	const outcome = write({
+		id: planRestId(planId),
+		kind: 'preference',
+		payload: { seconds: seconds ?? null },
+		expect: 'any',
+		deleted: seconds === undefined
+	});
+
+	if (failed(outcome)) {
+		return refused(outcome);
+	}
+
+	return reply({
+		planId,
+		inherits: seconds === undefined,
+		restSeconds: seconds === undefined ? inherited : seconds
+	});
+}
 
 export function registerExercises(server: McpServer, { library, write }: Tools): void {
 	server.registerTool(
@@ -171,7 +206,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 		{
 			title: 'Set a rest duration',
 			description:
-				'The rest timer between working sets. Called with no arguments at all it writes nothing and answers with the standing default — read it that way before overriding it, since the default is the number a plan or an exercise is then departing from. With no exerciseId it sets that default; with one it is that exercise’s own override — a number of seconds, or null to never rest on it. Careful: an exerciseId with no seconds is not a read, it drops the override and inherits again; the duration in force on one exercise is a field on `exercise`. A plan can also carry its own duration, written through save_plan, which wins over both.',
+				'The rest timer between working sets. Called with no arguments at all it writes nothing and answers with the standing default — read it that way before overriding it, since the default is the number a plan or an exercise is then departing from. With no exerciseId it sets that default; with one it is that exercise’s own override — a number of seconds, or null to never rest on it. With a planId it is that plan’s own default, for every exercise in it that has neither a planned duration nor an override of its own (null: never rest in this plan); plans reads it back as `defaultRestSeconds`. Careful: an exerciseId or a planId with no seconds is not a read, it drops what was stated and inherits again; the duration in force on one exercise is a field on `exercise`. A planned exercise can also carry its own duration, written through save_plan, which wins over all of them.',
 			inputSchema: z.object({
 				exerciseId: z
 					.string()
@@ -181,13 +216,28 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 					),
 				seconds: SECONDS.nullable()
 					.optional()
-					.describe('seconds; null means never rest here; omit alongside exerciseId to inherit'),
+					.describe(
+						'seconds; null means never rest here; omit alongside exerciseId or planId to inherit'
+					),
+				planId: z
+					.string()
+					.optional()
+					.describe('a plan id from plans, to set that plan’s own default instead'),
 				enabled: z.boolean().optional().describe('the default only — false turns rest off entirely')
 			}),
 			annotations: { idempotentHint: true }
 		},
-		({ exerciseId, seconds, enabled }) => {
+		({ exerciseId, seconds, planId, enabled }) => {
 			const settings = library.restSettings();
+
+			if (planId !== undefined) {
+				return exerciseId === undefined && enabled === undefined
+					? setPlanRest({ library, write }, planId, seconds)
+					: reply({
+							error:
+								'a plan’s default stands alone — a planned exercise’s own duration is written through save_plan, and enabled belongs to the standing default'
+						});
+			}
 
 			if (exerciseId === undefined) {
 				if (seconds === null) {

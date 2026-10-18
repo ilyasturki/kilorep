@@ -99,6 +99,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 			archived,
 			lastTrained: lastDone === undefined ? null : iso(lastDone),
 			position: archived ? undefined : (positions.get(template.id) ?? null),
+			defaultRestSeconds: library.planRests()[template.id],
 			exercises: archived ? null : plannedRows(template)
 		};
 	};
@@ -108,7 +109,7 @@ export function registerPlans(server: McpServer, { library, write, writeAll }: T
 		{
 			title: 'Plans',
 			description:
-				'Every plan in the rotation, in the order the lifter dragged them into, with what each prescribes and when it was last trained — plus the one the rotation says is next, which is simply the plan after the last one trained, wrapping at the end. Weight is never planned: a plan prescribes reps and the load is decided on the day. The `version` each row carries is what save_plan and delete_plan need; `position` is what reorder_plans takes back.',
+				'Every plan in the rotation, in the order the lifter dragged them into, with what each prescribes and when it was last trained — plus the one the rotation says is next, which is simply the plan after the last one trained, wrapping at the end. Weight is never planned: a plan prescribes reps and the load is decided on the day. The `version` each row carries is what save_plan and delete_plan need; `position` is what reorder_plans takes back. `defaultRestSeconds`, where present, is the plan’s own rest for every exercise it does not time itself (null: never rest in this plan); absent, the plan inherits the standing default. set_rest writes it.',
 			inputSchema: z.object({
 				includeArchived: z
 					.boolean()
