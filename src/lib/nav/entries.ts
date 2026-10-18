@@ -8,6 +8,10 @@ export type Step = 'fresh' | 'push' | 'replace' | 'traverse';
 /** The address each history entry of ours holds, by SvelteKit's index for it. */
 export type Entries = Record<number, string>;
 
+export function addressOf({ pathname, search }: { pathname: string; search: string }): string {
+	return `${pathname}${search}`;
+}
+
 export function stepOf(
 	type: string,
 	reason: EnterReason,

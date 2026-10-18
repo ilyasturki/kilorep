@@ -16,10 +16,15 @@ export function retreatingTo(address: string): boolean {
 	return retreat === address;
 }
 
+// `location` moves at pushState and popstate, `stack` only once the navigation lands.
+function settled(): URL {
+	return new URL(stack.at ?? location.href, location.href);
+}
+
 export function backDecision(): BackDecision {
 	return decideBack({
 		overlayOpen: hasOpenOverlay(),
-		target: backTo(new URL(location.href), stack.behind),
+		target: backTo(settled(), stack.behind),
 		behind: stack.behind
 	});
 }
@@ -54,12 +59,12 @@ export async function follow(decision: BackDecision): Promise<void> {
 }
 
 /** Whether a navigation about to happen is a browser back that should close an overlay instead. */
-export function closesOverlay(type: string): boolean {
+export function closesOverlay(type: string, delta: number | null = null): boolean {
 	const ours = popping;
 
 	popping = false;
 
-	if (type !== 'popstate' || ours || !hasOpenOverlay()) {
+	if (type !== 'popstate' || (delta ?? -1) >= 0 || ours || !hasOpenOverlay()) {
 		return false;
 	}
 
@@ -72,12 +77,11 @@ export async function goBack(): Promise<void> {
 	await follow(backDecision());
 }
 
-/** Leaves this screen for `target` the way back would: a pop when it is behind, else a replace. */
 export async function leaveFor(target: string): Promise<void> {
 	await follow(decideBack({ overlayOpen: false, target, behind: stack.behind }));
 }
 
 /** Leaves a screen whose subject is gone — deleted, finished — for where its back walks. */
 export async function leave(fallback: string): Promise<void> {
-	await leaveFor(backTo(new URL(location.href), stack.behind) ?? fallback);
+	await leaveFor(backTo(settled(), stack.behind) ?? fallback);
 }

@@ -16,7 +16,7 @@
 	$effect(() => wireShortcuts());
 
 	beforeNavigate((navigation) => {
-		if (closesOverlay(navigation.type)) {
+		if (closesOverlay(navigation.type, navigation.delta ?? null)) {
 			navigation.cancel();
 		}
 	});

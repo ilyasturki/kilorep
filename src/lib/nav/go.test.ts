@@ -16,7 +16,7 @@ vi.mock('$lib/ui/icons/GaugeFill.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/Gear.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/Stack.svelte', () => ({ default: {} }));
 vi.mock('$lib/workout/active.svelte', () => ({ activeWorkout: { session: null } }));
-vi.mock('./stack.svelte', () => ({ stack: { behind: null } }));
+vi.mock('./stack.svelte', () => ({ stack: { behind: null, at: null } }));
 
 const seen: string[] = [];
 
@@ -33,6 +33,7 @@ const back = vi.fn();
 function standOn(address: string, behind: string | null): void {
 	vi.stubGlobal('location', new URL(address, 'https://kilorep.test'));
 	stack.behind = behind;
+	stack.at = null;
 }
 
 beforeEach(() => {
@@ -84,6 +85,13 @@ describe('a back press', () => {
 		expect(close).toHaveBeenCalledOnce();
 		expect(back).not.toHaveBeenCalled();
 		expect(goto).not.toHaveBeenCalled();
+	});
+
+	it('decides from the address the stack last landed on, not one still loading', () => {
+		standOn('/plan/templates', '/history');
+		stack.at = '/history/w1';
+
+		expect(backDecision()).toEqual({ kind: 'pop' });
 	});
 
 	it('leaves minimizing to the shell: at a tab root nothing in the page moves', async () => {
@@ -160,6 +168,7 @@ describe('the browser back', () => {
 		});
 
 		expect(closesOverlay('link')).toBe(false);
+		expect(closesOverlay('popstate', 1)).toBe(false);
 		expect(hasOpenOverlay()).toBe(true);
 	});
 

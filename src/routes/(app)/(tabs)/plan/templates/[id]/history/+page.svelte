@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
+	import { addressOf } from '$lib/nav/entries';
 	import { templateTitle } from '$lib/templates/plan';
 	import EmptyState from '$lib/ui/EmptyState.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -51,7 +52,7 @@
 				<ListRow
 					title={when.long}
 					meta={workoutMeta(workout)}
-					href={openedFrom(`/history/${workout.id}`, `${page.url.pathname}${page.url.search}`)}
+					href={openedFrom(`/history/${workout.id}`, addressOf(page.url))}
 				/>
 			{/each}
 		</section>

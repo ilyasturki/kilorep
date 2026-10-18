@@ -28,6 +28,7 @@
 	import { firstUncompleted } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { addressOf } from '$lib/nav/entries';
 	import { leave } from '$lib/nav/go';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
@@ -307,7 +308,7 @@
 	// screen, and two open at once puts the second one's fields off the bottom again.
 	let openLegId = $state<string | null>(null);
 
-	const here = $derived(`${page.url.pathname}${page.url.search}`);
+	const here = $derived(addressOf(page.url));
 
 	fillAppBar(() => ({ title, action: deskActions }));
 </script>

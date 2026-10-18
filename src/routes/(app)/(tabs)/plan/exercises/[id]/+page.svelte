@@ -3,6 +3,7 @@
 
 	import { catalog } from '$lib/catalog';
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
+	import { addressOf } from '$lib/nav/entries';
 	import { leaveFor } from '$lib/nav/go';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { bodyweightShareOf, carriedFrom, carriedOn } from '$lib/domain/load';
@@ -52,7 +53,7 @@
 
 	fillAppBar(() => ({ title: exercise.name }));
 
-	const here = $derived(`${page.url.pathname}${page.url.search}`);
+	const here = $derived(addressOf(page.url));
 
 	const family = $derived(kin(catalog, exercise));
 

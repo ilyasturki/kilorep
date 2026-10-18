@@ -1,11 +1,14 @@
-import { behindOf, entriesAfter, HISTORY_INDEX, stepOf } from '$lib/nav/entries';
+import { addressOf, behindOf, entriesAfter, HISTORY_INDEX, stepOf } from '$lib/nav/entries';
 
 import type { EnterReason, Entries } from '$lib/nav/entries';
 
 const KEY = 'kilorep:entries';
 
-/** The entry behind the one on screen, when it is one of ours. */
-export const stack = $state<{ behind: string | null }>({ behind: null });
+/** The entry behind the one on screen, when it is one of ours, and the address it sits behind. */
+export const stack = $state<{ behind: string | null; at: string | null }>({
+	behind: null,
+	at: null
+});
 
 let entries: Entries = {};
 let current: number | null = null;
@@ -49,6 +52,9 @@ function indexNow(): number | null {
 
 export function recordEntry(type: string): void {
 	const index = indexNow();
+	const address = addressOf(location);
+
+	stack.at = address;
 
 	if (index === null) {
 		stack.behind = null;
@@ -58,7 +64,7 @@ export function recordEntry(type: string): void {
 	const before = type === 'enter' ? readStored() : entries;
 	const step = stepOf(type, enterReason(), current, index);
 
-	entries = entriesAfter(before, index, `${location.pathname}${location.search}`, step);
+	entries = entriesAfter(before, index, address, step);
 	current = index;
 
 	writeStored(entries);

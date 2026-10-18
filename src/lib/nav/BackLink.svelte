@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goBack } from '$lib/nav/go';
+	import { backDecision, follow } from '$lib/nav/go';
 	import { press } from '$lib/ui/press';
 
 	let {
@@ -8,14 +8,20 @@
 		class: extra
 	}: { href: string; label: string; class?: string | undefined } = $props();
 
-	// The href serves a new tab; a plain click walks the same back the system does.
+	// The href serves a new tab and a minimize; any other plain click walks the system's back.
 	function walk(event: MouseEvent) {
 		if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
 			return;
 		}
 
+		const decision = backDecision();
+
+		if (decision.kind === 'minimize') {
+			return;
+		}
+
 		event.preventDefault();
-		void goBack();
+		void follow(decision);
 	}
 </script>
 

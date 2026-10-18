@@ -39,7 +39,7 @@
 	</span>
 </Card>
 
-<Card name="BackLink" note="walks up the hierarchy, never back through time">
+<Card name="BackLink" note="walks the same back the system does; its href serves a new tab">
 	<div class="flex flex-wrap items-center gap-4">
 		<Spec label={`href="/plan/templates"`}>
 			<BackLink href="/plan/templates" label="Back" />
