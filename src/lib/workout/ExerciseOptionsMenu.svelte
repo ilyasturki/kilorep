@@ -8,12 +8,15 @@
 	import MenuItem from '$lib/ui/MenuItem.svelte';
 	import ArrowFatDown from '$lib/ui/icons/ArrowFatDown.svelte';
 	import ArrowFatUp from '$lib/ui/icons/ArrowFatUp.svelte';
+	import ArrowElbowDownRight from '$lib/ui/icons/ArrowElbowDownRight.svelte';
+	import ArrowsDownUp from '$lib/ui/icons/ArrowsDownUp.svelte';
 	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
 	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import ArrowsSplit from '$lib/ui/icons/ArrowsSplit.svelte';
 	import Eye from '$lib/ui/icons/Eye.svelte';
 	import Fire from '$lib/ui/icons/Fire.svelte';
 	import Pencil from '$lib/ui/icons/Pencil.svelte';
+	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	type Props = {
@@ -28,13 +31,19 @@
 		from?: string;
 		onswap: () => void;
 		onsuperset?: () => void;
+		/** A superset of three or more; with two, leaving is already breaking. */
 		onbreak?: () => void;
 		onremove: () => void;
 		ongrip?: (grip: string) => void;
-		onwarmup?: () => void;
-		onnote?: () => void;
 		onmoveup?: () => void;
 		onmovedown?: () => void;
+		onwarmup?: () => void;
+		onnote?: () => void;
+		/** A superset leg's own add set: its block's add row adds a round. */
+		onaddset?: () => void;
+		onleave?: () => void;
+		onahead?: () => void;
+		onbehind?: () => void;
 	};
 
 	let {
@@ -48,10 +57,14 @@
 		onbreak,
 		onremove,
 		ongrip,
+		onmoveup,
+		onmovedown,
 		onwarmup,
 		onnote,
-		onmoveup,
-		onmovedown
+		onaddset,
+		onleave,
+		onahead,
+		onbehind
 	}: Props = $props();
 
 	let confirmingRemove = $state(false);
@@ -59,16 +72,43 @@
 	// What the menu shows freezes the moment it closes: every action shuts it before it runs,
 	// and some — swap, remove — take the exercise with them, which would empty the sheet while
 	// it is still sliding out. The exit shows what the tap acted on, not the lookup's null.
+	type Act = (() => void) | undefined;
+
 	let held: {
 		group: Group | null;
 		superset: boolean;
-		up: (() => void) | undefined;
-		down: (() => void) | undefined;
-	} = { group: null, superset: false, up: undefined, down: undefined };
+		up: Act;
+		down: Act;
+		add: Act;
+		leave: Act;
+		ahead: Act;
+		behind: Act;
+		split: Act;
+	} = {
+		group: null,
+		superset: false,
+		up: undefined,
+		down: undefined,
+		add: undefined,
+		leave: undefined,
+		ahead: undefined,
+		behind: undefined,
+		split: undefined
+	};
 
 	const view = $derived.by(() => {
 		if (open && group !== null) {
-			held = { group, superset, up: onmoveup, down: onmovedown };
+			held = {
+				group,
+				superset,
+				up: onmoveup,
+				down: onmovedown,
+				add: onaddset,
+				leave: onleave,
+				ahead: onahead,
+				behind: onbehind,
+				split: onbreak
+			};
 		}
 
 		return held;
@@ -111,14 +151,7 @@
 		onremove();
 	}
 
-	const pairing = $derived(view.superset ? onbreak : onsuperset);
-
-	function pair() {
-		open = false;
-		pairing?.();
-	}
-
-	function move(go: (() => void) | undefined) {
+	function act(go: Act) {
 		open = false;
 		go?.();
 	}
@@ -149,26 +182,46 @@
 	{/if}
 
 	{#if onwarmup !== undefined}
-		<MenuItem onselect={() => move(onwarmup)}>
+		<MenuItem onselect={() => act(onwarmup)}>
 			<Fire size={18} />
 			Add warmup
 		</MenuItem>
 	{/if}
 	{#if onnote !== undefined}
-		<MenuItem onselect={() => move(onnote)}>
+		<MenuItem onselect={() => act(onnote)}>
 			<Pencil size={18} />
 			{noted ? 'Edit note' : 'Add note'}
 		</MenuItem>
 	{/if}
 
+	{#if view.superset && view.add !== undefined}
+		<MenuItem onselect={() => act(view.add)}>
+			<RowsPlusBottom size={18} />
+			Add set
+		</MenuItem>
+	{/if}
+
+	{#if view.superset && view.ahead !== undefined}
+		<MenuItem onselect={() => act(view.ahead)}>
+			<ArrowsDownUp size={18} />
+			Move ahead in superset
+		</MenuItem>
+	{/if}
+	{#if view.superset && view.behind !== undefined}
+		<MenuItem onselect={() => act(view.behind)}>
+			<ArrowsDownUp size={18} />
+			Move back in superset
+		</MenuItem>
+	{/if}
+
 	{#if view.up !== undefined}
-		<MenuItem onselect={() => move(view.up)}>
+		<MenuItem onselect={() => act(view.up)}>
 			<ArrowFatUp size={18} />
 			Move up
 		</MenuItem>
 	{/if}
 	{#if view.down !== undefined}
-		<MenuItem onselect={() => move(view.down)}>
+		<MenuItem onselect={() => act(view.down)}>
 			<ArrowFatDown size={18} />
 			Move down
 		</MenuItem>
@@ -177,15 +230,23 @@
 		<ArrowsLeftRight size={18} />
 		Swap exercise
 	</MenuItem>
-	{#if pairing !== undefined}
-		<MenuItem onselect={pair}>
-			{#if view.superset}
+	{#if view.superset}
+		{#if view.leave !== undefined}
+			<MenuItem onselect={() => act(view.leave)}>
+				<ArrowElbowDownRight size={18} />
+				Remove from superset
+			</MenuItem>
+		{/if}
+		{#if view.split !== undefined}
+			<MenuItem onselect={() => act(view.split)}>
 				<ArrowsSplit size={18} />
 				Break superset
-			{:else}
-				<ArrowsMerge size={18} />
-				Superset with…
-			{/if}
+			</MenuItem>
+		{/if}
+	{:else if onsuperset !== undefined}
+		<MenuItem onselect={() => act(onsuperset)}>
+			<ArrowsMerge size={18} />
+			Superset with…
 		</MenuItem>
 	{/if}
 	<MenuItem destructive onselect={remove}>

@@ -1043,6 +1043,11 @@ html[data-nav='pop']::view-transition-old(page) {
 		border-top: 1px solid var(--line-soft);
 	}
 
+	/* A superset's rounds: the seam between two rounds is canvas, the seam inside one a hairline. */
+	& > [data-round-opens] {
+		border-top: 4px solid var(--canvas);
+	}
+
 	& [data-list-row] {
 		border-radius: 0;
 	}

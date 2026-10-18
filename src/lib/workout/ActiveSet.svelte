@@ -23,6 +23,8 @@
 		cursor: SetCursor;
 		history: History;
 		meta: Exercise;
+		/** Which superset leg the set belongs to; null outside one. */
+		leg?: string | null;
 		note: string | null;
 		/** Off where last time is beside the point — editing a record older than "last time". */
 		hints?: boolean;
@@ -38,6 +40,7 @@
 		cursor,
 		history,
 		meta,
+		leg = null,
 		note,
 		hints = true,
 		step,
@@ -123,8 +126,15 @@
 	<div class="flex items-center gap-2">
 		<!-- No name here. The list behind the tray says which exercise this is — the highlighted
 		     row. What is left is what a lifter reads mid-set, each number under its own word, so
-		     the target and last time stay apart at a glance instead of running into one line. -->
+		     the target and last time stay apart at a glance instead of running into one line. A
+		     superset's row says only B2, so there the leg is named first. -->
 		<div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-5 gap-y-0.5">
+			{#if leg !== null}
+				<span class="min-w-0 truncate text-base font-extrabold tracking-tight text-ink">
+					{leg}
+				</span>
+			{/if}
+
 			{#if planned !== null}
 				<div class="flex items-baseline gap-1.5">
 					<span class="label-caps">Target</span>

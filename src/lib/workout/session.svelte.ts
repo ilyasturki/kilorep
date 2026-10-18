@@ -2,6 +2,7 @@ import { catalogById } from '$lib/catalog';
 import { settleGrip } from '$lib/domain/grip';
 import {
 	addExercise as insertExercise,
+	addRound as appendRound,
 	addSet as appendSet,
 	addWarmup as insertWarmup,
 	advanceFrom,
@@ -12,6 +13,7 @@ import {
 	draftSet,
 	firstUncompleted,
 	insertedSetCount,
+	leaveEntry,
 	markSet,
 	moveEntry as relocateEntry,
 	moveExercise as relocateExercise,
@@ -175,6 +177,15 @@ export class WorkoutSession {
 		typeSet(this.workout, setId, type);
 	}
 
+	// A lone exercise's round is one set, so this is its add set too.
+	public addRound(entryId: string): void {
+		const [first] = appendRound(this.workout, entryId, () => crypto.randomUUID());
+
+		if (first !== undefined) {
+			this.#focus(first.id);
+		}
+	}
+
 	public addExercises(picks: Pick[], after?: string): void {
 		let first: string | null = null;
 		let anchor = after;
@@ -223,13 +234,23 @@ export class WorkoutSession {
 			);
 		}
 
-		if (this.activeSetId === null) {
-			this.#focus(firstUncompleted(this.workout)?.set.id ?? null);
+		const active = this.activeSetId === null ? null : cursorFor(this.workout, this.activeSetId);
+
+		// A cursor standing in the superset just formed goes to where its rounds begin: left on
+		// the joining leg's first set, it would be B1 with A1 still owed above it.
+		if (active === null || active.entry.id === entryId) {
+			const owed = cursors(this.workout).find((c) => c.entry.id === entryId && !c.set.completed);
+
+			this.#focus((owed ?? firstUncompleted(this.workout))?.set.id ?? null);
 		}
 	}
 
 	public breakSuperset(entryId: string): void {
 		splitEntry(this.workout, entryId, () => crypto.randomUUID());
+	}
+
+	public leaveSuperset(exerciseId: string): void {
+		leaveEntry(this.workout, exerciseId, () => crypto.randomUUID());
 	}
 
 	// Nothing to re-offer afterwards: the card works out what it shows where it is shown, so a
@@ -304,8 +325,8 @@ export class WorkoutSession {
 		relocateEntry(this.workout, entryId, index);
 	}
 
-	public moveExercise(exerciseId: string): void {
-		relocateExercise(this.workout, exerciseId, -1);
+	public moveExercise(exerciseId: string, towards: -1 | 1 = -1): void {
+		relocateExercise(this.workout, exerciseId, towards);
 	}
 
 	public removeSet(setId: string): void {

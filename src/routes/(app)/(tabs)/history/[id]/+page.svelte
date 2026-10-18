@@ -26,7 +26,7 @@
 	import { pageSlide } from '$lib/nav/transitions';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { syncSoon } from '$lib/sync/client';
-	import { entriesWithMeta, entryOf, legOf, setNote, shelfOf } from '$lib/workout/groups';
+	import { entriesWithMeta, entryOf, legName, legOf, setNote, shelfOf } from '$lib/workout/groups';
 	import { WorkoutSession } from '$lib/workout/session.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
@@ -194,6 +194,8 @@
 	const activeCursor = $derived(
 		activeLeg?.cursors.find((c) => c.set.id === session?.activeSetId) ?? null
 	);
+
+	const activeEntry = $derived(entryOf(entries, activeLeg?.id ?? null));
 
 	function logSet(weight: number, reps: number) {
 		session?.commit(weight, reps);
@@ -364,6 +366,30 @@
 		}
 
 		session.breakSuperset(actingEntry.id);
+		acting = null;
+	}
+
+	function leaveSuperset() {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.leaveSuperset(acting);
+		acting = null;
+	}
+
+	const actingLegIndex = $derived(
+		actingEntry === null || acting === null
+			? -1
+			: actingEntry.legs.findIndex((leg) => leg.id === acting)
+	);
+
+	function moveLeg(towards: -1 | 1) {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.moveExercise(acting, towards);
 		acting = null;
 	}
 
@@ -807,7 +833,7 @@
 						oncommit={logSet}
 						ondraft={draftActive}
 						onrate={rateActive}
-						onadd={(exerciseId) => session.addSet(exerciseId)}
+						onadd={(entryId) => session.addRound(entryId)}
 						oninsert={insertFrom}
 						onoptions={options}
 						onexercise={exerciseOptions}
@@ -818,32 +844,21 @@
 				<div class="mx-auto flex w-full max-w-xl flex-col gap-5 px-3">
 					{#each entries as entry (entry.id)}
 						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-3">
-							<EntryStack
+							<ExerciseBlock
 								legs={entry.legs}
-								superset={entry.superset}
-								onswap={(leg) => session.moveExercise(leg.id)}
-								swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
-							>
-								{#snippet leg(leg)}
-									<ExerciseBlock
-										meta={leg.meta}
-										grip={leg.grip}
-										note={leg.note}
-										cursors={leg.cursors}
-										history={NO_HISTORY}
-										activeSetId={session.activeSetId}
-										{floor}
-										onselect={jumpTo}
-										onquick={quickLog}
-										onunlog={unlogFrom}
-										onremove={removeFrom}
-										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
-										oninsert={() => insertFrom(entry.id)}
-										onoptions={options}
-										onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
-									/>
-								{/snippet}
-							</EntryStack>
+								cursors={entry.cursors}
+								history={NO_HISTORY}
+								activeSetId={session.activeSetId}
+								{floor}
+								onselect={jumpTo}
+								onquick={quickLog}
+								onunlog={unlogFrom}
+								onremove={removeFrom}
+								onadd={() => session.addRound(entry.id)}
+								oninsert={() => insertFrom(entry.id)}
+								onoptions={options}
+								onexercise={exerciseOptions}
+							/>
 						</div>
 					{/each}
 				</div>
@@ -877,6 +892,7 @@
 				bind:peek={trayPeek}
 				cursor={activeCursor}
 				meta={activeLeg?.meta}
+				leg={activeEntry === null || activeLeg === null ? null : legName(activeEntry, activeLeg.id)}
 				note={activeCursor === null
 					? null
 					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
@@ -948,7 +964,19 @@
 	from="/history/{workout.id}"
 	onswap={() => (swapOpen = true)}
 	onsuperset={() => (supersetOpen = true)}
-	onbreak={breakSuperset}
+	onbreak={actingEntry !== null && actingEntry.legs.length > 2 ? breakSuperset : undefined}
+	onleave={leaveSuperset}
+	onaddset={() => {
+		if (acting !== null) {
+			session?.addSet(acting);
+		}
+	}}
+	onahead={actingLegIndex > 0 ? () => moveLeg(-1) : undefined}
+	onbehind={actingEntry !== null &&
+	actingLegIndex >= 0 &&
+	actingLegIndex < actingEntry.legs.length - 1
+		? () => moveLeg(1)
+		: undefined}
 	onremove={removeExercise}
 	ongrip={gripExercise}
 	onwarmup={warmUpActing}

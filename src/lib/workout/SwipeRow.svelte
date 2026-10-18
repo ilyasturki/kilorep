@@ -14,6 +14,8 @@
 		status: SetStatus;
 		index?: number;
 		warmup?: boolean;
+		/** A superset leg's letter, drawn on the mark. */
+		leg?: string;
 		/** From `setFigures`: `load` in kilograms, `null` where the body is the whole load. */
 		figures: { load: string | null; reps: string };
 		/** A logged row the cursor stands on, being edited. */
@@ -38,6 +40,7 @@
 		status,
 		index,
 		warmup = false,
+		leg,
 		figures,
 		selected = false,
 		right,
@@ -321,7 +324,7 @@
 				onselect !== undefined && 'pointer-fine:duration-100'
 			]}
 		>
-			<SetMark {status} {index} {warmup} contrast={selected} />
+			<SetMark {status} {index} {warmup} {leg} contrast={selected} />
 
 			<!-- Fixed tracks, so a row of `+10 kg × 8` and one of `8 reps` keep their reps in line. -->
 			<span

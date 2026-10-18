@@ -12,6 +12,8 @@
 	type Props = {
 		cursor: SetCursor | null;
 		meta: Exercise | undefined;
+		/** Which superset leg the set belongs to; null outside one. */
+		leg?: string | null;
 		note: string | null;
 		history: History;
 		/** Sets in the whole session — what the finish panel counts. */
@@ -46,6 +48,7 @@
 	let {
 		cursor,
 		meta,
+		leg = null,
 		note,
 		history,
 		total,
@@ -248,6 +251,7 @@
 						{cursor}
 						{history}
 						{meta}
+						{leg}
 						{note}
 						{hints}
 						step={(from, direction) => weightStep(meta.equipment, from, direction)}

@@ -23,9 +23,8 @@
 	import { syncSoon } from '$lib/sync/client';
 	import { restTimer } from '$lib/workout/rest.svelte';
 	import { templateTitle } from '$lib/templates/plan';
-	import { entriesWithMeta, entryOf, legOf, setNote, shelfOf } from '$lib/workout/groups';
+	import { entriesWithMeta, entryOf, legName, legOf, setNote, shelfOf } from '$lib/workout/groups';
 	import { activeWorkout } from '$lib/workout/active.svelte';
-	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
@@ -220,6 +219,8 @@
 		activeLeg?.cursors.find((c) => c.set.id === session?.activeSetId) ?? null
 	);
 
+	const activeEntry = $derived(entryOf(entries, activeLeg?.id ?? null));
+
 	// Rest is earned by a set just done. Advancing may also *clear* a timer — moving on from a
 	// set that earns none ends the wait for the one before it — but a set logged behind the
 	// cursor must never kill the rest the lifter is standing in.
@@ -231,11 +232,11 @@
 		const earned = restAfter(session.workout, setId, restSettings.current);
 
 		if (earned !== null) {
-			const leg = entries
-				.flatMap((entry) => entry.legs)
-				.find((candidate) => candidate.cursors.some((cursor) => cursor.set.id === setId));
+			const entry = entries.find((candidate) =>
+				candidate.cursors.some((cursor) => cursor.set.id === setId)
+			);
 
-			restTimer.start({ ...earned, name: leg?.meta.name });
+			restTimer.start({ ...earned, name: entry?.title });
 		} else if (advancing) {
 			restTimer.clear();
 		}
@@ -610,6 +611,30 @@
 		acting = null;
 	}
 
+	function leaveSuperset() {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.leaveSuperset(acting);
+		acting = null;
+	}
+
+	const actingLegIndex = $derived(
+		actingEntry === null || acting === null
+			? -1
+			: actingEntry.legs.findIndex((leg) => leg.id === acting)
+	);
+
+	function moveLeg(towards: -1 | 1) {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.moveExercise(acting, towards);
+		acting = null;
+	}
+
 	function removeExercise() {
 		if (session === null || acting === null) {
 			return;
@@ -877,7 +902,7 @@
 								session.rate(session.activeSetId, rpe);
 							}
 						}}
-						onadd={(exerciseId) => session.addSet(exerciseId)}
+						onadd={(entryId) => session.addRound(entryId)}
 						oninsert={insertFrom}
 						onoptions={options}
 						onexercise={exerciseOptions}
@@ -894,33 +919,22 @@
 				<div class="mx-auto flex w-full max-w-xl flex-col gap-5 px-3">
 					{#each entries as entry (entry.id)}
 						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-3">
-							<EntryStack
+							<ExerciseBlock
 								legs={entry.legs}
-								superset={entry.superset}
-								onswap={(leg) => session.moveExercise(leg.id)}
-								swapLabel={(leg) => `Move ${leg.meta.name} ahead in the superset`}
-							>
-								{#snippet leg(leg)}
-									<ExerciseBlock
-										meta={leg.meta}
-										grip={leg.grip}
-										note={leg.note}
-										last={data.notes[leg.meta.id]}
-										cursors={leg.cursors}
-										history={data.history}
-										activeSetId={session.activeSetId}
-										{floor}
-										onselect={jumpTo}
-										onquick={quickLog}
-										onunlog={unlogFrom}
-										onremove={removeFrom}
-										onadd={() => session.addSet(leg.cursors[0].exercise.id)}
-										oninsert={() => insertFrom(entry.id)}
-										onoptions={options}
-										onexercise={(anchor) => exerciseOptions(leg.id, anchor)}
-									/>
-								{/snippet}
-							</EntryStack>
+								notes={data.notes}
+								cursors={entry.cursors}
+								history={data.history}
+								activeSetId={session.activeSetId}
+								{floor}
+								onselect={jumpTo}
+								onquick={quickLog}
+								onunlog={unlogFrom}
+								onremove={removeFrom}
+								onadd={() => session.addRound(entry.id)}
+								oninsert={() => insertFrom(entry.id)}
+								onoptions={options}
+								onexercise={exerciseOptions}
+							/>
 						</div>
 					{/each}
 				</div>
@@ -953,6 +967,7 @@
 				bind:peek={trayPeek}
 				cursor={activeCursor}
 				meta={activeLeg?.meta}
+				leg={activeEntry === null || activeLeg === null ? null : legName(activeEntry, activeLeg.id)}
 				note={activeCursor === null
 					? null
 					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
@@ -1052,7 +1067,19 @@
 		from="/train/live"
 		onswap={() => (swapOpen = true)}
 		onsuperset={() => (supersetOpen = true)}
-		onbreak={breakSuperset}
+		onbreak={actingEntry !== null && actingEntry.legs.length > 2 ? breakSuperset : undefined}
+		onleave={leaveSuperset}
+		onaddset={() => {
+			if (acting !== null) {
+				session.addSet(acting);
+			}
+		}}
+		onahead={actingLegIndex > 0 ? () => moveLeg(-1) : undefined}
+		onbehind={actingEntry !== null &&
+		actingLegIndex >= 0 &&
+		actingLegIndex < actingEntry.legs.length - 1
+			? () => moveLeg(1)
+			: undefined}
 		onremove={removeExercise}
 		ongrip={gripExercise}
 		onwarmup={warmUpActing}

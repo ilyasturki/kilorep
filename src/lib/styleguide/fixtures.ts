@@ -8,6 +8,7 @@ import { freshWorkout } from '$lib/domain/fixture';
 import type { PastSession } from '$lib/domain/stats';
 import { startFrom } from '$lib/domain/template';
 import type { Template, TemplateExercise, TemplateMark, TemplateSet } from '$lib/domain/template';
+import { commitSet, joinEntry } from '$lib/domain/workout';
 import type { Workout } from '$lib/domain/workout';
 
 export { history as sessionHistory } from '$lib/domain/fixture';
@@ -33,6 +34,18 @@ export function liveWorkout(): Workout {
 
 	Object.assign(first, { weight: 82.5, reps: 8, rpe: 8, completed: true, entered: true });
 	Object.assign(second, { weight: 82.5, reps: 7, rpe: 9, completed: true, entered: true });
+
+	return workout;
+}
+
+/** The same session with the fly and the pec deck lifted as a superset, a round and a half in. */
+export function supersetWorkout(): Workout {
+	const workout = liveWorkout();
+
+	joinEntry(workout, 'entry-3', 'we-pecdeck');
+	commitSet(workout, 'fly-1', 20, 12);
+	commitSet(workout, 'pecdeck-1', 45, 10);
+	commitSet(workout, 'fly-2', 20, 11);
 
 	return workout;
 }

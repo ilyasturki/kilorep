@@ -25,30 +25,39 @@
 		contrast?: boolean;
 		// W in every state: a check on a logged warmup would read as a working set.
 		warmup?: boolean;
+		/** A superset leg's letter. The mark then names its leg in every state, done included. */
+		leg?: string;
 	};
 
-	let { status, index, contrast = false, warmup = false }: Props = $props();
+	let { status, index, contrast = false, warmup = false, leg }: Props = $props();
 
-	const label = $derived(
-		warmup && status !== 'warmup'
+	const warm = $derived(warmup || status === 'warmup');
+
+	const text = $derived(warm ? `${leg ?? ''}W` : `${leg ?? ''}${index ?? ''}`);
+
+	const label = $derived.by(() => {
+		if (leg !== undefined) {
+			return `set ${text} ${status === 'done' ? 'logged' : status}`;
+		}
+
+		return warmup && status !== 'warmup'
 			? `warmup ${status === 'done' ? 'logged' : status}`
-			: (fixedLabels[status] ?? `set ${index ?? ''} ${status}`.trim())
-	);
+			: (fixedLabels[status] ?? `set ${index ?? ''} ${status}`.trim());
+	});
 </script>
 
 <div
 	role="img"
 	aria-label={label}
 	class={[
-		'grid size-8 shrink-0 place-items-center rounded-full text-md font-extrabold',
+		'grid size-8 shrink-0 place-items-center rounded-full font-extrabold',
+		text.length > 2 ? 'text-sm tracking-tight' : 'text-md',
 		contrast && status === 'done' ? 'bg-surface text-accent-text' : shells[status]
 	]}
 >
-	{#if warmup || status === 'warmup'}
-		W
-	{:else if status === 'done'}
+	{#if status === 'done' && !warm && leg === undefined}
 		<Check size={17} />
 	{:else}
-		{index ?? ''}
+		{text}
 	{/if}
 </div>

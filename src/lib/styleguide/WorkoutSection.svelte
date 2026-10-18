@@ -5,12 +5,17 @@
 	import Card from '$lib/styleguide/Card.svelte';
 	import Frame from '$lib/styleguide/Frame.svelte';
 	import Spec from '$lib/styleguide/Spec.svelte';
-	import { bench, incline, liveWorkout, sessionHistory } from '$lib/styleguide/fixtures';
+	import {
+		bench,
+		incline,
+		liveWorkout,
+		sessionHistory,
+		supersetWorkout
+	} from '$lib/styleguide/fixtures';
 	import Button from '$lib/ui/Button.svelte';
 	import { caption } from '$lib/styleguide/chrome';
 	import ActiveSet from '$lib/workout/ActiveSet.svelte';
 	import ArmsField from '$lib/workout/ArmsField.svelte';
-	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import GripField from '$lib/workout/GripField.svelte';
 	import LiveLedger from '$lib/workout/LiveLedger.svelte';
@@ -29,19 +34,19 @@
 	// ledger beside it is pointing at, or two cards would be arguing about the same afternoon.
 	const trayWorkout = $state(liveWorkout());
 	const ledgerWorkout = $state(liveWorkout());
-	const blockWorkout = $state(liveWorkout());
+	const blockWorkout = $state(supersetWorkout());
 
 	const cursorsOf = (workout: typeof trayWorkout, entry = 0) =>
 		entriesWithMeta(workout, catalogById)[entry];
 
 	const trayEntry = $derived(cursorsOf(trayWorkout));
-	const blockEntry = $derived(cursorsOf(blockWorkout));
+	const blockEntries = $derived(entriesWithMeta(blockWorkout, catalogById).slice(0, 3));
 	const ledgerEntries = $derived(entriesWithMeta(ledgerWorkout, catalogById));
 
 	// The third set — warmup logged, two working sets in, this is the one being stood over.
 	const trayCursor = $derived<SetCursor | null>(trayEntry.cursors[3] ?? null);
 
-	let blockActive = $state<string | null>('bench-3');
+	let blockActive = $state<string | null>('pecdeck-2');
 	let ledgerActive = $state<string | null>('bench-3');
 
 	const step = (from: number, direction: number) => weightStep(bench.equipment, from, direction);
@@ -140,15 +145,14 @@
 	</Button>
 </Card>
 
-<Card name="ExerciseBlock" note="one exercise's sets, the phone's list" tall>
-	<Frame label="EntryStack wraps it — the accent rail marks a superset">
-		<div class="relative flex flex-col gap-5 p-3">
-			<EntryStack legs={blockEntry.legs} superset={blockEntry.superset}>
-				{#snippet leg(leg)}
+<Card name="ExerciseBlock" note="one entry's sets, the phone's list" tall>
+	<Frame label="a lone exercise, then a superset: one heading, rounds interleaved, lettered marks">
+		<div class="flex flex-col gap-5 p-3">
+			{#each blockEntries as entry (entry.id)}
+				{#if entry.id !== 'entry-2'}
 					<ExerciseBlock
-						meta={leg.meta}
-						grip={leg.grip}
-						cursors={leg.cursors}
+						legs={entry.legs}
+						cursors={entry.cursors}
 						history={sessionHistory}
 						activeSetId={blockActive}
 						onselect={(setId) => (blockActive = setId)}
@@ -156,12 +160,15 @@
 						onadd={noop}
 						oninsert={noop}
 						onoptions={(_, anchor) => onoptions(anchor)}
-						onexercise={onoptions}
+						onexercise={(_, anchor) => onoptions(anchor)}
 					/>
-				{/snippet}
-			</EntryStack>
+				{/if}
+			{/each}
 		</div>
 	</Frame>
+	<span class={caption}>
+		a superset's names are each a leg's menu; its add row adds a round, a set on every leg
+	</span>
 </Card>
 
 <Card name="SwipeRow" note="a set — swipe to log or remove, hold for options">

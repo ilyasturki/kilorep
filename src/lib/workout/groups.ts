@@ -60,6 +60,23 @@ export type Entry = {
 	title: string;
 };
 
+export function legLetter(at: number): string {
+	return String.fromCodePoint(65 + at);
+}
+
+/** What the tray says about the leg it is editing — nothing outside a superset. */
+export function legName(entry: Legged<Group>, legId: string): string | null {
+	const at = entry.legs.findIndex((leg) => leg.id === legId);
+
+	if (entry.legs.length < 2 || at === -1) {
+		return null;
+	}
+
+	const { meta, grip } = entry.legs[at];
+
+	return [legLetter(at), meta.name, gripLabel(meta, grip)].filter(Boolean).join(' · ');
+}
+
 export function entryTitle(legs: { meta: Exercise }[]): string {
 	return legs
 		.map((leg): Exercise | undefined => leg.meta)
