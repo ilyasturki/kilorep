@@ -265,6 +265,14 @@
 										{#if setupOf(leg)}
 											<span class="truncate text-sm font-bold text-ink-faint">{setupOf(leg)}</span>
 										{/if}
+										{#if leg.cursors[0]?.exercise.optional === true}
+											<span
+												class="shrink-0 rounded-full bg-surface-2 px-2 text-xs font-extrabold
+													text-ink-muted"
+											>
+												Optional
+											</span>
+										{/if}
 									</button>
 								{/each}
 							{:else}

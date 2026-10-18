@@ -171,6 +171,9 @@
 							<span class="min-w-0 truncate text-lg font-extrabold tracking-tight text-ink">
 								{leg.meta.name}
 							</span>
+							{#if leg.cursors[0]?.exercise.optional === true}
+								<span class="shrink-0 self-center"><Badge>Optional</Badge></span>
+							{/if}
 						</button>
 					</span>
 				{/each}
