@@ -136,6 +136,8 @@ export class AppBarSlot {
 	// session owes the lifter both the way out and the way into its own session list, and the
 	// list being one tap away on a phone is the only thing standing in for the desktop rail.
 	public leading: Snippet | null = $state(null);
+	// Stands where the title would on a phone; a desk keeps the tabs there.
+	public heading: Snippet | null = $state(null);
 	public action: Snippet | null = $state(null);
 }
 
@@ -152,7 +154,7 @@ export function appBarSlot(): AppBarSlot {
 	return getContext<AppBarSlot>(key);
 }
 
-const EMPTY = { title: null, leading: null, action: null };
+const EMPTY = { title: null, leading: null, heading: null, action: null };
 
 export function fillAppBar(carried: () => Partial<AppBarSlot>): void {
 	const slot = appBarSlot();

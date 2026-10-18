@@ -7,6 +7,7 @@
 	import { byRank, drawableMark, isArchived, reorder } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
 	import { formatSince } from '$lib/history/label';
+	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import PlanTabs from '$lib/nav/PlanTabs.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { planMeta, templateTitle } from '$lib/templates/plan';
@@ -66,7 +67,13 @@
 	const blank = `/plan/templates/${crypto.randomUUID()}`;
 
 	let showArchived = $state(false);
+
+	fillAppBar(() => ({ heading: halves }));
 </script>
+
+{#snippet halves()}
+	<PlanTabs value="/plan/templates" />
+{/snippet}
 
 <svelte:head>
 	<title>Templates | Kilorep</title>
@@ -144,8 +151,6 @@
 				<Button variant="chrome" href={blank}>+ New template</Button>
 			{/if}
 		</div>
-	{:else}
-		<PlanTabs value="/plan/templates" />
 	{/if}
 
 	{#if templates.length === 0}

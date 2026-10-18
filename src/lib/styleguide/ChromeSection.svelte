@@ -2,6 +2,7 @@
 	import AppBar from '$lib/nav/AppBar.svelte';
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { createAppBarSlot } from '$lib/nav/bar.svelte';
+	import { barIcon } from '$lib/nav/chrome';
 	import Section from '$lib/settings/Section.svelte';
 	import RestDurationField from '$lib/settings/RestDurationField.svelte';
 	import Card from '$lib/styleguide/Card.svelte';
@@ -9,11 +10,13 @@
 	import Spec from '$lib/styleguide/Spec.svelte';
 	import { caption, chromeButton } from '$lib/styleguide/chrome';
 	import Badge from '$lib/ui/Badge.svelte';
+	import Button from '$lib/ui/Button.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
 	import MiniStepper from '$lib/ui/MiniStepper.svelte';
 	import Switch from '$lib/ui/Switch.svelte';
 	import TipButton from '$lib/ui/TipButton.svelte';
 	import Archive from '$lib/ui/icons/Archive.svelte';
+	import More from '$lib/ui/icons/More.svelte';
 
 	// The bar reads its title out of context rather than a prop, so the sheet has to stand in
 	// for the layout that normally provides it.
@@ -27,7 +30,11 @@
 	let plates = $state(4);
 </script>
 
-<Card name="AppBar" note="phone: back · title. lg: back · tabs · action" wide>
+<Card
+	name="AppBar"
+	note="phone: back · title or heading · one act; a tab root folds to the inset. lg: back · tabs · action"
+	wide
+>
 	<Frame label="the real bar — below lg it is a title, at lg the tabs move into it" size="column">
 		<AppBar />
 	</Frame>
@@ -37,6 +44,19 @@
 	<span class={caption}>
 		its breakpoint is the viewport, not this frame: narrow the window to see the phone's title bar
 	</span>
+</Card>
+
+<Card name="Bar controls" note="no border: the bar's surface sets them apart">
+	<div class="flex flex-wrap items-center gap-4">
+		<Spec label="barIcon">
+			<button type="button" aria-label="Options" class={barIcon}>
+				<More size={20} />
+			</button>
+		</Spec>
+		<Spec label={`variant="bar" caps — the one act`}>
+			<Button variant="bar" caps>FINISH</Button>
+		</Spec>
+	</div>
 </Card>
 
 <Card name="BackLink" note="walks the same back the system does; its href serves a new tab">

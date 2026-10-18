@@ -30,6 +30,7 @@
 	import { firstUncompleted } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { barIcon } from '$lib/nav/chrome';
 	import { addressOf } from '$lib/nav/entries';
 	import { leave } from '$lib/nav/go';
 	import { restSettings } from '$lib/settings/rest.svelte';
@@ -342,51 +343,59 @@
 
 	const here = $derived(addressOf(page.url));
 
-	fillAppBar(() => ({ title, action: deskActions }));
+	let nameInView = $state(true);
+
+	function watchName(node: HTMLElement) {
+		const observer = new IntersectionObserver(([entry]) => {
+			nameInView = entry.isIntersecting;
+		});
+
+		observer.observe(node);
+
+		return () => observer.disconnect();
+	}
+
+	fillAppBar(() => ({ title: nameInView ? null : title, action: deskActions }));
 </script>
 
-{#snippet trash(size: number)}
-	<TipButton
-		label="Delete template"
-		onclick={() => (deleteOpen = true)}
-		class="{CHROME_BUTTON} text-danger"
-	>
+{#snippet trash(size: number, look: string)}
+	<TipButton label="Delete template" onclick={() => (deleteOpen = true)} class="{look} text-danger">
 		<Trash {size} />
 	</TipButton>
 {/snippet}
 
-{#snippet history(size: number)}
+{#snippet history(size: number, look: string)}
 	<TipButton
 		label="Sessions from this template"
 		onclick={() => void goto(`/plan/templates/${template.id}/history`)}
-		class="{CHROME_BUTTON} text-ink-muted"
+		class="{look} text-ink-muted"
 	>
 		<ClockCounterClockwise {size} />
 	</TipButton>
 {/snippet}
 
-{#snippet archive(size: number)}
+{#snippet archive(size: number, look: string)}
 	{@const Glyph = archived ? ArrowCounterClockwise : Archive}
 
 	<TipButton
 		label={archived ? 'Unarchive template' : 'Archive template'}
 		onclick={toggleArchived}
-		class="{CHROME_BUTTON} text-ink-muted"
+		class="{look} text-ink-muted"
 	>
 		<Glyph {size} />
 	</TipButton>
 {/snippet}
 
 {#snippet go()}
-	<Button variant="chrome" caps onclick={() => void start()}>START</Button>
+	<Button variant="bar" caps onclick={() => void start()}>START</Button>
 {/snippet}
 
 {#snippet deskActions()}
-	<div class="hidden items-center gap-2 lg:flex">
+	<div class="hidden items-center gap-1 lg:flex">
 		{#if persisted}
-			{@render history(20)}
-			{@render archive(20)}
-			{@render trash(20)}
+			{@render history(20, barIcon)}
+			{@render archive(20, barIcon)}
+			{@render trash(20, barIcon)}
 		{/if}
 
 		{@render go()}
@@ -394,7 +403,7 @@
 {/snippet}
 
 {#snippet identity(meta: boolean)}
-	<div class="flex items-center gap-2">
+	<div class="flex items-center gap-2" {@attach watchName}>
 		<TipButton
 			label={mark === null ? 'Pick a template icon' : 'Change the template icon'}
 			onclick={() => (markOpen = true)}
@@ -601,9 +610,9 @@
 
 				{#if persisted}
 					<div class="flex justify-center gap-2 pt-2 pb-1">
-						{@render history(18)}
-						{@render archive(18)}
-						{@render trash(18)}
+						{@render history(18, CHROME_BUTTON)}
+						{@render archive(18, CHROME_BUTTON)}
+						{@render trash(18, CHROME_BUTTON)}
 					</div>
 				{/if}
 

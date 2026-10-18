@@ -10,17 +10,26 @@
 	const slot = appBarSlot();
 
 	const pathname = $derived(page.url.pathname);
-	const current = $derived(navTabs().find((tab) => isActive(pathname, tab)));
-
-	const title = $derived(slot.title ?? current?.label ?? '');
 
 	const parent = $derived(backTo(page.url, stack.behind));
+
+	// A tab root says nothing on a phone that the lit tab under the thumb does not, so its bar
+	// folds to the status-bar inset until a rest needs a face.
+	const bare = $derived(
+		parent === null &&
+			slot.leading === null &&
+			slot.heading === null &&
+			slot.title === null &&
+			slot.action === null
+	);
 </script>
 
-<header class="shrink-0 border-b border-line-soft bg-surface pt-safe-t">
+<header class={['shrink-0 pt-safe-t lg:bg-surface', bare ? 'bg-canvas' : 'bg-surface']}>
 	<div
-		class="flex min-h-bar items-center gap-2 px-3 py-2 lg:grid
-			lg:grid-cols-[1fr_auto_1fr] lg:gap-3"
+		class={[
+			'min-h-bar items-center gap-2 px-3 py-2 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-3',
+			bare && !restTimer.showing ? 'hidden' : 'flex'
+		]}
 	>
 		<!-- One group, not two children: on `lg` the bar is a three-column grid, and a second
 		     child claiming `col-start-1` would sit on top of the first. -->
@@ -36,9 +45,15 @@
 			</div>
 		{/if}
 
-		<h1 class="min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight lg:hidden">
-			{title}
-		</h1>
+		{#if slot.heading !== null}
+			<div class="min-w-0 flex-1 lg:hidden">
+				{@render slot.heading()}
+			</div>
+		{:else if slot.title !== null}
+			<h1 class="min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight lg:hidden">
+				{slot.title}
+			</h1>
+		{/if}
 
 		<nav aria-label="Main" class="hidden items-center gap-1 lg:col-start-2 lg:flex">
 			{#each navTabs() as tab (tab.href)}

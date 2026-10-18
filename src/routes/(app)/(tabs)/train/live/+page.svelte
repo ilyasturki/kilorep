@@ -16,6 +16,7 @@
 	import type { Pick } from '$lib/exercises/picker';
 	import type { Arms, SetType, SwapMode } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { barIcon } from '$lib/nav/chrome';
 	import { leaveFor } from '$lib/nav/go';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
@@ -806,9 +807,7 @@
 		type="button"
 		aria-label="Session overview"
 		onclick={() => (overview = true)}
-		class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-			border-line text-ink-muted focus-ring hover:bg-hover lg:hidden
-			press:bg-surface-2"
+		class={[barIcon, 'lg:hidden']}
 		{@attach press()}
 	>
 		<Stack size={20} />
@@ -818,7 +817,7 @@
 <!-- No ⋮ here any more: its one item was Discard workout, and the drawer carries that at its
      own foot, under the list the act is about. -->
 {#snippet finish()}
-	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
+	<Button variant="bar" caps onclick={() => (finishing = true)}>FINISH</Button>
 {/snippet}
 
 <svelte:head>

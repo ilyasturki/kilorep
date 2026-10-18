@@ -4,6 +4,7 @@
 	import ExerciseLedger from '$lib/exercises/ExerciseLedger.svelte';
 	import type { LedgerSort } from '$lib/exercises/ExerciseLedger.svelte';
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
+	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import PlanTabs from '$lib/nav/PlanTabs.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
@@ -58,7 +59,13 @@
 			sort = value.sort;
 		}
 	};
+
+	fillAppBar(() => ({ heading: halves }));
 </script>
+
+{#snippet halves()}
+	<PlanTabs value="/plan/exercises" />
+{/snippet}
 
 <svelte:head>
 	<title>Exercises | Kilorep</title>
@@ -116,8 +123,6 @@
 			{/each}
 		</Menu>
 	{:else}
-		<PlanTabs value="/plan/exercises" />
-
 		<SearchField label="Search exercises" bind:value={query} class="w-full" />
 
 		<ExerciseList {query} lastPerformed={data.lastPerformed} />

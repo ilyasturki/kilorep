@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	type Variant = 'commit' | 'secondary' | 'primary' | 'destructive' | 'chrome' | 'raised';
+	type Variant = 'commit' | 'secondary' | 'primary' | 'destructive' | 'chrome' | 'bar' | 'raised';
 
 	type Look = Variant | 'inert';
 
@@ -44,6 +44,11 @@
 			shape:
 				'min-h-chrome rounded-full px-4 border border-line text-ink-muted ' +
 				'hover:bg-hover press:bg-surface-2',
+			text: 'text-md font-extrabold',
+			caps: 'text-sm font-extrabold tracking-caps'
+		},
+		bar: {
+			shape: 'min-h-chrome rounded-full px-3 text-accent-text hover:bg-hover press:bg-surface-2',
 			text: 'text-md font-extrabold',
 			caps: 'text-sm font-extrabold tracking-caps'
 		},

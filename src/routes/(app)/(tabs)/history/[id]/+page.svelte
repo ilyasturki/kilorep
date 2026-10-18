@@ -20,6 +20,7 @@
 	import PlanOffer from '$lib/templates/PlanOffer.svelte';
 	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
+	import { barIcon } from '$lib/nav/chrome';
 	import { leave } from '$lib/nav/go';
 	import { bottomDock } from '$lib/nav/dock.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
@@ -674,21 +675,22 @@
 
 {#snippet actions()}
 	{#if editing}
-		<Button variant="chrome" caps onclick={stopEditing}>DONE</Button>
+		<Button variant="bar" caps onclick={stopEditing}>DONE</Button>
 	{:else}
-		<div class="flex items-center gap-2">
-			<Button variant="chrome" caps onclick={() => void repeat()}>REPEAT</Button>
+		<div class="flex items-center gap-1">
+			{#if desk}
+				<Button variant="bar" caps onclick={() => void repeat()}>REPEAT</Button>
 
-			<button
-				type="button"
-				aria-label="Edit this workout"
-				onclick={() => (unlockOpen = true)}
-				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border
-					border-line text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
-				{@attach press()}
-			>
-				<Pencil size={18} />
-			</button>
+				<button
+					type="button"
+					aria-label="Edit this workout"
+					onclick={() => (unlockOpen = true)}
+					class={barIcon}
+					{@attach press()}
+				>
+					<Pencil size={18} />
+				</button>
+			{/if}
 
 			<button
 				type="button"
@@ -697,8 +699,7 @@
 					menuAnchor = e.currentTarget;
 					menuOpen = true;
 				}}
-				class="grid min-h-chrome w-11 shrink-0 place-items-center rounded-full
-					text-ink-muted focus-ring hover:bg-hover press:bg-surface-2"
+				class={barIcon}
 				{@attach press()}
 			>
 				<More size={20} />
@@ -970,6 +971,8 @@
 	{title}
 	anchor={menuAnchor}
 	linked={template !== null}
+	onrepeat={desk ? undefined : () => void repeat()}
+	onedit={desk ? undefined : () => (unlockOpen = true)}
 	onlink={() => (linkOpen = true)}
 	onsave={template === null ? () => void saveAsPlan() : undefined}
 	ondelete={() => (deleteOpen = true)}

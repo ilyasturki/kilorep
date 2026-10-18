@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { barIcon } from '$lib/nav/chrome';
 	import { backDecision, follow } from '$lib/nav/go';
+	import CaretLeft from '$lib/ui/icons/CaretLeft.svelte';
 	import { press } from '$lib/ui/press';
 
 	let {
@@ -25,17 +27,6 @@
 	}
 </script>
 
-<a
-	{href}
-	aria-label={label}
-	onclick={walk}
-	class={[
-		'grid min-h-chrome w-11 shrink-0 place-items-center rounded-full border',
-		'border-line text-xl leading-none text-ink-muted focus-ring hover:bg-hover',
-		'press:bg-surface-2',
-		extra
-	]}
-	{@attach press()}
->
-	‹
+<a {href} aria-label={label} onclick={walk} class={[barIcon, extra]} {@attach press()}>
+	<CaretLeft size={20} />
 </a>
