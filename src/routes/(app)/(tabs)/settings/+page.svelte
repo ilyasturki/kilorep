@@ -5,6 +5,7 @@
 	import { apiBase, deviceToken, setApiBase } from '$lib/api/client';
 	import AccountSection from '$lib/settings/AccountSection.svelte';
 	import DangerSection from '$lib/settings/DangerSection.svelte';
+	import DataSection from '$lib/settings/DataSection.svelte';
 	import Section from '$lib/settings/Section.svelte';
 	import ServerSection from '$lib/settings/ServerSection.svelte';
 	import SetsSection from '$lib/settings/SetsSection.svelte';
@@ -129,6 +130,8 @@
 	{#if data.tokens !== null}
 		<TokensSection tokens={data.tokens} bind:minted />
 	{/if}
+
+	<DataSection userId={data.user?.id ?? null} />
 
 	{#if data.user}
 		<DangerSection user={data.user} ondeleted={afterDelete} />
