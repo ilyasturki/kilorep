@@ -47,14 +47,14 @@ function slotting(workout: Workout, template: Template): Slotted {
 	const slotOf = new Map<string, TemplateExercise>();
 	const legsOf = new Map<string, WorkoutExercise[]>();
 
-	const take = (leg: WorkoutExercise, slot: TemplateExercise | undefined) => {
+	const take = (leg: WorkoutExercise, slot: TemplateExercise | undefined): void => {
 		if (slot !== undefined) {
 			slotOf.set(leg.id, slot);
 			legsOf.set(slot.id, [...(legsOf.get(slot.id) ?? []), leg]);
 		}
 	};
 
-	const free = (exerciseId: string) =>
+	const free = (exerciseId: string): TemplateExercise | undefined =>
 		slots.find((slot) => !legsOf.has(slot.id) && slot.exerciseId === exerciseId);
 
 	// Planned legs first, so a stand-in dragged above the leg it replaced cannot take its slot.
@@ -254,7 +254,13 @@ export function driftFrom(workout: Workout, template: Template, exerciseOf: Exer
 			const legs = slotted.legsOf.get(slot.id) ?? [leg];
 			const counted = legs[0] === leg ? slotDrift(slot, legs, exerciseOf) : CLEAN;
 
-			matched[leg.id] = { ...counted, instead: insteadOf(leg, slot) };
+			matched[leg.id] = {
+				added: counted.added,
+				removed: counted.removed,
+				retargeted: counted.retargeted,
+				grip: counted.grip,
+				instead: insteadOf(leg, slot)
+			};
 		}
 	}
 
@@ -263,12 +269,9 @@ export function driftFrom(workout: Workout, template: Template, exerciseOf: Exer
 		.filter((slot) => !slotted.legsOf.has(slot.id) && slot.optional !== true)
 		.map((slot) => slot.exerciseId);
 
-	return {
-		matched,
-		unplanned,
-		missing,
-		...moves(template, reshaped(template, workout, slotted))
-	};
+	const { reordered, regrouped } = moves(template, reshaped(template, workout, slotted));
+
+	return { matched, unplanned, missing, reordered, regrouped };
 }
 
 export function hasSetDrift(drift: SetDrift): boolean {

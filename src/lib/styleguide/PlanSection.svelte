@@ -50,7 +50,7 @@
 	// Keyed so a dismissed specimen can be brought back.
 	let offerRound = $state(0);
 
-	const noop = () => {};
+	const noop = (): Promise<void> => Promise.resolve();
 </script>
 
 <Card name="PlanCard" note="one exercise of a template — closed it is a row, open it is the fields">

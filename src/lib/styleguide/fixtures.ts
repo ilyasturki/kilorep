@@ -87,11 +87,14 @@ export function pushTemplate(): Template {
 /** Push A as it went on the day: a fifth bench set, no incline, dips nobody planned. */
 export function driftedWorkout(): Workout {
 	let n = 0;
-	const mint = () => `drift-${(n += 1)}`;
+	const mint = (): string => `drift-${(n += 1)}`;
 	const workout = startFrom(pushTemplate(), STARTED, mint);
 	const [benched] = workout.entries[0].exercises;
 
-	benched.sets.push({ ...benched.sets[0], id: mint() });
+	const extra = structuredClone(benched.sets[0]);
+
+	extra.id = mint();
+	benched.sets.push(extra);
 	workout.entries.splice(1, 1);
 	workout.entries.push({
 		id: mint(),

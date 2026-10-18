@@ -26,11 +26,11 @@ export const load: PageLoad = async ({ params }) => {
 		]);
 
 	// Only the newest session of a plan offers to change it, and only until it is answered.
+	const newestHere = plan === null ? newest : newestOfPlan;
+
 	const offer = {
 		templateId: plan,
-		open:
-			answered !== workout.id &&
-			(plan === null ? newest : newestOfPlan)?.id === workout.id
+		open: answered !== workout.id && newestHere !== null && newestHere.id === workout.id
 	};
 
 	return { store, workout, templates, lastPerformed, heaviest, frequent, offer };

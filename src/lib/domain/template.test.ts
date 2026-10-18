@@ -1011,9 +1011,9 @@ describe('rankAfter', () => {
 		const templates = [at('a', 100, 5000), at('b', 200), archived];
 		const placed = at('new', 50, rankAfter(templates));
 
-		expect([...templates, placed].filter((t) => !isArchived(t)).toSorted(byRank).at(-1)?.id).toBe(
-			'new'
-		);
+		const rotation = [...templates, placed].filter((t) => !isArchived(t)).toSorted(byRank);
+
+		expect(rotation.map((t) => t.id)).toEqual(['b', 'a', 'new']);
 	});
 
 	test('an empty rotation leaves the birthday to rank it', () => {

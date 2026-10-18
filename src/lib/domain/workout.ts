@@ -147,7 +147,7 @@ function due(cursor: SetCursor): boolean {
 }
 
 export function firstUncompleted(workout: Workout): SetCursor | null {
-	return cursors(workout).find(due) ?? null;
+	return cursors(workout).find((cursor) => due(cursor)) ?? null;
 }
 
 // Forward only. Coming back for the gaps left behind dragged the lifter to an exercise two
@@ -156,7 +156,7 @@ export function advanceFrom(workout: Workout, setId: string): SetCursor | null {
 	const all = cursors(workout);
 	const at = all.findIndex((c) => c.set.id === setId);
 
-	return all.slice(at + 1).find(due) ?? null;
+	return all.slice(at + 1).find((cursor) => due(cursor)) ?? null;
 }
 
 export type SetTally = { logged: number; owed: number };
@@ -166,7 +166,7 @@ export function tally(workout: Workout): SetTally {
 
 	return {
 		logged: all.filter((c) => c.set.completed).length,
-		owed: all.filter(due).length
+		owed: all.filter((cursor) => due(cursor)).length
 	};
 }
 

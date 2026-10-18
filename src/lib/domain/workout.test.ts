@@ -1149,15 +1149,15 @@ describe('advanceFrom', () => {
 	});
 });
 
+function withOptional(index: number): Workout {
+	const workout = freshWorkout(0);
+
+	workout.entries[index].exercises[0].optional = true;
+
+	return workout;
+}
+
 describe('an optional exercise', () => {
-	function withOptional(index: number): Workout {
-		const workout = freshWorkout(0);
-
-		workout.entries[index].exercises[0].optional = true;
-
-		return workout;
-	}
-
 	test('the session never opens on one nobody has started', () => {
 		const workout = freshWorkout(0);
 

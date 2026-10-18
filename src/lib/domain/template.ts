@@ -493,7 +493,10 @@ export function startFrom(
 }
 
 // Null for an exercise holding only warmups, which plan nothing.
-export function plannedFrom(exercise: WorkoutExercise, mint: () => string): TemplateExercise | null {
+export function plannedFrom(
+	exercise: WorkoutExercise,
+	mint: () => string
+): TemplateExercise | null {
 	const working = exercise.sets.filter((set) => set.type !== 'warmup');
 
 	if (working.length === 0) {
@@ -503,7 +506,9 @@ export function plannedFrom(exercise: WorkoutExercise, mint: () => string): Temp
 	const planned: TemplateExercise = {
 		id: mint(),
 		exerciseId: exercise.exerciseId,
-		sets: working.slice(0, MAX_PLANNED_SETS).map((set) => ({ id: mint(), plannedReps: set.plannedReps }))
+		sets: working
+			.slice(0, MAX_PLANNED_SETS)
+			.map((set) => ({ id: mint(), plannedReps: set.plannedReps }))
 	};
 
 	if (exercise.restSeconds !== undefined) {
@@ -539,5 +544,5 @@ export function templateFrom(
 		}
 	}
 
-	return { ...blankTemplate(id, createdAt), entries };
+	return Object.assign(blankTemplate(id, createdAt), { entries });
 }

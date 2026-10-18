@@ -107,9 +107,10 @@ describe('workouts', () => {
 
 		await store.finishWorkout(ran, 200);
 
-		expect((await store.getWorkout('w1'))?.entries[0].exercises[0]).toMatchObject({
-			optional: true,
-			plannedAs: 'bench-dip'
+		const stored = await store.getWorkout('w1');
+
+		expect(stored).toMatchObject({
+			entries: [{ exercises: [{ optional: true, plannedAs: 'bench-dip' }] }]
 		});
 	});
 
@@ -267,20 +268,25 @@ describe('plan offers', () => {
 	});
 
 	it('the latest session is found per plan, and overall', async () => {
-		const ran = (id: string, startedAt: number, templateId: string | null): Workout => ({
-			...workout(id, startedAt, 'bench-press', []),
-			templateId
-		});
+		const ran = (id: string, startedAt: number, templateId: string | null): Workout =>
+			Object.assign(workout(id, startedAt, 'bench-press', []), { templateId });
 
 		await store.finishWorkout(ran('a1', 100, 'a'), 150);
 		await store.finishWorkout(ran('a2', 300, 'a'), 350);
 		await store.finishWorkout(ran('free', 400, null), 450);
 		await store.finishWorkout(ran('b1', 200, 'b'), 250);
 
-		expect((await store.latestWorkout('a'))?.id).toBe('a2');
-		expect((await store.latestWorkout('b'))?.id).toBe('b1');
-		expect(await store.latestWorkout('c')).toBeNull();
-		expect((await store.latestWorkout())?.id).toBe('free');
+		const [a, b, c, any] = await Promise.all([
+			store.latestWorkout('a'),
+			store.latestWorkout('b'),
+			store.latestWorkout('c'),
+			store.latestWorkout()
+		]);
+
+		expect(a).toMatchObject({ id: 'a2' });
+		expect(b).toMatchObject({ id: 'b1' });
+		expect(c).toBeNull();
+		expect(any).toMatchObject({ id: 'free' });
 	});
 });
 
@@ -424,7 +430,9 @@ describe('templates', () => {
 
 		await store.saveTemplate(planned, 150);
 
-		expect((await store.getTemplate('t1'))?.entries[0].exercises[0].optional).toBe(true);
+		const stored = await store.getTemplate('t1');
+
+		expect(stored).toMatchObject({ entries: [{ exercises: [{ optional: true }] }] });
 	});
 
 	it('keeps kinds isolated in the shared records box', async () => {

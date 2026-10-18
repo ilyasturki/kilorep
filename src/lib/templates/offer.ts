@@ -1,30 +1,40 @@
 import { catalogById } from '$lib/catalog';
 import type { PlanChange, PlanSwap } from '$lib/domain/drift';
+import type { Exercise } from '$lib/domain/exercise';
 import { gripLabel } from '$lib/domain/grip';
 
 function nameOf(exerciseId: string): string {
-	return catalogById[exerciseId]?.name ?? exerciseId;
+	const meta: Exercise | undefined = catalogById[exerciseId];
+
+	return meta === undefined ? exerciseId : meta.name;
+}
+
+function setsLabel(from: number, to: number): string {
+	const count = Math.abs(to - from);
+
+	return `${to > from ? '+' : '−'}${count} set${count === 1 ? '' : 's'}`;
 }
 
 export function changeLabel(change: PlanChange): string {
-	switch (change.kind) {
-		case 'sets': {
-			const delta = change.to - change.from;
-			const count = Math.abs(delta);
-
-			return `${nameOf(change.exerciseId)} ${delta > 0 ? '+' : '−'}${count} set${count === 1 ? '' : 's'}`;
-		}
-		case 'grip':
-			return `${nameOf(change.exerciseId)}: ${gripLabel(catalogById[change.exerciseId], change.grip) ?? change.grip}`;
-		case 'added':
-			return `${nameOf(change.exerciseId)} added`;
-		case 'removed':
-			return `${nameOf(change.exerciseId)} not done`;
-		case 'order':
-			return 'new order';
-		case 'supersets':
-			return 'supersets changed';
+	if (change.kind === 'order') {
+		return 'new order';
 	}
+
+	if (change.kind === 'supersets') {
+		return 'supersets changed';
+	}
+
+	const name = nameOf(change.exerciseId);
+
+	if (change.kind === 'sets') {
+		return `${name} ${setsLabel(change.from, change.to)}`;
+	}
+
+	if (change.kind === 'grip') {
+		return `${name}: ${gripLabel(catalogById[change.exerciseId], change.grip) ?? change.grip}`;
+	}
+
+	return change.kind === 'added' ? `${name} added` : `${name} not done`;
 }
 
 export function changesLine(changes: PlanChange[]): string {
