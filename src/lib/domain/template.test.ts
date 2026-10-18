@@ -12,6 +12,7 @@ import {
 	isArchived,
 	isBlank,
 	joinEntry,
+	leaveEntry,
 	MAX_PLANNED_SETS,
 	moveEntry,
 	moveExercise,
@@ -467,14 +468,11 @@ describe('planning supersets', () => {
 			expect(template.entries).toHaveLength(2);
 		});
 
-		test('an exercise already in this entry is planned a second time', () => {
+		test('an exercise cannot superset with itself', () => {
 			const template = pair();
 
-			expect(supersetWith(template, 'cable-fly-entry', 'cable-fly', ids)).toBe(true);
-			expect(template.entries[0].exercises.map((e) => e.id)).toEqual([
-				'cable-fly-node',
-				'fresh-node'
-			]);
+			expect(supersetWith(template, 'cable-fly-entry', 'cable-fly', ids)).toBe(false);
+			expect(template.entries[0].exercises.map((e) => e.id)).toEqual(['cable-fly-node']);
 		});
 
 		test('an unknown entry is refused', () => {
@@ -612,6 +610,58 @@ describe('a superset rests once per round', () => {
 
 	test('an unknown entry is refused', () => {
 		expect(setEntryRest(paired(), 'nope', 75)).toBe(false);
+	});
+
+	test('a leg leaving the superset keeps the round’s rest as its own', () => {
+		const template = paired();
+
+		setEntryRest(template, 'cable-fly-entry', 75);
+		leaveEntry(template, 'lateral-raise-node', mint('e'));
+
+		expect(template.entries.map((entry) => entry.exercises[0].restSeconds)).toEqual([75, 75]);
+	});
+});
+
+describe('leaving a superset', () => {
+	function trio(): Template {
+		const template = blankTemplate('t1', 100);
+
+		plan(template, 'cable-fly', 3);
+		plan(template, 'lateral-raise', 3);
+		plan(template, 'pec-deck', 2);
+		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');
+		joinEntry(template, 'cable-fly-entry', 'pec-deck-node');
+
+		return template;
+	}
+
+	const legsOf = (template: Template) =>
+		template.entries.map((entry) => entry.exercises.map((exercise) => exercise.exerciseId));
+
+	test('one leg steps out behind the entry and the rest stay joined', () => {
+		const template = trio();
+		setPlannedReps(template, 'lateral-raise-set-1', 15);
+
+		expect(leaveEntry(template, 'lateral-raise-node', mint('e'))).toBe(true);
+		expect(legsOf(template)).toEqual([['cable-fly', 'pec-deck'], ['lateral-raise']]);
+		expect(template.entries[0].id).toBe('cable-fly-entry');
+		expect(targetsOf(template, 'lateral-raise-node')).toEqual([15, null, null]);
+	});
+
+	test('the first leg steps out ahead of it', () => {
+		const template = trio();
+
+		leaveEntry(template, 'cable-fly-node', mint('e'));
+
+		expect(legsOf(template)).toEqual([['cable-fly'], ['lateral-raise', 'pec-deck']]);
+	});
+
+	test('a lone exercise is refused', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'cable-fly', 3);
+
+		expect(leaveEntry(template, 'cable-fly-node', mint('e'))).toBe(false);
+		expect(template.entries).toHaveLength(1);
 	});
 });
 

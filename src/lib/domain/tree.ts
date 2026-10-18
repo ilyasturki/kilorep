@@ -71,6 +71,12 @@ export function supersetWith<E extends { id: string; exerciseId: string }>(
 	ids: ExerciseIds,
 	make: (ids: ExerciseIds) => E
 ): boolean {
+	const target = tree.entries.find((entry) => entry.id === entryId);
+
+	if (target === undefined || target.exercises.some((leg) => leg.exerciseId === catalogId)) {
+		return false;
+	}
+
 	const standing = tree.entries
 		.filter((entry) => entry.id !== entryId)
 		.flatMap((entry) => entry.exercises)
@@ -102,6 +108,33 @@ export function splitEntry<E>(tree: Tree<E>, entryId: string, mint: () => string
 	);
 
 	return true;
+}
+
+// The first leg steps out ahead of the entry, so a pair split this way keeps its lifting order.
+export function leaveEntry<E extends { id: string }>(
+	tree: Tree<E>,
+	exerciseId: string,
+	mint: () => string
+): boolean {
+	for (const [at, entry] of tree.entries.entries()) {
+		const index = entry.exercises.findIndex((e) => e.id === exerciseId);
+
+		if (index === -1) {
+			continue;
+		}
+
+		if (entry.exercises.length < 2) {
+			return false;
+		}
+
+		const [exercise] = entry.exercises.splice(index, 1);
+
+		tree.entries.splice(index === 0 ? at : at + 1, 0, { id: mint(), exercises: [exercise] });
+
+		return true;
+	}
+
+	return false;
 }
 
 export function removeExercise<E extends { id: string }>(

@@ -13,6 +13,7 @@ import type { ExerciseIds, NewExerciseIds } from './tree.ts';
 
 export {
 	joinEntry,
+	leaveEntry,
 	moveEntry,
 	moveExercise,
 	removeExercise,
@@ -555,6 +556,22 @@ export function setExerciseNote(workout: Workout, exerciseId: string, text: stri
 	}
 
 	return true;
+}
+
+export function addRound(workout: Workout, entryId: string, mint: () => string): WorkoutSet[] {
+	const entry = workout.entries.find((e) => e.id === entryId);
+
+	if (entry === undefined) {
+		return [];
+	}
+
+	return entry.exercises.map((exercise) => {
+		const set = blankSet(mint(), exercise.grip);
+
+		exercise.sets.push(set);
+
+		return set;
+	});
 }
 
 /**

@@ -12,6 +12,7 @@ import type { Workout, WorkoutEntry, WorkoutExercise, WorkoutSet } from './worko
 
 export {
 	joinEntry,
+	leaveEntry,
 	moveEntry,
 	moveExercise,
 	removeExercise,

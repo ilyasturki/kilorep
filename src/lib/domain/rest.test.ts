@@ -20,7 +20,14 @@ import {
 	startingRest
 } from '$lib/domain/rest';
 import type { RestSettings } from '$lib/domain/rest';
-import { addWarmup, commitSet, markSet, setSetType, supersetWith } from '$lib/domain/workout';
+import {
+	addRound,
+	addWarmup,
+	commitSet,
+	markSet,
+	setSetType,
+	supersetWith
+} from '$lib/domain/workout';
 import type { Workout } from '$lib/domain/workout';
 
 function settings(over: Partial<RestSettings> = {}): RestSettings {
@@ -262,6 +269,21 @@ describe('supersets rest by the round', () => {
 		expect(restAfter(workout, 'super-1', settings())).toEqual({
 			exerciseId: 'lateral-raise',
 			seconds: 45
+		});
+	});
+
+	test('a round added to a ragged pair rests once, after the leg that now closes it', () => {
+		const workout = paired();
+		let n = 0;
+		const [, joined] = addRound(workout, 'entry-1', () => `added-${++n}`);
+
+		commitSet(workout, 'bench-4', 80, 6);
+		commitSet(workout, joined.id, 20, 12);
+
+		expect(restAfter(workout, 'bench-4', settings())).toBeNull();
+		expect(restAfter(workout, joined.id, settings())).toEqual({
+			exerciseId: 'lateral-raise',
+			seconds: DEFAULT_REST_SECONDS
 		});
 	});
 

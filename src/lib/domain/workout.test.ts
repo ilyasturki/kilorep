@@ -5,6 +5,7 @@ import { freshWorkout, history } from '$lib/domain/fixture';
 import {
 	addExercise,
 	addExerciseTo,
+	addRound,
 	addSet,
 	addWarmup,
 	advanceFrom,
@@ -21,6 +22,7 @@ import {
 	isEntryDraft,
 	isWholeDraft,
 	joinEntry,
+	leaveEntry,
 	markSet,
 	moveEntry,
 	moveExercise,
@@ -977,11 +979,21 @@ describe('supersetWith', () => {
 		expect(at(workout, 'new-1').set.completed).toBe(false);
 	});
 
-	test('a movement already standing in this entry is added again', () => {
+	test('a movement cannot superset with itself', () => {
 		const workout = freshWorkout(0);
 
-		expect(supersetWith(workout, 'entry-1', 'bench-press', ids)).toBe(true);
-		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench', 'we-new']);
+		expect(supersetWith(workout, 'entry-1', 'bench-press', ids)).toBe(false);
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench']);
+		expect(idsOf(workout)).not.toContain('new-1');
+	});
+
+	test('nor through a second copy standing elsewhere in the session', () => {
+		const workout = freshWorkout(0);
+		addExercise(workout, 'bench-press', { entry: 'entry-5', exercise: 'we-again', sets: ['x-1'] });
+
+		expect(supersetWith(workout, 'entry-1', 'bench-press', ids)).toBe(false);
+		expect(workout.entries[0].exercises.map((e) => e.id)).toEqual(['we-bench']);
+		expect(workout.entries.at(-1)?.exercises.map((e) => e.id)).toEqual(['we-again']);
 	});
 
 	test('the first match wins when the session holds the exercise twice', () => {
@@ -1038,6 +1050,177 @@ describe('splitEntry', () => {
 
 	test('an unknown entry is refused rather than silently ignored', () => {
 		expect(splitEntry(freshWorkout(0), 'nope', freshEntry)).toBe(false);
+	});
+});
+
+describe('leaveEntry', () => {
+	function trio(): Workout {
+		const workout = superset(freshWorkout(0));
+
+		workout.entries[1].exercises.push({
+			id: 'we-c',
+			exerciseId: 'lateral-raise',
+			sets: [openSet('c-1'), openSet('c-2')]
+		});
+
+		return workout;
+	}
+
+	const legsOf = (workout: Workout) => workout.entries.map((e) => e.exercises.map((x) => x.id));
+
+	test('one leg steps out and the others stay joined', () => {
+		const workout = trio();
+
+		expect(leaveEntry(workout, 'we-b', freshEntry)).toBe(true);
+		expect(legsOf(workout)).toEqual([['we-bench'], ['we-a', 'we-c'], ['we-b']]);
+		expect(workout.entries[1].id).toBe('superset');
+		expect(workout.entries[2].id).toBe('fresh');
+	});
+
+	test('the first leg steps out ahead, so a pair keeps its lifting order', () => {
+		const workout = superset(freshWorkout(0));
+
+		expect(leaveEntry(workout, 'we-a', freshEntry)).toBe(true);
+		expect(legsOf(workout)).toEqual([['we-bench'], ['we-a'], ['we-b']]);
+		expect(orderOf(workout)).toEqual(['bench-press', 'cable-fly', 'pec-deck']);
+	});
+
+	test('logged sets go with the leg', () => {
+		const workout = superset(freshWorkout(0));
+		commitSet(workout, 'b-1', 12, 15);
+
+		leaveEntry(workout, 'we-b', freshEntry);
+
+		expect(at(workout, 'b-1').set.completed).toBe(true);
+		expect(at(workout, 'b-1').entry.id).toBe('fresh');
+	});
+
+	test('the legs left behind stop interleaving with it', () => {
+		const workout = superset(freshWorkout(0));
+
+		leaveEntry(workout, 'we-b', freshEntry);
+
+		expect(idsOf(workout).slice(5)).toEqual(['a-1', 'a-2', 'a-3', 'b-1', 'b-2']);
+	});
+
+	test('a lone exercise has no superset to leave', () => {
+		const workout = freshWorkout(0);
+
+		expect(leaveEntry(workout, 'we-bench', freshEntry)).toBe(false);
+		expect(leaveEntry(workout, 'nope', freshEntry)).toBe(false);
+		expect(workout.entries.map((e) => e.id)).toEqual(['entry-1', 'entry-2', 'entry-3', 'entry-4']);
+	});
+});
+
+describe('addRound', () => {
+	const mint = (() => {
+		let n = 0;
+
+		return () => `r-${++n}`;
+	})();
+
+	test('one set lands on every leg, in leg order', () => {
+		const workout = superset(freshWorkout(0));
+		workout.entries[1].exercises[1].sets.push(openSet('b-3'));
+
+		const added = addRound(workout, 'superset', mint);
+
+		expect(added.map((set) => set.id)).toHaveLength(2);
+		expect(at(workout, added[0].id).exercise.id).toBe('we-a');
+		expect(at(workout, added[1].id).exercise.id).toBe('we-b');
+		expect(idsOf(workout).slice(-2)).toEqual(added.map((set) => set.id));
+	});
+
+	test('the new sets are blank, on the grip each leg is set to', () => {
+		const workout = superset(freshWorkout(0));
+		workout.entries[1].exercises[0].grip = 'rope';
+
+		const [a, b] = addRound(workout, 'superset', mint);
+
+		expect(a).toMatchObject({ type: 'normal', weight: null, reps: null, completed: false });
+		expect(a.grip).toBe('rope');
+		expect('grip' in b).toBe(false);
+	});
+
+	test("on a ragged superset the short leg's new set fills the open round", () => {
+		const workout = superset(freshWorkout(0));
+
+		const [a4, b3] = addRound(workout, 'superset', mint);
+
+		expect(at(workout, a4.id).workingIndex).toBe(3);
+		expect(at(workout, b3.id).workingIndex).toBe(2);
+		expect(idsOf(workout).slice(5)).toEqual(['a-1', 'b-1', 'a-2', 'b-2', 'a-3', b3.id, a4.id]);
+	});
+
+	test('an unknown entry adds nothing', () => {
+		const workout = superset(freshWorkout(0));
+		const before = idsOf(workout);
+
+		expect(addRound(workout, 'nope', mint)).toEqual([]);
+		expect(idsOf(workout)).toEqual(before);
+	});
+});
+
+describe('round order', () => {
+	function trio(): Workout {
+		const workout = superset(freshWorkout(0));
+		const [a, b] = workout.entries[1].exercises;
+
+		b.sets.unshift({ ...openSet('b-w'), type: 'warmup' });
+		a.sets.unshift({ ...openSet('a-w'), type: 'warmup' });
+		workout.entries[1].exercises.push({
+			id: 'we-c',
+			exerciseId: 'lateral-raise',
+			sets: [openSet('c-1')]
+		});
+
+		return workout;
+	}
+
+	test('warmups lead in leg order, then one set of each leg per round', () => {
+		expect(idsOf(trio()).slice(5)).toEqual([
+			'a-w',
+			'b-w',
+			'a-1',
+			'b-1',
+			'c-1',
+			'a-2',
+			'b-2',
+			'a-3'
+		]);
+	});
+
+	test('reordering the legs reorders every round, logged ones included', () => {
+		const workout = trio();
+		commitSet(workout, 'a-1', 20, 12);
+		commitSet(workout, 'b-1', 30, 10);
+
+		moveExercise(workout, 'we-c', -1);
+		moveExercise(workout, 'we-c', -1);
+
+		expect(idsOf(workout).slice(5)).toEqual([
+			'a-w',
+			'b-w',
+			'c-1',
+			'a-1',
+			'b-1',
+			'a-2',
+			'b-2',
+			'a-3'
+		]);
+	});
+
+	test('the cursor walks the rounds the way they are listed', () => {
+		const workout = trio();
+		const walked: string[] = [];
+
+		for (let cursor = cursorFor(workout, 'a-w'); cursor?.entry.id === 'superset'; ) {
+			walked.push(cursor.set.id);
+			commitSet(workout, cursor.set.id, 10, 10);
+			cursor = advanceFrom(workout, cursor.set.id);
+		}
+
+		expect(walked).toEqual(idsOf(workout).slice(5));
 	});
 });
 
