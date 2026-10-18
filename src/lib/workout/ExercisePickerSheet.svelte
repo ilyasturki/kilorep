@@ -129,7 +129,9 @@
 	// a shelf of misses while a filter never blanks it.
 	const shelfShown = $derived(shelf === null ? [] : searchExercises(shelf.exercises, query));
 
-	const groups = $derived(pickerGroups(mainPool, filters, swap ? shelfShown : []));
+	// Searching, a match the shelf already shows is not listed twice; browsing, the muscle
+	// sections stay whole, so an exercise is where the lifter looks for it.
+	const groups = $derived(pickerGroups(mainPool, filters, swap || searching ? shelfShown : []));
 
 	const shownCount = $derived(
 		groups.reduce(
@@ -238,13 +240,15 @@
 
 	const activeKey = $derived(ordered[active]?.key);
 
+	let list = $state<HTMLElement | null>(null);
+
+	// A new query is a new list, read from its top.
 	$effect(() => {
 		void [query, muscle, equipment];
 
 		active = 0;
+		list?.scrollTo({ top: 0 });
 	});
-
-	let list = $state<HTMLElement | null>(null);
 
 	async function reveal() {
 		await tick();
@@ -680,6 +684,7 @@
 				<!-- `[&>*]:shrink-0`: a flex column that scrolls must not let its cards compress to
 				     fit first — a group squeezed to nothing reads as missing, not as scrollable. -->
 				<div
+					bind:this={list}
 					class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pt-3 pb-4 [&>*]:shrink-0"
 				>
 					{#if empty}
@@ -896,7 +901,7 @@
 				<span class={wide ? 'size-5.5' : 'size-6'}>
 					<ExerciseIllustration id={exercise.id} name={exercise.name} class="size-full" />
 				</span>
-				<span class={['truncate', wide ? 'max-w-36' : 'max-w-22']}>{pickName(pick)}</span>
+				<span class={['truncate', wide ? 'max-w-36' : 'max-w-44']}>{pickName(pick)}</span>
 				<span aria-hidden="true" class="text-md">×</span>
 			</button>
 		{/if}
