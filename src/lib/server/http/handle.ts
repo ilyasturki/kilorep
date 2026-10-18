@@ -7,6 +7,7 @@ import {
 	GOOGLE_ENABLED_PATH,
 	GOOGLE_START_PATH
 } from '../../api/routes.ts';
+import { legacyAddress } from '../../nav/legacy.ts';
 import type { Credential } from '../auth/session.ts';
 import { SESSION_COOKIE, bearerToken, resolveCredential } from '../auth/session.ts';
 import type { Database } from '../db/client.ts';
@@ -46,6 +47,12 @@ export function createHandle(database: () => Database): Handle {
 			isApiPath(pathname) || isApiPath(event.url.pathname) || isApiPath(event.route.id ?? '');
 
 		if (!api) {
+			const moved = legacyAddress(event.url);
+
+			if (moved !== null) {
+				return new Response(null, { status: 308, headers: { location: moved } });
+			}
+
 			event.locals.credential = null;
 			return resolve(event);
 		}

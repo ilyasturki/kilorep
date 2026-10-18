@@ -223,6 +223,23 @@ describe('enforcement', () => {
 	});
 });
 
+describe('moved addresses', () => {
+	test('answers a renamed page with a permanent redirect, tail and query kept', async () => {
+		const { response, resolved } = await run('/templates/t1/history?from=%2Fprogress');
+
+		expect(response.status).toBe(308);
+		expect(response.headers.get('location')).toBe('/plan/templates/t1/history?from=%2Fprogress');
+		expect(resolved).toBe(0);
+	});
+
+	test('leaves a page that merely starts like a moved one to the router', async () => {
+		const { response, resolved } = await run('/workouts');
+
+		expect(response.status).toBe(200);
+		expect(resolved).toBe(1);
+	});
+});
+
 describe('cors', () => {
 	test('answers a preflight without reaching a route', async () => {
 		const { response, resolved } = await run('/api/auth/login', {
