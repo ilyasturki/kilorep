@@ -248,6 +248,12 @@ server* state above, reachable at last.
   checks the store, so call it once the write is in there; called a moment too
   early it finds nothing dirty and returns. `syncNow(page)` starts a sync the
   way the network coming back does — the way to make a second device pull.
+- `plantRecords(db, account.id, page, rows)`, from `e2e/plant.ts`, writes
+  templates and workouts straight into the account on the server — a session
+  imported from v1, a plan archived or edited at a chosen time — then reloads
+  `page` and waits until its launch sync has pulled them. It reloads rather
+  than calling `syncNow`: going offline mid-launch fails that pull, and a
+  failed pull with nothing to push is never retried.
 
 **Adding a spec.** One file per area, in `e2e/`, named for what it holds. Find
 things the way a person does — role and name, `getByRole('button', { name:
