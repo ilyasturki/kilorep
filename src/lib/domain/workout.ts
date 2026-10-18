@@ -33,7 +33,13 @@ export type Arms = 'both' | 'one';
 // `grip` is the settled value, absent only on an exercise with no axis.
 export type PerformedSet = { weight: number; reps: number; rpe: number | null; grip?: string };
 
-export type History = Record<string, PerformedSet[] | undefined>;
+/**
+ * One slot of what a set recalls. `earlier` marks a slot last time did not reach, filled from
+ * the most recent session before it that did.
+ */
+export type Recall = PerformedSet & { earlier?: true };
+
+export type History = Record<string, Recall[] | undefined>;
 
 export type WorkoutSet = {
 	id: string;
@@ -137,7 +143,7 @@ export function advanceFrom(workout: Workout, setId: string): SetCursor | null {
 	return all.slice(at + 1).find((c) => !c.set.completed) ?? null;
 }
 
-export function hintFor(history: History, key: string, hintIndex: number): PerformedSet | null {
+export function hintFor(history: History, key: string, hintIndex: number): Recall | null {
 	if (hintIndex < 0) {
 		return null;
 	}
@@ -147,6 +153,10 @@ export function hintFor(history: History, key: string, hintIndex: number): Perfo
 
 export function cursorKey(cursor: SetCursor): string {
 	return cursor.exercise.exerciseId;
+}
+
+export function neverLogged(history: History, cursor: SetCursor): boolean {
+	return history[cursorKey(cursor)] === undefined;
 }
 
 export function hintLabel(
@@ -448,7 +458,13 @@ export function armsOf(set: WorkoutSet): Arms {
 export function insertedSetCount(history: History, key: string): number {
 	const performed = history[key];
 
-	return performed === undefined ? 3 : performed.length;
+	if (performed === undefined) {
+		return 3;
+	}
+
+	const reached = performed.findIndex((slot) => slot.earlier === true);
+
+	return reached === -1 ? performed.length : reached;
 }
 
 export function addExercise(

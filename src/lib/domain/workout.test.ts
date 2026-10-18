@@ -22,6 +22,7 @@ import {
 	markSet,
 	moveEntry,
 	moveExercise,
+	neverLogged,
 	parseEntry,
 	prefillFor,
 	rateSet,
@@ -592,6 +593,18 @@ describe('insertedSetCount', () => {
 	test('three when nothing recalls the exercise', () => {
 		expect(insertedSetCount(history, 'pec-deck')).toBe(3);
 	});
+
+	test('last time’s count, not the deepest an older session reached', () => {
+		const deeper = {
+			'cable-fly': [
+				{ weight: 15, reps: 12, rpe: null },
+				{ weight: 15, reps: 12, rpe: null },
+				{ weight: 12.5, reps: 12, rpe: null, earlier: true as const }
+			]
+		};
+
+		expect(insertedSetCount(deeper, 'cable-fly')).toBe(2);
+	});
 });
 
 describe('removeSet', () => {
@@ -1124,10 +1137,41 @@ describe('hintLabel', () => {
 		expect(hintLabel(history, cursor, metaOf(cursor))).toBe('77.5 × 7');
 	});
 
-	test('null with nothing to recall, so the caller can say "First time"', () => {
+	test('null with nothing to recall, and never logged says so apart', () => {
 		const cursor = at(freshWorkout(0), 'pecdeck-1');
 
 		expect(hintLabel(history, cursor, metaOf(cursor))).toBeNull();
+		expect(neverLogged(history, cursor)).toBe(true);
+	});
+
+	test('a set past every session is quiet, not a first time', () => {
+		const workout = freshWorkout(0);
+		addSet(workout, 'we-bench', 'bench-5');
+		const cursor = at(workout, 'bench-5');
+
+		expect(hintLabel(history, cursor, metaOf(cursor))).toBeNull();
+		expect(neverLogged(history, cursor)).toBe(false);
+	});
+
+	test('a warmup recalls nothing', () => {
+		const cursor = at(freshWorkout(0), 'bench-w');
+
+		expect(hintLabel(history, cursor, metaOf(cursor))).toBeNull();
+	});
+
+	test('a set last time never reached recalls the older session that did', () => {
+		const workout = freshWorkout(0);
+		addSet(workout, 'we-bench', 'bench-5');
+		const cursor = at(workout, 'bench-5');
+		const deeper = {
+			'bench-press': [
+				...(history['bench-press'] ?? []),
+				{ weight: 70, reps: 9, rpe: null, earlier: true as const }
+			]
+		};
+
+		expect(hintLabel(deeper, cursor, metaOf(cursor))).toBe('70 × 9');
+		expect(prefillFor(cursor, deeper)).toEqual({ weight: 70, reps: 9 });
 	});
 
 	test('grows how last time felt, in whichever scale it is asked for', () => {

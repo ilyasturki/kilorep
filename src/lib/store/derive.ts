@@ -4,7 +4,7 @@ import { settleGrip } from '$lib/domain/grip';
 import type { PastSession } from '$lib/domain/stats';
 import { rawPr } from '$lib/domain/stats';
 import type { Exercise } from '$lib/domain/exercise';
-import type { History, PerformedSet, Workout, WorkoutSet } from '$lib/domain/workout';
+import type { History, PerformedSet, Recall, Workout, WorkoutSet } from '$lib/domain/workout';
 
 export type FinishedWorkout = Workout & { finishedAt: number };
 
@@ -155,13 +155,32 @@ export function heaviestFrom(workouts: FinishedWorkout[]): Heaviest {
 /**
  * Last time's sets, per exercise — what the logging card recalls, whatever the grip. Each set
  * keeps the grip it was performed with, so the card can say so when today's differs.
+ * A slot last time never reached falls back to the most recent session that did.
  */
 export function historyFrom(workouts: FinishedWorkout[]): History {
 	return Object.fromEntries(
 		Object.entries(sessionsByExercise(workouts)).flatMap(([exerciseId, sessions]) => {
 			const last = sessions.at(-1);
 
-			return last === undefined ? [] : [[exerciseId, last.sets]];
+			if (last === undefined) {
+				return [];
+			}
+
+			const slots: Recall[] = [...last.sets];
+
+			for (const session of sessions.toReversed()) {
+				for (const set of session.sets.slice(slots.length)) {
+					const slot: Recall = { weight: set.weight, reps: set.reps, rpe: set.rpe, earlier: true };
+
+					if (set.grip !== undefined) {
+						slot.grip = set.grip;
+					}
+
+					slots.push(slot);
+				}
+			}
+
+			return [[exerciseId, slots]];
 		})
 	);
 }

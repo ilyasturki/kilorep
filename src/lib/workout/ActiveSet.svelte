@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Exercise } from '$lib/domain/exercise';
-	import { canCommit, hintLabel, prefillFor } from '$lib/domain/workout';
+	import { canCommit, hintLabel, neverLogged, prefillFor } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -42,6 +42,12 @@
 	}: Props = $props();
 
 	const hint = $derived(hintLabel(history, cursor, meta, exertionScale.current));
+
+	const recall = $derived(
+		hint !== null ? `Last ${hint}` : neverLogged(history, cursor) ? 'First time' : null
+	);
+
+	const recalls = $derived(hints && cursor.workingIndex >= 0 && recall !== null);
 
 	// The plan's own number, which the reps field cannot say for itself: what it holds is the
 	// prefill, and from the second set on that is the weight and reps carried from the first.
@@ -117,20 +123,20 @@
 		>
 			{#if note !== null}
 				<span>{note}</span>
-				{#if planned !== null || hints}
+				{#if planned !== null || recalls}
 					<span aria-hidden="true">·</span>
 				{/if}
 			{/if}
 
 			{#if planned !== null}
 				<span>Target {planned}</span>
-				{#if hints}
+				{#if recalls}
 					<span aria-hidden="true">·</span>
 				{/if}
 			{/if}
 
-			{#if hints}
-				<span>{hint === null ? 'First time' : `Last ${hint}`}</span>
+			{#if recalls}
+				<span>{recall}</span>
 			{/if}
 		</div>
 
