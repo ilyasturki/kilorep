@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { catalogById } from '$lib/catalog';
+import { catalog, catalogById } from '$lib/catalog';
+import { withCustoms } from '$lib/domain/custom';
 import { rawPr } from '$lib/domain/stats';
 import type { WorkoutEntry, WorkoutExercise, WorkoutSet } from '$lib/domain/workout';
 
@@ -303,5 +304,23 @@ describe('heaviestFrom', () => {
 		);
 
 		expect(heaviest['bench-press']).toMatchObject({ weight: 100, reps: 2 });
+	});
+});
+
+describe('history reads grips against the merged catalog', () => {
+	const wide = {
+		id: 'grip:custom_wide',
+		payload: { exerciseId: 'bench-press', label: 'Wide', createdAt: 1 }
+	};
+	const logged = [workout(100, leg('bench-press', [{ weight: 80, reps: 5, grip: 'custom_wide' }]))];
+
+	// The shipped catalog alone has never heard of the grip and settles it to the default.
+	it('keeps a custom grip on the set only when the catalog it is handed knows it', () => {
+		const merged = withCustoms(catalog, [wide]).byId;
+		const kept = sessionsByExercise(logged, merged)['bench-press'][0];
+		const settled = sessionsByExercise(logged, catalogById)['bench-press'][0];
+
+		expect(grips(kept.sets)).toEqual(['custom_wide']);
+		expect(grips(settled.sets)).toEqual(['standard']);
 	});
 });
