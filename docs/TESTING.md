@@ -216,6 +216,7 @@ from `@playwright/test`, and ask for what the test needs:
 | --- | --- |
 | `account` | A fresh, empty account, with `page` already signed in to it — on the web build and the app build both. `{ id, email, password }`. |
 | `test.use({ seeded: true })` | Makes that account the seeded one: the eight weeks of *The content* above, planted for it in the run's database relative to now, and already pulled onto the device when the test starts. |
+| `test.use({ google: true })` | Makes that account a Google-only one: no password, a Google identity instead. Signed in the same way. |
 | `secondDevice` | A page in a second browser, signed in to the same account and holding nothing yet. Two of these make a sync test. |
 | `token` | An API token for the account, for MCP and HTTP specs: `Authorization: Bearer <token>`. |
 | `db` | The run's database, for the rare spec that has to look behind the API. |

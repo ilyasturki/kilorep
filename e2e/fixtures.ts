@@ -19,6 +19,7 @@ const PASSWORD = 'e2e-password';
 
 type Fixtures = {
 	seeded: boolean;
+	google: boolean;
 	account: Account;
 	secondDevice: Page;
 	token: string;
@@ -80,9 +81,13 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
 
 	seeded: [false, { option: true }],
 
-	account: async ({ db, passwordHash, seeded, context }, use) => {
+	google: [false, { option: true }],
+
+	account: async ({ db, passwordHash, seeded, google, context }, use) => {
 		const email = `e2e-${crypto.randomUUID()}@kilorep.test`;
-		const { id } = insertUser(db, email, passwordHash, null);
+		const { id } = google
+			? insertUser(db, email, null, `google-${crypto.randomUUID()}`)
+			: insertUser(db, email, passwordHash, null);
 		const account = { id, email, password: PASSWORD };
 
 		const planted = seeded ? plant(db, id, Date.now()) : 0;
