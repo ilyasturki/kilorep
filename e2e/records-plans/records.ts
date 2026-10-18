@@ -1,15 +1,10 @@
+import { test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
-
-import type { Template } from '../../src/lib/domain/template.ts';
-import type { FinishedWorkout } from '../../src/lib/store/derive.ts';
 
 import { readStore } from '../helpers.ts';
 
 /** The device's copy of one record's payload, or null while it holds none. */
-export async function held<T extends Template | FinishedWorkout>(
-	page: Page,
-	id: string
-): Promise<T | null> {
+export async function held<T>(page: Page, id: string): Promise<T | null> {
 	const { records } = await readStore(page);
 	const record = records.find((candidate) => candidate.id === id && candidate.deletedAt === null);
 
@@ -36,4 +31,13 @@ export function recordBlock(page: Page, name: string): Locator {
 	return page
 		.getByRole('main')
 		.locator('section', { has: page.getByRole('heading', { name, exact: true }) });
+}
+
+/**
+ * A finger on a phone, the mouse on a desk. An emulated mouse on a touch screen has no implicit
+ * pointer capture: a press whose target moves under it lifts somewhere else, and the long press
+ * it started fires on its own.
+ */
+export async function touch(target: Locator): Promise<void> {
+	await (test.info().project.use.hasTouch === true ? target.tap() : target.click());
 }

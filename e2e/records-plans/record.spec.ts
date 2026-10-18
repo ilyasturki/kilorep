@@ -6,7 +6,7 @@ import { expect, test } from '../fixtures.ts';
 import { openRecord, waitForSync } from '../helpers.ts';
 import { plantRecords } from '../plant.ts';
 
-import { beginEdit, held } from './records.ts';
+import { beginEdit, held, touch } from './records.ts';
 
 test.use({ seeded: true });
 
@@ -57,7 +57,7 @@ test.describe('h2 · edit a record in place', () => {
 		await expect(reps).toHaveAttribute('inputmode', 'numeric');
 		await expect(reps).toHaveAttribute('enterkeyhint', 'next');
 
-		await kg.click();
+		await touch(kg);
 		await expectAllSelected(kg);
 		await expect(bar(page, 'SAVE')).toBeVisible();
 
@@ -79,7 +79,7 @@ test.describe('h2 · edit a record in place', () => {
 		}
 
 		const kg = figure(page, 'Set 1 kg');
-		await kg.click();
+		await touch(kg);
 		await page.keyboard.type('82.5');
 		await bar(page, 'SAVE').click();
 		await expect(bar(page, 'SAVE')).toBeHidden();
@@ -185,7 +185,7 @@ test.describe('h3 · back while editing', () => {
 		const kg = figure(page, 'Set 1 kg');
 		const was = await kg.inputValue();
 
-		await kg.click();
+		await touch(kg);
 		await page.keyboard.type('99');
 
 		const ask = page.getByRole('alertdialog', { name: 'Discard your changes?' });
@@ -208,7 +208,7 @@ test.describe('h3 · back while editing', () => {
 
 	test('‹ with a change asks too', async ({ page }) => {
 		await openRecord(page, 'Push Day');
-		await figure(page, 'Set 1 kg').click();
+		await touch(figure(page, 'Set 1 kg'));
 		await page.keyboard.type('99');
 
 		await page.getByRole('banner').getByRole('link', { name: 'Back' }).click();
