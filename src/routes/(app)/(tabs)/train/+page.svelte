@@ -8,6 +8,7 @@
 	import { cursors, firstUncompleted } from '$lib/domain/workout';
 	import { formatSince, lastDoneLine } from '$lib/history/label';
 	import { openedFrom } from '$lib/nav/bar.svelte';
+	import { restamp } from '$lib/nav/stack.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { planLine, planMeta, rotationLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
@@ -110,6 +111,7 @@
 
 		settled.searchParams.delete('start');
 		replaceState(settled, page.state);
+		restamp();
 
 		if (running !== null) {
 			void goto('/train/live');

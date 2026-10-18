@@ -71,3 +71,8 @@ export function recordEntry(type: string): void {
 
 	stack.behind = behindOf(entries, index);
 }
+
+/** Re-reads the entry on screen after a shallow `replaceState` rewrote its address. */
+export function restamp(): void {
+	recordEntry('replace');
+}
