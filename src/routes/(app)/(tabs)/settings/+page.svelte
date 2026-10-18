@@ -30,7 +30,8 @@
 
 	// A refused sync drops the device token with no load to say so, and this screen names the account.
 	$effect(() => {
-		if (syncState.current.stall === 'signed-out' && data.user !== null) {
+		// The stall outlives a sign-in until the next exchange settles; the token does not.
+		if (syncState.current.stall === 'signed-out' && data.user !== null && deviceToken() === null) {
 			void invalidateAll();
 		}
 	});
