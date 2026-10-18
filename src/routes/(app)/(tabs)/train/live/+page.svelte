@@ -43,6 +43,7 @@
 	import { fullyVisible, instantly, revealNearest, revealStart } from '$lib/ui/scroll';
 	import { deskViewport } from '$lib/ui/viewport';
 	import Stack from '$lib/ui/icons/Stack.svelte';
+	import Trash from '$lib/ui/icons/Trash.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 
 	import type { PageProps } from './$types';
@@ -862,6 +863,12 @@
 						onexercise={exerciseOptions}
 						onreorder={(entryId, index) => session.moveEntry(entryId, index)}
 					/>
+
+					<!-- The ledger is the desk's session list, so its last row is the drawer's. -->
+					<Button variant="destructive" class="w-full" onclick={() => (discarding = true)}>
+						<Trash size={20} />
+						Discard workout
+					</Button>
 				</div>
 			{:else}
 				<div class="mx-auto flex w-full max-w-xl flex-col gap-5 px-3">
