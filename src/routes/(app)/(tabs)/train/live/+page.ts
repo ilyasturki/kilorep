@@ -30,5 +30,8 @@ export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 		redirect(307, '/train');
 	}
 
-	return { store, lastPerformed, heaviest, frequent, history, notes };
+	const { templateId } = activeWorkout.session.workout;
+	const plan = templateId === null ? null : await store.getTemplate(templateId);
+
+	return { store, lastPerformed, heaviest, frequent, history, notes, plan };
 };

@@ -21,6 +21,7 @@
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import { restTimer } from '$lib/workout/rest.svelte';
+	import { templateTitle } from '$lib/templates/plan';
 	import { entriesWithMeta, entryOf, legOf, setNote, shelfOf } from '$lib/workout/groups';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
@@ -821,7 +822,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>Workout | Kilorep</title>
+	<title>{data.plan === null ? 'Workout' : templateTitle(data.plan)} | Kilorep</title>
 </svelte:head>
 
 {#if session !== null}

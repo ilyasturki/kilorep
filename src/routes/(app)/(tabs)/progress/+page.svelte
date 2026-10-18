@@ -438,7 +438,7 @@
 
 					{#if weightNow === null}
 						<span class="px-1 pb-1 {SUB}">
-							No weigh-ins yet. The trend starts on the Weight screen.
+							No weigh-ins yet. The trend starts on the Body weight screen.
 						</span>
 					{:else}
 						<span class="flex items-end justify-between gap-4 px-1 pb-1">

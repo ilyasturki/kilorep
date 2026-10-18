@@ -212,7 +212,7 @@
 </script>
 
 <svelte:head>
-	<title>Weight | Kilorep</title>
+	<title>Body weight | Kilorep</title>
 </svelte:head>
 
 <main class="column-board flex min-h-full flex-col gap-4 px-3 pt-3 pb-4">
