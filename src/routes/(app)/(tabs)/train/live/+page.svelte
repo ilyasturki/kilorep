@@ -18,7 +18,7 @@
 	import type { Arms, SetType, SwapMode } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { barIcon } from '$lib/nav/chrome';
-	import { leaveFor } from '$lib/nav/go';
+	import { finishOnto, leaveFor } from '$lib/nav/go';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
@@ -306,7 +306,7 @@
 
 		activeWorkout.finish();
 
-		await (keeping ? goto(`/history/${id}`, { replaceState: true }) : leaveFor('/train'));
+		await (keeping ? finishOnto(`/history/${id}`) : leaveFor('/train'));
 	}
 
 	async function discardSession() {

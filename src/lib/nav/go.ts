@@ -1,8 +1,8 @@
 import { goto } from '$app/navigation';
 
 import { decideBack } from '$lib/nav/back';
-import { backTo } from '$lib/nav/bar.svelte';
-import { stack } from '$lib/nav/stack.svelte';
+import { backTo, openedFrom } from '$lib/nav/bar.svelte';
+import { restamp, stack } from '$lib/nav/stack.svelte';
 import { closeTopOverlay, hasOpenOverlay } from '$lib/ui/overlays';
 
 import type { BackDecision } from '$lib/nav/back';
@@ -79,6 +79,17 @@ export async function goBack(): Promise<void> {
 
 export async function leaveFor(target: string): Promise<void> {
 	await follow(decideBack({ overlayOpen: false, target, behind: stack.behind }));
+}
+
+export async function finishOnto(record: string): Promise<void> {
+	const origin = backTo(settled(), stack.behind);
+
+	// The browser's own, keeping SvelteKit's state: History is written under the record without
+	// being drawn, and a shallow `replaceState` would make a back into it redraw the session.
+	history.replaceState(history.state, '', openedFrom('/history', origin));
+	restamp();
+
+	await goto(record);
 }
 
 /** Leaves a screen whose subject is gone — deleted, finished — for where its back walks. */
