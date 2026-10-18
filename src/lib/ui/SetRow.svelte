@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import { shown } from '$lib/format/locale';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
 
 	const styles: Record<SetStatus, { shell: string; numerals: string; times: string }> = {
@@ -27,12 +28,9 @@
 	const numeralGrid =
 		'grid grid-cols-[5rem_1.375rem_2.5rem] items-baseline justify-start font-extrabold ' +
 		'@md:grid-cols-[6.5rem_1.625rem_3.5rem]';
-
-	const show = (n: number | null | undefined) => (n === null || n === undefined ? '–' : decimal(n));
 </script>
 
 <script lang="ts">
-	import { decimal } from '$lib/format/locale';
 	import type { Snippet } from 'svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import More from '$lib/ui/icons/More.svelte';
@@ -73,9 +71,9 @@
 		<SetMark {status} {index} />
 
 		<div class="{numeralGrid} {style.numerals}">
-			<span class="text-right">{show(weight)}</span>
+			<span class="text-right">{shown(weight ?? null)}</span>
 			<span class="text-center font-bold text-ink-faint {style.times}">×</span>
-			<span class="text-right">{show(reps)}</span>
+			<span class="text-right">{shown(reps ?? null)}</span>
 		</div>
 
 		<div class="text-sm font-bold text-ink-faint">

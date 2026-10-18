@@ -1,6 +1,8 @@
 <script lang="ts" module>
 	import { getLocalTimeZone } from '@internationalized/date';
 
+	import { LOCALE, dateFormat } from '$lib/format/locale';
+
 	const nav =
 		'focus-ring grid size-10 place-items-center rounded-xl text-2xl leading-none ' +
 		'font-bold text-ink-muted hover:bg-hover press:bg-surface-2 ' +
@@ -26,7 +28,6 @@
 </script>
 
 <script lang="ts">
-	import { LOCALE, dateFormat } from '$lib/format/locale';
 	import type { ClassValue } from 'svelte/elements';
 	import type { DateValue } from '@internationalized/date';
 	import { today } from '@internationalized/date';

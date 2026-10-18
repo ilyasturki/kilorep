@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decimal } from '$lib/format/locale';
 	import ArrowCounterClockwise from '$lib/ui/icons/ArrowCounterClockwise.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
 	import More from '$lib/ui/icons/More.svelte';
@@ -360,7 +361,7 @@
 		{#if quick !== null && onquick !== undefined}
 			<button
 				type="button"
-				aria-label="Log {quick.weight} × {quick.reps} as planned"
+				aria-label="Log {decimal(quick.weight)} × {quick.reps} as planned"
 				onclick={onquick}
 				class="grid w-12 shrink-0 place-items-center focus-ring-inset
 					hover:bg-surface-2 press:bg-surface-2"

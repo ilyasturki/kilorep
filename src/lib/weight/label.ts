@@ -45,7 +45,7 @@ function signed(change: number): string {
 	const rounded = Math.round(change * 10) / 10;
 
 	if (rounded === 0) {
-		return '±0.0';
+		return `±${tenth(0)}`;
 	}
 
 	return `${rounded > 0 ? '+' : '−'}${tenth(Math.abs(rounded))}`;
