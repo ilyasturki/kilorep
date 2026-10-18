@@ -183,5 +183,7 @@
 			</div>
 		{/each}
 	</div>
-	<span class={caption}>a colour with no glyph fills; a glyph with no colour stays sunken</span>
+	<span class={caption}>
+		a colour with no glyph fills; a glyph with no colour, or no mark at all, stays sunken
+	</span>
 </Card>

@@ -82,13 +82,10 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
 {#snippet planRow(template: Template, klass?: string, draggable = false)}
-	{@const mark = drawableMark(template)}
 	{@const done = data.lastDone[template.id]}
 
 	{#snippet tile()}
-		{#if mark !== null}
-			<TemplateMark {mark} />
-		{/if}
+		<TemplateMark mark={drawableMark(template)} />
 	{/snippet}
 
 	{#snippet upNext()}
@@ -124,7 +121,7 @@
 		stacked
 		chevron={false}
 		badge={template.id === next?.plan.id ? upNext : undefined}
-		leading={mark === null ? undefined : tile}
+		leading={tile}
 		{trailing}
 		href="/plan/templates/{template.id}"
 		class={klass}

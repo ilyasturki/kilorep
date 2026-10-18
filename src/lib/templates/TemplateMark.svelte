@@ -2,16 +2,16 @@
 	import type { TemplateMark } from '$lib/domain/template';
 	import { MARK_FILLS, MARK_GLYPHS, MARK_TILES } from '$lib/templates/marks';
 
-	let { mark }: { mark: TemplateMark } = $props();
+	let { mark }: { mark: TemplateMark | null } = $props();
 
-	const Glyph = $derived(mark.icon === null ? null : MARK_GLYPHS[mark.icon]);
+	const Glyph = $derived(mark === null || mark.icon === null ? null : MARK_GLYPHS[mark.icon]);
 
-	function tileFor({ icon, colour }: TemplateMark): string {
-		if (colour === null) {
+	function tileFor(drawn: TemplateMark | null): string {
+		if (drawn === null || drawn.colour === null) {
 			return 'bg-sunken text-ink-muted';
 		}
 
-		return icon === null ? MARK_FILLS[colour] : MARK_TILES[colour];
+		return drawn.icon === null ? MARK_FILLS[drawn.colour] : MARK_TILES[drawn.colour];
 	}
 
 	const tile = $derived(tileFor(mark));

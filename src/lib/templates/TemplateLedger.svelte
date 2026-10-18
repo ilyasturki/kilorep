@@ -43,7 +43,6 @@
 <svelte:window onkeydown={(e) => e.key === 'Escape' && drag.cancel()} />
 
 {#snippet row(template: Template, draggable: boolean)}
-	{@const mark = drawableMark(template)}
 	{@const counts = planCounts(template)}
 	{@const done = lastDone[template.id]}
 
@@ -71,9 +70,7 @@
 		{/if}
 
 		<span class="flex justify-center">
-			{#if mark !== null}
-				<TemplateMark {mark} />
-			{/if}
+			<TemplateMark mark={drawableMark(template)} />
 		</span>
 
 		<span class="flex min-w-0 items-baseline gap-2 pr-3">

@@ -42,12 +42,8 @@
 	<div class="flex flex-col gap-2">
 		<div class="list-group">
 			{#each templates as template (template.id)}
-				{@const mark = drawableMark(template)}
-
 				{#snippet tile()}
-					{#if mark !== null}
-						<TemplateMark {mark} />
-					{/if}
+					<TemplateMark mark={drawableMark(template)} />
 				{/snippet}
 
 				{#snippet flag()}
@@ -63,7 +59,7 @@
 					meta={planLine(template, catalogById)}
 					stacked
 					chevron={false}
-					leading={mark === null ? undefined : tile}
+					leading={tile}
 					badge={flag}
 					onclick={() => choose(template)}
 				/>
