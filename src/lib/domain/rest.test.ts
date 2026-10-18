@@ -287,6 +287,23 @@ describe('supersets rest by the round', () => {
 		});
 	});
 
+	test('an optional leg nobody has started leaves the round to the leg before it', () => {
+		const workout = paired();
+		workout.entries[0].exercises[1].optional = true;
+
+		commitSet(workout, 'bench-1', 80, 8);
+
+		expect(restAfter(workout, 'bench-1', settings())).toEqual({
+			exerciseId: 'bench-press',
+			seconds: DEFAULT_REST_SECONDS
+		});
+
+		commitSet(workout, 'super-1', 20, 12);
+		commitSet(workout, 'bench-2', 80, 8);
+
+		expect(restAfter(workout, 'bench-2', settings())).toBeNull();
+	});
+
 	test('warmups sit outside the rounds entirely', () => {
 		expect(closesRound(paired().entries[0], 'bench-w')).toBe(false);
 	});

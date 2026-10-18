@@ -1210,6 +1210,18 @@ describe('round order', () => {
 		]);
 	});
 
+	test('an optional leg nobody has started is passed over round by round', () => {
+		const workout = superset(freshWorkout(0));
+		workout.entries[1].exercises[1].optional = true;
+
+		expect(idOf(advanceFrom(workout, 'a-1'))).toBe('a-2');
+
+		draftSet(workout, 'b-2', { weight: 12, reps: 15 });
+
+		expect(idOf(advanceFrom(workout, 'a-1'))).toBe('b-1');
+		expect(idOf(advanceFrom(workout, 'a-2'))).toBe('b-2');
+	});
+
 	test('the cursor walks the rounds the way they are listed', () => {
 		const workout = trio();
 		const walked: string[] = [];

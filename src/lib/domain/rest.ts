@@ -1,4 +1,4 @@
-import { cursorFor, entryCursors } from './workout.ts';
+import { cursorFor, entryCursors, untouched } from './workout.ts';
 import type { Workout, WorkoutEntry } from './workout.ts';
 
 export const DEFAULT_REST_SECONDS = 120;
@@ -98,7 +98,8 @@ export function closesRound(entry: WorkoutEntry, setId: string): boolean {
 		return false;
 	}
 
-	const next = order[at + 1];
+	// An optional leg nobody has started is passed over, so the leg before it closes the round.
+	const next = order.slice(at + 1).find((cursor) => !untouched(cursor.exercise));
 
 	return next === undefined || next.workingIndex !== order[at].workingIndex;
 }

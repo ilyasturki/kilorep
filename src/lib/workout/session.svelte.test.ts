@@ -43,6 +43,17 @@ describe('superset', () => {
 		expect(session.activeSetId).toBe('fly-2');
 	});
 
+	test('forming one skips an optional leg nobody has started', () => {
+		const workout = freshWorkout(0);
+		workout.entries[1].exercises[0].optional = true;
+
+		const session = new WorkoutSession({}, { workout, activeSetId: 'fly-1' });
+
+		session.superset('entry-2', [{ exerciseId: 'cable-fly' }]);
+
+		expect(session.activeSetId).toBe('fly-1');
+	});
+
 	test('a round already under way is not restarted', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'incline-1', 30, 10);

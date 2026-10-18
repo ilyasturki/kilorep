@@ -27,7 +27,8 @@ import {
 	setSetGrip as gripSet,
 	setSetType as typeSet,
 	splitEntry,
-	supersetWith
+	supersetWith,
+	untouched
 } from '$lib/domain/workout';
 import type { Arms, History, SetType, SwapMode, Workout } from '$lib/domain/workout';
 import type { Pick } from '$lib/exercises/picker';
@@ -248,7 +249,9 @@ export class WorkoutSession {
 
 		// A cursor standing in the superset just formed goes to where its rounds begin: left on
 		// the joining leg's first set, it would be B1 with A1 still owed above it.
-		const owed = cursors(this.workout).find((c) => c.entry.id === entryId && !c.set.completed);
+		const owed = cursors(this.workout).find(
+			(c) => c.entry.id === entryId && !c.set.completed && !untouched(c.exercise)
+		);
 
 		if (owed !== undefined) {
 			this.#focus(owed.set.id);
