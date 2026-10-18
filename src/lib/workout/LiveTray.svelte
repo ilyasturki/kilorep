@@ -168,7 +168,7 @@
 			mediumMs() > 0 &&
 			'transition-transform duration-(--dur-medium) ease-(--ease-medium)'
 	]}
-	style="transform: translateY({lowered}px)"
+	style:transform={lowered === 0 ? undefined : `translateY(${lowered}px)`}
 	bind:offsetHeight={span}
 >
 	<!-- The strip, not the pill, is the target: a 3.5rem bar is a thing to look at, and a
