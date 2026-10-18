@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 import type { StoredRecord } from '../src/lib/store/db.ts';
@@ -227,6 +227,15 @@ export async function waitForSync(page: Page): Promise<void> {
 			}
 		)
 		.toBe(0);
+}
+
+/**
+ * A finger on a phone, the mouse on a desk. An emulated mouse on a touch screen has no implicit
+ * pointer capture: a press whose target moves under it lifts somewhere else, and the long press
+ * it started fires on its own.
+ */
+export async function touch(target: Locator): Promise<void> {
+	await (test.info().project.use.hasTouch === true ? target.tap() : target.click());
 }
 
 /** A sync right now, the way the network coming back starts one. */

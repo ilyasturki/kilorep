@@ -3,10 +3,10 @@ import type { Locator, Page } from '@playwright/test';
 import type { FinishedWorkout } from '../../src/lib/store/derive.ts';
 
 import { expect, test } from '../fixtures.ts';
-import { openRecord, waitForSync } from '../helpers.ts';
+import { openRecord, touch, waitForSync } from '../helpers.ts';
 import { plantRecords } from '../plant.ts';
 
-import { beginEdit, held, touch } from './records.ts';
+import { beginEdit, held } from './records.ts';
 
 test.use({ seeded: true });
 

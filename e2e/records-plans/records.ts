@@ -1,6 +1,5 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
-import { test } from '../fixtures.ts';
 import { readStore } from '../helpers.ts';
 
 /** The device's copy of one record's payload, or null while it holds none. */
@@ -24,13 +23,4 @@ export async function beginEdit(page: Page): Promise<void> {
 	}
 
 	await page.getByRole('banner').getByRole('button', { name: 'SAVE', exact: true }).waitFor();
-}
-
-/**
- * A finger on a phone, the mouse on a desk. An emulated mouse on a touch screen has no implicit
- * pointer capture: a press whose target moves under it lifts somewhere else, and the long press
- * it started fires on its own.
- */
-export async function touch(target: Locator): Promise<void> {
-	await (test.info().project.use.hasTouch === true ? target.tap() : target.click());
 }

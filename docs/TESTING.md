@@ -251,6 +251,10 @@ server* state above, reachable at last.
   way the network coming back does — the way to make a second device pull.
   Call it on a page that has drawn: offline while it is still loading, the
   page's own scripts fail and the app never starts, so nothing pulls.
+- `touch(locator)` taps on the phone and clicks on the desk. A set row arms a
+  long press on the way down, and an emulated mouse on a touch screen has no
+  pointer capture: a click whose row moves under it lifts somewhere else, and
+  the set sheet opens on its own half a second later.
 - `plantRecords(db, account.id, page, rows)`, from `e2e/plant.ts`, writes
   templates and workouts straight into the account on the server — a session
   imported from v1, a plan archived or edited at a chosen time — then reloads
