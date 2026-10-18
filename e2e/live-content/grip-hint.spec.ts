@@ -10,7 +10,6 @@ import { exerciseBlock, onDesk, pastWorkout, plantWorkouts, setRow, trayLast } f
 const UNDERHAND = 'underhand';
 
 async function plantSupinated(page: Page, db: Database, account: Account): Promise<void> {
-	await page.goto('/train');
 	await plantWorkouts(page, db, account.id, [
 		pastWorkout('w11-supinated', 60, [
 			{

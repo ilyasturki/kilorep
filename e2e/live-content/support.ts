@@ -7,9 +7,9 @@ import { claimSeq } from '../../src/lib/server/db/seq.ts';
 import type { WorkoutExercise, WorkoutSet } from '../../src/lib/domain/workout.ts';
 import type { FinishedWorkout } from '../../src/lib/store/derive.ts';
 
-import { readStore, syncNow } from '../helpers.ts';
+import { readStore } from '../helpers.ts';
 
-/** Writes finished workouts on the server and resolves once the page's device holds them. */
+/** Writes finished workouts on the server, then opens Train and waits for its launch sync to bring them. */
 export async function plantWorkouts(
 	page: Page,
 	db: Database,
@@ -34,21 +34,18 @@ export async function plantWorkouts(
 
 	const ids = workouts.map(({ id }) => id);
 
-	// A nudge sent before the app listens for the network starts nothing, so it is repeated.
-	await expect(async () => {
-		await syncNow(page);
-		await expect
-			.poll(
-				async () => {
-					const store = await readStore(page);
-					const held = new Set(store.records.map(({ id }) => id));
+	await page.goto('/train');
+	await expect
+		.poll(
+			async () => {
+				const store = await readStore(page);
+				const held = new Set(store.records.map(({ id }) => id));
 
-					return ids.every((id) => held.has(id));
-				},
-				{ message: 'planted workouts still missing from the device', timeout: 3000 }
-			)
-			.toBe(true);
-	}).toPass({ timeout: 20_000 });
+				return ids.every((id) => held.has(id));
+			},
+			{ message: 'planted workouts still missing from the device', timeout: 15_000 }
+		)
+		.toBe(true);
 }
 
 type PlantedSet = { weight: number; reps: number; grip?: string };

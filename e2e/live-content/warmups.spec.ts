@@ -53,7 +53,6 @@ async function addWarmups(page: Page, name: string, count: number): Promise<void
 }
 
 test.beforeEach(async ({ page, db, account }) => {
-	await page.goto('/train');
 	await plantWorkouts(page, db, account.id, [
 		pastWorkout('w12-last', 24 * 60, [
 			{

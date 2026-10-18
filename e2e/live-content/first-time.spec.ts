@@ -16,7 +16,6 @@ import {
 
 // Last time stopped at three sets; the session before it reached five.
 async function plantBench(page: Page, db: Database, account: Account): Promise<void> {
-	await page.goto('/train');
 	await plantWorkouts(page, db, account.id, [
 		pastWorkout('w5-older', 3 * 24 * 60, [
 			{
