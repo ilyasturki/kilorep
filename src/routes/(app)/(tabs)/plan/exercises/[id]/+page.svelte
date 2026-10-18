@@ -10,7 +10,7 @@
 	import { bodyweightShareOf, carriedFrom, carriedOn } from '$lib/domain/load';
 	import { restLabel } from '$lib/domain/rest';
 	import { bestEstimate, rawPr } from '$lib/domain/stats';
-	import { addExercise, drawableMark, PLANNED_SET_COUNT } from '$lib/domain/template';
+	import { addExercise, drawableMark, PLANNED_SET_COUNT, plansWith } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
 	import { gripLabel, musclesOf } from '$lib/domain/grip';
 	import type { PerformedSet } from '$lib/domain/workout';
@@ -164,6 +164,10 @@
 
 	let planOpen = $state(false);
 	let planned = $state<Template | null>(null);
+
+	const programmedIn = $derived(
+		planned === null ? data.programmedIn : plansWith(data.plans, exercise.id)
+	);
 
 	async function addToWorkout() {
 		const session = activeWorkout.session;
@@ -429,11 +433,11 @@
 		{/if}
 	</section>
 
-	{#if data.programmedIn.length > 0}
+	{#if programmedIn.length > 0}
 		<section class="flex flex-col gap-2">
 			<h2 class="px-3 label-caps">Programmed in</h2>
 			<div class="list-group">
-				{#each data.programmedIn as template (template.id)}
+				{#each programmedIn as template (template.id)}
 					{@const mark = drawableMark(template)}
 
 					{#snippet tile()}
