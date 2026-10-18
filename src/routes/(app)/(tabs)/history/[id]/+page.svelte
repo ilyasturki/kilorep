@@ -19,7 +19,7 @@
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
 	import PlanOffer from '$lib/templates/PlanOffer.svelte';
 	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
-	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
 	import { leave } from '$lib/nav/go';
 	import { bottomDock } from '$lib/nav/dock.svelte';
 	import { pageSlide } from '$lib/nav/transitions';
@@ -603,7 +603,7 @@
 			syncSoon(data.user.id);
 		}
 
-		await goto(`/plan/templates/${plan.id}`);
+		await goto(openedFrom(`/plan/templates/${plan.id}`, `/history/${workout.id}`));
 	}
 
 	let deleteOpen = $state(false);
