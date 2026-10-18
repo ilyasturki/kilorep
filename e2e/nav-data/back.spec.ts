@@ -323,6 +323,30 @@ test('FINISH draws the record without History on the way', async ({ page, accoun
 	expect(await titles()).not.toContain('History | Kilorep');
 });
 
+test('History opened cold walks to the origin it names, or else up to Progress', async ({
+	page,
+	account
+}) => {
+	void account;
+	await page.goto('/history?from=%2Fplan%2Ftemplates%2Fseed-template-pull');
+	await expect(
+		page
+			.getByRole('main')
+			.getByRole('link', { name: /^Pull Day /u })
+			.first()
+	).toBeVisible();
+	await backTo(page, '‹', '/plan/templates/seed-template-pull');
+
+	await page.goto('/history');
+	await expect(
+		page
+			.getByRole('main')
+			.getByRole('link', { name: /^Pull Day /u })
+			.first()
+	).toBeVisible();
+	await backTo(page, '‹', '/progress');
+});
+
 test('a tab root offers no back, unless it was glanced at from a running session', async ({
 	page,
 	account

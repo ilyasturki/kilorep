@@ -191,6 +191,7 @@ for (const google of [false, true]) {
 
 		test('Sign out other devices keeps this one and signs the phone out at its next sync', async ({
 			page,
+			account,
 			secondDevice,
 			token,
 			request
@@ -219,6 +220,30 @@ for (const google of [false, true]) {
 				secondDevice.getByRole('main').getByRole('button', { name: 'Sign in', exact: true })
 			).toBeVisible();
 			await expect(row(secondDevice, 'Sign out other devices')).toBeHidden();
+
+			if (google) {
+				return;
+			}
+
+			let asked = 0;
+			secondDevice.on('request', (sent) => {
+				if (sent.url().endsWith('/api/auth/session')) {
+					asked += 1;
+				}
+			});
+
+			await secondDevice
+				.getByRole('main')
+				.getByRole('button', { name: 'Sign in', exact: true })
+				.click();
+			const sheet = secondDevice.getByRole('dialog', { name: /^Sign in to /u });
+			await sheet.getByRole('textbox', { name: 'Email' }).fill(account.email);
+			await sheet.getByRole('textbox', { name: 'Password' }).fill(account.password);
+			await sheet.getByRole('button', { name: 'Sign in', exact: true }).click();
+
+			await expect(secondDevice.getByText(`${WEB_URL} Signed in`)).toBeVisible();
+			await expect(secondDevice.getByText(/^Synced/u)).toBeVisible();
+			expect(asked).toBeLessThanOrEqual(3);
 		});
 	});
 }
