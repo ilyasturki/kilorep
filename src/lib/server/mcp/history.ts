@@ -6,7 +6,7 @@ import type { Drift } from '$lib/domain/drift';
 import type { Carried } from '$lib/domain/load';
 import { driftFrom, hasSetDrift } from '$lib/domain/drift';
 import { gripLabel } from '$lib/domain/grip';
-import { momentOf, retime } from '$lib/domain/retime';
+import { lastedOf, momentOf, retime } from '$lib/domain/retime';
 import type { Workout, WorkoutEntry } from '$lib/domain/workout';
 import { completedSetCount, exerciseCount, workoutTitle } from '$lib/history/label';
 import type { FinishedWorkout } from '$lib/store/derive';
@@ -111,7 +111,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 			templateId: workout.templateId,
 			startedAt: iso(workout.startedAt),
 			finishedAt: iso(workout.finishedAt),
-			minutes: Math.round((workout.finishedAt - workout.startedAt) / 60_000),
+			minutes: Math.round(lastedOf(workout) / 60_000),
 			totals: totalsOf(workout, library.carried()),
 			drift:
 				drift === null
@@ -315,7 +315,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				id: payload.id,
 				version: outcome.updatedAt,
 				startedAt: iso(payload.startedAt),
-				minutes: Math.round((span.finishedAt - span.startedAt) / 60_000),
+				minutes: Math.round(lastedOf(span) / 60_000),
 				totals: totalsOf(payload, library.carried())
 			});
 		}

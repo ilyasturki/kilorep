@@ -18,8 +18,7 @@ export function timeOf(at: number): string {
 	return `${pad(when.getHours())}:${pad(when.getMinutes())}`;
 }
 
-// Built from components rather than added to midnight: on the day the clocks go forward,
-// midnight plus twelve hours is 13:00.
+// From components, not midnight plus hours: that reads 13:00 for noon when the clocks go forward.
 export function momentOf(date: string, time: string): number {
 	const [year, month, day] = date.split('-').map(Number);
 	const [hours, minutes] = time.split(':').map(Number);
