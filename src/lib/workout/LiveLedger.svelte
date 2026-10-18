@@ -285,10 +285,11 @@
 									cols,
 									'min-h-11 scroll-my-3 border-t border-line-soft',
 									selected ? 'bg-accent-soft' : 'bg-surface',
-									status !== 'warmup' && !selected && 'hover:bg-hover',
+									status !== 'warmup' && !selected && 'hover:bg-hover press:bg-surface-2',
 									status === 'warmup' && 'opacity-[0.72]',
 									'pointer-fine:transition-[background-color] pointer-fine:duration-100'
 								]}
+								{@attach press()}
 							>
 								<span class="grid place-items-center">
 									<SetMark
