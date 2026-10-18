@@ -722,12 +722,10 @@ describe('replaceExercise', () => {
 
 		const exercise = swapped(workout, 'we-bench', 'dumbbell-bench-press', 'move');
 
-		expect(exercise.sets.filter((s) => s.completed).map((s) => [s.id, s.weight, s.reps])).toEqual(
-			[
-				['bench-w', 40, 10],
-				['bench-1', 80, 8]
-			]
-		);
+		expect(exercise.sets.filter((s) => s.completed).map((s) => [s.id, s.weight, s.reps])).toEqual([
+			['bench-w', 40, 10],
+			['bench-1', 80, 8]
+		]);
 		expect(at(workout, 'bench-1').set.rpe).toBe(8);
 		expect(at(workout, 'bench-2').set).toEqual(openSet('bench-2', 8));
 	});

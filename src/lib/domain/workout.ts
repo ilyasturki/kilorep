@@ -542,7 +542,8 @@ export function replaceExercise(
 	grip?: string
 ): WorkoutExercise | null {
 	const at = workout.entries.findIndex((entry) => entry.exercises.some((e) => e.id === exerciseId));
-	const leg = at === -1 ? undefined : workout.entries[at].exercises.find((e) => e.id === exerciseId);
+	const leg =
+		at === -1 ? undefined : workout.entries[at].exercises.find((e) => e.id === exerciseId);
 
 	if (leg === undefined || leg.exerciseId === catalogId) {
 		return null;

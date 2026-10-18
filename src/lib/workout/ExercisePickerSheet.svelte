@@ -331,9 +331,7 @@
 
 	let keysUp = $state(false);
 
-	$effect(() =>
-		open && panel !== null ? dockSheet(panel, (up) => (keysUp = up)) : undefined
-	);
+	$effect(() => (open && panel !== null ? dockSheet(panel, (up) => (keysUp = up)) : undefined));
 
 	function metaLine(exercise: Exercise): string {
 		const set = lastSetLabel(exercise, lastPerformed[exercise.id]);
