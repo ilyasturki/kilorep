@@ -195,7 +195,7 @@
 	);
 
 	async function removeCustom() {
-		const outcome = await exerciseCatalog.remove(exercise.id, account);
+		const outcome = await exerciseCatalog.remove(exercise.id, account, named);
 
 		if (outcome === 'deleted') {
 			await leave('/plan/exercises');

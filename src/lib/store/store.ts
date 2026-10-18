@@ -638,7 +638,7 @@ export class Store {
 		);
 	}
 
-	/** Gone for good, its grips with it: only for a custom nothing names. */
+	/** Gone for good, with everything keyed by it: only for a custom nothing names. */
 	public async deleteCustomExercise(exerciseId: string, deletedAt: number): Promise<void> {
 		const rows = await this.preferenceRows();
 		const grips = rows.filter(
@@ -648,10 +648,15 @@ export class Store {
 				payload.exerciseId === exerciseId
 		);
 
-		await this.tombstone(customExerciseId(exerciseId), 'preference', deletedAt);
+		const owned = [
+			customExerciseId(exerciseId),
+			noteId(exerciseId),
+			restOverrideId(exerciseId),
+			...grips.map((grip) => grip.id)
+		];
 
-		for (const grip of grips) {
-			await this.tombstone(grip.id, 'preference', deletedAt);
+		for (const id of owned) {
+			await this.tombstone(id, 'preference', deletedAt);
 		}
 	}
 
@@ -692,7 +697,6 @@ export class Store {
 		await this.tombstone(customGripId(gripId), 'preference', deletedAt);
 	}
 
-	/** Whether a finished session, a plan or the session in progress names this exercise. */
 	public async exerciseInUse(exerciseId: string): Promise<boolean> {
 		const [workouts, templates, snapshot] = await Promise.all([
 			this.listWorkouts(),

@@ -48,10 +48,14 @@ class CatalogHolder {
 	}
 
 	/** Archived while anything names it, so history keeps its name; gone otherwise. */
-	public async remove(id: string, account: string | null): Promise<'archived' | 'deleted'> {
+	public async remove(
+		id: string,
+		account: string | null,
+		alreadyNamed = false
+	): Promise<'archived' | 'deleted'> {
 		const store = await getStore();
 		const now = Date.now();
-		const named = await store.exerciseInUse(id);
+		const named = alreadyNamed || (await store.exerciseInUse(id));
 
 		await (named ? store.archiveCustomExercise(id, now, now) : store.deleteCustomExercise(id, now));
 		await this.#wrote(store, account);
