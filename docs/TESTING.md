@@ -249,12 +249,13 @@ server* state above, reachable at last.
   checks the store, so call it once the write is in there; called a moment too
   early it finds nothing dirty and returns. `syncNow(page)` starts a sync the
   way the network coming back does — the way to make a second device pull.
+  Call it on a page that has drawn: offline while it is still loading, the
+  page's own scripts fail and the app never starts, so nothing pulls.
 - `plantRecords(db, account.id, page, rows)`, from `e2e/plant.ts`, writes
   templates and workouts straight into the account on the server — a session
   imported from v1, a plan archived or edited at a chosen time — then reloads
   `page` and waits until its launch sync has pulled them. It reloads rather
-  than calling `syncNow`: going offline mid-launch fails that pull, and a
-  failed pull with nothing to push is never retried.
+  than calling `syncNow`, which would kill a page that is still loading.
 - `finishedSession(daysAgo, exercises)`, beside it, is one such workout: each
   exercise as `{ exerciseId, grip?, sets: [{ kg, reps, grip? }] }`, every set
   completed. It writes grips and slugs as given, so a session logged before

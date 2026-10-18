@@ -40,8 +40,7 @@ export async function plantRecords(
 		}
 	});
 
-	// Not `syncNow`: going offline mid-launch fails the launch's pull, and a failed pull with
-	// nothing to push is never retried.
+	// Not `syncNow`: offline while a page is still loading fails its scripts, and the app never starts.
 	await page.goto('/train');
 
 	const ids = rows.map(({ payload }) => payload.id);
