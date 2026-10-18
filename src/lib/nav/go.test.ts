@@ -5,7 +5,7 @@ import { closeTopOverlay, hasOpenOverlay, registerOverlay } from '$lib/ui/overla
 
 import { stack } from './stack.svelte';
 
-import { backDecision, follow, goBack, leave, leaveFor, retreatingTo } from './go';
+import { backDecision, closesOverlay, follow, goBack, leave, leaveFor, retreatingTo } from './go';
 
 vi.mock('$lib/ui/icons/Barbell.svelte', () => ({ default: {} }));
 vi.mock('$lib/ui/icons/BarbellFill.svelte', () => ({ default: {} }));
@@ -43,6 +43,9 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 	vi.clearAllMocks();
 	seen.length = 0;
+
+	// Any navigation settles a pop the app asked for; this one stands in for it.
+	closesOverlay('link');
 
 	while (hasOpenOverlay()) {
 		closeTopOverlay();
@@ -135,5 +138,41 @@ describe('a jump whose source is spent', () => {
 		await leave('/plan/templates');
 
 		expect(goto).toHaveBeenCalledWith('/plan/templates', { replaceState: true });
+	});
+});
+
+describe('the browser back', () => {
+	it('closes the top overlay instead of navigating', () => {
+		const close = vi.fn<() => void>();
+
+		registerOverlay(close);
+
+		expect(closesOverlay('popstate')).toBe(true);
+		expect(close).toHaveBeenCalledOnce();
+		expect(hasOpenOverlay()).toBe(false);
+	});
+
+	it('navigates when nothing is open, and for anything but a pop', () => {
+		expect(closesOverlay('popstate')).toBe(false);
+
+		registerOverlay(() => {
+			/* a sheet whose link was followed */
+		});
+
+		expect(closesOverlay('link')).toBe(false);
+		expect(hasOpenOverlay()).toBe(true);
+	});
+
+	it('lets through the pop the app asked for itself', async () => {
+		standOn('/history/w1', '/history');
+
+		await leave('/history');
+
+		registerOverlay(() => {
+			/* the confirm, mid-close */
+		});
+
+		expect(closesOverlay('popstate')).toBe(false);
+		expect(closesOverlay('popstate')).toBe(true);
 	});
 });

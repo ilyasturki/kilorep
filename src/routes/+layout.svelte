@@ -1,9 +1,10 @@
 <script lang="ts">
 	import '../app.css';
 	import { Tooltip } from 'bits-ui';
-	import { afterNavigate } from '$app/navigation';
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import { shortcutsReady, wireShortcuts } from '$lib/app/launcher';
 	import favicon from '$lib/assets/favicon.svg';
+	import { closesOverlay } from '$lib/nav/go';
 	import { syncSystemBack, wireHardwareBack } from '$lib/nav/hardware-back';
 	import { recordEntry } from '$lib/nav/stack.svelte';
 	import { wireNativeFeel } from '$lib/ui/native';
@@ -13,6 +14,12 @@
 	$effect(() => wireHardwareBack());
 	$effect(() => wireNativeFeel());
 	$effect(() => wireShortcuts());
+
+	beforeNavigate((navigation) => {
+		if (closesOverlay(navigation.type)) {
+			navigation.cancel();
+		}
+	});
 
 	// Order matters: `syncSystemBack` reads the entry `recordEntry` has just written, and
 	// tells Android whether the back press it is about to be offered belongs to the app. The

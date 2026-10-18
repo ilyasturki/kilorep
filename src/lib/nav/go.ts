@@ -9,6 +9,8 @@ import type { BackDecision } from '$lib/nav/back';
 
 let retreat: string | null = null;
 
+let popping = false;
+
 /** Whether the navigation landing on `address` is a back that replaced rather than popped. */
 export function retreatingTo(address: string): boolean {
 	return retreat === address;
@@ -30,6 +32,7 @@ export async function follow(decision: BackDecision): Promise<void> {
 			break;
 		}
 		case 'pop': {
+			popping = true;
 			history.back();
 			break;
 		}
@@ -48,6 +51,21 @@ export async function follow(decision: BackDecision): Promise<void> {
 			break;
 		}
 	}
+}
+
+/** Whether a navigation about to happen is a browser back that should close an overlay instead. */
+export function closesOverlay(type: string): boolean {
+	const ours = popping;
+
+	popping = false;
+
+	if (type !== 'popstate' || ours || !hasOpenOverlay()) {
+		return false;
+	}
+
+	closeTopOverlay();
+
+	return true;
 }
 
 export async function goBack(): Promise<void> {
