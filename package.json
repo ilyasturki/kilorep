@@ -38,8 +38,8 @@
 		"account:delete": "node scripts/account.ts delete"
 	},
 	"devDependencies": {
-		"@capacitor/android": "8.5.0",
-		"@capacitor/cli": "8.5.0",
+		"@capacitor/android": "8.5.3",
+		"@capacitor/cli": "8.5.3",
 		"@phosphor-icons/core": "^2.1.1",
 		"@playwright/test": "^1.64.1",
 		"@sveltejs/adapter-node": "^5.5.7",
@@ -67,7 +67,7 @@
 	"dependencies": {
 		"@capacitor/app": "^8",
 		"@capacitor/browser": "8",
-		"@capacitor/core": "8.5.0",
+		"@capacitor/core": "8.5.3",
 		"@capacitor/haptics": "^8.0.2",
 		"@capacitor/local-notifications": "^8.3.1",
 		"@internationalized/date": "^3.12.3",
