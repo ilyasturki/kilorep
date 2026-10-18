@@ -2,11 +2,11 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 
 import { catalogById } from '$lib/catalog';
-import { localDateOf } from '$lib/domain/bodyweight';
 import type { Drift } from '$lib/domain/drift';
 import type { Carried } from '$lib/domain/load';
 import { driftFrom, hasSetDrift } from '$lib/domain/drift';
 import { gripLabel } from '$lib/domain/grip';
+import { momentOf, retime } from '$lib/domain/retime';
 import type { Workout, WorkoutEntry } from '$lib/domain/workout';
 import { completedSetCount, exerciseCount, workoutTitle } from '$lib/history/label';
 import type { FinishedWorkout } from '$lib/store/derive';
@@ -20,7 +20,6 @@ import {
 	dayStart,
 	failed,
 	iso,
-	momentOf,
 	refused,
 	reply,
 	volumeOf
@@ -34,17 +33,6 @@ const MINUTES = z
 	.min(0)
 	.max(1440)
 	.describe('how long the session took; omit when you do not know rather than inventing one');
-
-function pad(value: number): string {
-	return String(value).padStart(2, '0');
-}
-
-/** The wall time on the server's own clock, which is the clock the session was stamped by. */
-function timeOf(at: number): string {
-	const when = new Date(at);
-
-	return `${pad(when.getHours())}:${pad(when.getMinutes())}`;
-}
 
 /**
  * The performed tree, flattened the way a caller writes it back.
@@ -301,24 +289,15 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				return reply({ error: `no plan ${templateId}` });
 			}
 
-			const moved =
-				date === undefined && startedAt === undefined
-					? stored.startedAt
-					: momentOf(
-							date ?? localDateOf(new Date(stored.startedAt)),
-							startedAt ?? timeOf(stored.startedAt)
-						);
-
 			// A session moved to another day keeps however long it took; only `minutes` resets that.
-			const lasted =
-				minutes === undefined ? stored.finishedAt - stored.startedAt : minutes * 60_000;
+			const span = retime(stored, { date, time: startedAt, minutes });
 
 			const payload: FinishedWorkout = {
 				id: stored.id,
 				templateId: templateId === undefined ? stored.templateId : templateId,
-				startedAt: moved,
+				startedAt: span.startedAt,
 				entries: exercises === undefined ? stored.entries : workoutEntriesOf(exercises),
-				finishedAt: moved + lasted
+				finishedAt: span.finishedAt
 			};
 
 			const outcome = write({
@@ -336,7 +315,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 				id: payload.id,
 				version: outcome.updatedAt,
 				startedAt: iso(payload.startedAt),
-				minutes: Math.round(lasted / 60_000),
+				minutes: Math.round((span.finishedAt - span.startedAt) / 60_000),
 				totals: totalsOf(payload, library.carried())
 			});
 		}

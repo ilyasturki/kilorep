@@ -157,19 +157,6 @@ export const VERSION = z
 		'the `version` the read handed you; the write is refused if the record has moved since'
 	);
 
-/**
- * `at`, on the server's own clock, from the day and the wall time the caller named.
- *
- * Built from components rather than added to midnight: on the day the clocks go forward,
- * midnight plus twelve hours is 13:00, and the session would be stamped an hour late.
- */
-export function momentOf(date: string, time: string): number {
-	const [year, month, day] = date.split('-').map(Number);
-	const [hours, minutes] = time.split(':').map(Number);
-
-	return new Date(year, month - 1, day, hours, minutes).getTime();
-}
-
 export function failed(outcome: WriteOutcome): outcome is Extract<WriteOutcome, { ok: false }> {
 	return !outcome.ok;
 }
