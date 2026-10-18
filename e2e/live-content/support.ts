@@ -124,6 +124,12 @@ export function setRow(block: Locator, mark: string | RegExp): Locator {
 				.filter({ has: block.page().getByRole('img', { name: mark, exact }) });
 }
 
+// A row's hold timer is released only by a pointer it captured, which a phone's emulated
+// mouse click is not: one that slips off the moving row opens the set sheet 500 ms later.
+export async function tapOn(target: Locator): Promise<void> {
+	await (onDesk(target.page()) ? target.click() : target.tap());
+}
+
 export function tray(page: Page): Locator {
 	return page.getByRole('button', { name: /^(?:Lower|Raise) the set editor$/u }).locator('..');
 }

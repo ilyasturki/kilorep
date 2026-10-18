@@ -11,6 +11,7 @@ import {
 	pastWorkout,
 	plantWorkouts,
 	setRow,
+	tapOn,
 	tray
 } from './support.ts';
 
@@ -71,20 +72,20 @@ test(
 		await expect(last).toBeHidden();
 		await expect(card.getByText('First time')).toBeHidden();
 
-		await setRow(bench, 'set 1 pending').click();
+		await tapOn(setRow(bench, 'set 1 pending'));
 		await expect(card).toContainText(/Last\s*90 × 5/u);
 
-		await setRow(bench, 'set 4 pending').click();
+		await tapOn(setRow(bench, 'set 4 pending'));
 		await expect(card).toContainText(/Last\s*62\.5 × 10/u);
 
-		await setRow(bench, 'set 5 pending').click();
+		await tapOn(setRow(bench, 'set 5 pending'));
 		await expect(card).toContainText(/Last\s*60 × 12/u);
 
-		await setRow(bench, 'set 6 pending').click();
+		await tapOn(setRow(bench, 'set 6 pending'));
 		await expect(last).toBeHidden();
 		await expect(card.getByText('First time')).toBeHidden();
 
-		await setRow(curl, 'set 1 pending').click();
+		await tapOn(setRow(curl, 'set 1 pending'));
 		await expect(card).toContainText(/Last\s*First time/u);
 
 		await exerciseAction(page, 'Bench Press', 'Add warmup');

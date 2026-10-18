@@ -10,6 +10,7 @@ import {
 	pastWorkout,
 	plantWorkouts,
 	setRow,
+	tapOn,
 	tray
 } from './support.ts';
 
@@ -97,7 +98,7 @@ test('a barbell ramp climbs to 85 % rounded down to 2.5 kg, and a fourth is the 
 	]);
 
 	if (!onDesk(page)) {
-		await setRow(bench, WARMUP).nth(1).click();
+		await tapOn(setRow(bench, WARMUP).nth(1));
 		await expect(tray(page)).toContainText(/Warmup\s*50 % of 87\.5 kg/u);
 	}
 });

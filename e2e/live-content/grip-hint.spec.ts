@@ -5,7 +5,15 @@ import type { Account } from '../fixtures.ts';
 import type { Database } from '../../src/lib/server/db/client.ts';
 import { addExercise, logSet, startEmpty, startPlan } from '../helpers.ts';
 
-import { exerciseBlock, onDesk, pastWorkout, plantWorkouts, setRow, trayLast } from './support.ts';
+import {
+	exerciseBlock,
+	onDesk,
+	pastWorkout,
+	plantWorkouts,
+	setRow,
+	tapOn,
+	trayLast
+} from './support.ts';
 
 const UNDERHAND = 'underhand';
 
@@ -39,7 +47,7 @@ async function recallOf(page: Page, mark: string | RegExp): Promise<Locator> {
 		return row.locator('xpath=./span[3]');
 	}
 
-	await row.click();
+	await tapOn(row);
 
 	return trayLast(page);
 }
@@ -72,7 +80,7 @@ test.describe(() => {
 		await startPlan(page, 'Pull Day');
 
 		const pullUp = exerciseBlock(page, 'Pull-Up');
-		await setRow(pullUp, 'set 1 pending').click();
+		await tapOn(setRow(pullUp, 'set 1 pending'));
 		await logSet(page);
 		// The carry from set 1 outranks last time's +5 here.
 		await logSet(page, { kg: 5 });
