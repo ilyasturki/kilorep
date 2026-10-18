@@ -1,3 +1,4 @@
+import { randomBytes, scryptSync } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -29,7 +30,13 @@ import {
 	verifyLogin
 } from './accounts.ts';
 import { verifyClaims } from './google.ts';
-import { decoyHash, passwordProblem, verifyPassword } from './password.ts';
+import {
+	decoyHash,
+	hashPassword,
+	passwordProblem,
+	scryptParams,
+	verifyPassword
+} from './password.ts';
 import {
 	SESSION_COOKIE,
 	bearerToken,
@@ -85,6 +92,34 @@ describe('credential validation', () => {
 		expect(credentialProblem('nope', PASSWORD)).toMatch(/valid address/u);
 		expect(credentialProblem('a@b.co', 'short')).toMatch(/at least 8/u);
 		expect(credentialProblem('a@b.co', PASSWORD)).toBeUndefined();
+	});
+});
+
+describe('hash cost', () => {
+	test('is the strong one wherever vitest has not asked for less', () => {
+		expect(scryptParams(false)).toEqual({ N: 2 ** 17, r: 8, p: 1 });
+	});
+
+	test('is cheap under vitest, and says so in the stored hash', async () => {
+		const stored = await hashPassword(PASSWORD);
+
+		expect(stored.startsWith('scrypt$1024$8$1$')).toBe(true);
+	});
+
+	test('verifies a hash stored at the strong cost by the cost it names', async () => {
+		const salt = randomBytes(16);
+		const key = scryptSync(PASSWORD, salt, 64, {
+			N: 2 ** 17,
+			r: 8,
+			p: 1,
+			maxmem: 256 * 2 ** 17 * 8
+		});
+		const stored = ['scrypt', 2 ** 17, 8, 1, salt.toString('base64'), key.toString('base64')].join(
+			'$'
+		);
+
+		await expect(verifyPassword(PASSWORD, stored)).resolves.toBe(true);
+		await expect(verifyPassword('not the password', stored)).resolves.toBe(false);
 	});
 });
 

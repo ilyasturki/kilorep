@@ -7,6 +7,8 @@ declare global {
 		readonly DEFAULT_SERVER: string;
 
 		readonly APP_VERSION: string;
+
+		readonly CHEAP_SCRYPT?: 'true';
 	}
 
 	namespace App {

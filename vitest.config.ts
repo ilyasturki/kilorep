@@ -13,7 +13,8 @@ export default defineConfig({
 		'import.meta.env.DEFAULT_SERVER': JSON.stringify(
 			process.env.DEFAULT_SERVER ?? 'https://kilorep.com'
 		),
-		'import.meta.env.APP_VERSION': JSON.stringify(pkg.version)
+		'import.meta.env.APP_VERSION': JSON.stringify(pkg.version),
+		'import.meta.env.CHEAP_SCRYPT': 'true'
 	},
 	test: {
 		include: ['src/**/*.test.ts', 'tests/**/*.test.ts']

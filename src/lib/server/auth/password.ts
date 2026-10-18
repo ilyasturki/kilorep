@@ -2,7 +2,14 @@ import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 
 type ScryptParams = { N: number; r: number; p: number };
 
-const PARAMS: ScryptParams = { N: 2 ** 17, r: 8, p: 1 };
+export function scryptParams(cheap: boolean): ScryptParams {
+	return cheap ? { N: 2 ** 10, r: 8, p: 1 } : { N: 2 ** 17, r: 8, p: 1 };
+}
+
+// Defined by vitest.config.ts alone, which hands it over as a string; the server build and plain node (the account scripts) take the strong cost.
+const PARAMS: ScryptParams = scryptParams(
+	import.meta.env !== undefined && import.meta.env.CHEAP_SCRYPT === 'true'
+);
 const KEY_LENGTH = 64;
 const SALT_LENGTH = 16;
 
