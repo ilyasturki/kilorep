@@ -33,19 +33,21 @@ export const load: PageLoad = async ({ params, url }) => {
 	const asked = url.searchParams.get('grip');
 	const grip = asked === null || asked === '' ? null : (settleGrip(exercise, asked) ?? null);
 
-	const [past, lastPerformed, note, bodyweight, templates] = await Promise.all([
+	const [past, lastPerformed, note, bodyweight, templates, named] = await Promise.all([
 		store.pastSessions(exercise.id),
 		store.lastPerformed(),
 		store.exerciseNote(exercise.id),
 		store.listBodyweight(),
-		store.listTemplates()
+		store.listTemplates(),
+		exercise.custom === true ? store.exerciseInUse(exercise.id) : false
 	]);
 
 	const plans = startable(templates);
 	const programmedIn = plansWith(templates, exercise.id);
 
-	// Only a custom can be deleted, and whether anything names it decides how.
-	const named = exercise.custom === true && (await store.exerciseInUse(exercise.id));
-
 	return { exercise, grip, past, lastPerformed, note, plans, programmedIn, bodyweight, named };
+};
+=======
+	return { exercise, grip, past, lastPerformed, note, plans, bodyweight, named };
+>>>>>>> 510c0b4 (perf(exercises): ask whether a custom is named beside the other reads)
 };
