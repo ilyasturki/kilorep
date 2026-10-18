@@ -143,7 +143,7 @@
 		>
 			<Input
 				label="New {label.toLowerCase()}"
-				placeholder="Wide"
+				placeholder="Reverse"
 				bind:value={draft}
 				error={draftError}
 				maxlength={40}
