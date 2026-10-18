@@ -1115,9 +1115,9 @@ describe('leaveEntry', () => {
 });
 
 describe('addRound', () => {
-	let minted = 0;
+	let rounds = 0;
 
-	const roundId = (): string => `r-${++minted}`;
+	const roundId = (): string => `r-${++rounds}`;
 
 	test('one set lands on every leg, in leg order', () => {
 		const workout = superset(freshWorkout(0));
