@@ -10,7 +10,7 @@ import {
 import type { RestSettings } from '$lib/domain/rest';
 import type { NextUp } from '$lib/domain/rotation';
 import type { Template, TemplateExercise } from '$lib/domain/template';
-import { entryTitle } from '$lib/workout/groups';
+import { entryTitle, unknownExercise } from '$lib/workout/groups';
 
 export type Planned = {
 	id: string;
@@ -32,7 +32,7 @@ export function plannedEntries(
 	return template.entries.map((entry) => {
 		const legs = entry.exercises.map((exercise) => ({
 			id: exercise.id,
-			meta: catalog[exercise.exerciseId],
+			meta: catalog[exercise.exerciseId] ?? unknownExercise(exercise.exerciseId),
 			exercise
 		}));
 

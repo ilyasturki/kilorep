@@ -114,7 +114,7 @@ export function shelfOf(
 			entries
 				.filter((entry) => entry.id !== exclude)
 				.flatMap((entry) => entry.legs)
-				.filter((leg) => leg.meta !== undefined)
+				.filter((leg) => leg.meta.archived !== true)
 				.map((leg) => [leg.meta.id, leg.meta] as const)
 		).values()
 	];
@@ -130,7 +130,8 @@ export function unknownExercise(id: string): Exercise {
 		aliases: [],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Core', secondary: [] }
+		muscles: { primary: 'Core', secondary: [] },
+		archived: true
 	};
 }
 

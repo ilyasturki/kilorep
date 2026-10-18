@@ -130,7 +130,7 @@
 
 		const exercises = frequent
 			.map((id) => catalogById[id])
-			.filter((exercise) => exercise !== undefined);
+			.filter((exercise) => exercise !== undefined && exercise.archived !== true);
 
 		return exercises.length === 0 ? null : { title: 'Trained most', exercises };
 	});
