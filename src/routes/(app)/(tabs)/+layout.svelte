@@ -6,8 +6,6 @@
 	import { covers, isActive, navTabs } from '$lib/nav/bar.svelte';
 	import { bottomDock } from '$lib/nav/dock.svelte';
 	import { press } from '$lib/ui/press';
-	import { activeWorkout } from '$lib/workout/active.svelte';
-	import RestBar from '$lib/workout/RestBar.svelte';
 
 	import type { LayoutProps, Snapshot } from './$types';
 
@@ -59,12 +57,6 @@
 		<div bind:this={pane} class="min-h-0 flex-1 overflow-y-auto">
 			{@render children()}
 		</div>
-	{/if}
-
-	<!-- Not on the live page: its docked tray is the rest timer's face there, and two
-	     countdowns stacked over one tab bar would be the screen saying it twice. -->
-	{#if activeWorkout.session !== null && !covers(page.url.pathname, '/train/live')}
-		<RestBar />
 	{/if}
 
 	<!-- The live screen keeps the whole bottom edge: its tray is the working surface there,

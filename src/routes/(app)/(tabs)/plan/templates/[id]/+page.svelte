@@ -241,7 +241,8 @@
 			workout,
 			activeSetId: first === null ? null : first.set.id,
 			rest: null,
-			muted: false
+			muted: false,
+			dismissed: null
 		});
 
 		await invalidate(SESSION_DEP);

@@ -18,7 +18,8 @@ export async function launchRepeat(store: Store, workout: Workout): Promise<void
 		workout: next,
 		activeSetId: first === null ? null : first.set.id,
 		rest: null,
-		muted: false
+		muted: false,
+		dismissed: null
 	});
 
 	await invalidate(SESSION_DEP);

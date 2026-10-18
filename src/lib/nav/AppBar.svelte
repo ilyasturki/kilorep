@@ -3,6 +3,8 @@
 
 	import BackLink from '$lib/nav/BackLink.svelte';
 	import { appBarSlot, backTo, isActive, navTabs } from '$lib/nav/bar.svelte';
+	import RestChip from '$lib/workout/RestChip.svelte';
+	import { restTimer } from '$lib/workout/rest.svelte';
 
 	const slot = appBarSlot();
 
@@ -62,9 +64,16 @@
 			{/each}
 		</nav>
 
-		{#if slot.action !== null}
-			<div class="ml-auto shrink-0 lg:col-start-3 lg:ml-0 lg:justify-self-end">
-				{@render slot.action()}
+		{#if slot.action !== null || restTimer.showing}
+			<div
+				class="ml-auto flex shrink-0 items-center gap-2.5 lg:col-start-3 lg:ml-0
+					lg:justify-self-end"
+			>
+				<RestChip />
+
+				{#if slot.action !== null}
+					{@render slot.action()}
+				{/if}
 			</div>
 		{/if}
 	</div>

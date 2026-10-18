@@ -31,8 +31,6 @@
 	import OverviewDrawer from '$lib/workout/OverviewDrawer.svelte';
 	import OverviewPeek from '$lib/workout/OverviewPeek.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
-	import RestBar from '$lib/workout/RestBar.svelte';
-	import RestPill from '$lib/workout/RestPill.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -66,8 +64,6 @@
 	let traySpan = $state(0);
 
 	const floor = $derived(trayOpen ? traySpan : 0);
-
-	const restShowing = $derived(restTimer.running || restTimer.undoing);
 
 	let intent: 'jump' | 'advance' = 'advance';
 	let scheduled = false;
@@ -157,13 +153,8 @@
 		void settle();
 	}
 
-	// A tapped row is the set being lifted now, so a rest still running has been declined —
-	// skipped rather than cleared, and the tray offers the undo for a stray thumb.
+	// A tapped row is a set picked, not a rest declined: only SKIP or the next log ends one.
 	function jumpTo(setId: string) {
-		if (restTimer.running) {
-			restTimer.skip();
-		}
-
 		trayOpen = true;
 		activeWorkout.session?.select(setId);
 		jumped();
@@ -230,7 +221,11 @@
 		const earned = restAfter(session.workout, setId, restSettings.current);
 
 		if (earned !== null) {
-			restTimer.start(earned);
+			const leg = entries
+				.flatMap((entry) => entry.legs)
+				.find((candidate) => candidate.cursors.some((cursor) => cursor.set.id === setId));
+
+			restTimer.start({ ...earned, name: leg?.meta.name });
 		} else if (advancing) {
 			restTimer.clear();
 		}
@@ -756,13 +751,7 @@
 <!-- No ⋮ here any more: its one item was Discard workout, and the drawer carries that at its
      own foot, under the list the act is about. -->
 {#snippet finish()}
-	<div class="flex items-center gap-2.5">
-		{#if desk}
-			<RestPill />
-		{/if}
-
-		<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
-	</div>
+	<Button variant="chrome" caps onclick={() => (finishing = true)}>FINISH</Button>
 {/snippet}
 
 <svelte:head>
@@ -878,14 +867,8 @@
 
 		{#if !desk && entries.length > 0}
 			{#if !trayOpen}
-				<!-- What stands on the edge the tray gave up. The global bar is kept off this
-				     screen while the tray is the timer's face; with the tray down it is the only
-				     face left, and it carries the home-indicator inset the tray took with it.
-				     Above the tray in the file but under it on screen — the tray is out of flow,
-				     so this is already standing where the tray uncovers it. -->
-				<div class={['shrink-0 pb-safe-b', restShowing && 'bg-surface']}>
-					<RestBar />
-				</div>
+				<!-- The home-indicator inset the lowered tray took down with it. -->
+				<div class="shrink-0 pb-safe-b"></div>
 			{/if}
 
 			<LiveTray

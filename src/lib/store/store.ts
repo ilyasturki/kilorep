@@ -49,13 +49,18 @@ export type RestSnapshot = {
 	endsAt: number;
 	seconds: number;
 	exerciseId: string;
+	name?: string;
 };
 
-export type Snapshot = {
-	workout: Workout;
-	activeSetId: string | null;
+export type RestState = {
 	rest: RestSnapshot | null;
 	muted: boolean;
+	dismissed: RestSnapshot | null;
+};
+
+export type Snapshot = RestState & {
+	workout: Workout;
+	activeSetId: string | null;
 };
 
 const WATERMARK_KEY = 'watermark';
@@ -63,7 +68,7 @@ const SNAPSHOT_KEY = 'active-session';
 const OWNER_KEY = 'owner';
 const SYNCED_KEY = 'syncedAt';
 
-type LegacySnapshot = Omit<Snapshot, 'rest' | 'muted'> & Partial<Pick<Snapshot, 'rest' | 'muted'>>;
+type LegacySnapshot = Omit<Snapshot, keyof RestState> & Partial<RestState>;
 
 function isSnapshot(value: unknown): value is LegacySnapshot {
 	return (
@@ -85,12 +90,13 @@ function isRestSnapshot(value: unknown): value is RestSnapshot {
 		'seconds' in value &&
 		typeof value.seconds === 'number' &&
 		'exerciseId' in value &&
-		typeof value.exerciseId === 'string'
+		typeof value.exerciseId === 'string' &&
+		(!('name' in value) || typeof value.name === 'string')
 	);
 }
 
-// `rest` and `muted` postdate existing snapshots; normalise rather than reject so an
-// upgrade mid-session keeps the half-logged workout.
+// The rest state postdates existing snapshots; normalise rather than reject so an upgrade
+// mid-session keeps the half-logged workout.
 function settleSnapshot(value: LegacySnapshot): Snapshot {
 	return {
 		// Folded like every other read: a session in flight when the app upgraded is the one
@@ -98,7 +104,8 @@ function settleSnapshot(value: LegacySnapshot): Snapshot {
 		workout: foldWorkout(value.workout),
 		activeSetId: value.activeSetId,
 		rest: isRestSnapshot(value.rest) ? value.rest : null,
-		muted: value.muted === true
+		muted: value.muted === true,
+		dismissed: isRestSnapshot(value.dismissed) ? value.dismissed : null
 	};
 }
 
@@ -426,12 +433,17 @@ export class Store {
 		await this.db.put('meta', snapshot, SNAPSHOT_KEY);
 	}
 
-	public async saveRest(rest: RestSnapshot | null, muted: boolean): Promise<void> {
+	public async saveRest(state: RestState): Promise<void> {
 		const tx = this.db.transaction('meta', 'readwrite');
 		const value = await tx.store.get(SNAPSHOT_KEY);
 
 		if (isSnapshot(value)) {
-			await tx.store.put(Object.assign(settleSnapshot(value), { rest, muted }), SNAPSHOT_KEY);
+			const { rest, muted, dismissed } = state;
+
+			await tx.store.put(
+				Object.assign(settleSnapshot(value), { rest, muted, dismissed }),
+				SNAPSHOT_KEY
+			);
 		}
 
 		await tx.done;

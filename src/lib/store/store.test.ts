@@ -735,7 +735,8 @@ describe('the active session snapshot', () => {
 			workout: workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8, completed: false }]),
 			activeSetId: 'w1-set-0',
 			rest: null,
-			muted: false
+			muted: false,
+			dismissed: null
 		};
 
 		expect(await store.loadSnapshot()).toBeNull();
@@ -745,6 +746,42 @@ describe('the active session snapshot', () => {
 
 		await store.clearSnapshot();
 		expect(await store.loadSnapshot()).toBeNull();
+	});
+
+	it('keeps a skipped rest, named, beside the workout', async () => {
+		const workoutInFlight = workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]);
+		const skipped = { endsAt: 9000, seconds: 120, exerciseId: 'bench-press', name: 'Bench Press' };
+
+		await store.saveSnapshot({
+			workout: workoutInFlight,
+			activeSetId: null,
+			rest: null,
+			muted: false,
+			dismissed: null
+		});
+		await store.saveRest({ rest: null, muted: true, dismissed: skipped });
+
+		expect(await store.loadSnapshot()).toMatchObject({
+			dismissed: skipped,
+			muted: true,
+			workout: { id: 'w1' }
+		});
+	});
+
+	it('reads a snapshot written before the rest state existed', async () => {
+		const workoutInFlight = workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]);
+
+		counter += 1;
+
+		const db = await openDatabase(`kilorep-test-${counter}`);
+
+		await db.put('meta', { workout: workoutInFlight, activeSetId: null }, 'active-session');
+
+		expect(await new Store(db).loadSnapshot()).toMatchObject({
+			rest: null,
+			muted: false,
+			dismissed: null
+		});
 	});
 });
 
@@ -908,7 +945,8 @@ describe('changing hands', () => {
 			workout: workout('live', 900, 'squat', [{ weight: 100, reps: 5 }]),
 			activeSetId: null,
 			rest: null,
-			muted: false
+			muted: false,
+			dismissed: null
 		});
 
 		await store.wipe('user-b');

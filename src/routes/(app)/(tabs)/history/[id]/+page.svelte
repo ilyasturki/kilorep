@@ -704,7 +704,7 @@
 		{#if !desk && entries.length > 0}
 			{#if !trayOpen}
 				<!-- The home-indicator inset the lowered tray took down with it. Nothing else
-				     stands here: the global rest bar belongs to the layout, below this column.
+				     stands here: the rest lives in the top bar.
 				     Above the tray in the file but under it on screen — the tray is out of flow,
 				     so this is already standing where the tray uncovers it. -->
 				<div class="shrink-0 pb-safe-b"></div>
@@ -720,7 +720,6 @@
 					: setNote(activeLeg?.meta, activeLeg?.grip, activeCursor.set)}
 				history={NO_HISTORY}
 				total={allCursors.length}
-				rest={false}
 				hints={false}
 				finishLabel="DONE"
 				oncommit={logSet}

@@ -17,6 +17,10 @@ export function persistSession(store: Store, session: WorkoutSession): void {
 		workout,
 		activeSetId: session.activeSetId,
 		// `saveSnapshot` writes the record whole: omitting rest would erase it.
-		...untrack(() => ({ rest: restTimer.snapshot, muted: restTimer.muted }))
+		...untrack(() => ({
+			rest: restTimer.snapshot,
+			muted: restTimer.muted,
+			dismissed: restTimer.dismissed
+		}))
 	});
 }

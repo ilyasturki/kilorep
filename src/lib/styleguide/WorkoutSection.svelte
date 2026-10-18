@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { weightStep } from '$lib/domain/exercise';
-	import { REST_NUDGE_SECONDS } from '$lib/domain/rest';
 	import type { Arms, SetCursor } from '$lib/domain/workout';
 	import { loadUnitLabel, setFigures } from '$lib/exercises/label';
 	import Card from '$lib/styleguide/Card.svelte';
@@ -16,8 +15,7 @@
 	import GripField from '$lib/workout/GripField.svelte';
 	import LiveLedger from '$lib/workout/LiveLedger.svelte';
 	import LiveTray from '$lib/workout/LiveTray.svelte';
-	import RestBar from '$lib/workout/RestBar.svelte';
-	import RestPill from '$lib/workout/RestPill.svelte';
+	import RestChip from '$lib/workout/RestChip.svelte';
 	import SwipeRow from '$lib/workout/SwipeRow.svelte';
 	import { entriesWithMeta } from '$lib/workout/groups';
 	import { restTimer } from '$lib/workout/rest.svelte';
@@ -61,7 +59,8 @@
 			return;
 		}
 
-		restTimer.start({ exerciseId: 'bench-press', seconds: 180 }, Date.now());
+		restTimer.reset();
+		restTimer.start({ exerciseId: 'bench-press', seconds: 180, name: 'Bench Press' }, Date.now());
 		resting = true;
 	}
 
@@ -249,17 +248,14 @@
 	</Frame>
 </Card>
 
-<Card name="RestBar · RestPill" note="both read the one global restTimer">
-	<Spec label="press to start a 3:00 rest — the bar docks, the pill rides the chrome" full>
+<Card name="RestChip" note="the rest's one face, in the top bar on every tab">
+	<Spec label="start a 3:00 rest, then tap the chip for −30 / +30, SKIP and rest off" full>
 		<Button variant="secondary" onclick={toggleRest}>
 			{resting ? 'Stop the timer' : 'Start a rest'}
 		</Button>
 	</Spec>
-	<Frame label="RestBar — full width, +{REST_NUDGE_SECONDS}s per tap">
-		<div class="min-h-16 p-2"><RestBar /></div>
-	</Frame>
-	<Frame label="RestPill — the same timer, folded into a bar button">
-		<div class="flex min-h-16 items-center p-2"><RestPill /></div>
+	<Frame label="running, then skipped (REST brings it back), then off (tap to turn it on)">
+		<div class="flex min-h-16 items-center justify-end p-2"><RestChip /></div>
 	</Frame>
 </Card>
 

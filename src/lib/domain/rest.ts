@@ -10,10 +10,6 @@ export const REST_STEP_SECONDS = 15;
 export const MIN_REST_SECONDS = 15;
 export const MAX_REST_SECONDS = 600;
 
-// How long SKIP stays undoable: long enough to notice a mis-tap, short enough
-// to be gone before the next set.
-export const REST_UNDO_MS = 5000;
-
 // `overrides` is tri-state per exercise: missing key = default applies, number = override,
 // explicit null = never rest on this exercise.
 export type RestSettings = {
@@ -28,7 +24,7 @@ export const defaultRestSettings = (): RestSettings => ({
 	overrides: {}
 });
 
-export type RestStart = { exerciseId: string; seconds: number };
+export type RestStart = { exerciseId: string; seconds: number; name?: string };
 
 export function restSecondsFor(exerciseId: string, settings: RestSettings): number | null {
 	const override = settings.overrides[exerciseId];

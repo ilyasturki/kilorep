@@ -28,7 +28,7 @@ async function restoreSession(): Promise<void> {
 
 		activeWorkout.begin(historyFrom(workouts), snapshot, lastGripsFrom(workouts));
 
-		restTimer.resume(snapshot.rest, snapshot.muted);
+		restTimer.resume(snapshot.rest, snapshot.muted, snapshot.dismissed);
 	}
 }
 

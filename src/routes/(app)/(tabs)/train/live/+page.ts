@@ -22,7 +22,7 @@ export const load: PageLoad = async ({ depends }: PageLoadEvent) => {
 
 		if (resume !== null) {
 			activeWorkout.begin(history, resume, grips);
-			restTimer.resume(resume.rest, resume.muted);
+			restTimer.resume(resume.rest, resume.muted, resume.dismissed);
 		}
 	}
 
