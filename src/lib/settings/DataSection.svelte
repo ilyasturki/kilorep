@@ -131,11 +131,15 @@
 	}
 
 	function outcomeLine({ written, kept, session }: ImportOutcome): string {
+		const already =
+			session === 'restored'
+				? 'Every record was already here.'
+				: 'Nothing new: this device already holds everything in the backup.';
+
 		const lines = [
-			written === 0
-				? 'Nothing new: this device already holds everything in the backup.'
-				: `Imported ${counted(written, 'record', 'records')}.`,
+			written > 0 && `Imported ${counted(written, 'record', 'records')}.`,
 			written > 0 && kept > 0 && `${kept} already here were as new or newer and stayed.`,
+			written === 0 && kept > 0 && already,
 			session === 'restored' && 'The session in progress is back on Train.',
 			session === 'kept' && 'The session in progress it held was left out.'
 		];
