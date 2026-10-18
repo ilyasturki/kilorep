@@ -13,6 +13,7 @@
 	import type { ClassValue } from 'svelte/elements';
 	import { Popover, Tooltip } from 'bits-ui';
 	import Info from '$lib/ui/icons/Info.svelte';
+	import { registerOverlay } from '$lib/ui/overlays';
 	import { coarsePointer } from '$lib/ui/pointer';
 
 	type Props = {
@@ -22,13 +23,17 @@
 	};
 
 	let { text, children, class: klass }: Props = $props();
+
+	let open = $state(false);
+
+	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 </script>
 
 <span class={['inline-flex items-center gap-1', klass]}>
 	{@render children()}
 
 	{#if coarsePointer}
-		<Popover.Root>
+		<Popover.Root bind:open>
 			<Popover.Trigger class={trigger} aria-label="More information">
 				<Info size={16} />
 			</Popover.Trigger>

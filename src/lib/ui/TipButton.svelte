@@ -4,6 +4,7 @@
 	import { Popover, Tooltip } from 'bits-ui';
 
 	import { bubble } from '$lib/ui/Tooltip.svelte';
+	import { registerOverlay } from '$lib/ui/overlays';
 	import { coarsePointer } from '$lib/ui/pointer';
 	import { press } from '$lib/ui/press';
 
@@ -18,6 +19,8 @@
 
 	let open = $state(false);
 	let anchor = $state<HTMLElement | null>(null);
+
+	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
 	function reveal(element: HTMLElement): void {
 		anchor = element;
