@@ -72,7 +72,7 @@ export async function addExercise(page: Page, name: string): Promise<void> {
  */
 export async function logSet(page: Page, set: { kg?: number; reps?: number } = {}): Promise<void> {
 	const typed = {
-		kg: page.getByRole('textbox', { name: 'kg' }),
+		kg: page.getByRole('textbox', { name: /^kg\b/u }),
 		reps: page.getByRole('textbox', { name: 'reps' })
 	};
 
