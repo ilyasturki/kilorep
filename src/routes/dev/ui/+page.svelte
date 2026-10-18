@@ -638,6 +638,11 @@
 			<Card name="AddRow">
 				<AddRow label="Add exercise" />
 				<span class={caption}>the dashed grow-by-one silhouette every list ends on</span>
+				<div class="list-group">
+					<ListRow title="Bench Press" dense />
+					<AddRow flush label="Add set" secondaryLabel="Exercise" onsecondary={() => {}} />
+				</div>
+				<span class={caption}>flush — the last row of the list it adds to</span>
 			</Card>
 
 			<Card name="EmptyState" tall>

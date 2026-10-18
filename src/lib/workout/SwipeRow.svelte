@@ -5,6 +5,7 @@
 	import Trash from '$lib/ui/icons/Trash.svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import type { SetStatus } from '$lib/ui/SetMark.svelte';
+	import { tapTick } from '$lib/ui/feedback';
 	import { mediumMs } from '$lib/ui/motion';
 	import { coarsePointer } from '$lib/ui/pointer';
 	import { press, SLOP } from '$lib/ui/press';
@@ -12,8 +13,10 @@
 	type Props = {
 		status: SetStatus;
 		index?: number;
-		weight: number | null;
-		reps: number | null;
+		/** From `setFigures`: `load` in kilograms, `null` where the body is the whole load. */
+		figures: { load: string | null; reps: string };
+		/** A logged row the cursor stands on, being edited. */
+		selected?: boolean;
 		right?: string | null;
 		/** What one gesture would log — absent, the row cannot be quick-logged. */
 		quick?: { weight: number; reps: number } | null;
@@ -33,8 +36,8 @@
 	let {
 		status,
 		index,
-		weight,
-		reps,
+		figures,
+		selected = false,
 		right,
 		quick = null,
 		onselect,
@@ -44,15 +47,17 @@
 		onoptions
 	}: Props = $props();
 
-	const show = (n: number | null) => (n === null ? '–' : String(n));
+	const tinted = $derived(status === 'active' || selected);
 
 	const numerals = $derived(
-		{
-			done: 'text-ink',
-			active: 'text-accent-text',
-			pending: 'text-ink-faint',
-			warmup: 'text-ink-muted'
-		}[status]
+		selected
+			? 'text-accent-text'
+			: {
+					done: 'text-ink',
+					active: 'text-accent-text',
+					pending: 'text-ink-faint',
+					warmup: 'text-ink-muted'
+				}[status]
 	);
 
 	// The swipe. Same intent test as every horizontal gesture here: vertical wins past SLOP,
@@ -72,14 +77,13 @@
 
 	let width = $state(0);
 
-	// The reveal has to finish the sentence it starts. A track that stops mid-word is the
-	// gesture asking the lifter to guess, which is what a flat 150px cap did to `Log 100 × 12`
-	// — so each cap is its own label's measured width, and only then bounded by the row.
+	// The reveal has to finish the word it starts, so each cap is its own label's measured width,
+	// held to a floor so a short word does not make a short, twitchy pull.
 	let forwardLabel = $state(0);
 	let backLabel = $state(0);
 
 	const REST = 8;
-	const LEAST = 96;
+	const LEAST = 128;
 
 	function capFor(label: number, offered: boolean): number {
 		return offered && width > 0 ? Math.min(Math.max(label + REST, LEAST), width * 0.75) : 0;
@@ -99,7 +103,22 @@
 	let pulling = $state(false);
 	let swallow = false;
 
+	// Past this, letting go goes through. The track says so and the hand feels it, both ways.
+	let armed = $state(false);
+
 	const clamp = (dx: number) => Math.max(-backCap, Math.min(dx, forwardCap));
+
+	function follow(dx: number) {
+		pull = clamp(dx);
+
+		const cap = pull > 0 ? forwardCap : backCap;
+		const crossed = pull !== 0 && Math.abs(pull) >= cap * SETTLE_AT;
+
+		if (crossed !== armed) {
+			armed = crossed;
+			tapTick();
+		}
+	}
 
 	function swipeStart(event: PointerEvent) {
 		swallow = false;
@@ -136,7 +155,7 @@
 		const dy = Math.abs(event.clientY - drag.y0);
 
 		if (pulling) {
-			pull = clamp(dx);
+			follow(dx);
 			return;
 		}
 
@@ -158,7 +177,7 @@
 
 		event.currentTarget.setPointerCapture(drag.id);
 		pulling = true;
-		pull = clamp(dx);
+		follow(dx);
 	}
 
 	function swipeEnd() {
@@ -176,6 +195,7 @@
 		pulling = false;
 		swallow = true;
 		pull = 0;
+		armed = false;
 
 		if (!settles || went === 0) {
 			return;
@@ -215,7 +235,6 @@
 	onpointercancel={swipeEnd}
 	onclickcapture={swipeClick}
 	class="relative touch-pan-y overflow-hidden"
-	{@attach press(() => onoptions)}
 >
 	<!-- `invisible` rather than a `{#if}`: the label is what sizes the cap, and a track that
 	     only exists once the pull has begun would be measured a frame after it was needed. -->
@@ -229,15 +248,25 @@
 		>
 			<span
 				bind:clientWidth={forwardLabel}
-				class="flex shrink-0 items-center gap-2 px-4 text-base font-extrabold"
+				class={[
+					'flex shrink-0 items-center gap-2 px-4 text-base font-extrabold',
+					'transition-opacity duration-(--dur-micro)',
+					armed ? 'opacity-100' : 'opacity-60'
+				]}
 			>
-				{#if forward === 'log' && quick !== null}
-					<Check size={20} />
-					Log {quick.weight} × {quick.reps}
-				{:else}
-					<ArrowCounterClockwise size={20} />
-					Unlog
-				{/if}
+				<span
+					class={[
+						'grid motion-safe:transition-transform motion-safe:duration-(--dur-micro)',
+						armed && 'motion-safe:scale-125'
+					]}
+				>
+					{#if forward === 'log'}
+						<Check size={20} />
+					{:else}
+						<ArrowCounterClockwise size={20} />
+					{/if}
+				</span>
+				{forward === 'log' ? 'Log' : 'Unlog'}
 			</span>
 		</div>
 	{/if}
@@ -246,7 +275,9 @@
 		<div
 			aria-hidden="true"
 			class={[
-				'absolute inset-0 flex items-center justify-end bg-danger-soft text-danger',
+				'absolute inset-0 flex items-center justify-end',
+				'transition-[background-color,color] duration-(--dur-micro)',
+				armed ? 'bg-danger text-canvas' : 'bg-danger-soft text-danger',
 				pull >= 0 && 'invisible'
 			]}
 		>
@@ -263,16 +294,18 @@
 	<!-- The hover reads on the whole row — trailing buttons included — so a fine pointer sees
 	     one target, and each button answers its own hover a shade deeper. -->
 	<div
+		data-ripple
 		class={[
 			'flex items-stretch',
-			status === 'active' ? 'bg-accent-soft' : 'bg-surface',
-			status !== 'active' &&
+			tinted ? 'bg-accent-soft' : 'bg-surface',
+			!tinted &&
 				onselect !== undefined &&
-				'pointer-fine:transition-[background-color] pointer-fine:duration-100 pointer-fine:hover:bg-hover',
+				'pointer-fine:transition-[background-color] pointer-fine:duration-100 pointer-fine:hover:bg-hover press:bg-surface-2',
 			status === 'warmup' && 'opacity-[0.72]',
 			!pulling && pull === 0 && mediumMs() > 0 && 'transition-transform duration-(--dur-small)'
 		]}
 		style={pull === 0 ? undefined : `transform: translateX(${pull}px)`}
+		{@attach press(() => onoptions)}
 	>
 		<svelte:element
 			this={onselect === undefined ? 'div' : 'button'}
@@ -280,22 +313,40 @@
 			onclick={onselect}
 			class={[
 				'flex min-h-row-dense min-w-0 flex-1 items-center gap-3 py-1.5 pl-3 text-left',
-				onselect !== undefined && 'focus-ring-inset press:bg-surface-2',
-				onselect !== undefined && status === 'active' && 'hover:bg-hover',
+				onselect !== undefined && 'focus-ring-inset',
+				onselect !== undefined && tinted && 'hover:bg-hover',
 				onselect !== undefined && 'pointer-fine:transition-[background-color]',
 				onselect !== undefined && 'pointer-fine:duration-100'
 			]}
 		>
-			<SetMark {status} {index} />
+			<SetMark {status} {index} contrast={selected} />
 
-			<span class="grid shrink-0 grid-cols-[3.25rem_1.25rem_2.5rem] items-baseline">
-				<span class="text-right text-base font-extrabold {numerals}">{show(weight)}</span>
-				<span class="text-center text-sm font-bold text-ink-faint">×</span>
-				<span class="text-right text-base font-extrabold {numerals}">{show(reps)}</span>
+			<!-- Fixed tracks, so a row of `+10 kg × 8` and one of `8 reps` keep their reps in line. -->
+			<span
+				class="grid shrink-0 grid-cols-[3.5rem_1.75rem_1rem_minmax(1.75rem,auto)] items-baseline"
+			>
+				<span class="text-right text-base font-extrabold {numerals}">{figures.load ?? ''}</span>
+				<span class="pl-1 text-sm font-bold text-ink-faint">
+					{figures.load === null ? '' : 'kg'}
+				</span>
+				<span class="text-center text-sm font-bold text-ink-faint">
+					{figures.load === null ? '' : '×'}
+				</span>
+				<span class="pl-1 text-base font-extrabold {numerals}">
+					{figures.reps}
+					{#if figures.load === null}
+						<span class="text-sm font-bold text-ink-faint">reps</span>
+					{/if}
+				</span>
 			</span>
 
 			{#if right}
-				<span class="min-w-0 flex-1 truncate text-right text-sm font-bold text-ink-faint">
+				<span
+					class={[
+						'min-w-0 flex-1 truncate text-right text-sm font-bold',
+						selected ? 'text-accent-text' : 'text-ink-faint'
+					]}
+				>
 					{right}
 				</span>
 			{/if}

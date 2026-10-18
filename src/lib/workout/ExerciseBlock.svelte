@@ -7,6 +7,7 @@
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { History, SetCursor } from '$lib/domain/workout';
+	import { setFigures } from '$lib/exercises/label';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import { smallMs } from '$lib/ui/motion';
 	import { press } from '$lib/ui/press';
@@ -78,11 +79,13 @@
 	}
 
 	function rowWord(cursor: SetCursor): string | null {
+		const active = cursor.set.id === activeSetId;
+
 		if (cursor.set.completed) {
-			return exertionLabel(cursor.set.rpe, exertionScale.current) ?? 'Logged';
+			return active ? 'Editing' : (exertionLabel(cursor.set.rpe, exertionScale.current) ?? 'Logged');
 		}
 
-		return cursor.set.id === activeSetId ? 'Now' : null;
+		return active ? 'Now' : null;
 	}
 
 	function rowRight(cursor: SetCursor): string | null {
@@ -100,7 +103,7 @@
 	const grow = $derived(mounted ? smallMs() : 0);
 </script>
 
-<section data-exercise class="flex flex-col gap-2">
+<section data-exercise class="flex flex-col gap-1">
 	<!-- The heading is the whole control now. A ⋮ on every exercise put four of them on a
 	     phone screen for one act apiece, so the act moved onto the thing it acts on: tapping
 	     the name opens the exercise's sheet, and the page it used to link to is the first row
@@ -111,14 +114,14 @@
 				type="button"
 				aria-label="{meta.name} options"
 				onclick={(e) => onexercise(e.currentTarget)}
-				class="w-full press-sink rounded-xl px-1 py-1 text-left focus-ring hover:bg-hover
-					press:bg-surface-2"
+				class="flex min-h-11 w-full press-sink items-baseline gap-2 rounded-xl px-1 py-2 text-left
+					focus-ring hover:bg-hover press:bg-surface-2"
 				{@attach press()}
 			>
-				<span class="block truncate text-lg font-extrabold tracking-tight text-ink">
+				<span class="min-w-0 shrink truncate text-lg font-extrabold tracking-tight text-ink">
 					{meta.name}
 				</span>
-				<span class="block truncate text-sm font-bold text-ink-faint">{setup}</span>
+				<span class="min-w-0 shrink-[2] truncate text-sm font-bold text-ink-faint">{setup}</span>
 			</button>
 		</h2>
 	</div>
@@ -127,6 +130,7 @@
 		{#each cursors as cursor (cursor.set.id)}
 			{@const status = statusOf(cursor)}
 			{@const active = cursor.set.id === activeSetId}
+			{@const editing = active && cursor.set.completed}
 			{@const shown = cursor.set.completed
 				? { weight: cursor.set.weight, reps: cursor.set.reps }
 				: offerOf(cursor)}
@@ -139,8 +143,8 @@
 				<SwipeRow
 					status={active && !cursor.set.completed ? 'active' : status}
 					index={cursor.workingIndex + 1}
-					weight={shown.weight}
-					reps={shown.reps}
+					figures={setFigures(meta, shown.weight, shown.reps)}
+					selected={editing}
 					right={rowRight(cursor)}
 					quick={quickOf(cursor)}
 					onselect={cursor.set.type === 'warmup' ? undefined : () => onselect(cursor.set.id)}
@@ -161,14 +165,15 @@
 				/>
 			</div>
 		{/each}
-	</div>
 
-	<AddRow
-		label="Add set"
-		icon={RowsPlusBottom}
-		onclick={onadd}
-		secondaryLabel={oninsert === undefined ? undefined : 'Exercise'}
-		secondaryIcon={StackPlus}
-		onsecondary={oninsert}
-	/>
+		<AddRow
+			flush
+			label="Add set"
+			icon={RowsPlusBottom}
+			onclick={onadd}
+			secondaryLabel={oninsert === undefined ? undefined : 'Exercise'}
+			secondaryIcon={StackPlus}
+			onsecondary={oninsert}
+		/>
+	</div>
 </section>

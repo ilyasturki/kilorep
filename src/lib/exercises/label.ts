@@ -50,6 +50,28 @@ export function setLabel(exercise: Exercise, set: PerformedSet): string {
 	return set.weight === 0 ? `${set.reps} reps` : `+${set.weight} × ${set.reps}`;
 }
 
+/**
+ * A set split for a row's columns, by the rule `setLabel` follows. `load` reads in kilograms and
+ * is `null` where the body is the whole load, so the row reads `8 reps`; `–` marks a blank.
+ */
+export function setFigures(
+	exercise: Exercise,
+	weight: number | null,
+	reps: number | null
+): { load: string | null; reps: string } {
+	const shownReps = reps === null ? '–' : String(reps);
+
+	if (weight === null) {
+		return { load: '–', reps: shownReps };
+	}
+
+	if (bodyweightShareOf(exercise) === 0) {
+		return { load: String(weight), reps: shownReps };
+	}
+
+	return { load: weight === 0 ? null : `+${weight}`, reps: shownReps };
+}
+
 export function lastSetLabel(
 	exercise: Exercise,
 	session: PastSession | undefined

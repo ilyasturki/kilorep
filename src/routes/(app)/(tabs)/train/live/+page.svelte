@@ -825,9 +825,9 @@
 					/>
 				</div>
 			{:else}
-				<div class="mx-auto flex w-full max-w-xl flex-col gap-7 px-3">
+				<div class="mx-auto flex w-full max-w-xl flex-col gap-5 px-3">
 					{#each entries as entry (entry.id)}
-						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-5">
+						<div animate:flip={{ duration: slide }} class="relative flex flex-col gap-3">
 							<EntryStack
 								legs={entry.legs}
 								superset={entry.superset}

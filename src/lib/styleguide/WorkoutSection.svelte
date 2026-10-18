@@ -2,7 +2,7 @@
 	import { weightStep } from '$lib/domain/exercise';
 	import { REST_NUDGE_SECONDS } from '$lib/domain/rest';
 	import type { Arms, SetCursor } from '$lib/domain/workout';
-	import { loadUnitLabel } from '$lib/exercises/label';
+	import { loadUnitLabel, setFigures } from '$lib/exercises/label';
 	import Card from '$lib/styleguide/Card.svelte';
 	import Frame from '$lib/styleguide/Frame.svelte';
 	import Spec from '$lib/styleguide/Spec.svelte';
@@ -162,32 +162,65 @@
 	</Frame>
 </Card>
 
-<Card name="SwipeRow" note="a logged set — swipe to quick-log, hold for options">
-	<Frame label="the row ExerciseBlock is built from">
-		<div class="flex flex-col gap-1 p-3">
+<Card name="SwipeRow" note="a set — swipe to log or remove, hold for options">
+	<Frame label="the rows ExerciseBlock is built from">
+		<div class="m-3 list-group">
 			<SwipeRow
 				status="done"
 				index={1}
-				weight={82.5}
-				reps={8}
+				figures={setFigures(bench, 82.5, 8)}
 				right="RPE 8"
 				onselect={noop}
+				onunlog={noop}
+				onremove={noop}
+				{onoptions}
+			/>
+			<SwipeRow
+				status="done"
+				index={2}
+				figures={setFigures(bench, 82.5, 7)}
+				selected
+				right="Editing"
+				onselect={noop}
+				onunlog={noop}
+				onremove={noop}
 				{onoptions}
 			/>
 			<SwipeRow
 				status="pending"
 				index={3}
-				weight={null}
-				reps={null}
-				right="82.5 × 7"
+				figures={setFigures(bench, 82.5, 7)}
 				quick={{ weight: 82.5, reps: 7 }}
 				onselect={noop}
 				onquick={noop}
+				onremove={noop}
+				{onoptions}
+			/>
+			<SwipeRow
+				status="done"
+				index={1}
+				figures={setFigures(catalogById['pull-up'], 10, 6)}
+				right="Logged"
+				onselect={noop}
+				{onoptions}
+			/>
+			<SwipeRow
+				status="pending"
+				index={2}
+				figures={setFigures(catalogById['pull-up'], 0, 8)}
+				onselect={noop}
 				{onoptions}
 			/>
 		</div>
 	</Frame>
-	<span class={caption}>quick={'{'}…{'}'} — drag the second row right to log what it recalls</span>
+	<span class={caption}>
+		selected — a logged set being edited · the body-weight rows add what was on the belt, or read
+		reps alone
+	</span>
+	<span class={caption}>
+		drag a row right to log or unlog, left to remove: past the point where letting go goes through,
+		Log lights up and Remove turns solid, with one tick each way
+	</span>
 </Card>
 
 <Card name="LiveLedger" note="the desktop's whole session, one table" wide tall>

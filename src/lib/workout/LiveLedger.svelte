@@ -14,6 +14,7 @@
 	import { canCommit, hintLabel, prefillFor } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import { weightStep } from '$lib/domain/exercise';
+	import { setFigures } from '$lib/exercises/label';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import { press } from '$lib/ui/press';
@@ -272,6 +273,9 @@
 									? 'text-ink'
 									: 'text-ink-faint'}
 							{@const shownRpe = exertionLabel(cursor.set.rpe, scale)}
+							{@const load = selected
+								? show(offer.weight)
+								: setFigures(leg.meta, offer.weight, offer.reps).load}
 
 							<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 							<div
@@ -322,11 +326,16 @@
 											−
 										</button>
 									{/if}
-									<span
-										class="min-w-13 text-center text-base font-extrabold tracking-numeral
-									tabular-nums {numerals}"
-									>
-										{show(offer.weight)}
+									<span class="flex items-baseline">
+										<span
+											class="min-w-13 text-right text-base font-extrabold tracking-numeral
+										tabular-nums {numerals}"
+										>
+											{load ?? ''}
+										</span>
+										<span class="w-6 pl-1 text-sm font-bold text-ink-faint">
+											{load === null ? '' : 'kg'}
+										</span>
 									</span>
 									{#if selected}
 										<button
