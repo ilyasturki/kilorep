@@ -251,6 +251,7 @@ describe('cors', () => {
 		expect(resolved).toBe(0);
 		expect(response.headers.get('access-control-allow-origin')).toBe('https://localhost');
 		expect(response.headers.get('access-control-allow-methods')).toContain('POST');
+		expect(response.headers.get('access-control-allow-methods')).toContain('PATCH');
 		expect(response.headers.get('access-control-allow-headers')).toContain('authorization');
 	});
 
