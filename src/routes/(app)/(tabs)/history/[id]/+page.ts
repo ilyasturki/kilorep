@@ -14,10 +14,24 @@ export const load: PageLoad = async ({ params }) => {
 
 	// Every plan, not the one it names: the link is editable here, and the plan it moves to
 	// has to be in the sheet before it can be picked.
-	const [templates, { lastPerformed, heaviest, frequent }] = await Promise.all([
-		store.listTemplates(),
-		store.pickerData()
-	]);
+	const plan = workout.templateId ?? null;
 
-	return { store, workout, templates, lastPerformed, heaviest, frequent };
+	const [templates, { lastPerformed, heaviest, frequent }, newest, newestOfPlan, answered] =
+		await Promise.all([
+			store.listTemplates(),
+			store.pickerData(),
+			store.latestWorkout(),
+			plan === null ? null : store.latestWorkout(plan),
+			store.answeredOffer(plan)
+		]);
+
+	// Only the newest session of a plan offers to change it, and only until it is answered.
+	const offer = {
+		templateId: plan,
+		open:
+			answered !== workout.id &&
+			(plan === null ? newest : newestOfPlan)?.id === workout.id
+	};
+
+	return { store, workout, templates, lastPerformed, heaviest, frequent, offer };
 };

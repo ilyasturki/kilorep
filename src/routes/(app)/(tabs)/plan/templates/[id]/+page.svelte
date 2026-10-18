@@ -5,6 +5,7 @@
 	import { page } from '$app/state';
 
 	import { catalogById } from '$lib/catalog';
+	import { applyDrift } from '$lib/domain/drift';
 	import {
 		addExercise,
 		drawableMark,
@@ -37,6 +38,7 @@
 	import { entryRest, plannedEntries, planDefaultRest, planMeta } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanLedger from '$lib/templates/PlanLedger.svelte';
+	import PlanOffer from '$lib/templates/PlanOffer.svelte';
 	import PlanOptionsMenu from '$lib/templates/PlanOptionsMenu.svelte';
 	import PlanRestField from '$lib/templates/PlanRestField.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
@@ -305,6 +307,35 @@
 
 	const title = $derived(template.name.trim() === '' ? 'New template' : template.name);
 
+	// svelte-ignore state_referenced_locally
+	const offered = data.offered;
+
+	async function answerOffer() {
+		if (offered !== null) {
+			await data.store.answerOffer(template.id, offered.id, Date.now());
+
+			if (data.user) {
+				syncSoon(data.user.id);
+			}
+		}
+	}
+
+	async function updateFromOffer(swaps: string[]) {
+		if (offered === null) {
+			return;
+		}
+
+		applyDrift(
+			template,
+			offered,
+			(id) => catalogById[id],
+			() => crypto.randomUUID(),
+			swaps
+		);
+
+		await answerOffer();
+	}
+
 	// One card at a time on the phone: the collapsed rows are what makes the whole plan fit a
 	// screen, and two open at once puts the second one's fields off the bottom again.
 	let openLegId = $state<string | null>(null);
@@ -417,6 +448,18 @@
 	{/if}
 {/snippet}
 
+{#snippet offer()}
+	{#if offered !== null && !archived}
+		<PlanOffer
+			workout={offered}
+			{template}
+			where="plan"
+			onupdate={updateFromOffer}
+			ondismiss={answerOffer}
+		/>
+	{/if}
+{/snippet}
+
 {#snippet nothing()}
 	<EmptyState title="Nothing planned" description="Add an exercise to shape the session.">
 		{#snippet icon()}
@@ -453,6 +496,8 @@
 				{@render identity(true)}
 				{@render planRestRow()}
 
+				{@render offer()}
+
 				{#if entries.length === 0}
 					{@render nothing()}
 				{:else}
@@ -481,6 +526,8 @@
 			<div bind:this={drag.root} class="column-content flex min-h-full flex-col gap-3 px-3 pt-3">
 				{@render identity(false)}
 				{@render planRestRow()}
+
+				{@render offer()}
 
 				{#each entries as entry (entry.id)}
 					{@const lifted = drag.isLifted(entry.id)}

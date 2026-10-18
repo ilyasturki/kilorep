@@ -13,12 +13,21 @@
 		grip?: string;
 		cursors: SetCursor[];
 		badges: string[];
+		/** The planned exercise's name, when this one was swapped in for it. */
+		instead?: string;
 	};
 
-	let { meta, grip, cursors, badges }: Props = $props();
+	let { meta, grip, cursors, badges, instead }: Props = $props();
 
 	const note = $derived(
-		[meta.equipment, loadModeNote(meta.loadMode), gripLabel(meta, grip)].filter(Boolean).join(' · ')
+		[
+			meta.equipment,
+			loadModeNote(meta.loadMode),
+			gripLabel(meta, grip),
+			instead === undefined ? null : `instead of ${instead}`
+		]
+			.filter(Boolean)
+			.join(' · ')
 	);
 
 	const scale = $derived(exertionScale.current);

@@ -7,12 +7,15 @@ import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params }) => {
 	const store = await getStore();
-	const [stored, deleted, { lastPerformed, heaviest, frequent }, planRest] = await Promise.all([
-		store.getTemplate(params.id),
-		store.templateDeleted(params.id),
-		store.pickerData(),
-		store.planRest(params.id)
-	]);
+	const [stored, deleted, { lastPerformed, heaviest, frequent }, planRest, latest, answered] =
+		await Promise.all([
+			store.getTemplate(params.id),
+			store.templateDeleted(params.id),
+			store.pickerData(),
+			store.planRest(params.id),
+			store.latestWorkout(params.id),
+			store.answeredOffer(params.id)
+		]);
 
 	if (deleted) {
 		error(404, 'This template was deleted');
@@ -25,6 +28,7 @@ export const load: PageLoad = async ({ params }) => {
 		planRest,
 		lastPerformed,
 		heaviest,
-		frequent
+		frequent,
+		offered: latest === null || answered === latest.id ? null : latest
 	};
 };

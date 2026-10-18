@@ -11,10 +11,11 @@
 	import Frame from '$lib/styleguide/Frame.svelte';
 	import Spec from '$lib/styleguide/Spec.svelte';
 	import { caption } from '$lib/styleguide/chrome';
-	import { bench, marks, pushTemplate } from '$lib/styleguide/fixtures';
+	import { bench, driftedWorkout, marks, pushTemplate } from '$lib/styleguide/fixtures';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanLedger from '$lib/templates/PlanLedger.svelte';
 	import PlanRestField from '$lib/templates/PlanRestField.svelte';
+	import PlanOffer from '$lib/templates/PlanOffer.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { entryRest, plannedEntries, planDefaultRest } from '$lib/templates/plan';
@@ -41,6 +42,15 @@
 	const mint = () => crypto.randomUUID();
 
 	let planRest = $state<number | null>();
+
+	const drifted = driftedWorkout();
+
+	const offerPlan = pushTemplate();
+
+	// Keyed so a dismissed specimen can be brought back.
+	let offerRound = $state(0);
+
+	const noop = () => {};
 </script>
 
 <Card name="PlanCard" note="one exercise of a template — closed it is a row, open it is the fields">
@@ -109,6 +119,37 @@
 		one row per exercise — per-set rows only where the targets differ, or where the caret opens
 		them; one rest per entry, on the row that closes a superset's round
 	</span>
+</Card>
+
+<Card name="PlanOffer" note="a session that differed from its plan, on its record and in the plan">
+	{#key offerRound}
+		<Frame label="on the record, then in the plan's editor, then for a workout with no plan">
+			<div class="flex flex-col gap-3 p-3">
+				<PlanOffer
+					workout={drifted}
+					template={offerPlan}
+					where="record"
+					onupdate={noop}
+					ondismiss={noop}
+				/>
+				<PlanOffer
+					workout={drifted}
+					template={offerPlan}
+					where="plan"
+					onupdate={noop}
+					ondismiss={noop}
+				/>
+				<PlanOffer
+					workout={drifted}
+					template={null}
+					where="record"
+					onsave={noop}
+					ondismiss={noop}
+				/>
+			</div>
+		</Frame>
+	{/key}
+	<button type="button" class={caption} onclick={() => (offerRound += 1)}>bring them back</button>
 </Card>
 
 <Card name="TemplateMark" note="the tile a plan is recognised by">

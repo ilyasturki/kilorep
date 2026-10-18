@@ -6,6 +6,7 @@ import { catalogById } from '$lib/catalog';
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
 import { freshWorkout } from '$lib/domain/fixture';
 import type { PastSession } from '$lib/domain/stats';
+import { startFrom } from '$lib/domain/template';
 import type { Template, TemplateExercise, TemplateMark, TemplateSet } from '$lib/domain/template';
 import type { Workout } from '$lib/domain/workout';
 
@@ -49,7 +50,7 @@ export function planExercise(): TemplateExercise {
 const planSets = (count: number, plannedReps: number | null, key: string): TemplateSet[] =>
 	Array.from({ length: count }, (_, i) => ({ id: `${key}-${i + 1}`, plannedReps }));
 
-/** The plan those sets came from — a superset in the middle, so the rail has something to mark. */
+/** The plan those sets came from — a superset at the end, its second leg optional. */
 export function pushTemplate(): Template {
 	return {
 		id: 'push-a',
@@ -71,11 +72,49 @@ export function pushTemplate(): Template {
 				id: 'pe-super',
 				exercises: [
 					{ id: 'pe-fly-1', exerciseId: 'cable-fly', sets: planSets(3, 12, 'fly') },
-					{ id: 'pe-pec-1', exerciseId: 'pec-deck', sets: planSets(3, 12, 'pec') }
+					{
+						id: 'pe-pec-1',
+						exerciseId: 'pec-deck',
+						optional: true,
+						sets: planSets(3, 12, 'pec')
+					}
 				]
 			}
 		]
 	};
+}
+
+/** Push A as it went on the day: a fifth bench set, no incline, dips nobody planned. */
+export function driftedWorkout(): Workout {
+	let n = 0;
+	const mint = () => `drift-${(n += 1)}`;
+	const workout = startFrom(pushTemplate(), STARTED, mint);
+	const [benched] = workout.entries[0].exercises;
+
+	benched.sets.push({ ...benched.sets[0], id: mint() });
+	workout.entries.splice(1, 1);
+	workout.entries.push({
+		id: mint(),
+		exercises: [
+			{
+				id: mint(),
+				exerciseId: 'dip',
+				sets: [
+					{
+						id: mint(),
+						type: 'normal',
+						plannedReps: null,
+						weight: 10,
+						reps: 8,
+						rpe: null,
+						completed: true
+					}
+				]
+			}
+		]
+	});
+
+	return workout;
 }
 
 export const marks: TemplateMark[] = [

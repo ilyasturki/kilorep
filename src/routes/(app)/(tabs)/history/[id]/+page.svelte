@@ -1,21 +1,23 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
+	import { goto, invalidateAll } from '$app/navigation';
 
 	import { catalogById } from '$lib/catalog';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
-	import { driftFrom, hasDrift, hasSetDrift } from '$lib/domain/drift';
+	import { applyDrift, driftFrom, hasDrift, hasSetDrift } from '$lib/domain/drift';
 	import type { SetDrift } from '$lib/domain/drift';
-	import { isArchived, startable } from '$lib/domain/template';
+	import { isArchived, rankAfter, startable, templateFrom } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
-	import { canCommit, firstUncompleted, prefillFor } from '$lib/domain/workout';
+	import { canCommit, firstUncompleted, prefillFor, untouched } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
-	import type { Arms, History, SwapMode } from '$lib/domain/workout';
+	import type { Arms, History, SwapMode, WorkoutExercise } from '$lib/domain/workout';
 	import { workoutTitle } from '$lib/history/label';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import RecordLedger from '$lib/history/RecordLedger.svelte';
 	import WorkoutOptionsMenu from '$lib/history/WorkoutOptionsMenu.svelte';
+	import PlanOffer from '$lib/templates/PlanOffer.svelte';
 	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { leave } from '$lib/nav/go';
@@ -491,12 +493,16 @@
 		return marks;
 	}
 
-	function badgesFor(exerciseNodeId: string, meta: Exercise | undefined): string[] {
-		if (drift === null) {
+	function badgesFor(leg: WorkoutExercise | undefined, meta: Exercise | undefined): string[] {
+		if (leg !== undefined && untouched(leg)) {
+			return ['Skipped, optional'];
+		}
+
+		if (drift === null || leg === undefined) {
 			return [];
 		}
 
-		const setDrift = drift.matched[exerciseNodeId];
+		const setDrift = drift.matched[leg.id];
 
 		if (setDrift === undefined) {
 			return ['Unplanned'];
@@ -535,6 +541,69 @@
 
 	function unlink() {
 		workout.templateId = null;
+	}
+
+	// Read once: answering the offer changes what the load says, and the banner stays to say so.
+	// svelte-ignore state_referenced_locally
+	const { offer } = data;
+
+	const offering = $derived(
+		offer.open && (template === null || (template.id === offer.templateId && !isArchived(template)))
+	);
+
+	async function updatePlan(swaps: string[]) {
+		if (template === null) {
+			return;
+		}
+
+		const now = Date.now();
+		const plan = $state.snapshot(template);
+
+		applyDrift(
+			plan,
+			$state.snapshot(workout),
+			(id) => catalogById[id],
+			() => crypto.randomUUID(),
+			swaps
+		);
+
+		await data.store.saveTemplate(plan, now);
+		await data.store.answerOffer(plan.id, workout.id, now);
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+
+		await invalidateAll();
+	}
+
+	async function dismissOffer() {
+		await data.store.answerOffer(offer.templateId, workout.id, Date.now());
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+	}
+
+	async function saveAsPlan() {
+		const now = Date.now();
+		const plan = templateFrom($state.snapshot(workout), crypto.randomUUID(), now, () =>
+			crypto.randomUUID()
+		);
+
+		plan.order = rankAfter(data.templates);
+
+		await data.store.saveTemplate(plan, now);
+
+		workout.templateId = plan.id;
+
+		await data.store.updateWorkout($state.snapshot(workout), now);
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+
+		await goto(`/plan/templates/${plan.id}`);
 	}
 
 	let deleteOpen = $state(false);
@@ -617,6 +686,17 @@
 				{#if drift !== null && !hasDrift(drift)}· as planned{/if}
 			</p>
 
+			{#if offering}
+				<PlanOffer
+					{workout}
+					{template}
+					where="record"
+					onupdate={updatePlan}
+					onsave={saveAsPlan}
+					ondismiss={dismissOffer}
+				/>
+			{/if}
+
 			<div class="flex flex-1 flex-col gap-3">
 				{#if entries.length === 0}
 					<div class="flex flex-1 flex-col justify-center">
@@ -634,11 +714,13 @@
 						<div class="relative flex flex-col gap-2 rounded-2xl">
 							<EntryStack legs={entry.legs} superset={entry.superset}>
 								{#snippet leg(leg)}
+									{@const instead = drift?.matched[leg.id]?.instead ?? null}
 									<RecordLedger
 										meta={leg.meta}
 										grip={leg.grip}
 										cursors={leg.cursors}
-										badges={badgesFor(leg.id, leg.meta)}
+										badges={badgesFor(leg.cursors[0]?.exercise, leg.meta)}
+										instead={instead === null ? undefined : (catalogById[instead]?.name ?? instead)}
 									/>
 								{/snippet}
 							</EntryStack>
@@ -852,6 +934,7 @@
 	anchor={menuAnchor}
 	linked={template !== null}
 	onlink={() => (linkOpen = true)}
+	onsave={template === null ? () => void saveAsPlan() : undefined}
 	ondelete={() => (deleteOpen = true)}
 />
 
