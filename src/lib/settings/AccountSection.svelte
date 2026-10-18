@@ -158,7 +158,7 @@
 	<li>
 		<ListRow
 			title={othersPending ? 'Signing out…' : 'Sign out other devices'}
-			onclick={() => (othersOpen = true)}
+			onclick={() => (othersOpen = !othersPending)}
 			chevron={false}
 		/>
 	</li>

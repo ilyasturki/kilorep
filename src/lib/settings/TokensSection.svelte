@@ -134,10 +134,10 @@
 		}
 
 		revokeError = '';
+		heldOpen = false;
 
 		try {
 			await revokeToken(revoking.id);
-			heldOpen = false;
 			await invalidateAll();
 		} catch (error) {
 			revokeError = error instanceof ApiError ? error.message : 'could not revoke the token';
