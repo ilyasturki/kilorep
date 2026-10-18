@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { dateFormat } from '$lib/format/locale';
-	import { catalogById } from '$lib/catalog';
 	import { planOffer } from '$lib/domain/drift';
+	import type { Exercise } from '$lib/domain/exercise';
 	import type { Template } from '$lib/domain/template';
 	import type { Workout } from '$lib/domain/workout';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { changesLine, swapLabel } from '$lib/templates/offer';
 	import { templateTitle } from '$lib/templates/plan';
 	import Button from '$lib/ui/Button.svelte';
@@ -22,9 +23,9 @@
 
 	let { workout, template, where, onupdate, onsave, ondismiss }: Props = $props();
 
-	const offer = $derived(
-		template === null ? null : planOffer(template, workout, (id) => catalogById[id])
-	);
+	const lookup = (id: string): Exercise | undefined => exerciseCatalog.current.byId[id];
+
+	const offer = $derived(template === null ? null : planOffer(template, workout, lookup));
 
 	let answer = $state<'open' | 'updated' | 'dismissed'>('open');
 	let busy = $state(false);
@@ -43,7 +44,7 @@
 	);
 
 	const line = $derived.by(() => {
-		const changes = offer === null ? '' : changesLine(offer.changes);
+		const changes = offer === null ? '' : changesLine(offer.changes, lookup);
 
 		return where === 'record' || changes === ''
 			? changes
@@ -99,7 +100,7 @@
 		{#if offer !== null}
 			{#each offer.swaps as swap (swap.legId)}
 				<Switch
-					label={swapLabel(swap)}
+					label={swapLabel(swap, lookup)}
 					bind:checked={
 						() => chosen.includes(swap.legId),
 						(on) => {

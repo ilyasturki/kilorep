@@ -180,10 +180,11 @@ function withGrips(exercise: Exercise, added: Grip[]): Exercise {
 
 	const taken = new Set(axis.values.map((value) => value.id));
 
-	return {
-		...exercise,
-		grips: { ...axis, values: [...axis.values, ...added.filter((grip) => !taken.has(grip.id))] }
-	};
+	const values = [...axis.values, ...added.filter((grip) => !taken.has(grip.id))];
+
+	const grips: GripAxis = Object.assign(structuredClone(axis), { values });
+
+	return Object.assign(structuredClone(exercise), { grips });
 }
 
 // A grip naming an exercise nobody has is dropped, so a deleted custom takes its grips with it.
@@ -233,7 +234,9 @@ export function withCustoms(base: Exercise[], preferences: PreferenceRow[]): Cat
 		return withGrips(exercise, ordered);
 	};
 
-	const all = [...base, ...customs.toSorted((a, b) => a.name.localeCompare(b.name))].map(gripped);
+	const all = [...base, ...customs.toSorted((a, b) => a.name.localeCompare(b.name))].map(
+		(exercise) => gripped(exercise)
+	);
 
 	return {
 		exercises: all.filter((exercise) => exercise.archived !== true),

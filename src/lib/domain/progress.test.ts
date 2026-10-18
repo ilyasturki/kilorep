@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
 import {
 	estTrend,
 	mainLifts,
@@ -113,10 +114,10 @@ describe('recentPrs', () => {
 			return Object.assign(workout(startedAt, 'pull-up', [done]), { finishedAt: startedAt + 1 });
 		}
 
-		const sessions = sessionsByExercise([
-			pulls(10, 'underhand', 10, 6),
-			pulls(90, 'overhand', 12.5, 3)
-		]);
+		const sessions = sessionsByExercise(
+			[pulls(10, 'underhand', 10, 6), pulls(90, 'overhand', 12.5, 3)],
+			catalogById
+		);
 
 		expect(recentPrs(sessions, 50, bare)).toMatchObject([
 			{ exerciseId: 'pull-up', set: { weight: 12.5, reps: 3, grip: 'overhand' }, date: 90 }

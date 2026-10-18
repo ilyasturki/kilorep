@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { dateFormat, decimal, numberFormat } from '$lib/format/locale';
-	import { catalogById } from '$lib/catalog';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { rollingAverage, localDateOf, weeklyRate, windowed } from '$lib/domain/bodyweight';
 	import { loadFactor } from '$lib/domain/exercise';
 	import { carriedFrom, carriedOn } from '$lib/domain/load';
@@ -45,11 +45,12 @@
 	const SUB = 'text-md font-bold text-ink-faint';
 	const WINDOW = 'text-sm font-bold text-ink-faint';
 
-	const nameOf = (exerciseId: string): string => catalogById[exerciseId]?.name ?? exerciseId;
+	const nameOf = (exerciseId: string): string =>
+		exerciseCatalog.current.byId[exerciseId]?.name ?? exerciseId;
 	const factorOf = (exerciseId: string): number =>
-		loadFactor(catalogById[exerciseId]?.loadMode ?? 'total');
+		loadFactor(exerciseCatalog.current.byId[exerciseId]?.loadMode ?? 'total');
 
-	const carried = $derived(carriedFrom(data.bodyweight, (id) => catalogById[id]));
+	const carried = $derived(carriedFrom(data.bodyweight, (id) => exerciseCatalog.current.byId[id]));
 
 	const kgFormat = numberFormat({ maximumFractionDigits: 0 });
 	const tonnes = numberFormat({ minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -139,7 +140,9 @@
 	const barHeight = (count: number): number =>
 		count === 0 ? 10 : Math.max(10, (count / barMax) * 100);
 
-	const muscles = $derived(muscleSets(data.workouts, since4, (id) => catalogById[id]));
+	const muscles = $derived(
+		muscleSets(data.workouts, since4, (id) => exerciseCatalog.current.byId[id])
+	);
 
 	const muscleMax = $derived(Math.max(...muscles.map((row) => row.direct + row.indirect)));
 
@@ -256,7 +259,9 @@
 									{/snippet}
 									{#snippet trailing()}
 										<span class={WINDOW}>{day.format(pr.date)}</span>
-										<span class="tabular-nums">{setLabel(catalogById[pr.exerciseId], pr.set)}</span>
+										<span class="tabular-nums"
+											>{setLabel(exerciseCatalog.current.byId[pr.exerciseId], pr.set)}</span
+										>
 									{/snippet}
 								</ListRow>
 							{/each}
@@ -291,7 +296,7 @@
 												{#snippet trailing()}
 													<span class={WINDOW}>{day.format(pr.date)}</span>
 													<span class="tabular-nums"
-														>{setLabel(catalogById[pr.exerciseId], pr.set)}</span
+														>{setLabel(exerciseCatalog.current.byId[pr.exerciseId], pr.set)}</span
 													>
 												{/snippet}
 											</ListRow>

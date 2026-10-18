@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { formatWhen, workoutMeta, workoutTitle } from '$lib/history/label';
 	import type { Workout } from '$lib/domain/workout';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
@@ -78,7 +79,7 @@
 	{#if live !== null}
 		<section class="list-group">
 			<ListRow
-				title={workoutTitle(live.workout, data.templates)}
+				title={workoutTitle(live.workout, data.templates, exerciseCatalog.current.byId)}
 				meta={workoutMeta(live.workout)}
 				href="/train/live"
 			>
@@ -107,7 +108,7 @@
 				{@const when = formatWhen(workout.startedAt, now)}
 
 				<ListRow
-					title={workoutTitle(workout, data.templates)}
+					title={workoutTitle(workout, data.templates, exerciseCatalog.current.byId)}
 					meta={workoutMeta(workout)}
 					href="/history/{workout.id}"
 					onhold={(anchor) => hold(anchor, workout)}
@@ -124,7 +125,7 @@
 
 <WorkoutRowMenu
 	bind:open={menuOpen}
-	title={held === null ? '' : workoutTitle(held, data.templates)}
+	title={held === null ? '' : workoutTitle(held, data.templates, exerciseCatalog.current.byId)}
 	anchor={menuAnchor}
 	onrepeat={() => void repeat()}
 	ondelete={() => (deleteOpen = true)}

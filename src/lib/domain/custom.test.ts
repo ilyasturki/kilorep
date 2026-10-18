@@ -28,6 +28,9 @@ const landmine: CustomExercisePreference = {
 
 const row = (id: string, payload: unknown): PreferenceRow => ({ id, payload });
 
+const custom = (id: string, change: Record<string, unknown>): PreferenceRow =>
+	row(customExerciseId(id), Object.assign(structuredClone(landmine), change));
+
 describe('custom ids', () => {
 	test('are never shaped like a slug, so no catalog entry can ever answer to one', () => {
 		for (let i = 0; i < 200; i += 1) {
@@ -85,9 +88,7 @@ describe('withCustoms', () => {
 	});
 
 	test('hangs a variant under its root and borrows the family pattern', () => {
-		const merged = withCustoms(catalog, [
-			row(customExerciseId('custom_v'), { ...landmine, variantOf: 'incline-bench-press' })
-		]);
+		const merged = withCustoms(catalog, [custom('custom_v', { variantOf: 'incline-bench-press' })]);
 
 		expect(merged.byId.custom_v.variantOf).toBe('bench-press');
 		expect(merged.byId.custom_v.pattern).toBe('horizontal-press');
@@ -95,15 +96,11 @@ describe('withCustoms', () => {
 
 	test('borrows the body-weight share only where both are body-weight movements', () => {
 		const towel = withCustoms(catalog, [
-			row(customExerciseId('custom_t'), {
-				...landmine,
-				equipment: 'Bodyweight',
-				variantOf: 'pull-up'
-			})
+			custom('custom_t', { equipment: 'Bodyweight', variantOf: 'pull-up' })
 		]).byId.custom_t;
 
 		const machine = withCustoms(catalog, [
-			row(customExerciseId('custom_m'), { ...landmine, equipment: 'Machine', variantOf: 'pull-up' })
+			custom('custom_m', { equipment: 'Machine', variantOf: 'pull-up' })
 		]).byId.custom_m;
 
 		expect(towel.bodyweightShare).toBe(1);
@@ -111,17 +108,13 @@ describe('withCustoms', () => {
 	});
 
 	test('a variant of something the catalog never had stands alone', () => {
-		const merged = withCustoms(catalog, [
-			row(customExerciseId('custom_x'), { ...landmine, variantOf: 'no-such-slug' })
-		]);
+		const merged = withCustoms(catalog, [custom('custom_x', { variantOf: 'no-such-slug' })]);
 
 		expect(merged.byId.custom_x.variantOf).toBeUndefined();
 	});
 
 	test('an archived custom still resolves but is offered nowhere', () => {
-		const merged = withCustoms(catalog, [
-			row(customExerciseId('custom_a'), { ...landmine, archivedAt: 5 })
-		]);
+		const merged = withCustoms(catalog, [custom('custom_a', { archivedAt: 5 })]);
 
 		expect(merged.byId.custom_a).toMatchObject({ archived: true, name: 'Landmine Press' });
 		expect(merged.exercises.map((e) => e.id)).not.toContain('custom_a');
@@ -129,8 +122,8 @@ describe('withCustoms', () => {
 
 	test('a malformed payload, or an id outside the custom alphabet, reads as absent', () => {
 		const merged = withCustoms(catalog, [
-			row(customExerciseId('custom_bad'), { ...landmine, equipment: 'Rowing machine' }),
-			row(customExerciseId('custom_blank'), { ...landmine, name: '  ' }),
+			custom('custom_bad', { equipment: 'Rowing machine' }),
+			custom('custom_blank', { name: '  ' }),
 			row(customExerciseId('bench-press'), landmine),
 			row(customGripId('wide'), { exerciseId: 'bench-press', label: 'Wide', createdAt: 1 })
 		]);
@@ -155,7 +148,7 @@ describe('withCustoms', () => {
 
 		expect(gripsOf(bench).map((g) => g.label)).toEqual(['Standard', 'Close', 'Reverse', 'Wide']);
 		expect(gripsOf(bench).at(-1)).toMatchObject({ id: 'custom_g2', custom: true });
-		expect(bench.grips?.default).toBe('standard');
+		expect(bench.grips!.default).toBe('standard');
 		expect(gripsOf(catalog.find((e) => e.id === 'bench-press'))).toHaveLength(2);
 	});
 
@@ -167,8 +160,8 @@ describe('withCustoms', () => {
 		const press = merged.byId['leg-press'];
 
 		expect(press.grips).toMatchObject({ label: 'Grip', default: CUSTOM_DEFAULT_GRIP });
-		expect(settleGrip(press, undefined)).toBe(CUSTOM_DEFAULT_GRIP);
-		expect(gripLabel(press, undefined)).toBe('Standard');
+		expect(settleGrip(press, null)).toBe(CUSTOM_DEFAULT_GRIP);
+		expect(gripLabel(press, null)).toBe('Standard');
 		expect(gripLabel(press, 'custom_g')).toBe('Narrow');
 	});
 

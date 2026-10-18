@@ -152,7 +152,9 @@ describe('the sets', () => {
 
 	it('keeps warmups out of history', () => {
 		// The bench warmup is 40 kg and every working set is heavier.
-		const performed = content.workouts.flatMap((workout) => performedSets(workout, 'bench-press'));
+		const performed = content.workouts.flatMap((workout) =>
+			performedSets(workout, 'bench-press', catalogById)
+		);
 
 		expect(performed.length).toBeGreaterThan(0);
 
@@ -164,7 +166,7 @@ describe('the sets', () => {
 
 describe('the planted states', () => {
 	it('sets the bench PR before the last bench session', () => {
-		const sessions = pastSessionsFrom(content.workouts, 'bench-press');
+		const sessions = pastSessionsFrom(content.workouts, 'bench-press', catalogById);
 		const pr = rawPr(sessions, () => 0)!;
 		const last = sessions.at(-1)!;
 
@@ -198,7 +200,7 @@ describe('the planted states', () => {
 		for (const entry of arms.entries) {
 			for (const exercise of entry.exercises) {
 				expect(
-					pastSessionsFrom(content.workouts, exercise.exerciseId),
+					pastSessionsFrom(content.workouts, exercise.exerciseId, catalogById),
 					exercise.exerciseId
 				).toHaveLength(0);
 			}
@@ -211,7 +213,7 @@ describe('the planted states', () => {
 			(workout) => workout.templateId === tombstoned.template.id
 		)!;
 
-		expect(workoutTitle(orphan, live)).toBe('Bench Press + 4 more');
+		expect(workoutTitle(orphan, live, catalogById)).toBe('Bench Press + 4 more');
 	});
 });
 

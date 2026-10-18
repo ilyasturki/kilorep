@@ -13,7 +13,7 @@ import { Store, getStore } from '$lib/store/store';
 import type { Workout } from '$lib/domain/workout';
 import type { SyncRequest } from './protocol.ts';
 
-import { readSyncState, stopSyncing, syncNow, syncPromptly, syncSoon } from './client.ts';
+import { onPulled, readSyncState, stopSyncing, syncNow, syncPromptly, syncSoon } from './client.ts';
 import { healsItself, resetSyncStatus, syncStatus } from './status.ts';
 
 let server: Database;
@@ -162,6 +162,52 @@ describe('syncNow', () => {
 
 		const listed = await store.listWorkouts();
 		expect(listed.some((w) => w.id === theirs.id)).toBe(true);
+	});
+
+	it('carries a custom exercise and its grip from one device to another, and says so', async () => {
+		const other = new Store(await openDatabase(`kilorep-e2e-other-${Math.random()}`));
+		const pulled: string[] = [];
+		const stop = onPulled((records) => {
+			pulled.push(...records.map((record) => record.id));
+		});
+
+		await store.saveCustomExercise(
+			'custom_lm',
+			{
+				name: 'Landmine Press',
+				equipment: 'Barbell',
+				loadMode: 'total',
+				muscles: { primary: 'Shoulders', secondary: [] },
+				variantOf: null
+			},
+			100
+		);
+		await store.saveCustomGrip(
+			'custom_w',
+			{ exerciseId: 'custom_lm', label: 'One hand', createdAt: 100 },
+			100
+		);
+
+		await syncNow(userId, store);
+		await syncNow(userId, other);
+		stop();
+
+		const { byId } = await other.catalog();
+
+		expect(byId.custom_lm).toMatchObject({ name: 'Landmine Press', custom: true });
+		expect(byId.custom_lm.grips!.values.map((grip) => grip.label)).toEqual([
+			'Standard',
+			'One hand'
+		]);
+		expect(pulled.toSorted()).toEqual(['exercise:custom_lm', 'grip:custom_w']);
+
+		await store.deleteCustomExercise('custom_lm', 200);
+		await syncNow(userId, store);
+		await syncNow(userId, other);
+
+		const after = await other.catalog();
+
+		expect(after.byId.custom_lm).toBeUndefined();
 	});
 
 	it('leaves records dirty and stays quiet when the network is down', async () => {

@@ -2,9 +2,11 @@ import { redirect } from '@sveltejs/kit';
 
 import { session } from '$lib/api/auth';
 import { ApiError, NO_SERVER, deviceToken } from '$lib/api/client';
+import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 import { exertionScale } from '$lib/settings/exertion.svelte';
 import { restSettings } from '$lib/settings/rest.svelte';
 import { historyFrom, lastGripsFrom } from '$lib/store/derive';
+import type { Store } from '$lib/store/store';
 import { getStore } from '$lib/store/store';
 import { syncPromptly } from '$lib/sync/client';
 import { activeWorkout } from '$lib/workout/active.svelte';
@@ -15,18 +17,20 @@ import type { LayoutLoad } from './$types';
 export const ssr = false;
 export const prerender = false;
 
-async function restoreSession(): Promise<void> {
+// The catalog first: a session's hints and grips settle against the customs it may name.
+async function restoreSession(store: Store): Promise<void> {
+	const { byId } = await exerciseCatalog.load(store);
+
 	if (activeWorkout.session !== null) {
 		return;
 	}
 
-	const store = await getStore();
 	const snapshot = await store.loadSnapshot();
 
 	if (snapshot !== null) {
 		const workouts = await store.listWorkouts();
 
-		activeWorkout.begin(historyFrom(workouts), snapshot, lastGripsFrom(workouts));
+		activeWorkout.begin(historyFrom(workouts, byId), snapshot, lastGripsFrom(workouts));
 
 		restTimer.resume(snapshot.rest, snapshot.muted, snapshot.dismissed);
 	}
@@ -35,7 +39,7 @@ async function restoreSession(): Promise<void> {
 export const load: LayoutLoad = async ({ url, fetch }) => {
 	const store = await getStore();
 
-	await Promise.all([restoreSession(), exertionScale.load(store), restSettings.load(store)]);
+	await Promise.all([restoreSession(store), exertionScale.load(store), restSettings.load(store)]);
 
 	if (import.meta.env.APP_BUILD && deviceToken() === null) {
 		return { user: null, stranded: false };

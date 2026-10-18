@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
 import { freshWorkout } from '$lib/domain/fixture';
 import type { Template } from '$lib/domain/template';
 import type { WorkoutSet } from '$lib/domain/workout';
@@ -52,7 +53,7 @@ describe('a CSV field', () => {
 
 describe('the sets CSV', () => {
 	it('heads every column and ends every row with CRLF', () => {
-		const csv = setsCsv([], [], []);
+		const csv = setsCsv([], [], [], catalogById);
 
 		expect(csv).toBe(
 			'date,workout,exercise,set,type,weight_kg,load_mode,reps,rpe,grip,arms,completed,load_kg,note\r\n'
@@ -64,7 +65,7 @@ describe('the sets CSV', () => {
 			finishedAt: at('2026-07-20')
 		});
 
-		expect(lines(setsCsv([workout], [], [])).slice(0, 5)).toEqual([
+		expect(lines(setsCsv([workout], [], [], catalogById)).slice(0, 5)).toEqual([
 			'2026-07-20,Bench Press + 3 more,Bench Press,,warmup,40,total,10,,Standard,both,true,,',
 			'2026-07-20,Bench Press + 3 more,Bench Press,1,normal,,total,,,Standard,both,false,,',
 			'2026-07-20,Bench Press + 3 more,Bench Press,2,normal,,total,,,Standard,both,false,,',
@@ -102,7 +103,7 @@ describe('the sets CSV', () => {
 			]
 		};
 
-		expect(lines(setsCsv([workout], [], []))).toEqual([
+		expect(lines(setsCsv([workout], [], [], catalogById))).toEqual([
 			'2026-07-21,Incline DB Press + 1 more,Incline DB Press,,warmup,12,per-hand,10,,,both,true,,',
 			'2026-07-21,Incline DB Press + 1 more,Incline DB Press,1,normal,30,per-hand,10,8,,both,true,,',
 			'2026-07-21,Incline DB Press + 1 more,Cable Fly,1,normal,20,per-hand,12,,,one,true,,',
@@ -147,7 +148,7 @@ describe('the sets CSV', () => {
 		];
 		const workouts = [pulls('before', '2026-07-01'), pulls('after', '2026-07-10')];
 
-		expect(lines(setsCsv(workouts, [plan], weighIns))).toEqual([
+		expect(lines(setsCsv(workouts, [plan], weighIns, catalogById))).toEqual([
 			'2026-07-01,Pull,Pull-Up,1,normal,10,total,6,,Supinated,both,true,,',
 			'2026-07-01,Pull,Pull-Up,2,normal,0,total,8,,Pronated,both,true,,',
 			'2026-07-01,Pull,Push-Up,1,normal,0,total,20,,,both,true,,',
@@ -171,7 +172,7 @@ describe('the sets CSV', () => {
 		};
 		const plan: Template = { id: 'push', name: 'Push "A", heavy', createdAt: 0, entries: [] };
 
-		expect(lines(setsCsv([workout], [plan], []))).toEqual([
+		expect(lines(setsCsv([workout], [plan], [], catalogById))).toEqual([
 			'2026-07-22,"Push ""A"", heavy",my-own-press,1,normal,50,,8,,,both,true,,'
 		]);
 	});
@@ -198,7 +199,7 @@ describe('the sets CSV', () => {
 		};
 		const note = '"Wider grip, ""slow""\nnext time"';
 
-		expect(lines(setsCsv([workout], [], []))).toEqual([
+		expect(lines(setsCsv([workout], [], [], catalogById))).toEqual([
 			`2026-07-24,Bench Press,Bench Press,1,normal,80,total,5,,Standard,both,true,,${note}`,
 			`2026-07-24,Bench Press,Bench Press,2,normal,80,total,5,,Standard,both,true,,${note}`
 		]);
@@ -215,7 +216,7 @@ it('leaves blank what a set from an older build never wrote', () => {
 		entries: [{ id: 'e', exercises: [{ id: 'x', exerciseId: 'pull-up', sets: [sparse] }] }]
 	};
 
-	expect(lines(setsCsv([workout], [], [{ date: '2026-07-01', kg: 80 }]))).toEqual([
+	expect(lines(setsCsv([workout], [], [{ date: '2026-07-01', kg: 80 }], catalogById))).toEqual([
 		'2026-07-23,Pull-Up,Pull-Up,1,,,total,5,,Pronated,both,false,,'
 	]);
 });

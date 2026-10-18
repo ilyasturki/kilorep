@@ -4,10 +4,13 @@
 	import { logout } from '$lib/api/auth';
 	import HandoverSheet from '$lib/app/HandoverSheet.svelte';
 	import { wireSyncTriggers } from '$lib/app/triggers';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import AppBar from '$lib/nav/AppBar.svelte';
 	import { createAppBarSlot } from '$lib/nav/bar.svelte';
 	import { slideNavigation } from '$lib/nav/transitions';
 	import { getStore } from '$lib/store/store';
+	import { onPulled } from '$lib/sync/client';
+	import type { WireRecord } from '$lib/sync/protocol';
 	import { activeWorkout } from '$lib/workout/active.svelte';
 
 	import type { LayoutProps } from './$types';
@@ -24,6 +27,12 @@
 	const account = $derived(data.user?.id ?? null);
 
 	$effect(() => wireSyncTriggers(account));
+
+	async function refreshCatalog(records: WireRecord[]): Promise<void> {
+		await exerciseCatalog.pulled(await getStore(), records);
+	}
+
+	$effect(() => onPulled((records) => void refreshCatalog(records)));
 
 	let handoverOpen = $state(false);
 

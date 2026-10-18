@@ -1,35 +1,44 @@
 import { describe, expect, test } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
+import type { Exercise } from '$lib/domain/exercise';
 import type { Workout } from '$lib/domain/workout';
 import { changeLabel, changesLine, offerStands, swapLabel } from '$lib/templates/offer';
 
+const lookup = (id: string): Exercise | undefined => catalogById[id];
+
 describe('the offer in words', () => {
 	test('each change names its exercise the way the record badges do', () => {
-		expect(changeLabel({ kind: 'sets', exerciseId: 'bench-press', from: 3, to: 4 })).toBe(
+		expect(changeLabel({ kind: 'sets', exerciseId: 'bench-press', from: 3, to: 4 }, lookup)).toBe(
 			'Bench Press +1 set'
 		);
-		expect(changeLabel({ kind: 'sets', exerciseId: 'bench-press', from: 4, to: 2 })).toBe(
+		expect(changeLabel({ kind: 'sets', exerciseId: 'bench-press', from: 4, to: 2 }, lookup)).toBe(
 			'Bench Press −2 sets'
 		);
-		expect(changeLabel({ kind: 'grip', exerciseId: 'triceps-pushdown', grip: 'bar' })).toBe(
+		expect(changeLabel({ kind: 'grip', exerciseId: 'triceps-pushdown', grip: 'bar' }, lookup)).toBe(
 			'Triceps Pushdown: Straight Bar'
 		);
-		expect(changeLabel({ kind: 'added', exerciseId: 'dip' })).toBe('Dip added');
-		expect(changeLabel({ kind: 'removed', exerciseId: 'cable-fly' })).toBe('Cable Fly not done');
+		expect(changeLabel({ kind: 'added', exerciseId: 'dip' }, lookup)).toBe('Dip added');
+		expect(changeLabel({ kind: 'removed', exerciseId: 'cable-fly' }, lookup)).toBe(
+			'Cable Fly not done'
+		);
 	});
 
 	test('the changes read as one line', () => {
 		expect(
-			changesLine([
-				{ kind: 'sets', exerciseId: 'bench-press', from: 3, to: 4 },
-				{ kind: 'order' },
-				{ kind: 'supersets' }
-			])
+			changesLine(
+				[
+					{ kind: 'sets', exerciseId: 'bench-press', from: 3, to: 4 },
+					{ kind: 'order' },
+					{ kind: 'supersets' }
+				],
+				lookup
+			)
 		).toBe('Bench Press +1 set · new order · supersets changed');
 	});
 
 	test('a swap is offered as a replacement', () => {
-		expect(swapLabel({ legId: 'x', from: 'squat', to: 'hack-squat' })).toBe(
+		expect(swapLabel({ legId: 'x', from: 'squat', to: 'hack-squat' }, lookup)).toBe(
 			'Replace Squat with Hack Squat'
 		);
 	});

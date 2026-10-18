@@ -122,11 +122,23 @@ export function shelfOf(
 	return exercises.length === 0 ? null : { title, exercises };
 }
 
+// A custom another device deleted, or one whose record has not synced here yet.
+export function unknownExercise(id: string): Exercise {
+	return {
+		id,
+		name: 'Unknown exercise',
+		aliases: [],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Core', secondary: [] }
+	};
+}
+
 export function entriesWithMeta(workout: Workout, catalog: Record<string, Exercise>): Entry[] {
 	return workout.entries.map((entry) => {
 		const legs = entry.exercises.map((exercise) => ({
 			id: exercise.id,
-			meta: catalog[exercise.exerciseId],
+			meta: catalog[exercise.exerciseId] ?? unknownExercise(exercise.exerciseId),
 			grip: exercise.grip,
 			note: exercise.note,
 			cursors: legCursors(entry, exercise)

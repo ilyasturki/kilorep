@@ -1,4 +1,3 @@
-import { catalogById } from '$lib/catalog';
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
 import { localDateOf } from '$lib/domain/bodyweight';
 import type { Exercise } from '$lib/domain/exercise';
@@ -61,17 +60,18 @@ function loadOf(
 export function setsCsv(
 	workouts: FinishedWorkout[],
 	templates: Template[],
-	bodyweight: BodyweightEntry[]
+	bodyweight: BodyweightEntry[],
+	catalog: Record<string, Exercise>
 ): string {
 	const rows: Cell[][] = [];
 
 	for (const workout of workouts) {
 		const date = localDateOf(new Date(workout.startedAt));
-		const title = workoutTitle(workout, templates);
+		const title = workoutTitle(workout, templates, catalog);
 		const weighIn = bodyweightOn(bodyweight, date);
 
 		for (const { set, exercise, workingIndex } of cursors(workout)) {
-			const meta = catalogById[exercise.exerciseId];
+			const meta: Exercise | undefined = catalog[exercise.exerciseId];
 			// A set from an older build may lack its numbers altogether.
 			const weight = set.weight ?? null;
 

@@ -11,7 +11,7 @@
 	import { flip } from 'svelte/animate';
 	import { goto } from '$app/navigation';
 
-	import { catalogById } from '$lib/catalog';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { restAfter } from '$lib/domain/rest';
 	import { canCommit, prefillFor, tally } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
@@ -206,7 +206,9 @@
 		trayOpen = true;
 	});
 
-	const entries = $derived(session === null ? [] : entriesWithMeta(session.workout, catalogById));
+	const entries = $derived(
+		session === null ? [] : entriesWithMeta(session.workout, exerciseCatalog.current.byId)
+	);
 
 	const allCursors = $derived(entries.flatMap((entry) => entry.cursors));
 
@@ -579,7 +581,7 @@
 			exerciseId: acting,
 			pick,
 			from: actingLeg.meta.name,
-			to: catalogById[pick.exerciseId]?.name ?? pick.exerciseId,
+			to: exerciseCatalog.current.byId[pick.exerciseId]?.name ?? pick.exerciseId,
 			logged
 		};
 		swapAsk = true;

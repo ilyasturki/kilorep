@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { catalog } from '$lib/catalog';
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Exercise, Muscle } from '$lib/domain/exercise';
 	import { countOf, sections } from '$lib/exercises/browse';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
 	import type { LastPerformed } from '$lib/store/derive';
@@ -20,12 +20,15 @@
 
 	const now = Date.now();
 
-	const browse = sections(catalog);
+	const pool = $derived(exerciseCatalog.current.exercises);
+
+	const browse = $derived(sections(pool));
 
 	const searching = $derived(query.trim() !== '');
 
-	const results = $derived(searchExercises(catalog, query));
+	const results = $derived(searchExercises(pool, query));
 
+	// svelte-ignore state_referenced_locally
 	let active = $state<Muscle>(browse[0].muscle);
 
 	// A tap owns the highlight until its scroll settles — without this the spy would flick

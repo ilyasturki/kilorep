@@ -1,5 +1,22 @@
+import { catalog as shipped } from '$lib/catalog';
 import type { BodyweightEntry, ChartRange } from '$lib/domain/bodyweight';
 import { bodyweightId } from '$lib/domain/bodyweight';
+import type {
+	Catalog,
+	CustomDraft,
+	CustomExercisePreference,
+	CustomGripPreference,
+	PreferenceRow
+} from '$lib/domain/custom';
+import {
+	CUSTOM_GRIP_PREFIX,
+	customExerciseId,
+	customGripId,
+	isCustomExercisePreference,
+	isCustomGripPreference,
+	settleDraft,
+	withCustoms
+} from '$lib/domain/custom';
 import type { ExertionScale } from '$lib/domain/exertion';
 import type {
 	ExertionScalePreference,
@@ -257,11 +274,15 @@ export class Store {
 	}
 
 	public async history(): Promise<History> {
-		return historyFrom(await this.listWorkouts());
+		const [workouts, { byId }] = await Promise.all([this.listWorkouts(), this.catalog()]);
+
+		return historyFrom(workouts, byId);
 	}
 
 	public async lastPerformed(): Promise<LastPerformed> {
-		return lastPerformedFrom(await this.listWorkouts());
+		const [workouts, { byId }] = await Promise.all([this.listWorkouts(), this.catalog()]);
+
+		return lastPerformedFrom(workouts, byId);
 	}
 
 	public async pickerData(): Promise<{
@@ -272,29 +293,31 @@ export class Store {
 		grips: LastGrips;
 		notes: LastNotes;
 	}> {
-		const workouts = await this.listWorkouts();
+		const [workouts, { byId }] = await Promise.all([this.listWorkouts(), this.catalog()]);
 
 		return {
-			lastPerformed: lastPerformedFrom(workouts),
-			heaviest: heaviestFrom(workouts),
-			frequent: frequentFrom(workouts),
-			history: historyFrom(workouts),
+			lastPerformed: lastPerformedFrom(workouts, byId),
+			heaviest: heaviestFrom(workouts, byId),
+			frequent: frequentFrom(workouts, byId),
+			history: historyFrom(workouts, byId),
 			grips: lastGripsFrom(workouts),
 			notes: lastNotesFrom(workouts)
 		};
 	}
 
 	public async ledgerData(): Promise<{ lastPerformed: LastPerformed; heaviest: Heaviest }> {
-		const workouts = await this.listWorkouts();
+		const [workouts, { byId }] = await Promise.all([this.listWorkouts(), this.catalog()]);
 
 		return {
-			lastPerformed: lastPerformedFrom(workouts),
-			heaviest: heaviestFrom(workouts)
+			lastPerformed: lastPerformedFrom(workouts, byId),
+			heaviest: heaviestFrom(workouts, byId)
 		};
 	}
 
 	public async pastSessions(exerciseId: string): Promise<PastSession[]> {
-		return pastSessionsFrom(await this.listWorkouts(), exerciseId);
+		const [workouts, { byId }] = await Promise.all([this.listWorkouts(), this.catalog()]);
+
+		return pastSessionsFrom(workouts, exerciseId, byId);
 	}
 
 	public async saveTemplate(template: Template, updatedAt: number): Promise<void> {
@@ -549,6 +572,105 @@ export class Store {
 		const payload: PlanOfferPreference = { workoutId };
 
 		await this.write(planOfferId(templateId), 'preference', updatedAt, payload);
+	}
+
+	private async preferenceRows(): Promise<PreferenceRow[]> {
+		const records = await this.db.getAllFromIndex('records', 'kind', 'preference');
+
+		return records
+			.filter((record) => record.deletedAt === null)
+			.map(({ id, payload }) => ({ id, payload }));
+	}
+
+	public async catalog(): Promise<Catalog> {
+		return withCustoms(shipped, await this.preferenceRows());
+	}
+
+	// Read-modify-write, as a plan is: an edit never revives a custom deleted on another device.
+	private async writeCustom(
+		id: string,
+		updatedAt: number,
+		change: (stored: CustomExercisePreference | null) => CustomExercisePreference | null
+	): Promise<void> {
+		const tx = this.db.transaction('records', 'readwrite');
+		const record = await tx.store.get(id);
+
+		if (record === undefined || (record.kind === 'preference' && record.deletedAt === null)) {
+			const stored =
+				record !== undefined && isCustomExercisePreference(record.payload) ? record.payload : null;
+			const payload = change(stored);
+
+			if (payload !== null) {
+				await tx.store.put({
+					id,
+					kind: 'preference',
+					updatedAt,
+					deletedAt: null,
+					payload,
+					dirty: true
+				});
+			}
+		}
+
+		await tx.done;
+	}
+
+	public async saveCustomExercise(
+		exerciseId: string,
+		draft: CustomDraft,
+		updatedAt: number
+	): Promise<void> {
+		await this.writeCustom(customExerciseId(exerciseId), updatedAt, (stored) =>
+			Object.assign(settleDraft(draft), {
+				archivedAt: stored === null ? null : (stored.archivedAt ?? null)
+			})
+		);
+	}
+
+	/** Out of every list, still named by the history and the plans that hold it. */
+	public async archiveCustomExercise(
+		exerciseId: string,
+		archivedAt: number | null,
+		updatedAt: number
+	): Promise<void> {
+		await this.writeCustom(customExerciseId(exerciseId), updatedAt, (stored) =>
+			stored === null ? null : Object.assign(stored, { archivedAt })
+		);
+	}
+
+	/** Gone for good, its grips with it: only for a custom nothing names. */
+	public async deleteCustomExercise(exerciseId: string, deletedAt: number): Promise<void> {
+		const rows = await this.preferenceRows();
+		const grips = rows.filter(
+			({ id, payload }) =>
+				id.startsWith(CUSTOM_GRIP_PREFIX) &&
+				isCustomGripPreference(payload) &&
+				payload.exerciseId === exerciseId
+		);
+
+		await this.tombstone(customExerciseId(exerciseId), 'preference', deletedAt);
+
+		for (const grip of grips) {
+			await this.tombstone(grip.id, 'preference', deletedAt);
+		}
+	}
+
+	public async saveCustomGrip(
+		gripId: string,
+		grip: CustomGripPreference,
+		updatedAt: number
+	): Promise<void> {
+		const payload: CustomGripPreference = {
+			exerciseId: grip.exerciseId,
+			label: grip.label.trim(),
+			createdAt: grip.createdAt
+		};
+
+		await this.write(customGripId(gripId), 'preference', updatedAt, payload);
+	}
+
+	public async deleteCustomGrip(gripId: string, deletedAt: number): Promise<void> {
+		await this.tombstone(customGripId(gripId), 'preference', deletedAt);
 	}
 
 	public async saveSnapshot(snapshot: Snapshot): Promise<void> {

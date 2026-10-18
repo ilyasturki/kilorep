@@ -11,14 +11,15 @@ export const load: PageLoad = async ({ depends }) => {
 
 	// `lastPerformed()` is the same full history read as `listWorkouts()`, so the landing
 	// tab reads it once and derives the hints here rather than paying for it twice.
-	const [resume, templates, workouts, planRests] = await Promise.all([
+	const [resume, templates, workouts, planRests, { byId }] = await Promise.all([
 		store.loadSnapshot(),
 		store.listTemplates(),
 		store.listWorkouts(),
-		store.planRests()
+		store.planRests(),
+		store.catalog()
 	]);
 
-	const history = historyFrom(workouts);
+	const history = historyFrom(workouts, byId);
 	const grips = lastGripsFrom(workouts);
 
 	if (activeWorkout.session === null && resume !== null) {

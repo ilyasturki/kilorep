@@ -7,7 +7,7 @@
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
 
-	import { catalogById } from '$lib/catalog';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { drawableMark } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
 	import { trainedWhen } from '$lib/history/label';
@@ -83,7 +83,7 @@
 			{/if}
 
 			<span class="truncate text-sm font-bold text-ink-faint">
-				{planLine(template, catalogById)}
+				{planLine(template, exerciseCatalog.current.byId)}
 			</span>
 		</span>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { catalog } from '$lib/catalog';
 	import type { Equipment } from '$lib/domain/exercise';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import ExerciseLedger from '$lib/exercises/ExerciseLedger.svelte';
 	import type { LedgerSort } from '$lib/exercises/ExerciseLedger.svelte';
 	import ExerciseList from '$lib/exercises/ExerciseList.svelte';
@@ -24,7 +24,9 @@
 	let equipment = $state<Equipment | ''>('');
 	let sort = $state<LedgerSort>('muscle');
 
-	const EQUIPMENT = [...new Set(catalog.map((exercise) => exercise.equipment))];
+	const EQUIPMENT = $derived([
+		...new Set(exerciseCatalog.current.exercises.map((exercise) => exercise.equipment))
+	]);
 
 	const SORTS: { value: LedgerSort; label: string }[] = [
 		{ value: 'muscle', label: 'Muscle' },

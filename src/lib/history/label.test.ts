@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { catalog } from '$lib/catalog';
+import { catalog, catalogById } from '$lib/catalog';
 import {
 	completedSetCount,
 	exerciseCount,
@@ -51,22 +51,22 @@ describe('workoutTitle', () => {
 	];
 
 	test('a live template names the workout', () => {
-		expect(workoutTitle(workout('t1', [first.id], []), templates)).toBe('Push day');
+		expect(workoutTitle(workout('t1', [first.id], []), templates, catalogById)).toBe('Push day');
 	});
 
 	test('a nameless template reads Untitled, like the Start list', () => {
-		expect(workoutTitle(workout('t2', [first.id], []), templates)).toBe('Untitled');
+		expect(workoutTitle(workout('t2', [first.id], []), templates, catalogById)).toBe('Untitled');
 	});
 
 	test('a gone template falls back to what was done', () => {
-		expect(workoutTitle(workout('gone', [first.id], []), templates)).toBe(first.name);
-		expect(workoutTitle(workout(null, [first.id, second.id], []), templates)).toBe(
+		expect(workoutTitle(workout('gone', [first.id], []), templates, catalogById)).toBe(first.name);
+		expect(workoutTitle(workout(null, [first.id, second.id], []), templates, catalogById)).toBe(
 			`${first.name} + 1 more`
 		);
 	});
 
 	test('nothing to name is still a workout', () => {
-		expect(workoutTitle(workout(null, [], []), templates)).toBe('Workout');
+		expect(workoutTitle(workout(null, [], []), templates, catalogById)).toBe('Workout');
 	});
 });
 

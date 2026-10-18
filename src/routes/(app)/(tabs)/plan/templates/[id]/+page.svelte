@@ -5,7 +5,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 
-	import { catalogById } from '$lib/catalog';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { applyDrift } from '$lib/domain/drift';
 	import {
 		addExercise,
@@ -127,7 +127,7 @@
 		}
 	});
 
-	const entries = $derived(plannedEntries(template, catalogById));
+	const entries = $derived(plannedEntries(template, exerciseCatalog.current.byId));
 
 	const entryIds = $derived(entries.map((entry) => entry.id));
 
@@ -368,7 +368,7 @@
 		applyDrift(
 			template,
 			offered,
-			(id) => catalogById[id],
+			(id) => exerciseCatalog.current.byId[id],
 			() => crypto.randomUUID(),
 			swaps
 		);

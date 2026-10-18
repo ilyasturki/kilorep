@@ -2,7 +2,6 @@
 	import { dateFormat, decimal } from '$lib/format/locale';
 	import { page } from '$app/state';
 
-	import { catalog, catalogById } from '$lib/catalog';
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
 	import { addressOf } from '$lib/nav/entries';
 	import { leaveFor } from '$lib/nav/go';
@@ -15,6 +14,7 @@
 	import { gripLabel, musclesOf } from '$lib/domain/grip';
 	import type { PerformedSet } from '$lib/domain/workout';
 	import { kin } from '$lib/exercises/browse';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import EstimatedMax from '$lib/exercises/EstimatedMax.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import {
@@ -51,7 +51,8 @@
 
 	let { data }: PageProps = $props();
 
-	const exercise = $derived(data.exercise);
+	// Live rather than loaded, so an edit or a grip added here redraws without a reload.
+	const exercise = $derived(exerciseCatalog.current.byId[data.exercise.id] ?? data.exercise);
 
 	fillAppBar(() => ({ title: exercise.name }));
 
@@ -59,7 +60,7 @@
 
 	const cameFrom = $derived(page.url.searchParams.get('from'));
 
-	const family = $derived(kin(catalog, exercise));
+	const family = $derived(kin(exerciseCatalog.current.exercises, exercise));
 
 	const axis = $derived(exercise.grips);
 
@@ -448,7 +449,7 @@
 
 					<ListRow
 						title={templateTitle(template)}
-						meta={planLine(template, catalogById)}
+						meta={planLine(template, exerciseCatalog.current.byId)}
 						stacked
 						leading={mark === null ? undefined : tile}
 						href={openedFrom(`/plan/templates/${template.id}`, here)}

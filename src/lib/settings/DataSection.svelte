@@ -97,14 +97,15 @@
 		const now = Date.now();
 		const names = csvNames(now);
 
-		const [workouts, templates, bodyweight] = await Promise.all([
+		const [workouts, templates, bodyweight, { byId }] = await Promise.all([
 			store.listWorkouts(),
 			store.listTemplates(),
-			store.listBodyweight()
+			store.listBodyweight(),
+			store.catalog()
 		]);
 
 		await deliver([
-			{ name: names.sets, mime: 'text/csv', text: setsCsv(workouts, templates, bodyweight) },
+			{ name: names.sets, mime: 'text/csv', text: setsCsv(workouts, templates, bodyweight, byId) },
 			{ name: names.bodyweight, mime: 'text/csv', text: bodyweightCsv(bodyweight) }
 		]);
 	}

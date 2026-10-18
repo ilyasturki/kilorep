@@ -4,7 +4,7 @@
 	import { parseDate } from '@internationalized/date';
 	import type { DateValue } from '@internationalized/date';
 
-	import { catalogById } from '$lib/catalog';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { localDateOf } from '$lib/domain/bodyweight';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
@@ -70,12 +70,14 @@
 	// exactly the one that needs naming.
 	const plans = $derived([...startable(data.templates), ...data.templates.filter(isArchived)]);
 
-	const title = $derived(workoutTitle(shown, template === null ? [] : [template]));
+	const title = $derived(
+		workoutTitle(shown, template === null ? [] : [template], exerciseCatalog.current.byId)
+	);
 	const drift = $derived(
-		template === null ? null : driftFrom(shown, template, (id) => catalogById[id])
+		template === null ? null : driftFrom(shown, template, (id) => exerciseCatalog.current.byId[id])
 	);
 
-	const entries = $derived(entriesWithMeta(shown, catalogById));
+	const entries = $derived(entriesWithMeta(shown, exerciseCatalog.current.byId));
 
 	const address = $derived(`/history/${workout.id}`);
 
@@ -304,7 +306,7 @@
 			exerciseId: acting,
 			pick,
 			from: actingLeg.meta.name,
-			to: catalogById[pick.exerciseId]?.name ?? pick.exerciseId,
+			to: exerciseCatalog.current.byId[pick.exerciseId]?.name ?? pick.exerciseId,
 			logged
 		};
 		swapAsk = true;
@@ -502,7 +504,7 @@
 		applyDrift(
 			plan,
 			$state.snapshot(workout),
-			(id) => catalogById[id],
+			(id) => exerciseCatalog.current.byId[id],
 			() => crypto.randomUUID(),
 			swaps
 		);
@@ -678,7 +680,7 @@
 
 							return planned === undefined || planned === null
 								? undefined
-								: (catalogById[planned]?.name ?? planned);
+								: (exerciseCatalog.current.byId[planned]?.name ?? planned);
 						}}
 						from={address}
 						{editing}
@@ -700,7 +702,7 @@
 					<h2 class="px-1 label-caps text-ink-faint">Planned, not done</h2>
 					{#each drift.missing as exerciseId, slot (slot)}
 						<p class="px-1 text-md font-bold text-ink-muted">
-							{catalogById[exerciseId]?.name ?? exerciseId}
+							{exerciseCatalog.current.byId[exerciseId]?.name ?? exerciseId}
 						</p>
 					{/each}
 				</section>

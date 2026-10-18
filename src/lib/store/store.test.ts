@@ -2,6 +2,8 @@ import 'fake-indexeddb/auto';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
+import type { CustomDraft } from '$lib/domain/custom';
 import { MIN_REST_SECONDS } from '$lib/domain/rest';
 import type { Template } from '$lib/domain/template';
 import type { Workout, WorkoutSet } from '$lib/domain/workout';
@@ -890,7 +892,7 @@ describe('frequent exercises', () => {
 		await store.finishWorkout(session('w2', 200, ['bench-press', 'pec-deck']), 250);
 		await store.finishWorkout(session('w3', 300, ['bench-press']), 350);
 
-		expect(frequentFrom(await store.listWorkouts())).toEqual([
+		expect(frequentFrom(await store.listWorkouts(), catalogById)).toEqual([
 			'bench-press',
 			'pec-deck',
 			'cable-fly'
@@ -901,21 +903,27 @@ describe('frequent exercises', () => {
 		await store.finishWorkout(session('w1', 100, ['cable-fly']), 150);
 		await store.finishWorkout(session('w2', 200, ['pec-deck']), 250);
 
-		expect(frequentFrom(await store.listWorkouts())).toEqual(['pec-deck', 'cable-fly']);
+		expect(frequentFrom(await store.listWorkouts(), catalogById)).toEqual([
+			'pec-deck',
+			'cable-fly'
+		]);
 	});
 
 	it('counts an exercise performed twice in one session once', async () => {
 		await store.finishWorkout(session('w1', 100, ['bench-press', 'bench-press']), 150);
 		await store.finishWorkout(session('w2', 200, ['cable-fly']), 250);
 
-		expect(frequentFrom(await store.listWorkouts())).toEqual(['cable-fly', 'bench-press']);
+		expect(frequentFrom(await store.listWorkouts(), catalogById)).toEqual([
+			'cable-fly',
+			'bench-press'
+		]);
 	});
 
 	it('ignores an exercise nothing was completed on', async () => {
 		await store.finishWorkout(session('w1', 100, ['bench-press'], false), 150);
 		await store.finishWorkout(session('w2', 200, ['cable-fly']), 250);
 
-		expect(frequentFrom(await store.listWorkouts())).toEqual(['cable-fly']);
+		expect(frequentFrom(await store.listWorkouts(), catalogById)).toEqual(['cable-fly']);
 	});
 
 	it('looks ten sessions back and no further', async () => {
@@ -925,17 +933,17 @@ describe('frequent exercises', () => {
 			await store.finishWorkout(session(`w${i}`, 100 + i * 100, ['bench-press']), 150 + i * 100);
 		}
 
-		expect(frequentFrom(await store.listWorkouts())).toEqual(['bench-press']);
+		expect(frequentFrom(await store.listWorkouts(), catalogById)).toEqual(['bench-press']);
 	});
 
 	it('shelves nothing on a fresh install', async () => {
-		expect(frequentFrom(await store.listWorkouts())).toEqual([]);
+		expect(frequentFrom(await store.listWorkouts(), catalogById)).toEqual([]);
 	});
 
 	it('caps the shelf', async () => {
 		await store.finishWorkout(session('w1', 100, ['a', 'b', 'c']), 150);
 
-		expect(frequentFrom(await store.listWorkouts(), 2)).toEqual(['a', 'b']);
+		expect(frequentFrom(await store.listWorkouts(), catalogById, 2)).toEqual(['a', 'b']);
 	});
 });
 
@@ -1317,5 +1325,150 @@ describe('backup contents', () => {
 		const { records } = await store.exportContents();
 
 		expect(records).toEqual([]);
+	});
+});
+
+describe('custom exercises', () => {
+	const landmine: CustomDraft = {
+		name: 'Landmine Press',
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Triceps'] },
+		variantOf: null
+	};
+
+	it('join the catalog as a preference record that syncs', async () => {
+		await store.saveCustomExercise('custom_lm', landmine, 100);
+
+		const { exercises, byId } = await store.catalog();
+
+		expect(byId.custom_lm).toMatchObject({ name: 'Landmine Press', custom: true });
+		expect(exercises.map((exercise) => exercise.id)).toContain('custom_lm');
+		expect(await store.dirtyRecords()).toEqual([
+			expect.objectContaining({ id: 'exercise:custom_lm', kind: 'preference', updatedAt: 100 })
+		]);
+	});
+
+	it('an edit keeps the id, restates the fields and leaves the archive stamp alone', async () => {
+		await store.saveCustomExercise('custom_lm', landmine, 100);
+		await store.archiveCustomExercise('custom_lm', 150, 150);
+		await store.saveCustomExercise(
+			'custom_lm',
+			Object.assign(structuredClone(landmine), { name: 'One-arm Landmine' }),
+			200
+		);
+
+		const { byId } = await store.catalog();
+
+		expect(byId.custom_lm).toMatchObject({ name: 'One-arm Landmine', archived: true });
+	});
+
+	it('archived, it leaves every list and still names its history; restored, it comes back', async () => {
+		await store.saveCustomExercise('custom_lm', landmine, 100);
+		await store.finishWorkout(workout('w1', 1000, 'custom_lm', [{ weight: 40, reps: 8 }]), 2000);
+		await store.archiveCustomExercise('custom_lm', 3000, 3000);
+
+		const archived = await store.catalog();
+
+		expect(archived.exercises.map((exercise) => exercise.id)).not.toContain('custom_lm');
+		expect(archived.byId.custom_lm.name).toBe('Landmine Press');
+		expect(await store.pastSessions('custom_lm')).toHaveLength(1);
+
+		await store.archiveCustomExercise('custom_lm', null, 4000);
+
+		const restored = await store.catalog();
+
+		expect(restored.exercises.map((exercise) => exercise.id)).toContain('custom_lm');
+	});
+
+	it('deleted, it is tombstoned with its grips, so the deletion syncs', async () => {
+		const wide = { exerciseId: 'bench-press', label: 'Wide', createdAt: 1 };
+
+		await store.saveCustomExercise('custom_lm', landmine, 100);
+		await store.saveCustomGrip(
+			'custom_g',
+			{ exerciseId: 'custom_lm', label: 'One', createdAt: 1 },
+			100
+		);
+		await store.saveCustomGrip('custom_w', wide, 100);
+		await store.deleteCustomExercise('custom_lm', 500);
+
+		const { byId } = await store.catalog();
+		const dirty = await store.dirtyRecords();
+		const gone = dirty.filter((record) => record.deletedAt === 500).map((record) => record.id);
+
+		expect(byId.custom_lm).toBeUndefined();
+		expect(gone.toSorted()).toEqual(['exercise:custom_lm', 'grip:custom_g']);
+		expect(byId['bench-press'].grips!.values.map((grip) => grip.id)).toContain('custom_w');
+	});
+
+	it('an edit never revives a custom another device deleted', async () => {
+		const deleted = Object.assign(structuredClone(landmine), { archivedAt: null });
+
+		await store.applyRemote([wire('exercise:custom_lm', 500, deleted, 'preference', 500)]);
+
+		await store.saveCustomExercise('custom_lm', landmine, 600);
+
+		const { byId } = await store.catalog();
+
+		expect(byId.custom_lm).toBeUndefined();
+	});
+
+	it('a custom grip stays on the sets that carry it, and reads as the default once deleted', async () => {
+		await store.saveCustomGrip(
+			'custom_w',
+			{ exerciseId: 'bench-press', label: 'Wide', createdAt: 1 },
+			100
+		);
+
+		const lift = workout('w1', 1000, 'bench-press', [{ weight: 80, reps: 5 }]);
+		lift.entries[0].exercises[0].sets[0].grip = 'custom_w';
+		await store.finishWorkout(lift, 2000);
+
+		const [kept] = await store.pastSessions('bench-press');
+
+		expect(kept.sets[0].grip).toBe('custom_w');
+
+		await store.deleteCustomGrip('custom_w', 3000);
+
+		const [settled] = await store.pastSessions('bench-press');
+
+		expect(settled.sets[0].grip).toBe('standard');
+	});
+
+	it('a store that never heard of a custom still reads the session naming it', async () => {
+		await store.finishWorkout(
+			workout('w1', 1000, 'custom_elsewhere', [{ weight: 40, reps: 8 }]),
+			2000
+		);
+
+		const history = await store.history();
+		const { byId } = await store.catalog();
+
+		expect(await store.listWorkouts()).toHaveLength(1);
+		expect(history.custom_elsewhere).toEqual([{ weight: 40, reps: 8, rpe: null }]);
+		expect(byId.custom_elsewhere).toBeUndefined();
+	});
+
+	it('travel in a backup, and land in a fresh store as customs again', async () => {
+		await store.saveCustomExercise('custom_lm', landmine, 100);
+		await store.saveCustomGrip(
+			'custom_w',
+			{ exerciseId: 'bench-press', label: 'Wide', createdAt: 1 },
+			100
+		);
+
+		const contents = await store.exportContents();
+		const fresh = await freshStore();
+
+		await fresh.importContents(contents, 1000);
+
+		const { byId } = await fresh.catalog();
+
+		expect(byId.custom_lm.name).toBe('Landmine Press');
+		expect(byId['bench-press'].grips!.values.at(-1)).toMatchObject({
+			id: 'custom_w',
+			label: 'Wide'
+		});
 	});
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { catalogById } from '$lib/catalog';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { drawableMark, isArchived } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
 	import { planLine, templateTitle } from '$lib/templates/plan';
@@ -56,7 +56,7 @@
 
 				<ListRow
 					title={templateTitle(template)}
-					meta={planLine(template, catalogById)}
+					meta={planLine(template, exerciseCatalog.current.byId)}
 					stacked
 					chevron={false}
 					leading={tile}

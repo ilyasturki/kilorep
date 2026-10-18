@@ -1,4 +1,3 @@
-import { catalogById } from '$lib/catalog';
 import { DAY_MS, countedDays, midnightsBetween } from '$lib/format/when';
 import { dateFormat } from '$lib/format/locale';
 import type { Exercise } from '$lib/domain/exercise';
@@ -6,7 +5,11 @@ import type { Template } from '$lib/domain/template';
 import type { Workout } from '$lib/domain/workout';
 import { exercisesLabel, setsLabel, templateTitle } from '$lib/templates/plan';
 
-export function workoutTitle(workout: Workout, templates: Template[]): string {
+export function workoutTitle(
+	workout: Workout,
+	templates: Template[],
+	catalog: Record<string, Exercise>
+): string {
 	const template = templates.find((candidate) => candidate.id === workout.templateId);
 
 	if (template !== undefined) {
@@ -15,7 +18,7 @@ export function workoutTitle(workout: Workout, templates: Template[]): string {
 
 	const names = workout.entries
 		.flatMap((entry) => entry.exercises)
-		.map((exercise): Exercise | undefined => catalogById[exercise.exerciseId])
+		.map((exercise): Exercise | undefined => catalog[exercise.exerciseId])
 		.filter((meta) => meta !== undefined)
 		.map((meta) => meta.name);
 

@@ -7,10 +7,10 @@
 </script>
 
 <script lang="ts">
-	import { catalog } from '$lib/catalog';
 	import { matchRange, searchExercises } from '$lib/domain/search';
 	import type { Equipment, Exercise } from '$lib/domain/exercise';
 	import { countOf, sections } from '$lib/exercises/browse';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { lastSetLabel, lastSinceLabel, setLabel } from '$lib/exercises/label';
 	import type { Heaviest, LastPerformed } from '$lib/store/derive';
@@ -31,7 +31,9 @@
 	const now = Date.now();
 
 	const pool = $derived(
-		equipment === '' ? catalog : catalog.filter((exercise) => exercise.equipment === equipment)
+		equipment === ''
+			? exerciseCatalog.current.exercises
+			: exerciseCatalog.current.exercises.filter((exercise) => exercise.equipment === equipment)
 	);
 
 	const searching = $derived(query.trim() !== '');

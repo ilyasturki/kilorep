@@ -1,4 +1,3 @@
-import { catalogById } from '$lib/catalog';
 import { settleGrip } from '$lib/domain/grip';
 import {
 	addExercise as insertExercise,
@@ -31,6 +30,7 @@ import {
 	untouched
 } from '$lib/domain/workout';
 import type { Arms, History, SetType, SwapMode, Workout } from '$lib/domain/workout';
+import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 import type { Pick } from '$lib/exercises/picker';
 import type { LastGrips } from '$lib/store/derive';
 
@@ -73,7 +73,10 @@ export class WorkoutSession {
 	 * then carry no grip at all.
 	 */
 	#opening(pick: Pick): string | undefined {
-		return settleGrip(catalogById[pick.exerciseId], pick.grip ?? this.grips[pick.exerciseId]);
+		return settleGrip(
+			exerciseCatalog.current.byId[pick.exerciseId],
+			pick.grip ?? this.grips[pick.exerciseId]
+		);
 	}
 
 	#setCount(pick: Pick): number {
@@ -275,7 +278,7 @@ export class WorkoutSession {
 			return;
 		}
 
-		gripExercise(this.workout, exerciseId, catalogById[exercise.exerciseId], grip);
+		gripExercise(this.workout, exerciseId, exerciseCatalog.current.byId[exercise.exerciseId], grip);
 	}
 
 	public setSetGrip(setId: string, grip: string): void {
@@ -285,7 +288,7 @@ export class WorkoutSession {
 			return;
 		}
 
-		gripSet(this.workout, setId, catalogById[cursor.exercise.exerciseId], grip);
+		gripSet(this.workout, setId, exerciseCatalog.current.byId[cursor.exercise.exerciseId], grip);
 	}
 
 	public setSetArms(setId: string, arms: Arms): void {

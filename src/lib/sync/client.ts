@@ -2,7 +2,7 @@ import { ApiError, NO_SERVER, request } from '$lib/api/client';
 import type { Store } from '$lib/store/store';
 import { getStore } from '$lib/store/store';
 
-import type { SyncResponse } from './protocol.ts';
+import type { SyncResponse, WireRecord } from './protocol.ts';
 import { MAX_PUSH } from './protocol.ts';
 import type { SyncStall } from './status.ts';
 import { healsItself, report, syncStatus } from './status.ts';
@@ -31,6 +31,17 @@ function stallFor(status: number): SyncStall {
 	return 'unreachable';
 }
 
+const pullListeners = new Set<(records: WireRecord[]) => void>();
+
+/** Records another device wrote, once they are in the store: for state held outside a load. */
+export function onPulled(listener: (records: WireRecord[]) => void): () => void {
+	pullListeners.add(listener);
+
+	return () => {
+		pullListeners.delete(listener);
+	};
+}
+
 async function exchangeOnce(store: Store, userId: string): Promise<SyncStall | null> {
 	if (!(await store.claimOwner(userId))) {
 		return 'other-account';
@@ -57,6 +68,12 @@ async function exchangeOnce(store: Store, userId: string): Promise<SyncStall | n
 	await store.applyRemote(response.records);
 	await store.acknowledge(response.acks);
 	await store.setWatermark(response.watermark);
+
+	if (response.records.length > 0) {
+		for (const listener of pullListeners) {
+			listener(response.records);
+		}
+	}
 
 	return null;
 }

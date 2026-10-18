@@ -1,4 +1,3 @@
-import { catalogById } from '$lib/catalog';
 import { isExertion } from '$lib/domain/exertion';
 import { settleGrip } from '$lib/domain/grip';
 import type { PastSession } from '$lib/domain/stats';
@@ -38,12 +37,12 @@ function performedOf(set: WorkoutSet, meta: Exercise | undefined): PerformedSet 
 	return out;
 }
 
-function loggedIn(workout: Workout): Logged[] {
+function loggedIn(workout: Workout, catalog: Record<string, Exercise>): Logged[] {
 	const out: Logged[] = [];
 
 	for (const entry of workout.entries) {
 		for (const exercise of entry.exercises) {
-			const meta = catalogById[exercise.exerciseId];
+			const meta: Exercise | undefined = catalog[exercise.exerciseId];
 
 			for (const set of exercise.sets) {
 				const done = performedOf(set, meta);
@@ -58,8 +57,12 @@ function loggedIn(workout: Workout): Logged[] {
 	return out;
 }
 
-export function performedSets(workout: Workout, exerciseId: string): PerformedSet[] {
-	return loggedIn(workout)
+export function performedSets(
+	workout: Workout,
+	exerciseId: string,
+	catalog: Record<string, Exercise>
+): PerformedSet[] {
+	return loggedIn(workout, catalog)
 		.filter((logged) => logged.exerciseId === exerciseId)
 		.map((logged) => logged.set);
 }
@@ -79,14 +82,17 @@ function positionsIn(workout: Workout): Record<string, number> {
 	return Object.fromEntries(exercisesIn(workout).map((id, index) => [id, index + 1]));
 }
 
-export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, PastSession[]> {
+export function sessionsByExercise(
+	workouts: FinishedWorkout[],
+	catalog: Record<string, Exercise>
+): Record<string, PastSession[]> {
 	const out: Record<string, PastSession[]> = {};
 
 	for (const workout of workouts.toSorted((a, b) => a.startedAt - b.startedAt)) {
 		const positions = positionsIn(workout);
 		const sessions = new Map<string, PastSession>();
 
-		for (const logged of loggedIn(workout)) {
+		for (const logged of loggedIn(workout, catalog)) {
 			const open = sessions.get(logged.exerciseId) ?? {
 				date: workout.startedAt,
 				workoutId: workout.id,
@@ -106,8 +112,12 @@ export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, 
 	return out;
 }
 
-export function pastSessionsFrom(workouts: FinishedWorkout[], exerciseId: string): PastSession[] {
-	return sessionsByExercise(workouts)[exerciseId] ?? [];
+export function pastSessionsFrom(
+	workouts: FinishedWorkout[],
+	exerciseId: string,
+	catalog: Record<string, Exercise>
+): PastSession[] {
+	return sessionsByExercise(workouts, catalog)[exerciseId] ?? [];
 }
 
 /**
@@ -129,9 +139,15 @@ export function narrowTo(sessions: PastSession[], grip: string): PastSession[] {
 
 export type LastPerformed = Record<string, PastSession | undefined>;
 
-export function lastPerformedFrom(workouts: FinishedWorkout[]): LastPerformed {
+export function lastPerformedFrom(
+	workouts: FinishedWorkout[],
+	catalog: Record<string, Exercise>
+): LastPerformed {
 	return Object.fromEntries(
-		Object.entries(sessionsByExercise(workouts)).map(([id, sessions]) => [id, sessions.at(-1)])
+		Object.entries(sessionsByExercise(workouts, catalog)).map(([id, sessions]) => [
+			id,
+			sessions.at(-1)
+		])
 	);
 }
 
@@ -142,9 +158,12 @@ export type Heaviest = Record<string, PerformedSet | undefined>;
  * the weigh-in shifts what a set moved, never which set ranks first, and a ledger column has
  * no weigh-in to hand.
  */
-export function heaviestFrom(workouts: FinishedWorkout[]): Heaviest {
+export function heaviestFrom(
+	workouts: FinishedWorkout[],
+	catalog: Record<string, Exercise>
+): Heaviest {
 	return Object.fromEntries(
-		Object.entries(sessionsByExercise(workouts)).map(([id, sessions]) => {
+		Object.entries(sessionsByExercise(workouts, catalog)).map(([id, sessions]) => {
 			const best = rawPr(sessions, () => 0);
 
 			return [id, best === null ? undefined : best.set];
@@ -157,9 +176,12 @@ export function heaviestFrom(workouts: FinishedWorkout[]): Heaviest {
  * keeps the grip it was performed with, so the card can say so when today's differs.
  * A slot last time never reached falls back to the most recent session that did.
  */
-export function historyFrom(workouts: FinishedWorkout[]): History {
+export function historyFrom(
+	workouts: FinishedWorkout[],
+	catalog: Record<string, Exercise>
+): History {
 	return Object.fromEntries(
-		Object.entries(sessionsByExercise(workouts)).flatMap(([exerciseId, sessions]) => {
+		Object.entries(sessionsByExercise(workouts, catalog)).flatMap(([exerciseId, sessions]) => {
 			const last = sessions.at(-1);
 
 			if (last === undefined) {
@@ -235,12 +257,16 @@ const RECENT_SESSIONS = 10;
 
 const SHELF = 8;
 
-export function frequentFrom(workouts: FinishedWorkout[], limit: number = SHELF): string[] {
+export function frequentFrom(
+	workouts: FinishedWorkout[],
+	catalog: Record<string, Exercise>,
+	limit: number = SHELF
+): string[] {
 	const recent = workouts.toSorted((a, b) => b.startedAt - a.startedAt).slice(0, RECENT_SESSIONS);
 	const counts = new Map<string, { sessions: number; last: number }>();
 
 	for (const workout of recent) {
-		const trained = new Set(loggedIn(workout).map((logged) => logged.exerciseId));
+		const trained = new Set(loggedIn(workout, catalog).map((logged) => logged.exerciseId));
 
 		for (const exerciseId of trained) {
 			const seen = counts.get(exerciseId) ?? { sessions: 0, last: workout.startedAt };

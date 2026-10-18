@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
 import { rawPr } from '$lib/domain/stats';
 import type { WorkoutEntry, WorkoutExercise, WorkoutSet } from '$lib/domain/workout';
 
@@ -74,7 +75,7 @@ describe('history across grips', () => {
 	];
 
 	it('keeps every grip in one session of the exercise, each set saying which it was', () => {
-		const [session] = sessionsByExercise(both)['triceps-pushdown'];
+		const [session] = sessionsByExercise(both, catalogById)['triceps-pushdown'];
 
 		expect(only(session.sets)).toEqual([30, 40]);
 		expect(grips(session.sets)).toEqual(['rope', 'bar']);
@@ -82,27 +83,33 @@ describe('history across grips', () => {
 	});
 
 	it('names the default on a set logged before the axis existed, and nothing where there is none', () => {
-		const sessions = sessionsByExercise([
-			workout(100, leg('triceps-pushdown', [{ weight: 30, reps: 12 }])),
-			workout(200, leg('squat', [{ weight: 100, reps: 5 }]))
-		]);
+		const sessions = sessionsByExercise(
+			[
+				workout(100, leg('triceps-pushdown', [{ weight: 30, reps: 12 }])),
+				workout(200, leg('squat', [{ weight: 100, reps: 5 }]))
+			],
+			catalogById
+		);
 
 		expect(grips(sessions['triceps-pushdown'][0].sets)).toEqual(['rope']);
 		expect(Object.hasOwn(sessions.squat[0].sets[0], 'grip')).toBe(false);
 	});
 
 	it('reads one exercise on the shelf and in recency, not one per grip', () => {
-		expect(frequentFrom(both).toSorted()).toEqual(['squat', 'triceps-pushdown']);
-		expect(only(lastPerformedFrom(both)['triceps-pushdown']!.sets)).toEqual([30, 40]);
+		expect(frequentFrom(both, catalogById).toSorted()).toEqual(['squat', 'triceps-pushdown']);
+		expect(only(lastPerformedFrom(both, catalogById)['triceps-pushdown']!.sets)).toEqual([30, 40]);
 	});
 });
 
 describe('historyFrom', () => {
 	it('recalls the exercise’s last session whatever the grip it was done with', () => {
-		const history = historyFrom([
-			workout(100, leg('pull-up', [{ weight: 0, reps: 8, grip: 'overhand' }])),
-			workout(200, leg('pull-up', [{ weight: 0, reps: 10, grip: 'underhand' }]))
-		]);
+		const history = historyFrom(
+			[
+				workout(100, leg('pull-up', [{ weight: 0, reps: 8, grip: 'overhand' }])),
+				workout(200, leg('pull-up', [{ weight: 0, reps: 10, grip: 'underhand' }]))
+			],
+			catalogById
+		);
 
 		expect(history['pull-up']).toEqual([{ weight: 0, reps: 10, rpe: null, grip: 'underhand' }]);
 		expect(history['pull-up#underhand']).toBeUndefined();
@@ -118,11 +125,10 @@ describe('historyFrom', () => {
 		);
 
 	it('fills the sets last time never reached from the latest session that did', () => {
-		const history = historyFrom([
-			bench(100, 60, 60, 60, 60, 55),
-			bench(200, 70, 70, 70, 65),
-			bench(300, 80, 80)
-		]);
+		const history = historyFrom(
+			[bench(100, 60, 60, 60, 60, 55), bench(200, 70, 70, 70, 65), bench(300, 80, 80)],
+			catalogById
+		);
 		const slots = history['bench-press'] ?? [];
 
 		expect(only(slots)).toEqual([80, 80, 70, 65, 55]);
@@ -133,7 +139,7 @@ describe('historyFrom', () => {
 		const unchecked = bench(200, 80, 80, 80);
 		unchecked.entries[0].exercises[0].sets[2].completed = false;
 
-		const history = historyFrom([bench(100, 70, 70, 70), unchecked]);
+		const history = historyFrom([bench(100, 70, 70, 70), unchecked], catalogById);
 
 		expect(only(history['bench-press'] ?? [])).toEqual([80, 80, 70]);
 	});
@@ -146,7 +152,7 @@ describe('historyFrom', () => {
 				{ weight: 80, reps: 5 }
 			])
 		);
-		const history = historyFrom([warmed]);
+		const history = historyFrom([warmed], catalogById);
 
 		expect(only(history['bench-press'] ?? [])).toEqual([80]);
 	});
@@ -160,11 +166,11 @@ describe('bests across grips', () => {
 	];
 
 	it('rank every grip together on the ledger and the picker', () => {
-		expect(heaviestFrom(pulls)['pull-up']).toMatchObject({ weight: 12.5, reps: 3 });
+		expect(heaviestFrom(pulls, catalogById)['pull-up']).toMatchObject({ weight: 12.5, reps: 3 });
 	});
 
 	it('are the same set the exercise screen’s raw best finds', () => {
-		const pr = rawPr(pastSessionsFrom(pulls, 'pull-up'), () => 80);
+		const pr = rawPr(pastSessionsFrom(pulls, 'pull-up', catalogById), () => 80);
 
 		expect(pr).toMatchObject({ set: { weight: 12.5, reps: 3 }, date: 200, load: 92.5 });
 	});
@@ -182,7 +188,7 @@ describe('narrowTo', () => {
 		workout(200, leg('pull-up', [{ weight: 0, reps: 9, grip: 'overhand' }]))
 	];
 
-	const all = pastSessionsFrom(mixed, 'pull-up');
+	const all = pastSessionsFrom(mixed, 'pull-up', catalogById);
 
 	it('keeps one grip’s sets and drops the sessions that had none', () => {
 		const underhand = narrowTo(all, 'underhand');
@@ -263,7 +269,8 @@ describe('folded slugs', () => {
 					leg('wide-grip-lat-pulldown', [{ weight: 55, reps: 10 }]),
 					leg('lat-pulldown', [{ weight: 50, reps: 12 }])
 				)
-			].map((entry) => foldWorkout(entry))
+			].map((entry) => foldWorkout(entry)),
+			catalogById
 		);
 
 		const [session] = sessions['lat-pulldown'];
@@ -281,16 +288,19 @@ describe('folded slugs', () => {
 
 describe('heaviestFrom', () => {
 	it('ranks weight first, then reps at it, across every session', () => {
-		const heaviest = heaviestFrom([
-			workout(
-				100,
-				leg('bench-press', [
-					{ weight: 80, reps: 5 },
-					{ weight: 100, reps: 2 }
-				])
-			),
-			workout(200, leg('bench-press', [{ weight: 100, reps: 1 }]))
-		]);
+		const heaviest = heaviestFrom(
+			[
+				workout(
+					100,
+					leg('bench-press', [
+						{ weight: 80, reps: 5 },
+						{ weight: 100, reps: 2 }
+					])
+				),
+				workout(200, leg('bench-press', [{ weight: 100, reps: 1 }]))
+			],
+			catalogById
+		);
 
 		expect(heaviest['bench-press']).toMatchObject({ weight: 100, reps: 2 });
 	});

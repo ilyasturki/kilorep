@@ -1,6 +1,5 @@
 import { error, redirect } from '@sveltejs/kit';
 
-import { catalogById } from '$lib/catalog';
 import type { Exercise } from '$lib/domain/exercise';
 import { settleGrip } from '$lib/domain/grip';
 import { plansWith, startable } from '$lib/domain/template';
@@ -19,8 +18,12 @@ export const load: PageLoad = async ({ params, url }) => {
 		redirect(307, folded);
 	}
 
+	const store = await getStore();
+
+	const { byId } = await store.catalog();
+
 	// Widened by hand: a route param is any string, so the index can miss.
-	const exercise: Exercise | undefined = catalogById[params.id];
+	const exercise: Exercise | undefined = byId[params.id];
 
 	if (exercise === undefined) {
 		error(404, 'No such exercise');
@@ -29,8 +32,6 @@ export const load: PageLoad = async ({ params, url }) => {
 	// Opened from a workout, the page starts on the grip in use there; otherwise on All (`null`).
 	const asked = url.searchParams.get('grip');
 	const grip = asked === null || asked === '' ? null : (settleGrip(exercise, asked) ?? null);
-
-	const store = await getStore();
 
 	const [past, lastPerformed, note, bodyweight, templates] = await Promise.all([
 		store.pastSessions(exercise.id),

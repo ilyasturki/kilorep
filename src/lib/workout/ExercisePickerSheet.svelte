@@ -11,7 +11,6 @@
 	import { Dialog } from 'bits-ui';
 	import { Drawer } from 'vaul-svelte';
 
-	import { catalog, catalogById } from '$lib/catalog';
 	import { MUSCLES } from '$lib/domain/exercise';
 	import type { Equipment, Exercise, Muscle } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
@@ -19,6 +18,7 @@
 	import type { MatchRange } from '$lib/domain/search';
 	import { similarTo } from '$lib/exercises/browse';
 	import type { Family } from '$lib/exercises/browse';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import { bestLabel, lastSetLabel, lastSinceLabel } from '$lib/exercises/label';
 	import type { Pick, PickerFilters } from '$lib/exercises/picker';
@@ -95,7 +95,11 @@
 	let equipment = $state('');
 	let filtersOpen = $state(false);
 
-	const EQUIPMENT = [...new Set(catalog.map((exercise) => exercise.equipment))];
+	const catalog = $derived(exerciseCatalog.current.exercises);
+
+	const catalogById = $derived(exerciseCatalog.current.byId);
+
+	const EQUIPMENT = $derived([...new Set(catalog.map((exercise) => exercise.equipment))]);
 
 	const searching = $derived(query.trim() !== '');
 

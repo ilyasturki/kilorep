@@ -2,7 +2,7 @@
 	import { afterNavigate, goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 
-	import { catalogById } from '$lib/catalog';
+	import { exerciseCatalog } from '$lib/exercises/catalog.svelte';
 	import { lastDoneByTemplate, nextUp } from '$lib/domain/rotation';
 	import { drawableMark, startable, startFrom } from '$lib/domain/template';
 	import { cursors, firstUncompleted } from '$lib/domain/workout';
@@ -224,7 +224,7 @@
 
 								<ListRow
 									title={templateTitle(template)}
-									meta={planLine(template, catalogById)}
+									meta={planLine(template, exerciseCatalog.current.byId)}
 									stacked
 									chevron={false}
 									leading={tile}
@@ -276,7 +276,7 @@
 						</Button>
 					{:else if next !== null}
 						{@render hero('Next up', rotationLine(next), next.plan, [
-							planLine(next.plan, catalogById),
+							planLine(next.plan, exerciseCatalog.current.byId),
 							`${planMeta(next.plan)} · ${trained(next.plan).long}`
 						])}
 
