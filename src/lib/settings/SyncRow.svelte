@@ -46,7 +46,7 @@
 
 	const stamp = $derived(status.syncedAt === null ? null : syncedWhen(status.syncedAt, now));
 
-	type Line = { title: string; description?: string };
+	type Line = { title: string; description?: string; meta?: string };
 
 	// The dead ends, and what each of them needs from a person. Keyed by the stalls
 	// `healsItself` rules out, so a new one of those is a missing key here rather than a
@@ -72,11 +72,25 @@
 		// Ahead of the count: a dead end is worth naming even at zero, while `waiting`
 		// below is only true of records that exist.
 		if (!healsItself(status.stall)) {
-			return { title: `${counted} not being sent`, description: STALLED[status.stall] };
+			return {
+				title: `${counted} not being sent`,
+				description: STALLED[status.stall],
+				meta: status.pending === 0 ? (stamp ?? undefined) : undefined
+			};
+		}
+
+		if (status.pending === 0 && status.stall === 'unreachable') {
+			return {
+				title: 'Server not answering',
+				description:
+					stamp === null
+						? 'Trying again on its own.'
+						: `Last reached ${stamp}. Trying again on its own.`
+			};
 		}
 
 		if (status.pending === 0) {
-			return { title: 'Synced' };
+			return { title: 'Synced', meta: stamp ?? undefined };
 		}
 
 		if (status.stall === 'unreachable') {
@@ -109,7 +123,7 @@
 		<ListRow
 			title={line.title}
 			description={line.description}
-			meta={status.pending === 0 && stamp !== null ? stamp : undefined}
+			meta={line.meta}
 			chevron={false}
 			onclick={tappable ? sync : undefined}
 		>

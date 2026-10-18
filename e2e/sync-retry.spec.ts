@@ -61,3 +61,39 @@ for (const [build, baseURL] of [
 		});
 	});
 }
+
+test.describe('app build', () => {
+	test.use({ baseURL: APP_URL });
+
+	test('the Sync row says the server is not answering until a pull lands', async ({
+		page,
+		account: _account
+	}) => {
+		await page.clock.install();
+		await page.goto('/settings');
+		await expect(page.getByText('Synced', { exact: true })).toBeVisible();
+
+		let refused = 0;
+		await page.route('**/api/sync', async (route) => {
+			refused += 1;
+			await route.abort('connectionrefused');
+		});
+		await page.reload();
+		await expect.poll(() => refused).toBeGreaterThan(0);
+
+		await expect(page.getByText('Server not answering', { exact: true })).toBeVisible();
+		await expect(
+			page.getByText('Last reached just now. Trying again on its own.', { exact: true })
+		).toBeVisible();
+		await expect(page.getByText('Synced', { exact: true })).toBeHidden();
+
+		await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 100);
+		await page.unroute('**/api/sync');
+		await page.clock.runFor(FIRST_RUNG_MS);
+		await page.clock.resume();
+
+		await expect(page.getByText('Synced', { exact: true })).toBeVisible();
+		await expect(page.getByText('Server not answering', { exact: true })).toBeHidden();
+		expect(refused).toBe(1);
+	});
+});
