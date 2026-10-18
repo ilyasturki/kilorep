@@ -1,6 +1,6 @@
-import { test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
+import { test } from '../fixtures.ts';
 import { readStore } from '../helpers.ts';
 
 /** The device's copy of one record's payload, or null while it holds none. */
@@ -24,13 +24,6 @@ export async function beginEdit(page: Page): Promise<void> {
 	}
 
 	await page.getByRole('banner').getByRole('button', { name: 'SAVE', exact: true }).waitFor();
-}
-
-/** One exercise's block on a past workout. */
-export function recordBlock(page: Page, name: string): Locator {
-	return page
-		.getByRole('main')
-		.locator('section', { has: page.getByRole('heading', { name, exact: true }) });
 }
 
 /**
