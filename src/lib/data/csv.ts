@@ -1,6 +1,7 @@
 import { catalogById } from '$lib/catalog';
 import type { BodyweightEntry } from '$lib/domain/bodyweight';
 import { localDateOf } from '$lib/domain/bodyweight';
+import type { Exercise } from '$lib/domain/exercise';
 import { gripLabel } from '$lib/domain/grip';
 import { bodyweightOn, bodyweightShareOf } from '$lib/domain/load';
 import type { Template } from '$lib/domain/template';
@@ -29,7 +30,7 @@ export const SET_COLUMNS = [
 export const BODYWEIGHT_COLUMNS = ['date', 'kg'] as const;
 
 export function csvField(value: Cell): string {
-	const text = value === null ? '' : String(value);
+	const text = String(value ?? '');
 
 	return /[",\r\n]/u.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
@@ -41,13 +42,12 @@ export function csvOf(header: readonly string[], rows: Cell[][]): string {
 }
 
 function loadOf(
-	exerciseId: string,
+	meta: Exercise | undefined,
 	weight: number | null,
-	date: string,
-	bodyweight: BodyweightEntry[]
+	weighIn: number | null
 ): number | null {
-	const share = bodyweightShareOf(catalogById[exerciseId]);
-	const carried = share === 0 ? null : bodyweightOn(bodyweight, date);
+	const share = bodyweightShareOf(meta);
+	const carried = share === 0 ? null : weighIn;
 
 	if (weight === null || carried === null) {
 		return null;
@@ -67,9 +67,12 @@ export function setsCsv(
 	for (const workout of workouts) {
 		const date = localDateOf(new Date(workout.startedAt));
 		const title = workoutTitle(workout, templates);
+		const weighIn = bodyweightOn(bodyweight, date);
 
 		for (const { set, exercise, workingIndex } of cursors(workout)) {
 			const meta = catalogById[exercise.exerciseId];
+			// A set from an older build may lack its numbers altogether.
+			const weight = set.weight ?? null;
 
 			rows.push([
 				date,
@@ -77,14 +80,14 @@ export function setsCsv(
 				meta === undefined ? exercise.exerciseId : meta.name,
 				workingIndex < 0 ? null : workingIndex + 1,
 				set.type,
-				set.weight,
+				weight,
 				meta === undefined ? null : meta.loadMode,
 				set.reps,
 				set.rpe,
 				gripLabel(meta, set.grip) ?? null,
 				set.arms ?? 'both',
 				set.completed ? 'true' : 'false',
-				loadOf(exercise.exerciseId, set.weight, date, bodyweight)
+				loadOf(meta, weight, weighIn)
 			]);
 		}
 	}

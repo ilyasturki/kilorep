@@ -177,6 +177,21 @@ describe('the sets CSV', () => {
 	});
 });
 
+it('leaves blank what a set from an older build never wrote', () => {
+	const sparse = { id: 's', reps: 5 } as unknown as WorkoutSet;
+	const workout: FinishedWorkout = {
+		id: 'old',
+		templateId: null,
+		startedAt: at('2026-07-23'),
+		finishedAt: at('2026-07-23'),
+		entries: [{ id: 'e', exercises: [{ id: 'x', exerciseId: 'pull-up', sets: [sparse] }] }]
+	};
+
+	expect(lines(setsCsv([workout], [], [{ date: '2026-07-01', kg: 80 }]))).toEqual([
+		'2026-07-23,Pull-Up,Pull-Up,1,,,total,5,,Pronated,both,false,'
+	]);
+});
+
 describe('the body weight CSV', () => {
 	it('is a date and a weight per row', () => {
 		expect(
