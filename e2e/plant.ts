@@ -7,7 +7,7 @@ import { claimSeq } from '../src/lib/server/db/seq.ts';
 import type { FinishedWorkout } from '../src/lib/store/derive.ts';
 
 import { expect } from './fixtures.ts';
-import { readStore, syncNow } from './helpers.ts';
+import { readStore } from './helpers.ts';
 
 export type Planted =
 	| { kind: 'template'; payload: Template; updatedAt: number; deletedAt?: number }
@@ -15,7 +15,7 @@ export type Planted =
 
 /**
  * Writes records into the account on the server, as another device's sync would have, and
- * pulls them onto `page`'s device.
+ * relaunches `page` so its launch sync pulls them.
  */
 export async function plantRecords(
 	db: Database,
@@ -39,8 +39,9 @@ export async function plantRecords(
 		}
 	});
 
+	// Not `syncNow`: going offline mid-launch fails the launch's pull, and a failed pull with
+	// nothing to push is never retried.
 	await page.goto('/train');
-	await syncNow(page);
 
 	const ids = rows.map(({ payload }) => payload.id);
 
