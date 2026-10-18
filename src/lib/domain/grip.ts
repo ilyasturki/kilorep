@@ -19,8 +19,9 @@ export function hasGrips(meta: Exercise | undefined): boolean {
  * The value actually in force on a set.
  *
  * Absent means the default — every set has a grip, including the ones logged before the axis
- * existed. A value the catalog no longer lists falls back to the default rather than surviving
- * as a chip nobody can pick again.
+ * existed. A value taken off the axis reads as the one it was retired into, and a value the
+ * catalog never knew falls back to the default rather than surviving as a chip nobody can pick
+ * again.
  */
 export function settleGrip(
 	meta: Exercise | undefined,
@@ -34,7 +35,13 @@ export function settleGrip(
 
 	const wanted = grip ?? axis.default;
 
-	return axis.values.some((value) => value.id === wanted) ? wanted : axis.default;
+	if (axis.values.some((value) => value.id === wanted)) {
+		return wanted;
+	}
+
+	const retired = axis.retired === undefined ? undefined : axis.retired[wanted];
+
+	return retired ?? axis.default;
 }
 
 export function gripOf(

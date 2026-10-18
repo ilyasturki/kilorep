@@ -17,6 +17,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Barbell',
 		loadMode: 'total',
 		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
+		pattern: 'horizontal-press',
 		grips: {
 			label: 'Grip',
 			default: 'standard',
@@ -33,10 +34,16 @@ export const catalog: Exercise[] = [
 	{
 		id: 'incline-bench-press',
 		name: 'Incline Bench Press',
-		aliases: ['incline barbell press', 'incline barbell bench press', 'incline press'],
+		aliases: [
+			'incline barbell press',
+			'incline barbell bench press',
+			'incline press',
+			'incline bench'
+		],
 		equipment: 'Barbell',
 		loadMode: 'total',
 		muscles: { primary: 'Chest', secondary: ['Shoulders', 'Triceps'] },
+		pattern: 'horizontal-press',
 		variantOf: 'bench-press'
 	},
 	{
@@ -46,6 +53,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Barbell',
 		loadMode: 'total',
 		muscles: { primary: 'Chest', secondary: ['Triceps'] },
+		pattern: 'horizontal-press',
 		variantOf: 'bench-press'
 	},
 	{
@@ -61,21 +69,19 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] }
+		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
+		pattern: 'horizontal-press',
+		variantOf: 'bench-press'
 	},
 	{
 		id: 'incline-dumbbell-press',
 		name: 'Incline DB Press',
-		aliases: [
-			'incline dumbbell press',
-			'incline dumbbell bench press',
-			'incline db bench press',
-			'incline press'
-		],
+		aliases: ['incline dumbbell press', 'incline dumbbell bench press', 'incline db bench press'],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
 		muscles: { primary: 'Chest', secondary: ['Shoulders', 'Triceps'] },
-		variantOf: 'dumbbell-bench-press'
+		pattern: 'horizontal-press',
+		variantOf: 'bench-press'
 	},
 	{
 		id: 'machine-chest-press',
@@ -84,12 +90,12 @@ export const catalog: Exercise[] = [
 			'chest press',
 			'chest press machine',
 			'seated chest press',
-			'machine bench press',
 			'hammer strength chest press'
 		],
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
+		pattern: 'horizontal-press',
 		variantOf: 'bench-press'
 	},
 	{
@@ -103,6 +109,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Chest', secondary: ['Shoulders', 'Triceps'] },
+		pattern: 'horizontal-press',
 		variantOf: 'bench-press'
 	},
 	{
@@ -112,6 +119,40 @@ export const catalog: Exercise[] = [
 		equipment: 'Smith Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
+		pattern: 'horizontal-press',
+		variantOf: 'bench-press'
+	},
+	{
+		id: 'machine-bench-press',
+		name: 'Machine Bench Press',
+		aliases: [
+			'lying machine bench press',
+			'lying machine press',
+			'lying chest press',
+			'supine chest press',
+			'plate loaded bench press',
+			'hammer strength bench press',
+			'bench press machine'
+		],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
+		pattern: 'horizontal-press',
+		variantOf: 'bench-press'
+	},
+	{
+		id: 'incline-smith-machine-press',
+		name: 'Incline Smith Press',
+		aliases: [
+			'incline smith machine press',
+			'incline smith bench press',
+			'incline smith bench',
+			'smith incline press'
+		],
+		equipment: 'Smith Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Chest', secondary: ['Shoulders', 'Triceps'] },
+		pattern: 'horizontal-press',
 		variantOf: 'bench-press'
 	},
 	{
@@ -120,23 +161,38 @@ export const catalog: Exercise[] = [
 		aliases: ['cable crossover', 'crossover', 'cable chest fly', 'standing cable fly'],
 		equipment: 'Cable',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Chest', secondary: [] }
+		muscles: { primary: 'Chest', secondary: [] },
+		pattern: 'fly',
+		variantOf: 'dumbbell-fly'
 	},
 	{
 		id: 'dumbbell-fly',
 		name: 'Dumbbell Fly',
-		aliases: ['db fly', 'chest fly', 'flyes', 'db flyes', 'dumbbell flyes', 'pec fly'],
+		aliases: ['db fly', 'chest fly', 'flyes', 'db flyes', 'dumbbell flyes', 'flat dumbbell fly'],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Chest', secondary: [] }
+		muscles: { primary: 'Chest', secondary: [] },
+		pattern: 'fly'
+	},
+	{
+		id: 'incline-dumbbell-fly',
+		name: 'Incline DB Fly',
+		aliases: ['incline dumbbell fly', 'incline fly', 'incline flyes'],
+		equipment: 'Dumbbell',
+		loadMode: 'per-hand',
+		muscles: { primary: 'Chest', secondary: ['Shoulders'] },
+		pattern: 'fly',
+		variantOf: 'dumbbell-fly'
 	},
 	{
 		id: 'pec-deck',
 		name: 'Pec Deck',
-		aliases: ['butterfly', 'chest fly machine', 'machine fly', 'butterfly machine'],
+		aliases: ['butterfly', 'chest fly machine', 'machine fly', 'butterfly machine', 'pec fly'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Chest', secondary: [] }
+		muscles: { primary: 'Chest', secondary: [] },
+		pattern: 'fly',
+		variantOf: 'dumbbell-fly'
 	},
 	{
 		id: 'push-up',
@@ -145,7 +201,8 @@ export const catalog: Exercise[] = [
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 0.65,
-		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders', 'Core'] }
+		muscles: { primary: 'Chest', secondary: ['Triceps', 'Shoulders', 'Core'] },
+		pattern: 'horizontal-press'
 	},
 
 	{
@@ -154,7 +211,8 @@ export const catalog: Exercise[] = [
 		aliases: ['dl', 'conventional deadlift', 'barbell deadlift', 'deads'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings', 'Forearms', 'Core'] }
+		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings', 'Forearms', 'Core'] },
+		pattern: 'hinge'
 	},
 	{
 		id: 'sumo-deadlift',
@@ -163,6 +221,47 @@ export const catalog: Exercise[] = [
 		equipment: 'Barbell',
 		loadMode: 'total',
 		muscles: { primary: 'Glutes', secondary: ['Hamstrings', 'Back', 'Quads'] },
+		pattern: 'hinge',
+		variantOf: 'deadlift'
+	},
+	{
+		id: 'trap-bar-deadlift',
+		name: 'Trap Bar Deadlift',
+		aliases: ['hex bar deadlift', 'trap bar dl', 'hex bar dl', 'trap bar lift'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Glutes', secondary: ['Quads', 'Hamstrings', 'Back', 'Forearms'] },
+		pattern: 'hinge',
+		variantOf: 'deadlift'
+	},
+	{
+		id: 'rack-pull',
+		name: 'Rack Pull',
+		aliases: ['block pull', 'rack deadlift', 'partial deadlift', 'rack pulls'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings', 'Forearms'] },
+		pattern: 'hinge',
+		variantOf: 'deadlift'
+	},
+	{
+		id: 'deficit-deadlift',
+		name: 'Deficit Deadlift',
+		aliases: ['deficit dl', 'deficit pull'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings', 'Quads', 'Forearms'] },
+		pattern: 'hinge',
+		variantOf: 'deadlift'
+	},
+	{
+		id: 'snatch-grip-deadlift',
+		name: 'Snatch-Grip Deadlift',
+		aliases: ['snatch grip dl', 'wide grip deadlift'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings', 'Forearms'] },
+		pattern: 'hinge',
 		variantOf: 'deadlift'
 	},
 	{
@@ -171,26 +270,29 @@ export const catalog: Exercise[] = [
 		aliases: [
 			'pullup',
 			'overhand pull up',
+			'pronated pull up',
 			'wide grip pull up',
 			'chinup',
 			'chin up',
 			'supinated pull up',
 			'underhand pull up',
 			'reverse grip pull up',
-			'neutral grip pull up'
+			'neutral grip pull up',
+			'hammer grip pull up'
 		],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 1,
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'vertical-pull',
 		grips: {
 			label: 'Grip',
 			default: 'overhand',
 			values: [
-				{ id: 'overhand', label: 'Overhand' },
+				{ id: 'overhand', label: 'Pronated' },
 				{
 					id: 'underhand',
-					label: 'Underhand',
+					label: 'Supinated',
 					muscles: { primary: 'Back', secondary: ['Biceps'] }
 				},
 				{ id: 'neutral', label: 'Neutral' }
@@ -208,26 +310,59 @@ export const catalog: Exercise[] = [
 			'wide grip pulldown',
 			'wide pulldown',
 			'wide grip pull down',
+			'pronated pulldown',
 			'close grip pulldown',
 			'narrow grip pulldown',
 			'neutral grip pulldown',
 			'v bar pulldown',
 			'reverse grip pulldown',
-			'underhand pulldown'
+			'underhand pulldown',
+			'supinated pulldown'
 		],
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps'] },
+		pattern: 'vertical-pull',
 		grips: {
 			label: 'Grip',
 			default: 'wide',
 			values: [
-				{ id: 'wide', label: 'Wide' },
-				{ id: 'close', label: 'Close' },
+				{ id: 'wide', label: 'Pronated' },
 				{ id: 'neutral', label: 'Neutral' },
-				{ id: 'underhand', label: 'Underhand' }
-			]
+				{ id: 'underhand', label: 'Supinated' }
+			],
+			retired: { close: 'neutral' }
 		}
+	},
+	{
+		id: 'single-arm-lat-pulldown',
+		name: 'Single-Arm Pulldown',
+		aliases: [
+			'single arm lat pulldown',
+			'one arm lat pulldown',
+			'one arm pulldown',
+			'unilateral lat pulldown'
+		],
+		equipment: 'Cable',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Back', secondary: ['Biceps'] },
+		pattern: 'vertical-pull',
+		variantOf: 'lat-pulldown'
+	},
+	{
+		id: 'machine-pulldown',
+		name: 'Machine Pulldown',
+		aliases: [
+			'plate loaded pulldown',
+			'hammer strength pulldown',
+			'iso lateral pulldown',
+			'pulldown machine'
+		],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Biceps'] },
+		pattern: 'vertical-pull',
+		variantOf: 'lat-pulldown'
 	},
 	{
 		id: 'straight-arm-pulldown',
@@ -243,6 +378,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Triceps', 'Core'] },
+		pattern: 'pullover',
 		grips: {
 			label: 'Attachment',
 			default: 'bar',
@@ -253,37 +389,89 @@ export const catalog: Exercise[] = [
 		}
 	},
 	{
+		id: 'dumbbell-pullover',
+		name: 'Dumbbell Pullover',
+		aliases: ['db pullover', 'pullover', 'lying pullover', 'bench pullover'],
+		equipment: 'Dumbbell',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Chest', 'Triceps'] },
+		pattern: 'pullover'
+	},
+	{
 		id: 'barbell-row',
 		name: 'Barbell Row',
 		aliases: ['bent over row', 'bor', 'bb row', 'bent row', 'bent over barbell row'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull'
+	},
+	{
+		id: 'seal-row',
+		name: 'Seal Row',
+		aliases: ['bench row', 'prone barbell row', 'barbell seal row'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Shoulders'] },
+		pattern: 'horizontal-pull',
+		variantOf: 'barbell-row'
 	},
 	{
 		id: 'seated-cable-row',
 		name: 'Seated Cable Row',
-		aliases: ['cable row', 'seated row', 'v bar row', 'straight bar row', 'wide grip cable row'],
+		aliases: [
+			'cable row',
+			'seated row',
+			'v bar row',
+			'straight bar row',
+			'wide grip cable row',
+			'rope cable row'
+		],
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps'] },
+		pattern: 'horizontal-pull',
 		grips: {
 			label: 'Handle',
 			default: 'v-bar',
 			values: [
 				{ id: 'v-bar', label: 'V-Bar' },
 				{ id: 'wide', label: 'Wide Bar' },
-				{ id: 'straight', label: 'Straight Bar' }
-			]
+				{ id: 'rope', label: 'Rope' }
+			],
+			retired: { straight: 'wide' }
 		}
+	},
+	{
+		id: 'single-arm-cable-row',
+		name: 'Single-Arm Cable Row',
+		aliases: [
+			'one arm cable row',
+			'single arm seated row',
+			'one arm seated cable row',
+			'unilateral cable row'
+		],
+		equipment: 'Cable',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Back', secondary: ['Biceps'] },
+		pattern: 'horizontal-pull',
+		variantOf: 'seated-cable-row'
 	},
 	{
 		id: 'dumbbell-row',
 		name: 'Dumbbell Row',
-		aliases: ['one arm row', 'db row', 'single arm row', 'one arm dumbbell row', 'db one arm row'],
+		aliases: [
+			'one arm row',
+			'db row',
+			'single arm row',
+			'one arm dumbbell row',
+			'db one arm row',
+			'kroc row'
+		],
 		equipment: 'Dumbbell',
 		loadMode: 'unilateral',
-		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull'
 	},
 	{
 		id: 'chest-supported-row',
@@ -298,7 +486,25 @@ export const catalog: Exercise[] = [
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull',
 		variantOf: 'dumbbell-row'
+	},
+	{
+		id: 'inverted-row',
+		name: 'Inverted Row',
+		aliases: [
+			'australian pull up',
+			'body row',
+			'bodyweight row',
+			'ring row',
+			'trx row',
+			'smith machine inverted row'
+		],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0.6,
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Shoulders'] },
+		pattern: 'horizontal-pull'
 	},
 	{
 		id: 'pendlay-row',
@@ -307,6 +513,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Barbell',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull',
 		variantOf: 'barbell-row'
 	},
 	{
@@ -315,7 +522,34 @@ export const catalog: Exercise[] = [
 		aliases: ['tbar row', 'landmine row'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull'
+	},
+	{
+		id: 'chest-supported-t-bar-row',
+		name: 'Chest-Supported T-Bar Row',
+		aliases: [
+			'chest supported t bar',
+			'incline t bar row',
+			'machine t bar row',
+			't bar row machine',
+			'lying t bar row'
+		],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull',
+		variantOf: 't-bar-row'
+	},
+	{
+		id: 'meadows-row',
+		name: 'Meadows Row',
+		aliases: ['meadow row', 'one arm landmine row', 'single arm landmine row'],
+		equipment: 'Barbell',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull',
+		variantOf: 't-bar-row'
 	},
 	{
 		id: 'machine-row',
@@ -323,7 +557,8 @@ export const catalog: Exercise[] = [
 		aliases: ['seated machine row', 'hammer row', 'hammer strength row', 'plate loaded row'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] }
+		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull'
 	},
 	{
 		id: 'high-row',
@@ -332,6 +567,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull',
 		variantOf: 'machine-row'
 	},
 	{
@@ -341,6 +577,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Back', secondary: ['Biceps', 'Forearms'] },
+		pattern: 'horizontal-pull',
 		variantOf: 'machine-row'
 	},
 	{
@@ -349,7 +586,8 @@ export const catalog: Exercise[] = [
 		aliases: ['shrug', 'shrugs', 'trap shrug', 'bb shrug'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Back', secondary: ['Forearms'] }
+		muscles: { primary: 'Back', secondary: ['Forearms'] },
+		pattern: 'shrug'
 	},
 	{
 		id: 'dumbbell-shrug',
@@ -358,6 +596,27 @@ export const catalog: Exercise[] = [
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
 		muscles: { primary: 'Back', secondary: ['Forearms'] },
+		pattern: 'shrug',
+		variantOf: 'barbell-shrug'
+	},
+	{
+		id: 'smith-machine-shrug',
+		name: 'Smith Machine Shrug',
+		aliases: ['smith shrug', 'smith machine shrugs'],
+		equipment: 'Smith Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Forearms'] },
+		pattern: 'shrug',
+		variantOf: 'barbell-shrug'
+	},
+	{
+		id: 'trap-bar-shrug',
+		name: 'Trap Bar Shrug',
+		aliases: ['hex bar shrug', 'trap bar shrugs'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Back', secondary: ['Forearms'] },
+		pattern: 'shrug',
 		variantOf: 'barbell-shrug'
 	},
 	{
@@ -373,7 +632,8 @@ export const catalog: Exercise[] = [
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 0.45,
-		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings'] }
+		muscles: { primary: 'Back', secondary: ['Glutes', 'Hamstrings'] },
+		pattern: 'hinge'
 	},
 
 	{
@@ -389,15 +649,72 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Shoulders', secondary: ['Triceps', 'Core'] }
+		muscles: { primary: 'Shoulders', secondary: ['Triceps', 'Core'] },
+		pattern: 'vertical-press'
+	},
+	{
+		id: 'push-press',
+		name: 'Push Press',
+		aliases: ['barbell push press', 'push presses'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Triceps', 'Quads', 'Core'] },
+		pattern: 'vertical-press',
+		variantOf: 'overhead-press'
+	},
+	{
+		id: 'seated-barbell-press',
+		name: 'Seated Barbell Press',
+		aliases: [
+			'seated overhead press',
+			'seated military press',
+			'seated barbell shoulder press',
+			'seated ohp'
+		],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Triceps'] },
+		pattern: 'vertical-press',
+		variantOf: 'overhead-press'
+	},
+	{
+		id: 'smith-machine-shoulder-press',
+		name: 'Smith Shoulder Press',
+		aliases: [
+			'smith machine shoulder press',
+			'smith overhead press',
+			'smith machine overhead press',
+			'smith military press'
+		],
+		equipment: 'Smith Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Triceps'] },
+		pattern: 'vertical-press',
+		variantOf: 'overhead-press'
+	},
+	{
+		id: 'landmine-press',
+		name: 'Landmine Press',
+		aliases: [
+			'single arm landmine press',
+			'one arm landmine press',
+			'landmine shoulder press',
+			'half kneeling landmine press'
+		],
+		equipment: 'Barbell',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Shoulders', secondary: ['Chest', 'Triceps', 'Core'] },
+		pattern: 'vertical-press',
+		variantOf: 'overhead-press'
 	},
 	{
 		id: 'machine-shoulder-press',
 		name: 'Machine Shoulder Press',
-		aliases: ['shoulder press machine', 'machine overhead press', 'seated shoulder press'],
+		aliases: ['shoulder press machine', 'machine overhead press', 'seated machine shoulder press'],
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Shoulders', secondary: ['Triceps'] },
+		pattern: 'vertical-press',
 		variantOf: 'overhead-press'
 	},
 	{
@@ -413,7 +730,9 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Shoulders', secondary: ['Triceps'] }
+		muscles: { primary: 'Shoulders', secondary: ['Triceps'] },
+		pattern: 'vertical-press',
+		variantOf: 'overhead-press'
 	},
 	{
 		id: 'arnold-press',
@@ -422,7 +741,8 @@ export const catalog: Exercise[] = [
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
 		muscles: { primary: 'Shoulders', secondary: ['Triceps'] },
-		variantOf: 'seated-dumbbell-press'
+		pattern: 'vertical-press',
+		variantOf: 'overhead-press'
 	},
 	{
 		id: 'upright-row',
@@ -430,22 +750,47 @@ export const catalog: Exercise[] = [
 		aliases: ['barbell upright row', 'bb upright row'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Shoulders', secondary: ['Back', 'Biceps'] }
+		muscles: { primary: 'Shoulders', secondary: ['Back', 'Biceps'] },
+		pattern: 'raise'
+	},
+	{
+		id: 'cable-upright-row',
+		name: 'Cable Upright Row',
+		aliases: ['rope upright row', 'cable rope upright row'],
+		equipment: 'Cable',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Back', 'Biceps'] },
+		pattern: 'raise',
+		variantOf: 'upright-row'
 	},
 	{
 		id: 'front-raise',
 		name: 'Front Raise',
-		aliases: [
-			'dumbbell front raise',
-			'db front raise',
-			'front delt raise',
-			'anterior raise',
-			'plate front raise',
-			'cable front raise'
-		],
+		aliases: ['dumbbell front raise', 'db front raise', 'front delt raise', 'anterior raise'],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Shoulders', secondary: ['Chest'] }
+		muscles: { primary: 'Shoulders', secondary: ['Chest'] },
+		pattern: 'raise'
+	},
+	{
+		id: 'cable-front-raise',
+		name: 'Cable Front Raise',
+		aliases: ['rope front raise', 'cable front delt raise'],
+		equipment: 'Cable',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Chest'] },
+		pattern: 'raise',
+		variantOf: 'front-raise'
+	},
+	{
+		id: 'plate-front-raise',
+		name: 'Plate Front Raise',
+		aliases: ['plate raise', 'weight plate front raise', 'plate front raises'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Shoulders', secondary: ['Chest'] },
+		pattern: 'raise',
+		variantOf: 'front-raise'
 	},
 	{
 		id: 'lateral-raise',
@@ -461,7 +806,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Shoulders', secondary: [] }
+		muscles: { primary: 'Shoulders', secondary: [] },
+		pattern: 'raise'
 	},
 	{
 		id: 'cable-lateral-raise',
@@ -470,6 +816,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Cable',
 		loadMode: 'unilateral',
 		muscles: { primary: 'Shoulders', secondary: [] },
+		pattern: 'raise',
 		variantOf: 'lateral-raise'
 	},
 	{
@@ -485,6 +832,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Shoulders', secondary: [] },
+		pattern: 'raise',
 		variantOf: 'lateral-raise'
 	},
 	{
@@ -494,7 +842,17 @@ export const catalog: Exercise[] = [
 		equipment: 'Band',
 		loadMode: 'total',
 		muscles: { primary: 'Shoulders', secondary: [] },
+		pattern: 'raise',
 		variantOf: 'lateral-raise'
+	},
+	{
+		id: 'y-raise',
+		name: 'Y-Raise',
+		aliases: ['incline y raise', 'prone y raise', 'dumbbell y raise', 'db y raise'],
+		equipment: 'Dumbbell',
+		loadMode: 'per-hand',
+		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		pattern: 'raise'
 	},
 	{
 		id: 'rear-delt-fly',
@@ -508,7 +866,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Shoulders', secondary: ['Back'] }
+		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		pattern: 'fly'
 	},
 	{
 		id: 'reverse-pec-deck',
@@ -523,6 +882,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		pattern: 'fly',
 		variantOf: 'rear-delt-fly'
 	},
 	{
@@ -538,6 +898,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Cable',
 		loadMode: 'unilateral',
 		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		pattern: 'fly',
 		variantOf: 'rear-delt-fly'
 	},
 	{
@@ -547,6 +908,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Band',
 		loadMode: 'total',
 		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		pattern: 'fly',
 		variantOf: 'rear-delt-fly'
 	},
 	{
@@ -555,7 +917,8 @@ export const catalog: Exercise[] = [
 		aliases: ['facepull', 'rope face pull', 'cable face pull'],
 		equipment: 'Cable',
 		loadMode: 'total',
-		muscles: { primary: 'Shoulders', secondary: ['Back'] }
+		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		pattern: 'horizontal-pull'
 	},
 	{
 		id: 'band-face-pull',
@@ -564,6 +927,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Band',
 		loadMode: 'total',
 		muscles: { primary: 'Shoulders', secondary: ['Back'] },
+		pattern: 'horizontal-pull',
 		variantOf: 'face-pull'
 	},
 
@@ -573,7 +937,8 @@ export const catalog: Exercise[] = [
 		aliases: ['bb curl', 'straight bar curl', 'barbell bicep curl'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Biceps', secondary: ['Forearms'] }
+		muscles: { primary: 'Biceps', secondary: ['Forearms'] },
+		pattern: 'curl'
 	},
 	{
 		id: 'ez-bar-curl',
@@ -582,6 +947,7 @@ export const catalog: Exercise[] = [
 		equipment: 'EZ-Bar',
 		loadMode: 'total',
 		muscles: { primary: 'Biceps', secondary: ['Forearms'] },
+		pattern: 'curl',
 		variantOf: 'barbell-curl'
 	},
 	{
@@ -596,7 +962,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Biceps', secondary: ['Forearms'] }
+		muscles: { primary: 'Biceps', secondary: ['Forearms'] },
+		pattern: 'curl'
 	},
 	{
 		id: 'incline-dumbbell-curl',
@@ -605,6 +972,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
 		muscles: { primary: 'Biceps', secondary: ['Forearms'] },
+		pattern: 'curl',
 		variantOf: 'dumbbell-curl'
 	},
 	{
@@ -613,7 +981,29 @@ export const catalog: Exercise[] = [
 		aliases: ['neutral grip curl', 'dumbbell hammer curl', 'db hammer curl'],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Biceps', secondary: ['Forearms'] }
+		muscles: { primary: 'Biceps', secondary: ['Forearms'] },
+		pattern: 'curl',
+		variantOf: 'dumbbell-curl'
+	},
+	{
+		id: 'concentration-curl',
+		name: 'Concentration Curl',
+		aliases: ['seated concentration curl', 'db concentration curl', 'concentration curls'],
+		equipment: 'Dumbbell',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Biceps', secondary: [] },
+		pattern: 'curl',
+		variantOf: 'dumbbell-curl'
+	},
+	{
+		id: 'spider-curl',
+		name: 'Spider Curl',
+		aliases: ['prone incline curl', 'incline prone curl', 'db spider curl', 'spider curls'],
+		equipment: 'Dumbbell',
+		loadMode: 'per-hand',
+		muscles: { primary: 'Biceps', secondary: [] },
+		pattern: 'curl',
+		variantOf: 'dumbbell-curl'
 	},
 	{
 		id: 'preacher-curl',
@@ -621,7 +1011,8 @@ export const catalog: Exercise[] = [
 		aliases: ['preacher', 'scott curl', 'ez bar preacher curl'],
 		equipment: 'EZ-Bar',
 		loadMode: 'total',
-		muscles: { primary: 'Biceps', secondary: [] }
+		muscles: { primary: 'Biceps', secondary: [] },
+		pattern: 'curl'
 	},
 	{
 		id: 'dumbbell-preacher-curl',
@@ -635,6 +1026,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Dumbbell',
 		loadMode: 'unilateral',
 		muscles: { primary: 'Biceps', secondary: [] },
+		pattern: 'curl',
 		variantOf: 'preacher-curl'
 	},
 	{
@@ -651,6 +1043,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Biceps', secondary: ['Forearms'] },
+		pattern: 'curl',
 		grips: {
 			label: 'Attachment',
 			default: 'bar',
@@ -660,6 +1053,21 @@ export const catalog: Exercise[] = [
 				{ id: 'rope', label: 'Rope' }
 			]
 		}
+	},
+	{
+		id: 'bayesian-curl',
+		name: 'Bayesian Cable Curl',
+		aliases: [
+			'bayesian curl',
+			'behind the body cable curl',
+			'face away cable curl',
+			'single arm bayesian curl'
+		],
+		equipment: 'Cable',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Biceps', secondary: [] },
+		pattern: 'curl',
+		variantOf: 'cable-curl'
 	},
 	{
 		id: 'machine-curl',
@@ -674,7 +1082,9 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Biceps', secondary: [] }
+		muscles: { primary: 'Biceps', secondary: [] },
+		pattern: 'curl',
+		variantOf: 'preacher-curl'
 	},
 
 	{
@@ -692,6 +1102,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Triceps', secondary: [] },
+		pattern: 'extension',
 		grips: {
 			label: 'Attachment',
 			default: 'rope',
@@ -707,13 +1118,14 @@ export const catalog: Exercise[] = [
 		name: 'Overhead Triceps Extension',
 		aliases: [
 			'overhead extension',
-			'french press',
 			'cable overhead extension',
-			'rope overhead extension'
+			'rope overhead extension',
+			'cable overhead triceps extension'
 		],
 		equipment: 'Cable',
 		loadMode: 'total',
 		muscles: { primary: 'Triceps', secondary: [] },
+		pattern: 'extension',
 		grips: {
 			label: 'Attachment',
 			default: 'rope',
@@ -724,21 +1136,90 @@ export const catalog: Exercise[] = [
 		}
 	},
 	{
+		id: 'dumbbell-overhead-extension',
+		name: 'DB Overhead Extension',
+		aliases: [
+			'dumbbell overhead extension',
+			'dumbbell overhead triceps extension',
+			'db overhead triceps extension',
+			'seated dumbbell extension',
+			'db french press'
+		],
+		equipment: 'Dumbbell',
+		loadMode: 'total',
+		muscles: { primary: 'Triceps', secondary: [] },
+		pattern: 'extension',
+		variantOf: 'overhead-triceps-extension'
+	},
+	{
+		id: 'ez-bar-overhead-extension',
+		name: 'EZ-Bar Overhead Extension',
+		aliases: [
+			'french press',
+			'ez bar french press',
+			'ez overhead extension',
+			'seated ez bar extension',
+			'barbell overhead extension'
+		],
+		equipment: 'EZ-Bar',
+		loadMode: 'total',
+		muscles: { primary: 'Triceps', secondary: [] },
+		pattern: 'extension',
+		variantOf: 'overhead-triceps-extension'
+	},
+	{
 		id: 'skull-crusher',
 		name: 'Skull Crusher',
 		aliases: ['lying triceps extension', 'skullcrusher', 'ez bar skull crusher', 'nose breaker'],
 		equipment: 'EZ-Bar',
 		loadMode: 'total',
-		muscles: { primary: 'Triceps', secondary: [] }
+		muscles: { primary: 'Triceps', secondary: [] },
+		pattern: 'extension'
+	},
+	{
+		id: 'jm-press',
+		name: 'JM Press',
+		aliases: ['barbell jm press', 'jm presses'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] },
+		pattern: 'extension',
+		variantOf: 'skull-crusher'
+	},
+	{
+		id: 'triceps-kickback',
+		name: 'Triceps Kickback',
+		aliases: [
+			'tricep kickback',
+			'dumbbell kickback',
+			'db kickback',
+			'dumbbell triceps kickback',
+			'db triceps kickback'
+		],
+		equipment: 'Dumbbell',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Triceps', secondary: [] },
+		pattern: 'extension'
+	},
+	{
+		id: 'cable-triceps-kickback',
+		name: 'Cable Triceps Kickback',
+		aliases: ['cable tricep kickback', 'single arm cable kickback', 'rope kickback'],
+		equipment: 'Cable',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Triceps', secondary: [] },
+		pattern: 'extension',
+		variantOf: 'triceps-kickback'
 	},
 	{
 		id: 'dip',
 		name: 'Dip',
-		aliases: ['dips', 'parallel bar dip', 'tricep dip', 'chest dip', 'bar dip'],
+		aliases: ['dips', 'parallel bar dip', 'tricep dip', 'chest dip', 'bar dip', 'weighted dip'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 1,
 		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] },
+		pattern: 'vertical-press',
 		grips: {
 			label: 'Lean',
 			default: 'upright',
@@ -763,16 +1244,54 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Triceps', secondary: ['Chest', 'Shoulders'] },
+		pattern: 'vertical-press',
+		variantOf: 'dip'
+	},
+	{
+		id: 'bench-dip',
+		name: 'Bench Dip',
+		aliases: ['bench dips', 'chair dip', 'tricep bench dip', 'triceps bench dip'],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0.5,
+		muscles: { primary: 'Triceps', secondary: ['Shoulders', 'Chest'] },
+		pattern: 'vertical-press',
 		variantOf: 'dip'
 	},
 
 	{
 		id: 'wrist-curl',
 		name: 'Wrist Curl',
-		aliases: ['barbell wrist curl', 'forearm curl', 'dumbbell wrist curl', 'db wrist curl'],
+		aliases: ['barbell wrist curl', 'forearm curl'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Forearms', secondary: [] }
+		muscles: { primary: 'Forearms', secondary: [] },
+		pattern: 'curl'
+	},
+	{
+		id: 'dumbbell-wrist-curl',
+		name: 'Dumbbell Wrist Curl',
+		aliases: ['db wrist curl', 'dumbbell forearm curl'],
+		equipment: 'Dumbbell',
+		loadMode: 'per-hand',
+		muscles: { primary: 'Forearms', secondary: [] },
+		pattern: 'curl',
+		variantOf: 'wrist-curl'
+	},
+	{
+		id: 'reverse-wrist-curl',
+		name: 'Reverse Wrist Curl',
+		aliases: [
+			'wrist extension',
+			'reverse forearm curl',
+			'barbell wrist extension',
+			'reverse barbell wrist curl'
+		],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Forearms', secondary: [] },
+		pattern: 'extension',
+		variantOf: 'wrist-curl'
 	},
 	{
 		id: 'reverse-curl',
@@ -786,7 +1305,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'EZ-Bar',
 		loadMode: 'total',
-		muscles: { primary: 'Forearms', secondary: ['Biceps'] }
+		muscles: { primary: 'Forearms', secondary: ['Biceps'] },
+		pattern: 'curl'
 	},
 	{
 		id: 'farmers-carry',
@@ -794,7 +1314,8 @@ export const catalog: Exercise[] = [
 		aliases: ['farmers walk', 'farmers carry', 'farmer walk', 'loaded carry'],
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
-		muscles: { primary: 'Forearms', secondary: ['Core'] }
+		muscles: { primary: 'Forearms', secondary: ['Core'] },
+		pattern: 'carry'
 	},
 
 	{
@@ -804,7 +1325,8 @@ export const catalog: Exercise[] = [
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 0,
-		muscles: { primary: 'Core', secondary: [] }
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'brace'
 	},
 	{
 		id: 'side-plank',
@@ -814,6 +1336,7 @@ export const catalog: Exercise[] = [
 		loadMode: 'total',
 		bodyweightShare: 0,
 		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'brace',
 		variantOf: 'plank'
 	},
 	{
@@ -823,7 +1346,29 @@ export const catalog: Exercise[] = [
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 0,
-		muscles: { primary: 'Core', secondary: [] }
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'flexion'
+	},
+	{
+		id: 'sit-up',
+		name: 'Sit-Up',
+		aliases: ['situp', 'sit ups', 'situps', 'floor sit up'],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0,
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'flexion'
+	},
+	{
+		id: 'decline-sit-up',
+		name: 'Decline Sit-Up',
+		aliases: ['decline situp', 'decline bench sit up', 'decline sit ups'],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0,
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'flexion',
+		variantOf: 'sit-up'
 	},
 	{
 		id: 'ab-wheel-rollout',
@@ -832,7 +1377,8 @@ export const catalog: Exercise[] = [
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 0,
-		muscles: { primary: 'Core', secondary: ['Shoulders'] }
+		muscles: { primary: 'Core', secondary: ['Shoulders'] },
+		pattern: 'brace'
 	},
 	{
 		id: 'russian-twist',
@@ -841,7 +1387,18 @@ export const catalog: Exercise[] = [
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 0,
-		muscles: { primary: 'Core', secondary: [] }
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'rotation'
+	},
+	{
+		id: 'dead-bug',
+		name: 'Dead Bug',
+		aliases: ['deadbug', 'dead bugs'],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0,
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'brace'
 	},
 	{
 		id: 'cable-crunch',
@@ -849,7 +1406,8 @@ export const catalog: Exercise[] = [
 		aliases: ['kneeling crunch', 'rope crunch', 'kneeling cable crunch', 'cable ab crunch'],
 		equipment: 'Cable',
 		loadMode: 'total',
-		muscles: { primary: 'Core', secondary: [] }
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'flexion'
 	},
 	{
 		id: 'machine-ab-crunch',
@@ -864,16 +1422,47 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Core', secondary: [] }
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'flexion'
+	},
+	{
+		id: 'pallof-press',
+		name: 'Pallof Press',
+		aliases: ['pallof', 'anti rotation press', 'cable pallof press', 'band pallof press'],
+		equipment: 'Cable',
+		loadMode: 'total',
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'brace'
+	},
+	{
+		id: 'cable-woodchop',
+		name: 'Cable Woodchop',
+		aliases: ['woodchop', 'woodchopper', 'wood chop', 'cable chop', 'cable wood chop'],
+		equipment: 'Cable',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'rotation'
 	},
 	{
 		id: 'hanging-leg-raise',
 		name: 'Hanging Leg Raise',
-		aliases: ['leg raise', 'hanging knee raise', 'knee raise', 'hanging knee tuck'],
+		aliases: ['hanging knee raise', 'knee raise', 'hanging knee tuck', 'captains chair leg raise'],
 		equipment: 'Bodyweight',
 		loadMode: 'total',
 		bodyweightShare: 1,
-		muscles: { primary: 'Core', secondary: ['Forearms'] }
+		muscles: { primary: 'Core', secondary: ['Forearms'] },
+		pattern: 'flexion'
+	},
+	{
+		id: 'lying-leg-raise',
+		name: 'Lying Leg Raise',
+		aliases: ['leg raise', 'floor leg raise', 'lying leg raises', 'flat bench leg raise'],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0,
+		muscles: { primary: 'Core', secondary: [] },
+		pattern: 'flexion',
+		variantOf: 'hanging-leg-raise'
 	},
 
 	{
@@ -888,7 +1477,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings', 'Core'] }
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings', 'Core'] },
+		pattern: 'squat'
 	},
 	{
 		id: 'front-squat',
@@ -897,6 +1487,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Barbell',
 		loadMode: 'total',
 		muscles: { primary: 'Quads', secondary: ['Glutes', 'Core'] },
+		pattern: 'squat',
 		variantOf: 'squat'
 	},
 	{
@@ -911,6 +1502,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Kettlebell',
 		loadMode: 'total',
 		muscles: { primary: 'Quads', secondary: ['Glutes', 'Core'] },
+		pattern: 'squat',
 		variantOf: 'squat'
 	},
 	{
@@ -920,6 +1512,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Smith Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Quads', secondary: ['Glutes'] },
+		pattern: 'squat',
 		variantOf: 'squat'
 	},
 	{
@@ -928,15 +1521,93 @@ export const catalog: Exercise[] = [
 		aliases: ['hack squat machine', 'machine squat', 'machine hack squat'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Quads', secondary: ['Glutes'] }
+		muscles: { primary: 'Quads', secondary: ['Glutes'] },
+		pattern: 'squat',
+		variantOf: 'squat'
+	},
+	{
+		id: 'belt-squat',
+		name: 'Belt Squat',
+		aliases: ['belt squat machine', 'hip belt squat'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Quads', secondary: ['Glutes'] },
+		pattern: 'squat',
+		variantOf: 'squat'
+	},
+	{
+		id: 'pendulum-squat',
+		name: 'Pendulum Squat',
+		aliases: ['pendulum squat machine', 'pendulum'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Quads', secondary: ['Glutes'] },
+		pattern: 'squat',
+		variantOf: 'squat'
+	},
+	{
+		id: 'box-squat',
+		name: 'Box Squat',
+		aliases: ['barbell box squat', 'box squats'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings', 'Core'] },
+		pattern: 'squat',
+		variantOf: 'squat'
+	},
+	{
+		id: 'safety-bar-squat',
+		name: 'Safety Bar Squat',
+		aliases: ['ssb squat', 'safety squat bar squat', 'safety squat', 'ssb'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Back', 'Core'] },
+		pattern: 'squat',
+		variantOf: 'squat'
+	},
+	{
+		id: 'sissy-squat',
+		name: 'Sissy Squat',
+		aliases: ['sissy squats', 'bodyweight sissy squat'],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0.7,
+		muscles: { primary: 'Quads', secondary: [] },
+		pattern: 'squat'
 	},
 	{
 		id: 'leg-press',
 		name: 'Leg Press',
-		aliases: ['seated leg press', '45 degree leg press', 'machine leg press'],
+		aliases: ['45 degree leg press', 'machine leg press', 'sled leg press', 'incline leg press'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] }
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] },
+		pattern: 'squat'
+	},
+	{
+		id: 'horizontal-leg-press',
+		name: 'Horizontal Leg Press',
+		aliases: [
+			'seated leg press',
+			'selectorized leg press',
+			'seated leg press machine',
+			'horizontal leg press machine'
+		],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] },
+		pattern: 'squat',
+		variantOf: 'leg-press'
+	},
+	{
+		id: 'single-leg-press',
+		name: 'Single-Leg Press',
+		aliases: ['single leg leg press', 'one leg leg press', 'one leg press', 'unilateral leg press'],
+		equipment: 'Machine',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] },
+		pattern: 'squat',
+		variantOf: 'leg-press'
 	},
 	{
 		id: 'leg-extension',
@@ -944,7 +1615,8 @@ export const catalog: Exercise[] = [
 		aliases: ['quad extension', 'knee extension', 'machine leg extension'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Quads', secondary: [] }
+		muscles: { primary: 'Quads', secondary: [] },
+		pattern: 'extension'
 	},
 	{
 		id: 'bulgarian-split-squat',
@@ -952,7 +1624,8 @@ export const catalog: Exercise[] = [
 		aliases: ['bss', 'split squat', 'bulgarian squat', 'rear foot elevated split squat', 'rfess'],
 		equipment: 'Dumbbell',
 		loadMode: 'unilateral',
-		muscles: { primary: 'Quads', secondary: ['Glutes'] }
+		muscles: { primary: 'Quads', secondary: ['Glutes'] },
+		pattern: 'lunge'
 	},
 	{
 		id: 'step-up',
@@ -967,7 +1640,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Dumbbell',
 		loadMode: 'unilateral',
-		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] }
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] },
+		pattern: 'lunge'
 	},
 	{
 		id: 'lunge',
@@ -982,7 +1656,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Dumbbell',
 		loadMode: 'unilateral',
-		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] }
+		muscles: { primary: 'Quads', secondary: ['Glutes', 'Hamstrings'] },
+		pattern: 'lunge'
 	},
 
 	{
@@ -998,7 +1673,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Hamstrings', secondary: ['Glutes', 'Back'] }
+		muscles: { primary: 'Hamstrings', secondary: ['Glutes', 'Back'] },
+		pattern: 'hinge'
 	},
 	{
 		id: 'dumbbell-romanian-deadlift',
@@ -1012,6 +1688,23 @@ export const catalog: Exercise[] = [
 		equipment: 'Dumbbell',
 		loadMode: 'per-hand',
 		muscles: { primary: 'Hamstrings', secondary: ['Glutes'] },
+		pattern: 'hinge',
+		variantOf: 'romanian-deadlift'
+	},
+	{
+		id: 'single-leg-romanian-deadlift',
+		name: 'Single-Leg RDL',
+		aliases: [
+			'single leg romanian deadlift',
+			'single leg deadlift',
+			'one leg rdl',
+			'sl rdl',
+			'single leg db rdl'
+		],
+		equipment: 'Dumbbell',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Hamstrings', secondary: ['Glutes', 'Core'] },
+		pattern: 'hinge',
 		variantOf: 'romanian-deadlift'
 	},
 	{
@@ -1020,7 +1713,8 @@ export const catalog: Exercise[] = [
 		aliases: ['goodmorning', 'barbell good morning'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Hamstrings', secondary: ['Glutes', 'Back'] }
+		muscles: { primary: 'Hamstrings', secondary: ['Glutes', 'Back'] },
+		pattern: 'hinge'
 	},
 	{
 		id: 'leg-curl',
@@ -1028,7 +1722,8 @@ export const catalog: Exercise[] = [
 		aliases: ['hamstring curl', 'ham curl', 'machine leg curl'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Hamstrings', secondary: [] }
+		muscles: { primary: 'Hamstrings', secondary: [] },
+		pattern: 'curl'
 	},
 	{
 		id: 'seated-leg-curl',
@@ -1037,6 +1732,7 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Hamstrings', secondary: [] },
+		pattern: 'curl',
 		variantOf: 'leg-curl'
 	},
 	{
@@ -1046,16 +1742,73 @@ export const catalog: Exercise[] = [
 		equipment: 'Machine',
 		loadMode: 'total',
 		muscles: { primary: 'Hamstrings', secondary: [] },
+		pattern: 'curl',
 		variantOf: 'leg-curl'
+	},
+	{
+		id: 'nordic-curl',
+		name: 'Nordic Curl',
+		aliases: ['nordic hamstring curl', 'nordics', 'nordic curls', 'nordic ham curl'],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0.8,
+		muscles: { primary: 'Hamstrings', secondary: [] },
+		pattern: 'curl'
+	},
+	{
+		id: 'glute-ham-raise',
+		name: 'Glute-Ham Raise',
+		aliases: ['ghr', 'glute ham developer', 'ghd raise', 'natural leg curl'],
+		equipment: 'Bodyweight',
+		loadMode: 'total',
+		bodyweightShare: 0.8,
+		muscles: { primary: 'Hamstrings', secondary: ['Glutes'] },
+		pattern: 'curl'
 	},
 
 	{
 		id: 'hip-thrust',
 		name: 'Hip Thrust',
-		aliases: ['glute bridge', 'barbell hip thrust', 'bb hip thrust', 'glute thrust'],
+		aliases: ['barbell hip thrust', 'bb hip thrust', 'glute thrust'],
 		equipment: 'Barbell',
 		loadMode: 'total',
-		muscles: { primary: 'Glutes', secondary: ['Hamstrings'] }
+		muscles: { primary: 'Glutes', secondary: ['Hamstrings'] },
+		pattern: 'hinge'
+	},
+	{
+		id: 'machine-hip-thrust',
+		name: 'Machine Hip Thrust',
+		aliases: [
+			'glute drive',
+			'hip thrust machine',
+			'plate loaded hip thrust',
+			'glute drive machine'
+		],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Glutes', secondary: ['Hamstrings'] },
+		pattern: 'hinge',
+		variantOf: 'hip-thrust'
+	},
+	{
+		id: 'smith-machine-hip-thrust',
+		name: 'Smith Machine Hip Thrust',
+		aliases: ['smith hip thrust', 'smith glute bridge'],
+		equipment: 'Smith Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Glutes', secondary: ['Hamstrings'] },
+		pattern: 'hinge',
+		variantOf: 'hip-thrust'
+	},
+	{
+		id: 'glute-bridge',
+		name: 'Glute Bridge',
+		aliases: ['barbell glute bridge', 'floor glute bridge', 'hip bridge'],
+		equipment: 'Barbell',
+		loadMode: 'total',
+		muscles: { primary: 'Glutes', secondary: ['Hamstrings'] },
+		pattern: 'hinge',
+		variantOf: 'hip-thrust'
 	},
 	{
 		id: 'hip-abduction',
@@ -1069,7 +1822,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Glutes', secondary: [] }
+		muscles: { primary: 'Glutes', secondary: [] },
+		pattern: 'abduction'
 	},
 	{
 		id: 'hip-adduction',
@@ -1083,7 +1837,8 @@ export const catalog: Exercise[] = [
 		],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Glutes', secondary: [] }
+		muscles: { primary: 'Quads', secondary: [] },
+		pattern: 'adduction'
 	},
 	{
 		id: 'kettlebell-swing',
@@ -1091,15 +1846,45 @@ export const catalog: Exercise[] = [
 		aliases: ['kb swing', 'russian swing', 'two hand swing'],
 		equipment: 'Kettlebell',
 		loadMode: 'total',
-		muscles: { primary: 'Glutes', secondary: ['Hamstrings', 'Back', 'Core'] }
+		muscles: { primary: 'Glutes', secondary: ['Hamstrings', 'Back', 'Core'] },
+		pattern: 'hinge'
 	},
 	{
 		id: 'glute-kickback',
 		name: 'Glute Kickback',
-		aliases: ['cable kickback', 'kickback', 'cable glute kickback', 'donkey kick'],
+		aliases: ['cable glute kickback', 'glute kickbacks', 'standing cable kickback'],
 		equipment: 'Cable',
 		loadMode: 'unilateral',
-		muscles: { primary: 'Glutes', secondary: [] }
+		muscles: { primary: 'Glutes', secondary: [] },
+		pattern: 'extension'
+	},
+	{
+		id: 'machine-glute-kickback',
+		name: 'Machine Glute Kickback',
+		aliases: ['glute kickback machine', 'glute machine', 'butt blaster', 'machine kickback'],
+		equipment: 'Machine',
+		loadMode: 'unilateral',
+		muscles: { primary: 'Glutes', secondary: [] },
+		pattern: 'extension',
+		variantOf: 'glute-kickback'
+	},
+	{
+		id: 'cable-pull-through',
+		name: 'Cable Pull-Through',
+		aliases: ['pull through', 'cable pullthrough', 'rope pull through', 'pull throughs'],
+		equipment: 'Cable',
+		loadMode: 'total',
+		muscles: { primary: 'Glutes', secondary: ['Hamstrings'] },
+		pattern: 'hinge'
+	},
+	{
+		id: 'reverse-hyper',
+		name: 'Reverse Hyperextension',
+		aliases: ['reverse hyper', 'reverse hypers', 'reverse hyper machine'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Glutes', secondary: ['Hamstrings', 'Back'] },
+		pattern: 'hinge'
 	},
 
 	{
@@ -1108,7 +1893,34 @@ export const catalog: Exercise[] = [
 		aliases: ['calf raise', 'machine calf raise', 'calf raise machine'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Calves', secondary: [] }
+		muscles: { primary: 'Calves', secondary: [] },
+		pattern: 'raise'
+	},
+	{
+		id: 'single-leg-calf-raise',
+		name: 'Single-Leg Calf Raise',
+		aliases: [
+			'one leg calf raise',
+			'single calf raise',
+			'unilateral calf raise',
+			'single leg calf raises'
+		],
+		equipment: 'Bodyweight',
+		loadMode: 'unilateral',
+		bodyweightShare: 1,
+		muscles: { primary: 'Calves', secondary: [] },
+		pattern: 'raise',
+		variantOf: 'standing-calf-raise'
+	},
+	{
+		id: 'donkey-calf-raise',
+		name: 'Donkey Calf Raise',
+		aliases: ['donkey raise', 'donkey calves', 'donkey calf raise machine'],
+		equipment: 'Machine',
+		loadMode: 'total',
+		muscles: { primary: 'Calves', secondary: [] },
+		pattern: 'raise',
+		variantOf: 'standing-calf-raise'
 	},
 	{
 		id: 'seated-calf-raise',
@@ -1116,7 +1928,8 @@ export const catalog: Exercise[] = [
 		aliases: ['seated calves', 'soleus raise', 'seated machine calf raise'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Calves', secondary: [] }
+		muscles: { primary: 'Calves', secondary: [] },
+		pattern: 'raise'
 	},
 	{
 		id: 'calf-press',
@@ -1124,7 +1937,8 @@ export const catalog: Exercise[] = [
 		aliases: ['leg press calf raise', 'calf press machine', 'leg press calves'],
 		equipment: 'Machine',
 		loadMode: 'total',
-		muscles: { primary: 'Calves', secondary: [] }
+		muscles: { primary: 'Calves', secondary: [] },
+		pattern: 'raise'
 	}
 ];
 
@@ -1143,7 +1957,7 @@ export const catalogById: Record<string, Exercise> = Object.fromEntries(
  */
 export const FOLDED: Record<string, { id: string; grip: string }> = {
 	'close-grip-bench-press': { id: 'bench-press', grip: 'close' },
-	'close-grip-lat-pulldown': { id: 'lat-pulldown', grip: 'close' },
+	'close-grip-lat-pulldown': { id: 'lat-pulldown', grip: 'neutral' },
 	'wide-grip-lat-pulldown': { id: 'lat-pulldown', grip: 'wide' },
 	'chin-up': { id: 'pull-up', grip: 'underhand' }
 };

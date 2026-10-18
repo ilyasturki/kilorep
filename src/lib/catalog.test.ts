@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog, catalogById, FOLDED } from '$lib/catalog';
-import { settleGrip } from '$lib/domain/grip';
+import type { Exercise } from '$lib/domain/exercise';
+import { gripsOf, settleGrip } from '$lib/domain/grip';
 import { bodyweightShareOf } from '$lib/domain/load';
 import { normalize } from '$lib/domain/search';
 
@@ -94,5 +95,105 @@ describe('folded entries', () => {
 				slug
 			).toBe(true);
 		}
+	});
+});
+
+describe('the catalog as a whole', () => {
+	// A spelling two entries both answer to sends the lifter to whichever sorts first.
+	it('gives every alias and every name to one entry only', () => {
+		const owner = new Map<string, string>();
+
+		for (const exercise of catalog) {
+			for (const spelling of [normalize(exercise.name), ...exercise.aliases]) {
+				expect(owner.get(spelling) ?? exercise.id, spelling).toBe(exercise.id);
+				owner.set(spelling, exercise.id);
+			}
+		}
+	});
+
+	// The lists shelve a variant under a parent that is itself shelved: one pointing at another
+	// variant drops out of the Exercises list.
+	it('roots every variant on an entry that is no one else’s variant', () => {
+		for (const exercise of catalog) {
+			if (exercise.variantOf === undefined) {
+				continue;
+			}
+
+			const parent = catalogById[exercise.variantOf];
+
+			expect(parent, exercise.id).toBeDefined();
+			expect(parent.variantOf, exercise.id).toBeUndefined();
+		}
+	});
+
+	it('states a movement pattern on every entry', () => {
+		for (const exercise of catalog) {
+			expect(exercise.pattern, exercise.id).toBeDefined();
+		}
+	});
+});
+
+// Every grip value id that ever shipped, read off the catalog's history. A set on disk carries
+// one of these forever, so each must keep resolving to itself or to what it was retired into.
+const SHIPPED_GRIPS: Record<string, string[]> = {
+	'bench-press': ['standard', 'close'],
+	'cable-curl': ['bar', 'ez', 'rope'],
+	dip: ['upright', 'forward'],
+	'lat-pulldown': ['wide', 'close', 'neutral', 'underhand'],
+	'overhead-triceps-extension': ['rope', 'bar'],
+	'pull-up': ['overhand', 'underhand', 'neutral'],
+	'seated-cable-row': ['v-bar', 'wide', 'straight', 'rope'],
+	'straight-arm-pulldown': ['bar', 'rope'],
+	'triceps-pushdown': ['rope', 'bar', 'v-bar']
+};
+
+const offeredBy = (exercise: Exercise): Set<string> =>
+	new Set(gripsOf(exercise).map((value) => value.id));
+
+const retiredBy = (exercise: Exercise): Record<string, string> =>
+	exercise.grips === undefined || exercise.grips.retired === undefined
+		? {}
+		: exercise.grips.retired;
+
+describe('shipped grips', () => {
+	it('are pinned for every axis the catalog has', () => {
+		for (const exercise of catalog) {
+			for (const grip of offeredBy(exercise)) {
+				expect(SHIPPED_GRIPS[exercise.id] ?? [], exercise.id).toContain(grip);
+			}
+		}
+	});
+
+	it('each stay on their axis or name the value they were retired into', () => {
+		for (const [id, grips] of Object.entries(SHIPPED_GRIPS)) {
+			const exercise = catalogById[id];
+
+			expect(exercise.grips, id).toBeDefined();
+
+			for (const grip of grips) {
+				const kept = offeredBy(exercise).has(grip) || Object.hasOwn(retiredBy(exercise), grip);
+
+				expect(kept, `${id}: ${grip}`).toBe(true);
+			}
+		}
+	});
+
+	it('retire into a live value, and never retire one still offered', () => {
+		for (const exercise of catalog) {
+			const offered = offeredBy(exercise);
+
+			for (const [from, to] of Object.entries(retiredBy(exercise))) {
+				expect(offered.has(from), `${exercise.id}: ${from}`).toBe(false);
+				expect(offered.has(to), `${exercise.id}: ${to}`).toBe(true);
+				expect(settleGrip(exercise, from), `${exercise.id}: ${from}`).toBe(to);
+			}
+		}
+	});
+
+	it('give the seated row its rope back and read the straight bar as the wide one', () => {
+		const row = catalogById['seated-cable-row'];
+
+		expect(settleGrip(row, 'rope')).toBe('rope');
+		expect(settleGrip(row, 'straight')).toBe('wide');
 	});
 });

@@ -188,7 +188,7 @@ describe('folded slugs', () => {
 		);
 
 		expect(only(sessions['lat-pulldown'][0].sets)).toEqual([55, 50]);
-		expect(only(sessions['lat-pulldown#close'][0].sets)).toEqual([60]);
+		expect(only(sessions['lat-pulldown#neutral'][0].sets)).toEqual([60]);
 	});
 
 	it('leave a workout that names nothing retired untouched', () => {

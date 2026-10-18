@@ -11,7 +11,7 @@
 	import { bestEstimate, rawPr } from '$lib/domain/stats';
 	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
-	import { historyKey, settleGrip } from '$lib/domain/grip';
+	import { historyKey, musclesOf, settleGrip } from '$lib/domain/grip';
 	import { kin } from '$lib/exercises/browse';
 	import EstimatedMax from '$lib/exercises/EstimatedMax.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
@@ -64,6 +64,8 @@
 	let chip = $state<string | null>(null);
 
 	const grip = $derived(settleGrip(exercise, chip));
+
+	const muscles = $derived(musclesOf(exercise, grip));
 
 	const past = $derived(data.gripped[historyKey(exercise.id, exercise, grip)] ?? []);
 
@@ -270,8 +272,8 @@
 				{/if}
 
 				<div class="flex flex-wrap gap-1.5">
-					<Badge tone="accent">{exercise.muscles.primary}</Badge>
-					{#each exercise.muscles.secondary as muscle (muscle)}
+					<Badge tone="accent">{muscles.primary}</Badge>
+					{#each muscles.secondary as muscle (muscle)}
 						<Badge>{muscle}</Badge>
 					{/each}
 				</div>

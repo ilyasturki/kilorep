@@ -37,6 +37,25 @@ const bench: Exercise = {
 	}
 };
 
+const row: Exercise = {
+	id: 'seated-cable-row',
+	name: 'Seated Cable Row',
+	aliases: [],
+	equipment: 'Cable',
+	loadMode: 'total',
+	muscles: { primary: 'Back', secondary: ['Biceps'] },
+	grips: {
+		label: 'Handle',
+		default: 'v-bar',
+		values: [
+			{ id: 'v-bar', label: 'V-Bar' },
+			{ id: 'wide', label: 'Wide Bar' },
+			{ id: 'rope', label: 'Rope' }
+		],
+		retired: { straight: 'wide' }
+	}
+};
+
 const squat: Exercise = {
 	id: 'squat',
 	name: 'Squat',
@@ -61,6 +80,16 @@ describe('settleGrip', () => {
 
 	test('a value the catalogue no longer lists falls back rather than surviving as a dead chip', () => {
 		expect(settleGrip(pushdown, 'v-bar')).toBe('rope');
+	});
+
+	test('a retired value reads as the one it was retired into, never as the default', () => {
+		expect(settleGrip(row, 'straight')).toBe('wide');
+		expect(historyKey('seated-cable-row', row, 'straight')).toBe('seated-cable-row#wide');
+	});
+
+	test('a value back on the axis is itself again', () => {
+		expect(settleGrip(row, 'rope')).toBe('rope');
+		expect(settleGrip(row, 'neutral')).toBe('v-bar');
 	});
 });
 

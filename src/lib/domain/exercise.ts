@@ -103,7 +103,30 @@ export type GripAxis = {
 	/** The value every set carries until one is picked, and the one filed under the bare slug. */
 	default: string;
 	values: Grip[];
+	/** Values taken off the axis, and the live value each one now reads as. Read, never written. */
+	retired?: Record<string, string>;
 };
+
+export type Pattern =
+	| 'horizontal-press'
+	| 'vertical-press'
+	| 'horizontal-pull'
+	| 'vertical-pull'
+	| 'pullover'
+	| 'squat'
+	| 'lunge'
+	| 'hinge'
+	| 'fly'
+	| 'curl'
+	| 'extension'
+	| 'raise'
+	| 'shrug'
+	| 'abduction'
+	| 'adduction'
+	| 'carry'
+	| 'flexion'
+	| 'brace'
+	| 'rotation';
 
 export type Exercise = {
 	id: string;
@@ -113,6 +136,8 @@ export type Exercise = {
 	loadMode: LoadMode;
 	muscles: MuscleTargets;
 	variantOf?: string;
+	/** The coarse shape of the movement, which ranks what stands in for it. */
+	pattern?: Pattern;
 	grips?: GripAxis;
 	/**
 	 * The share of the lifter's own body weight this movement makes them carry.

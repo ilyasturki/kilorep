@@ -114,6 +114,8 @@ type Detail = {
 	restSeconds: number | null;
 	trainedSessions: number;
 	bodyweightShare?: number;
+	pattern?: string;
+	grips?: { default: string; values: { id: string }[]; retired?: Record<string, string> };
 	pr: Best | null;
 	sessions: { est1rm: number; sets: { weight: number; reps: number; rpe: number | null }[] }[];
 };
@@ -532,6 +534,15 @@ describe('exercise', () => {
 		expect(detail.sessions[0].sets).toEqual([{ weight: 80, reps: 5, rpe: 8 }]);
 		expect(detail.sessions[0].est1rm).toBeCloseTo(93.33, 2);
 		expect(detail.trainedSessions).toBe(1);
+	});
+
+	test('states the movement pattern, and offers only the grip ids a set may still name', async () => {
+		const send = await connect();
+		const detail = await callTool<Detail>(send, 'exercise', { id: 'seated-cable-row' });
+
+		expect(detail.pattern).toBe('horizontal-pull');
+		expect(detail.grips).toMatchObject({ values: [{ id: 'v-bar' }, { id: 'wide' }, { id: 'rope' }] });
+		expect(detail.grips).not.toHaveProperty('retired');
 	});
 
 	test('asking for no sessions gives none, rather than every one of them', async () => {
