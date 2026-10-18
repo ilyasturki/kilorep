@@ -8,6 +8,7 @@ import { REST_DEFAULT_ID, noteId, planRestId, restOverrideId } from '$lib/domain
 import { MAX_REST_SECONDS, MIN_REST_SECONDS, restSecondsFor } from '$lib/domain/rest';
 import { searchExercises } from '$lib/domain/search';
 import { estimated1Rm } from '$lib/domain/stats';
+import type { Workout } from '$lib/domain/workout';
 
 import type { Tools } from './context.ts';
 import type { ToolReply } from './format.ts';
@@ -15,6 +16,17 @@ import { bestOf, failed, identify, iso, refused, reply, round, summarise } from 
 import { exerciseOf, noSuchExercise } from './library.ts';
 
 const SECONDS = z.number().int().min(MIN_REST_SECONDS).max(MAX_REST_SECONDS);
+
+// The later occurrence wins where the exercise was trained twice that day, as the app reads it.
+function sessionNote(workout: Workout | null, exerciseId: string): string | undefined {
+	const said = (workout === null ? [] : workout.entries)
+		.flatMap((entry) => entry.exercises)
+		.filter((exercise) => exercise.exerciseId === exerciseId && exercise.note !== undefined);
+
+	const last = said.at(-1);
+
+	return last === undefined ? undefined : last.note;
+}
 
 function setPlanRest(
 	{ library, write }: Pick<Tools, 'library' | 'write'>,
@@ -101,7 +113,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 		{
 			title: 'Exercise detail',
 			description:
-				'Everything the app knows about one exercise: its catalogue entry, the standing note, the rest duration in force, the raw personal best, the estimated-1RM trend and recent sessions set by set. History and the best read across every grip; each set names the grip it was done with.',
+				'Everything the app knows about one exercise: its catalogue entry, the standing note, the rest duration in force, the raw personal best, the estimated-1RM trend and recent sessions set by set, each with the note said about the exercise that day. History and the best read across every grip; each set names the grip it was done with.',
 			inputSchema: z.object({
 				id: z.string().describe('catalogue id, e.g. "bench-press" — from search_exercises'),
 				sessions: z.number().int().min(0).max(50).default(8).describe('how many recent sessions')
@@ -147,6 +159,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 				sessions: recent.map((session) => ({
 					date: iso(session.date),
 					workoutId: session.workoutId,
+					note: sessionNote(library.workout(session.workoutId), id),
 					est1rm: round(
 						Math.max(0, ...session.sets.map((set) => estimated1Rm(set, carried(session.date))))
 					),

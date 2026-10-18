@@ -61,6 +61,7 @@ function performedRows(workout: Workout, drift: Drift | null): Record<string, un
 			exerciseId: exercise.exerciseId,
 			name: nameOf(exercise.exerciseId),
 			plannedAs: exercise.plannedAs,
+			note: exercise.note,
 			// Said only where it says something: most exercises have no grip axis at all, and
 			// two arms is what an unannotated set was. An undefined value leaves no key behind.
 			sets: exercise.sets.map((set) => ({
@@ -182,7 +183,7 @@ export function registerHistory(server: McpServer, { library, write }: Tools): v
 		{
 			title: 'One session, set by set',
 			description:
-				'A finished session in full: every exercise, every set with its weight, reps, type and RPE, and — where it was started from a plan — how it drifted from what was planned. The `version` it returns is what edit_workout and delete_workout need.',
+				'A finished session in full: every exercise with the note said about it that day, every set with its weight, reps, type and RPE, and — where it was started from a plan — how it drifted from what was planned. The `version` it returns is what edit_workout and delete_workout need.',
 			inputSchema: z.object({
 				id: z.string().describe('workout id, from workouts')
 			}),

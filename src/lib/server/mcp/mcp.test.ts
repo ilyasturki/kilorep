@@ -123,6 +123,7 @@ type Detail = {
 	pr: Best | null;
 	sessions: {
 		est1rm: number;
+		note?: string;
 		sets: { weight: number; reps: number; rpe: number | null; grip?: string }[];
 	}[];
 };
@@ -363,6 +364,7 @@ type WorkoutDetail = {
 	exercises: {
 		exerciseId: string;
 		plannedAs?: string;
+		note?: string;
 		group?: number;
 		optional?: boolean;
 		drift?: { added: number; removed: number; retargeted: number };
@@ -1472,6 +1474,45 @@ describe('logging a session that already happened', () => {
 		});
 
 		expect(leap.error).toBeUndefined();
+	});
+
+	test('keeps what was said about an exercise, through a correction that sends no sets', async () => {
+		const wrote = await once<Wrote>('log_workout', {
+			date: '2026-08-18',
+			exercises: [
+				{
+					exerciseId: 'bench-press',
+					note: '  Seat 5, left shoulder twinged  ',
+					sets: [
+						{ weight: 40, reps: 8, type: 'warmup' },
+						{ weight: 80, reps: 5 },
+						{ weight: 60, reps: 8, type: 'drop' }
+					]
+				},
+				{ exerciseId: 'barbell-row', note: '   ', sets: [{ weight: 60, reps: 10 }] }
+			]
+		});
+
+		// The drop set is a working set; the warmup is not.
+		expect(wrote.totals).toMatchObject({ completedSets: 3 });
+
+		const before = await once<WorkoutDetail>('workout', { id: wrote.id ?? '' });
+
+		expect(before.exercises[0].note).toBe('Seat 5, left shoulder twinged');
+		expect(before.exercises[0].sets.map((set) => set.type)).toEqual(['warmup', 'normal', 'drop']);
+		expect(before.exercises[1]).not.toHaveProperty('note');
+
+		await once<Wrote>('edit_workout', { id: before.id, version: before.version, minutes: 40 });
+
+		const after = await once<WorkoutDetail>('workout', { id: before.id });
+
+		expect(after.minutes).toBe(40);
+		expect(after.exercises[0].note).toBe('Seat 5, left shoulder twinged');
+
+		const send = await connect();
+		const detail = await callTool<Detail>(send, 'exercise', { id: 'bench-press' });
+
+		expect(detail.sessions.at(-1)).toMatchObject({ note: 'Seat 5, left shoulder twinged' });
 	});
 
 	test('refuses a plan and an exercise it cannot resolve', async () => {

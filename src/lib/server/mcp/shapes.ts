@@ -159,7 +159,9 @@ export const PERFORMED_SET = z
 		type: z
 			.enum(['normal', 'warmup', 'drop', 'failure'])
 			.default('normal')
-			.describe('warmups are excluded from volume and personal bests'),
+			.describe(
+				'warmups are excluded from volume, personal bests, hints and rest; drop and failure sets count as working sets'
+			),
 		rpe: z.number().min(1).max(10).nullable().default(null).describe('1–10, half steps'),
 		completed: z
 			.boolean()
@@ -187,7 +189,14 @@ export const PERFORMED_EXERCISE = z.object({
 			'the catalogue id the plan had in this slot, when this exercise was swapped in for it; omit when it is what was planned'
 		),
 	optional: OPTIONAL.optional(),
-	sets: z.array(PERFORMED_SET).min(1).max(30)
+	sets: z.array(PERFORMED_SET).min(1).max(30),
+	note: z
+		.string()
+		.max(2000)
+		.optional()
+		.describe(
+			'what was said about this exercise on this day; the app shows it again the next time the exercise is trained. Not the standing note set_exercise_note writes'
+		)
 });
 
 export type PerformedInput = z.infer<typeof PERFORMED_EXERCISE>;
@@ -245,6 +254,12 @@ export function workoutEntriesOf(items: PerformedInput[]): WorkoutEntry[] {
 
 		if (item.optional === true) {
 			exercise.optional = true;
+		}
+
+		const note = item.note === undefined ? '' : item.note.trim();
+
+		if (note !== '') {
+			exercise.note = note;
 		}
 
 		return exercise;
