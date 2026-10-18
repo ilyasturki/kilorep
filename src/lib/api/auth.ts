@@ -129,6 +129,15 @@ export async function revokeToken(id: string, fetch?: Fetch): Promise<void> {
 	await request<undefined>(`/api/auth/tokens/${id}`, { method: 'DELETE', fetch });
 }
 
+export async function revokeOtherTokens(fetch?: Fetch): Promise<number> {
+	const { revoked } = await request<{ revoked: number }>('/api/auth/tokens', {
+		method: 'DELETE',
+		fetch
+	});
+
+	return revoked;
+}
+
 export async function googleEnabled(fetch?: Fetch): Promise<boolean> {
 	try {
 		const { enabled } = await request<{ enabled: boolean }>(GOOGLE_ENABLED_PATH, { fetch });

@@ -291,6 +291,19 @@ describe('revokeOtherTokens', () => {
 		expect(resolveCredential(db, token)).toBeNull();
 	});
 
+	test('asks no password of a Google-only account', () => {
+		const result = resolveGoogleIdentity(db, identity('sub-1', 'lifter@example.com'), OPEN);
+		if (!result.ok) {
+			throw new Error('expected an account');
+		}
+
+		const { record } = issueToken(db, result.user.id, 'Web', 'web');
+		const { token: phone } = issueToken(db, result.user.id, 'Pixel 8', 'device');
+
+		expect(revokeOtherTokens(db, result.user.id, record.id)).toBe(1);
+		expect(resolveCredential(db, phone)).toBeNull();
+	});
+
 	test('never reaches past the account it was called for', async () => {
 		const mine = await createUser(db, 'mine@example.com', PASSWORD);
 		const yours = await createUser(db, 'yours@example.com', PASSWORD);

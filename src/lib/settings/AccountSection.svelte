@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 
-	import { setPassword } from '$lib/api/auth';
+	import { revokeOtherTokens, setPassword } from '$lib/api/auth';
 	import { ApiError } from '$lib/api/client';
 	import Section from '$lib/settings/Section.svelte';
+	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import Input from '$lib/ui/Input.svelte';
 	import ListRow from '$lib/ui/ListRow.svelte';
@@ -22,6 +23,7 @@
 
 	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
+	let notice = $state('');
 	let signOutError = $state('');
 	let signOutPending = $state(false);
 
@@ -38,6 +40,30 @@
 		signOutPending = false;
 	}
 
+	let othersOpen = $state(false);
+	let othersPending = $state(false);
+	let othersError = $state('');
+
+	async function signOutElsewhere() {
+		othersError = '';
+		notice = '';
+		othersPending = true;
+
+		try {
+			const revoked = await revokeOtherTokens();
+
+			onrevokedothers();
+			notice = revoked === 0 ? 'No other device was signed in.' : 'Every other device signed out.';
+
+			await invalidateAll();
+		} catch (error) {
+			othersError =
+				error instanceof ApiError ? error.message : 'could not sign out the other devices';
+		}
+
+		othersPending = false;
+	}
+
 	let passwordOpen = $state(false);
 	let currentPassword = $state('');
 	let newPassword = $state('');
@@ -48,7 +74,6 @@
 	let passwordFormError = $state('');
 	let passwordPending = $state(false);
 	let signOutOthers = $state(true);
-	let passwordDone = $state('');
 
 	let needsCurrent = $derived(user.currentPasswordRequired);
 
@@ -72,7 +97,7 @@
 		newError = '';
 		confirmError = '';
 		passwordFormError = '';
-		passwordDone = '';
+		notice = '';
 		signOutOthers = true;
 		passwordOpen = true;
 	}
@@ -107,7 +132,7 @@
 		confirmPassword = '';
 		passwordPending = false;
 		passwordOpen = false;
-		passwordDone = signOutOthers
+		notice = signOutOthers
 			? 'Password changed, and every other device signed out.'
 			: 'Password changed.';
 
@@ -131,6 +156,14 @@
 
 	<li>
 		<ListRow
+			title={othersPending ? 'Signing out…' : 'Sign out other devices'}
+			onclick={() => (othersOpen = true)}
+			chevron={false}
+		/>
+	</li>
+
+	<li>
+		<ListRow
 			title={signOutPending ? 'Signing out…' : 'Sign out'}
 			onclick={() => void signOut()}
 			chevron={false}
@@ -139,11 +172,14 @@
 
 	{#snippet footer()}
 		<div aria-live="polite">
-			{#if passwordDone !== ''}
-				<p class="text-sm font-bold text-ink-muted">{passwordDone}</p>
+			{#if notice !== ''}
+				<p class="text-sm font-bold text-ink-muted">{notice}</p>
 			{/if}
 			{#if signOutError !== ''}
 				<p class="text-sm font-bold text-danger">{signOutError}</p>
+			{/if}
+			{#if othersError !== ''}
+				<p class="text-sm font-bold text-danger">{othersError}</p>
 			{/if}
 		</div>
 	{/snippet}
@@ -197,3 +233,11 @@
 		</div>
 	</div>
 </Sheet>
+
+<AlertDialog
+	bind:open={othersOpen}
+	title="Sign out other devices?"
+	description="Every other browser, phone and API token loses access. This one stays signed in."
+	confirmLabel="Sign out"
+	onconfirm={() => void signOutElsewhere()}
+/>

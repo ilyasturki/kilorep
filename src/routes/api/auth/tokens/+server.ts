@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 
-import { issueToken, listTokens } from '$lib/server/auth/accounts';
+import { issueToken, listTokens, revokeOtherTokens } from '$lib/server/auth/accounts';
 import { getDatabase } from '$lib/server/db/client';
 import { readJsonBody, requiredString } from '$lib/server/http/body';
 import { requireCredential } from '$lib/server/http/guards';
@@ -34,4 +34,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const { token, record } = issueToken(getDatabase(), user.id, label, kind);
 
 	return json({ token, credential: publicToken(record, false) }, { status: 201 });
+};
+
+export const DELETE: RequestHandler = ({ locals }) => {
+	const { user, token } = requireCredential(locals);
+
+	return json({ revoked: revokeOtherTokens(getDatabase(), user.id, token.id) });
 };
