@@ -391,6 +391,154 @@ describe('when sync comes back for another go', () => {
 		expect(fetched.mock.calls.length).toBeGreaterThan(first);
 	});
 
+	async function emptied(): Promise<void> {
+		const singleton = await getStore();
+
+		await singleton.wipe(userId);
+	}
+
+	it('lines up a pull the server did not answer, with nothing to send', async () => {
+		await emptied();
+
+		const fetched = failing();
+
+		freeze();
+
+		syncPromptly(userId);
+
+		await settled(() => vi.getTimerCount() > 0);
+
+		expect(syncStatus().pending).toBe(0);
+		expect(syncStatus().stall).toBe('unreachable');
+
+		const first = fetched.mock.calls.length;
+
+		await vi.advanceTimersByTimeAsync(5000);
+		await settled(() => fetched.mock.calls.length > first);
+
+		expect(fetched.mock.calls.length).toBeGreaterThan(first);
+	});
+
+	it('stops climbing once a pull lands', async () => {
+		await emptied();
+
+		const answering = globalThis.fetch;
+
+		failing();
+
+		freeze();
+
+		syncPromptly(userId);
+
+		await settled(() => vi.getTimerCount() > 0);
+
+		vi.stubGlobal('fetch', answering);
+
+		await vi.advanceTimersByTimeAsync(5000);
+		await settled(() => syncStatus().stall === null && !syncStatus().busy);
+
+		expect(syncStatus().syncedAt).not.toBeNull();
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it('lines up nothing behind a dropped credential', async () => {
+		await emptied();
+
+		setDeviceToken('a-device-token');
+
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => Response.json({ message: 'unauthorized' }, { status: 401 }))
+		);
+
+		freeze();
+
+		syncPromptly(userId);
+
+		await settled(() => syncStatus().stall !== null && !syncStatus().busy);
+
+		expect(syncStatus().stall).toBe('signed-out');
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
+	it('drops the owed pull when the account leaves', async () => {
+		await emptied();
+
+		const fetched = failing();
+
+		freeze();
+
+		syncPromptly(userId);
+
+		await settled(() => vi.getTimerCount() > 0);
+
+		stopSyncing();
+
+		const first = fetched.mock.calls.length;
+
+		await vi.advanceTimersByTimeAsync(10_000);
+
+		expect(vi.getTimerCount()).toBe(0);
+		expect(fetched.mock.calls.length).toBe(first);
+	});
+
+	it('lines up nothing for an account that left mid-exchange', async () => {
+		await emptied();
+
+		const answer = Promise.withResolvers<null>();
+		const fetched = vi.fn(async () => {
+			await answer.promise;
+
+			throw new TypeError('fetch failed');
+		});
+
+		vi.stubGlobal('fetch', fetched);
+
+		freeze();
+
+		syncPromptly(userId);
+
+		await settled(() => fetched.mock.calls.length > 0);
+
+		stopSyncing();
+		answer.resolve(null);
+
+		await settled(() => syncStatus().stall !== null && !syncStatus().busy);
+		await vi.advanceTimersByTimeAsync(10_000);
+
+		expect(syncStatus().stall).toBe('unreachable');
+		expect(vi.getTimerCount()).toBe(0);
+		expect(fetched).toHaveBeenCalledTimes(1);
+	});
+
+	it('runs the re-run a new account asked for mid-exchange under that account', async () => {
+		await emptied();
+
+		const answer = Promise.withResolvers<null>();
+		const fetched = vi.fn(async () => {
+			await answer.promise;
+
+			throw new TypeError('fetch failed');
+		});
+
+		vi.stubGlobal('fetch', fetched);
+
+		freeze();
+
+		syncPromptly(userId);
+
+		await settled(() => fetched.mock.calls.length > 0);
+
+		stopSyncing();
+		syncPromptly('someone-else');
+		answer.resolve(null);
+
+		await settled(() => syncStatus().stall === 'other-account' && !syncStatus().busy);
+
+		expect(syncStatus().stall).toBe('other-account');
+		expect(fetched).toHaveBeenCalledTimes(1);
+	});
+
 	it('lines up nothing once there is nothing left to send', async () => {
 		const singleton = await getStore();
 

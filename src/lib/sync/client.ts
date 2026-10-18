@@ -168,8 +168,12 @@ let retry: ReturnType<typeof setTimeout> | undefined;
 let attempt = 0;
 let inFlight = false;
 let again = false;
+// Null once the account has left: a call mid-flight may name a new one, and the exchange in flight must not schedule under the old.
+let account: string | null = null;
 
 async function drain(userId: string): Promise<void> {
+	account = userId;
+
 	if (inFlight) {
 		again = true;
 
@@ -178,20 +182,30 @@ async function drain(userId: string): Promise<void> {
 
 	inFlight = true;
 
+	let owner: string | null = userId;
+
 	try {
-		do {
+		while (owner !== null) {
 			again = false;
-			await syncNow(userId);
-		} while (again);
+			await syncNow(owner);
+			owner = again ? account : null;
+		}
 	} finally {
 		inFlight = false;
+	}
+
+	const next = account;
+
+	if (next === null) {
+		return;
 	}
 
 	const { pending, stall } = syncStatus();
 
 	clearTimeout(retry);
 
-	if (pending === 0 || !healsItself(stall)) {
+	// An unanswered server owes a pull even with nothing to push: another device's records wait on it.
+	if (!healsItself(stall) || (stall === null && pending === 0)) {
 		attempt = 0;
 
 		return;
@@ -208,7 +222,7 @@ async function drain(userId: string): Promise<void> {
 	attempt += 1;
 
 	retry = setTimeout(() => {
-		void drain(userId);
+		void drain(next);
 	}, wait);
 }
 
@@ -265,4 +279,5 @@ export function syncPromptly(userId: string): void {
  */
 export function stopSyncing(): void {
 	clearSchedule();
+	account = null;
 }
