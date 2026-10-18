@@ -18,9 +18,10 @@ function download(file: OutFile): void {
 	anchor.click();
 	anchor.remove();
 
+	// Revoked at once, some engines abort a download that has not started reading the Blob yet.
 	setTimeout(() => {
 		URL.revokeObjectURL(url);
-	}, 0);
+	}, 40_000);
 }
 
 export async function deliver(files: OutFile[]): Promise<void> {
