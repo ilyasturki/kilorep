@@ -56,8 +56,7 @@ export function noteId(exerciseId: string): string {
 	return `${NOTE_PREFIX}${exerciseId}`;
 }
 
-// The session whose plan offer was answered, by Update or Dismiss. One record per plan, plus
-// one unsuffixed for the sessions that had no plan.
+// One record per plan, plus one unsuffixed for the sessions that had no plan.
 export type PlanOfferPreference = { workoutId: string };
 
 export const PLAN_OFFER_ID = 'plan-offer';

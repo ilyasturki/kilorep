@@ -306,7 +306,7 @@ export type PlanChange =
 	| { kind: 'order' }
 	| { kind: 'supersets' };
 
-// Made only when `applyDrift` is handed its `legId`.
+// Applied only when `applyDrift` is handed its `legId`.
 export type PlanSwap = { legId: string; from: string; to: string };
 
 export type PlanOffer = { changes: PlanChange[]; swaps: PlanSwap[] };
