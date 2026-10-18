@@ -154,8 +154,7 @@ export class WorkoutSession {
 		}
 	}
 
-	// The cursor goes to the top of the ramp, and only on an exercise not yet begun: a warmup
-	// put in front of logged sets is a correction, and logging it would end their rest.
+	// Only an exercise not yet begun gives up the cursor: logging the warmup would end their rest.
 	public addWarmup(exerciseId: string): void {
 		const exercise = cursors(this.workout).find((c) => c.exercise.id === exerciseId)?.exercise;
 
