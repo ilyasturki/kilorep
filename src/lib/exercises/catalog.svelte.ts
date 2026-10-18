@@ -4,30 +4,49 @@ import { isCustomRecord, newCustomId, withCustoms } from '$lib/domain/custom';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Store } from '$lib/store/store';
 import { getStore } from '$lib/store/store';
-import { syncSoon } from '$lib/sync/client';
+import { onPulled, syncSoon } from '$lib/sync/client';
 import type { WireRecord } from '$lib/sync/protocol';
 
 class CatalogHolder {
 	public current: Catalog = $state.raw(withCustoms(catalog, []));
 
-	public async load(store: Store): Promise<Catalog> {
-		this.current = await store.catalog();
+	// Reads overlap — a pull lands while a write reloads — and only the latest may draw.
+	#asked = 0;
 
-		return this.current;
+	// Never dropped: a singleton listening for the life of the app, from before the first sync.
+	public constructor() {
+		onPulled((records) => {
+			void this.#pulled(records);
+		});
 	}
 
-	public async pulled(store: Store, records: WireRecord[]): Promise<void> {
+	public async load(store: Store): Promise<Catalog> {
+		this.#asked += 1;
+
+		const ticket = this.#asked;
+		const next = await store.catalog();
+
+		if (ticket === this.#asked) {
+			this.current = next;
+		}
+
+		return next;
+	}
+
+	async #pulled(records: WireRecord[]): Promise<void> {
 		if (records.some((record) => isCustomRecord(record.id))) {
-			await this.load(store);
+			await this.load(await getStore());
 		}
 	}
 
-	async #wrote(store: Store, account: string | null): Promise<void> {
-		await this.load(store);
+	async #wrote(store: Store, account: string | null): Promise<Catalog> {
+		const next = await this.load(store);
 
 		if (account !== null) {
 			syncSoon(account);
 		}
+
+		return next;
 	}
 
 	public async create(draft: CustomDraft, account: string | null): Promise<Exercise> {
@@ -35,9 +54,10 @@ class CatalogHolder {
 		const id = newCustomId();
 
 		await store.saveCustomExercise(id, draft, Date.now());
-		await this.#wrote(store, account);
 
-		return this.current.byId[id];
+		const { byId } = await this.#wrote(store, account);
+
+		return byId[id];
 	}
 
 	public async edit(id: string, draft: CustomDraft, account: string | null): Promise<void> {
