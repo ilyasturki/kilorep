@@ -57,10 +57,12 @@
 		await exerciseCatalog.addGrip(exercise.id, text, account);
 	}
 
-	async function rename(grip: Grip, text: string) {
-		const trimmed = text.trim();
+	async function rename(grip: Grip, field: HTMLInputElement) {
+		const trimmed = field.value.trim();
 
 		if (trimmed === '' || trimmed === grip.label || clash(trimmed, grip.id)) {
+			field.value = grip.label;
+
 			return;
 		}
 
@@ -107,7 +109,7 @@
 							aria-label="Rename {grip.label}"
 							maxlength={40}
 							autocomplete="off"
-							onchange={(event) => void rename(grip, event.currentTarget.value)}
+							onchange={(event) => void rename(grip, event.currentTarget)}
 							onkeydown={(event) => {
 								if (event.key === 'Enter') {
 									event.currentTarget.blur();
