@@ -721,7 +721,7 @@
 		? 'Add to superset'
 		: `Superset ${actingGroup === null ? 'exercise' : actingGroup.meta.name} with…`}
 	multiple
-	verb="Superset"
+	verb={actingEntry !== null && actingEntry.superset ? 'Add' : 'Superset'}
 	pinned={supersetShelf}
 	{present}
 	presentLabel="In plan"
