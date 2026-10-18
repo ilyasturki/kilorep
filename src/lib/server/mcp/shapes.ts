@@ -80,7 +80,7 @@ const GRIP = z
 	.string()
 	.max(40)
 	.describe(
-		'which grip, attachment or handle — one of the ids the exercise’s `grips` axis lists; omit for its default. History, hints and bests are kept per grip'
+		'which grip, attachment or handle — one of the ids the exercise’s `grips` axis lists; omit for its default. Recorded on the set; history, hints and bests read across every grip'
 	);
 
 const ARMS = z

@@ -1,7 +1,9 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/server';
 import { beforeEach, describe, expect, test } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
 import { addDays, localDateOf } from '$lib/domain/bodyweight';
+import { gripLabel } from '$lib/domain/grip';
 import type { WireRecord } from '$lib/sync/protocol';
 
 import { createUser } from '../auth/accounts.ts';
@@ -34,6 +36,7 @@ type SetSpec = {
 	rpe?: number;
 	warmup?: boolean;
 	done?: boolean;
+	grip?: string;
 };
 
 function workout(id: string, startedAt: number, exerciseId: string, sets: SetSpec[]): WireRecord {
@@ -61,7 +64,8 @@ function workout(id: string, startedAt: number, exerciseId: string, sets: SetSpe
 								weight: set.weight,
 								reps: set.reps,
 								rpe: set.rpe ?? null,
-								completed: set.done !== false
+								completed: set.done !== false,
+								grip: set.grip
 							}))
 						}
 					]
@@ -117,7 +121,10 @@ type Detail = {
 	pattern?: string;
 	grips?: { default: string; values: { id: string }[]; retired?: Record<string, string> };
 	pr: Best | null;
-	sessions: { est1rm: number; sets: { weight: number; reps: number; rpe: number | null }[] }[];
+	sessions: {
+		est1rm: number;
+		sets: { weight: number; reps: number; rpe: number | null; grip?: string }[];
+	}[];
 };
 
 type WorkoutRow = { id: string; title: string; sets: number; volumeKg: number };
@@ -531,7 +538,9 @@ describe('exercise', () => {
 
 		// The warmup is excluded from history, as it is everywhere else.
 		expect(detail.sessions).toHaveLength(1);
-		expect(detail.sessions[0].sets).toEqual([{ weight: 80, reps: 5, rpe: 8 }]);
+		expect(detail.sessions[0].sets).toEqual([
+			{ weight: 80, reps: 5, rpe: 8, grip: gripLabel(catalogById['bench-press'], null) }
+		]);
 		expect(detail.sessions[0].est1rm).toBeCloseTo(93.33, 2);
 		expect(detail.trainedSessions).toBe(1);
 	});
@@ -727,6 +736,32 @@ describe('a movement that carries the body', () => {
 
 		expect(detail.bodyweightShare).toBe(1);
 		expect(detail.pr).toMatchObject({ kg: 88, addedKg: 10, reps: 8 });
+	});
+
+	test('the personal best reads every grip, and each set says which it was', async () => {
+		seed(
+			weighIn(addDays(today, -30), 78),
+			workout('w1', NOW - 3 * DAY, 'pull-up', [{ weight: 12.5, reps: 3, grip: 'overhand' }]),
+			workout('w2', NOW - DAY, 'pull-up', [
+				{ weight: 10, reps: 6, grip: 'underhand' },
+				{ weight: 0, reps: 8 }
+			])
+		);
+
+		const detail = await once<Detail>('exercise', { id: 'pull-up' });
+
+		expect(detail.trainedSessions).toBe(2);
+		expect(detail.pr).toMatchObject({ kg: 90.5, addedKg: 12.5, reps: 3 });
+		expect(detail.sessions.at(-1)!.sets.map((set) => set.grip)).toEqual([
+			gripLabel(catalogById['pull-up'], 'underhand'),
+			gripLabel(catalogById['pull-up'], 'overhand')
+		]);
+
+		const found = await once<Found>('search_exercises', { query: 'pull-up', detail: true });
+		const row = found.exercises.find((exercise) => exercise.id === 'pull-up')!;
+
+		expect(row.pr).toMatchObject({ addedKg: 12.5, reps: 3 });
+		expect(row.lastSets).toBe('+10 × 6, 8 reps');
 	});
 
 	test('a barbell best names no added weight, which would be the same number twice', async () => {

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { localDateOf } from '$lib/domain/bodyweight';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Carried, CarriedOn } from '$lib/domain/load';
-import { bodyweightShareOf, carriedOn } from '$lib/domain/load';
+import { bodyweightShareOf, carriedOn, setLabel } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import { rawPr } from '$lib/domain/stats';
 import type { Workout } from '$lib/domain/workout';
@@ -107,9 +107,9 @@ export function summarise(exercise: Exercise, library: Library): Record<string, 
 		loadMode: exercise.loadMode,
 		bodyweightShare: bodyweightShareOf(exercise) === 0 ? undefined : exercise.bodyweightShare,
 		lastTrained: last === undefined ? null : iso(last.date),
-		// The numbers as logged, which on a share-bearing exercise is what was added.
+		// As the app prints them: what was added on a share-bearing exercise, `8 reps` where nothing was.
 		lastSets:
-			last === undefined ? null : last.sets.map((set) => `${set.weight} × ${set.reps}`).join(', '),
+			last === undefined ? null : last.sets.map((set) => setLabel(exercise, set)).join(', '),
 		pr
 	});
 }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 
 import { catalog } from '$lib/catalog';
+import { gripLabel } from '$lib/domain/grip';
 import { bodyweightShareOf, carriedOn } from '$lib/domain/load';
 import { REST_DEFAULT_ID, noteId, restOverrideId } from '$lib/domain/preference';
 import { MAX_REST_SECONDS, MIN_REST_SECONDS, restSecondsFor } from '$lib/domain/rest';
@@ -65,7 +66,7 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 		{
 			title: 'Exercise detail',
 			description:
-				'Everything the app knows about one exercise: its catalogue entry, the standing note, the rest duration in force, the raw personal best, the estimated-1RM trend and recent sessions set by set.',
+				'Everything the app knows about one exercise: its catalogue entry, the standing note, the rest duration in force, the raw personal best, the estimated-1RM trend and recent sessions set by set. History and the best read across every grip; each set names the grip it was done with.',
 			inputSchema: z.object({
 				id: z.string().describe('catalogue id, e.g. "bench-press" — from search_exercises'),
 				sessions: z.number().int().min(0).max(50).default(8).describe('how many recent sessions')
@@ -94,8 +95,8 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 				muscles: exercise.muscles,
 				variantOf: exercise.variantOf,
 				pattern: exercise.pattern,
-				// The one axis this movement varies on, if any: history, hints and bests are kept
-				// per value, so a caller writing sets has to know which ids it may name.
+				// The one axis this movement varies on, if any: history and bests read across it,
+				// but a caller writing sets has to know which ids it may name.
 				grips:
 					exercise.grips === undefined
 						? undefined
@@ -117,7 +118,8 @@ export function registerExercises(server: McpServer, { library, write }: Tools):
 					sets: session.sets.map((set) => ({
 						weight: set.weight,
 						reps: set.reps,
-						rpe: set.rpe
+						rpe: set.rpe,
+						grip: gripLabel(exercise, set.grip)
 					}))
 				}))
 			});
