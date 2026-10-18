@@ -3,30 +3,24 @@ import type { Locator, Page } from '@playwright/test';
 import { expect, test } from '../fixtures.ts';
 import type { Account } from '../fixtures.ts';
 import type { Database } from '../../src/lib/server/db/client.ts';
-import { addExercise, logSet, startEmpty, startPlan } from '../helpers.ts';
+import { addExercise, logSet, startEmpty, startPlan, touch } from '../helpers.ts';
+import { finishedSession, plantRecords } from '../plant.ts';
 
-import {
-	exerciseBlock,
-	onDesk,
-	pastWorkout,
-	plantWorkouts,
-	setRow,
-	tapOn,
-	trayLast
-} from './support.ts';
+import { exerciseBlock, onDesk, setRow, trayLast } from './support.ts';
 
 const UNDERHAND = 'underhand';
 
+// An hour ago, so it is last time even on the seeded account, whose last pull day was yesterday.
 async function plantSupinated(page: Page, db: Database, account: Account): Promise<void> {
-	await plantWorkouts(page, db, account.id, [
-		pastWorkout('w11-supinated', 60, [
+	await plantRecords(db, account.id, page, [
+		finishedSession(1 / 24, [
 			{
 				exerciseId: 'pull-up',
 				grip: UNDERHAND,
 				sets: [
-					{ weight: 0, reps: 8, grip: UNDERHAND },
-					{ weight: 5, reps: 8, grip: UNDERHAND },
-					{ weight: 0, reps: 6, grip: UNDERHAND }
+					{ kg: 0, reps: 8, grip: UNDERHAND },
+					{ kg: 5, reps: 8, grip: UNDERHAND },
+					{ kg: 0, reps: 6, grip: UNDERHAND }
 				]
 			}
 		])
@@ -47,7 +41,7 @@ async function recallOf(page: Page, mark: string | RegExp): Promise<Locator> {
 		return row.locator('xpath=./span[3]');
 	}
 
-	await tapOn(row);
+	await touch(row);
 
 	return trayLast(page);
 }
@@ -80,7 +74,7 @@ test.describe(() => {
 		await startPlan(page, 'Pull Day');
 
 		const pullUp = exerciseBlock(page, 'Pull-Up');
-		await tapOn(setRow(pullUp, 'set 1 pending'));
+		await touch(setRow(pullUp, 'set 1 pending'));
 		await logSet(page);
 		// The carry from set 1 outranks last time's +5 here.
 		await logSet(page, { kg: 5 });

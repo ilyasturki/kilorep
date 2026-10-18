@@ -1,18 +1,10 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures.ts';
-import { addExercise, startEmpty } from '../helpers.ts';
+import { addExercise, startEmpty, touch } from '../helpers.ts';
+import { finishedSession, plantRecords } from '../plant.ts';
 
-import {
-	exerciseAction,
-	exerciseBlock,
-	onDesk,
-	pastWorkout,
-	plantWorkouts,
-	setRow,
-	tapOn,
-	tray
-} from './support.ts';
+import { exerciseAction, exerciseBlock, onDesk, setRow, tray } from './support.ts';
 
 const WARMUP = /^warmup (?:set|active)$/u;
 
@@ -54,20 +46,20 @@ async function addWarmups(page: Page, name: string, count: number): Promise<void
 }
 
 test.beforeEach(async ({ page, db, account }) => {
-	await plantWorkouts(page, db, account.id, [
-		pastWorkout('w12-last', 24 * 60, [
+	await plantRecords(db, account.id, page, [
+		finishedSession(1, [
 			{
 				exerciseId: 'bench-press',
 				sets: [
-					{ weight: 87.5, reps: 5 },
-					{ weight: 87.5, reps: 5 }
+					{ kg: 87.5, reps: 5 },
+					{ kg: 87.5, reps: 5 }
 				]
 			},
 			{
 				exerciseId: 'incline-dumbbell-press',
 				sets: [
-					{ weight: 17, reps: 10 },
-					{ weight: 17, reps: 10 }
+					{ kg: 17, reps: 10 },
+					{ kg: 17, reps: 10 }
 				]
 			}
 		])
@@ -98,7 +90,7 @@ test('a barbell ramp climbs to 85 % rounded down to 2.5 kg, and a fourth is the 
 	]);
 
 	if (!onDesk(page)) {
-		await tapOn(setRow(bench, WARMUP).nth(1));
+		await touch(setRow(bench, WARMUP).nth(1));
 		await expect(tray(page)).toContainText(/Warmup\s*50 % of 87\.5 kg/u);
 	}
 });

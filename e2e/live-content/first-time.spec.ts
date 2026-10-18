@@ -3,40 +3,33 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '../fixtures.ts';
 import type { Account } from '../fixtures.ts';
 import type { Database } from '../../src/lib/server/db/client.ts';
-import { addExercise, startEmpty } from '../helpers.ts';
+import { addExercise, startEmpty, touch } from '../helpers.ts';
+import { finishedSession, plantRecords } from '../plant.ts';
 
-import {
-	exerciseAction,
-	exerciseBlock,
-	pastWorkout,
-	plantWorkouts,
-	setRow,
-	tapOn,
-	tray
-} from './support.ts';
+import { exerciseAction, exerciseBlock, setRow, tray } from './support.ts';
 
 // Last time stopped at three sets; the session before it reached five.
 async function plantBench(page: Page, db: Database, account: Account): Promise<void> {
-	await plantWorkouts(page, db, account.id, [
-		pastWorkout('w5-older', 3 * 24 * 60, [
+	await plantRecords(db, account.id, page, [
+		finishedSession(3, [
 			{
 				exerciseId: 'bench-press',
 				sets: [
-					{ weight: 70, reps: 8 },
-					{ weight: 70, reps: 8 },
-					{ weight: 70, reps: 8 },
-					{ weight: 62.5, reps: 10 },
-					{ weight: 60, reps: 12 }
+					{ kg: 70, reps: 8 },
+					{ kg: 70, reps: 8 },
+					{ kg: 70, reps: 8 },
+					{ kg: 62.5, reps: 10 },
+					{ kg: 60, reps: 12 }
 				]
 			}
 		]),
-		pastWorkout('w5-last', 24 * 60, [
+		finishedSession(1, [
 			{
 				exerciseId: 'bench-press',
 				sets: [
-					{ weight: 90, reps: 5 },
-					{ weight: 90, reps: 5 },
-					{ weight: 90, reps: 5 }
+					{ kg: 90, reps: 5 },
+					{ kg: 90, reps: 5 },
+					{ kg: 90, reps: 5 }
 				]
 			}
 		])
@@ -72,20 +65,20 @@ test(
 		await expect(last).toBeHidden();
 		await expect(card.getByText('First time')).toBeHidden();
 
-		await tapOn(setRow(bench, 'set 1 pending'));
+		await touch(setRow(bench, 'set 1 pending'));
 		await expect(card).toContainText(/Last\s*90 × 5/u);
 
-		await tapOn(setRow(bench, 'set 4 pending'));
+		await touch(setRow(bench, 'set 4 pending'));
 		await expect(card).toContainText(/Last\s*62\.5 × 10/u);
 
-		await tapOn(setRow(bench, 'set 5 pending'));
+		await touch(setRow(bench, 'set 5 pending'));
 		await expect(card).toContainText(/Last\s*60 × 12/u);
 
-		await tapOn(setRow(bench, 'set 6 pending'));
+		await touch(setRow(bench, 'set 6 pending'));
 		await expect(last).toBeHidden();
 		await expect(card.getByText('First time')).toBeHidden();
 
-		await tapOn(setRow(curl, 'set 1 pending'));
+		await touch(setRow(curl, 'set 1 pending'));
 		await expect(card).toContainText(/Last\s*First time/u);
 
 		await exerciseAction(page, 'Bench Press', 'Add warmup');

@@ -1,9 +1,9 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures.ts';
-import { logSet, startPlan } from '../helpers.ts';
+import { logSet, startPlan, touch } from '../helpers.ts';
 
-import { exerciseBlock, onDesk, setRow, tapOn } from './support.ts';
+import { exerciseBlock, onDesk, setRow } from './support.ts';
 
 test.use({ seeded: true });
 
@@ -31,7 +31,7 @@ async function markOptional(page: Page, name: string): Promise<void> {
 async function logExercise(page: Page, name: string): Promise<void> {
 	const block = exerciseBlock(page, name);
 
-	await tapOn(setRow(block, /^set 1 (?:active|pending)$/u));
+	await touch(setRow(block, /^set 1 (?:active|pending)$/u));
 	await logSet(page, LOADS[name]);
 	await logSet(page);
 	await logSet(page);
@@ -64,7 +64,7 @@ test('logging walks past an untouched optional exercise, and a tap on it takes i
 	await expect(setRow(preacher, 'set 1 pending')).toBeVisible();
 	await expectFinishSays(page, '6 sets still owed.');
 
-	await tapOn(setRow(preacher, 'set 1 pending'));
+	await touch(setRow(preacher, 'set 1 pending'));
 	await logSet(page, LOADS['Preacher Curl']);
 	await expect(setRow(preacher, 'set 2 active')).toBeVisible();
 	await expectFinishSays(page, '8 sets still owed.');
