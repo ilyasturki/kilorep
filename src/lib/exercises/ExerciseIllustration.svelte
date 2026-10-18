@@ -1,10 +1,9 @@
 <script lang="ts" module>
-	// A 404 caches as `null` (the art is genuinely absent); a thrown fetch is
-	// evicted so the next mount retries.
+	// A failed response caches as `null`; a thrown fetch is evicted so the next mount retries.
 	const cache = new Map<string, Promise<string | null>>();
 
-	function load(id: string): Promise<string | null> {
-		const hit = cache.get(id);
+	function load(file: string): Promise<string | null> {
+		const hit = cache.get(file);
 
 		if (hit !== undefined) {
 			return hit;
@@ -12,18 +11,18 @@
 
 		const pending = (async (): Promise<string | null> => {
 			try {
-				const res = await fetch(`/illustrations/${id}.svg`);
+				const res = await fetch(`/illustrations/${file}.svg`);
 				const text = res.ok ? await res.text() : null;
 
 				return text !== null && text.startsWith('<svg') ? text : null;
 			} catch {
-				cache.delete(id);
+				cache.delete(file);
 
 				return null;
 			}
 		})();
 
-		cache.set(id, pending);
+		cache.set(file, pending);
 
 		return pending;
 	}
@@ -32,16 +31,26 @@
 <script lang="ts">
 	import type { ClassValue } from 'svelte/elements';
 
-	type Props = { id: string; name: string; class?: ClassValue };
+	import { illustrationFor } from '$lib/exercises/illustration';
 
-	let { id, name, class: klass }: Props = $props();
+	type Props = { id: string; name: string; grip?: string | null; class?: ClassValue };
+
+	let { id, name, grip, class: klass }: Props = $props();
+
+	const file = $derived(illustrationFor(id, grip));
 
 	let svg = $state<string | null>(null);
 
 	$effect(() => {
+		if (file === null) {
+			svg = null;
+
+			return;
+		}
+
 		let stale = false;
 
-		const pending = load(id);
+		const pending = load(file);
 
 		void (async () => {
 			const text = await pending;

@@ -27,9 +27,12 @@
 	// Nothing is weighed on this page, so the share a bodyweight movement carries is a fixed lifter.
 	const carried = () => 78;
 
-	// `chin-up` is not a catalog id — FOLDED maps it onto pull-up's underhand grip. The art is
-	// keyed by its own id regardless, which is the point of showing it here.
-	const illustrations = ['bench-press', 'cable-fly', 'chin-up', 'barbell-row'];
+	const illustrations: { id: string; grip?: string }[] = [
+		{ id: 'bench-press' },
+		{ id: 'cable-fly' },
+		{ id: 'pull-up' },
+		{ id: 'pull-up', grip: 'underhand' }
+	];
 </script>
 
 <Card name="TrendChart" note="twelve weeks of body weight, dots under a rolling average" wide>
@@ -69,14 +72,14 @@
 	</span>
 </Card>
 
-<Card name="ExerciseIllustration" note="traced line art, fetched per exercise id">
+<Card name="ExerciseIllustration" note="traced line art, fetched per exercise id and grip">
 	<div class="flex flex-wrap items-center gap-4">
-		{#each illustrations as id (id)}
+		{#each illustrations as { id, grip } (`${id}--${grip}`)}
 			<div class="flex flex-col items-center gap-1.5">
 				<div class="grid size-20 place-items-center rounded-xl bg-sunken">
-					<ExerciseIllustration {id} name={catalogById[id]?.name ?? id} class="size-16" />
+					<ExerciseIllustration {id} {grip} name={catalogById[id]?.name ?? id} class="size-16" />
 				</div>
-				<span class={caption}>{id}</span>
+				<span class={caption}>{grip === undefined ? id : `${id} · ${grip}`}</span>
 			</div>
 		{/each}
 		<div class="flex flex-col items-center gap-1.5">
@@ -87,6 +90,6 @@
 		</div>
 	</div>
 	<span class={caption}>
-		art is keyed by its own id — chin-up has a drawing without being a catalog entry
+		a grip with its own drawing shows it; the bundled manifest says which exist, so nothing 404s
 	</span>
 </Card>
