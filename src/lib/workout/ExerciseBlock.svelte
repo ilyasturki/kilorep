@@ -147,26 +147,32 @@
 	     inside that sheet. A superset's names are one such control each. -->
 	<div data-exercise-head class="flex scroll-mt-3 items-center gap-1">
 		{#if superset}
-			<h2 class="flex min-w-0 flex-1 items-baseline">
+			<!-- Wrapping, not truncating: three legs on a phone cut every name to a stub, and a
+			     second line of whole names is cheaper than a heading nobody can read. -->
+			<h2 class="flex min-w-0 flex-1 flex-wrap items-baseline">
 				<span class="shrink-0 pr-1.5 pl-1 label-caps text-accent-text">Superset</span>
 
 				{#each legs as leg, at (leg.id)}
-					{#if at > 0}
-						<span aria-hidden="true" class="shrink-0 text-lg font-extrabold text-ink-faint">+</span>
-					{/if}
+					<span class="flex max-w-full min-w-0 items-baseline">
+						{#if at > 0}
+							<span aria-hidden="true" class="shrink-0 text-lg font-extrabold text-ink-faint">
+								+
+							</span>
+						{/if}
 
-					<button
-						type="button"
-						aria-label="{leg.meta.name} options"
-						onclick={(e) => onexercise(leg.id, e.currentTarget)}
-						class="{heading} shrink gap-1.5"
-						{@attach press()}
-					>
-						<span class="shrink-0 text-md font-extrabold text-accent-text">{legLetter(at)}</span>
-						<span class="min-w-0 truncate text-lg font-extrabold tracking-tight text-ink">
-							{leg.meta.name}
-						</span>
-					</button>
+						<button
+							type="button"
+							aria-label="{leg.meta.name} options"
+							onclick={(e) => onexercise(leg.id, e.currentTarget)}
+							class="{heading} gap-1.5"
+							{@attach press()}
+						>
+							<span class="shrink-0 text-md font-extrabold text-accent-text">{legLetter(at)}</span>
+							<span class="min-w-0 truncate text-lg font-extrabold tracking-tight text-ink">
+								{leg.meta.name}
+							</span>
+						</button>
+					</span>
 				{/each}
 			</h2>
 		{:else}

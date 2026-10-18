@@ -231,7 +231,13 @@
 						<!-- The head borrows the four value columns, which hold nothing on this row:
 						     penned into the name column alone, a long name and its setup line were
 						     ellipsised over empty grid. A superset's names are each its leg's menu. -->
-						<span data-exercise-head class="col-span-5 flex min-w-0 items-baseline gap-2 py-1">
+						<span
+							data-exercise-head
+							class={[
+								'col-span-5 flex min-w-0 items-baseline gap-x-2 py-1',
+								entry.superset && 'flex-wrap'
+							]}
+						>
 							{#if entry.superset}
 								<span class="shrink-0 label-caps text-accent-text">Superset</span>
 
