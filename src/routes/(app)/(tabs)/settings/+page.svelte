@@ -11,6 +11,7 @@
 	import ServerSection from '$lib/settings/ServerSection.svelte';
 	import SetsSection from '$lib/settings/SetsSection.svelte';
 	import SyncRow from '$lib/settings/SyncRow.svelte';
+	import { syncState } from '$lib/settings/sync.svelte';
 	import TokensSection from '$lib/settings/TokensSection.svelte';
 	import { getStore } from '$lib/store/store';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -25,6 +26,13 @@
 		void data.user;
 
 		return deviceToken() !== null;
+	});
+
+	// A refused sync drops the device token with no load to say so, and this screen names the account.
+	$effect(() => {
+		if (syncState.current.stall === 'signed-out' && data.user !== null) {
+			void invalidateAll();
+		}
 	});
 
 	let server = $state(apiBase());
