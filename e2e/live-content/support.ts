@@ -32,21 +32,23 @@ export async function plantWorkouts(
 		}
 	});
 
-	await syncNow(page);
-
 	const ids = workouts.map(({ id }) => id);
 
-	await expect
-		.poll(
-			async () => {
-				const store = await readStore(page);
-				const held = new Set(store.records.map(({ id }) => id));
+	// A nudge sent before the app listens for the network starts nothing, so it is repeated.
+	await expect(async () => {
+		await syncNow(page);
+		await expect
+			.poll(
+				async () => {
+					const store = await readStore(page);
+					const held = new Set(store.records.map(({ id }) => id));
 
-				return ids.every((id) => held.has(id));
-			},
-			{ message: 'planted workouts still missing from the device', timeout: 15_000 }
-		)
-		.toBe(true);
+					return ids.every((id) => held.has(id));
+				},
+				{ message: 'planted workouts still missing from the device', timeout: 3000 }
+			)
+			.toBe(true);
+	}).toPass({ timeout: 20_000 });
 }
 
 type PlantedSet = { weight: number; reps: number; grip?: string };
