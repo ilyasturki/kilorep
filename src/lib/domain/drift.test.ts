@@ -362,6 +362,19 @@ describe('optional slots', () => {
 		expect(drift.matched['w-x1-0']).toEqual(clean);
 		expect(hasDrift(drift)).toBe(false);
 	});
+
+	test('one dropped from the head of a superset keeps its place in it', () => {
+		const template = laidOut([slot('dip', 3, { optional: true }), slot('bench-press')]);
+		const workout = ran([lift('bench-press')]);
+
+		expect(hasDrift(driftFrom(workout, template, known))).toBe(false);
+
+		applyDrift(template, workout, known, () => 'minted');
+
+		expect(template.entries.map((entry) => entry.exercises.map((e) => e.id))).toEqual([
+			['t-x0-0', 't-x0-1']
+		]);
+	});
 });
 
 describe('a swapped slot', () => {

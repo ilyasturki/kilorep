@@ -189,7 +189,11 @@ function reshaped(template: Template, workout: Workout, slotted: Slotted): Group
 		placed.add(slot.id);
 
 		if (holding !== undefined) {
-			holding.pieces.push({ slot });
+			const next = holding.pieces.findIndex(
+				(piece) => 'slot' in piece && flat.indexOf(piece.slot) > index
+			);
+
+			holding.pieces.splice(next === -1 ? holding.pieces.length : next, 0, { slot });
 
 			continue;
 		}
