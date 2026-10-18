@@ -259,6 +259,16 @@ server* state above, reachable at last.
   exercise as `{ exerciseId, grip?, sets: [{ kg, reps, grip? }] }`, every set
   completed. It writes grips and slugs as given, so a session logged before
   a grip retired or an entry folded can be planted as it was stored.
+- `bounds(locator)` is where a locator sits, `{ top, bottom, left, right }`,
+  for the specs that are about layout. `themeColor(page, '--accent')` reads a
+  theme colour back the way `getComputedStyle` reports one, to compare a
+  control's colour against.
+- `finger(page)` is one pointer whose every event carries its own timestamp:
+  `down`, `move(to, ms)`, `up`. Playwright's mouse sends a drag's moves back to
+  back, which anything measuring velocity reads as a flick, so a gesture whose
+  speed matters (a swipe, the tray's handle, a sheet) goes through `finger`.
+  `tap(at, roll)` presses, rolls and lifts in one burst, the quickest tap a
+  thumb makes.
 
 **Adding a spec.** One file per area, in `e2e/`, named for what it holds. Find
 things the way a person does — role and name, `getByRole('button', { name:
