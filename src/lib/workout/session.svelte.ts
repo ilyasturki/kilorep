@@ -236,12 +236,22 @@ export class WorkoutSession {
 
 		const active = this.activeSetId === null ? null : cursorFor(this.workout, this.activeSetId);
 
+		if (active === null) {
+			this.#focus(firstUncompleted(this.workout)?.set.id ?? null);
+
+			return;
+		}
+
+		if (active.entry.id !== entryId) {
+			return;
+		}
+
 		// A cursor standing in the superset just formed goes to where its rounds begin: left on
 		// the joining leg's first set, it would be B1 with A1 still owed above it.
-		if (active === null || active.entry.id === entryId) {
-			const owed = cursors(this.workout).find((c) => c.entry.id === entryId && !c.set.completed);
+		const owed = cursors(this.workout).find((c) => c.entry.id === entryId && !c.set.completed);
 
-			this.#focus((owed ?? firstUncompleted(this.workout))?.set.id ?? null);
+		if (owed !== undefined) {
+			this.#focus(owed.set.id);
 		}
 	}
 

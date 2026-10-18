@@ -29,6 +29,20 @@ describe('superset', () => {
 		expect(session.activeSetId).toBe('bench-2');
 	});
 
+	test('a set being rewritten in a superset with nothing owed keeps the cursor', () => {
+		const workout = freshWorkout(0);
+
+		for (const id of ['incline-1', 'incline-2', 'incline-3', 'fly-1', 'fly-2', 'fly-3']) {
+			commitSet(workout, id, 20, 10);
+		}
+
+		const session = new WorkoutSession({}, { workout, activeSetId: 'fly-2' });
+
+		session.superset('entry-2', [{ exerciseId: 'cable-fly' }]);
+
+		expect(session.activeSetId).toBe('fly-2');
+	});
+
 	test('a round already under way is not restarted', () => {
 		const workout = freshWorkout(0);
 		commitSet(workout, 'incline-1', 30, 10);
