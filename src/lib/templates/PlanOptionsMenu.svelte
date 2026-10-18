@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { hasGrips } from '$lib/domain/grip';
+	import { exerciseHref } from '$lib/exercises/link';
 	import GripField from '$lib/workout/GripField.svelte';
 	import type { Planned } from '$lib/templates/plan';
 	import Menu from '$lib/ui/Menu.svelte';
@@ -55,7 +56,7 @@
 	{/if}
 
 	<MenuItem
-		href={group === null ? undefined : `/plan/exercises/${group.meta.id}`}
+		href={group === null ? undefined : exerciseHref(group.meta.id, group.exercise.grip)}
 		onselect={() => (open = false)}
 	>
 		<Eye size={18} />

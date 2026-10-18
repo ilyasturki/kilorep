@@ -9,6 +9,7 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
 	import { loadModeNote } from '$lib/exercises/label';
+	import { exerciseHref } from '$lib/exercises/link';
 	import { planShape, planSummary, targetNote } from '$lib/templates/plan';
 	import type { PlanRest } from '$lib/templates/plan';
 	import PlanRestField from '$lib/templates/PlanRestField.svelte';
@@ -81,7 +82,7 @@
 		{#if open}
 			<h2 class="min-w-0 flex-1">
 				<a
-					href="/plan/exercises/{meta.id}"
+					href={exerciseHref(meta.id, exercise.grip)}
 					class="flex min-w-0 press-sink flex-col rounded-lg px-1 py-0.5 focus-ring
 						hover:bg-hover pointer-fine:transition-[background-color] pointer-fine:duration-100
 						press:bg-surface-2"

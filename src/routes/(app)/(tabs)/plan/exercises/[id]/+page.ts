@@ -4,19 +4,19 @@ import { catalogById } from '$lib/catalog';
 import type { Exercise } from '$lib/domain/exercise';
 import { settleGrip } from '$lib/domain/grip';
 import { startable } from '$lib/domain/template';
-import { foldedTo } from '$lib/store/fold';
+import { foldedHref } from '$lib/exercises/link';
 import { getStore } from '$lib/store/store';
 
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params, url }) => {
 	// A slug that became a grip keeps its address and forwards it: the entry is gone from the
-	// browse list, not from the web, and an old bookmark should land where the sets went. The
-	// query rides along — it carries where `‹` walks back to, which the fold has no say in.
-	const folded = foldedTo(params.id);
+	// browse list, not from the web, and an old bookmark should land where the sets went, on the
+	// grip they became. The query rides along — it carries where `‹` walks back to.
+	const folded = foldedHref(params.id, url.search);
 
 	if (folded !== null) {
-		redirect(307, `/plan/exercises/${folded}${url.search}`);
+		redirect(307, folded);
 	}
 
 	// Widened by hand: a route param is any string, so the index can miss.

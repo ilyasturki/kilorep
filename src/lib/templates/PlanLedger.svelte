@@ -27,6 +27,7 @@
 	import { roundLeg } from '$lib/domain/rest';
 	import { MAX_PLANNED_SETS, PLANNED_REPS } from '$lib/domain/template';
 	import { loadModeNote } from '$lib/exercises/label';
+	import { exerciseHref } from '$lib/exercises/link';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import { entryRest, planShape } from '$lib/templates/plan';
 	import type { Planned, PlannedEntry } from '$lib/templates/plan';
@@ -160,7 +161,7 @@
 
 							<span class="flex min-w-0 items-baseline gap-2 py-1 pr-3">
 								<a
-									href="/plan/exercises/{leg.meta.id}"
+									href={exerciseHref(leg.meta.id, leg.exercise.grip)}
 									class="truncate rounded-md text-md font-extrabold tracking-tight text-ink
 										focus-ring hover:underline"
 								>

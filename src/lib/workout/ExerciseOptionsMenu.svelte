@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { hasGrips } from '$lib/domain/grip';
-	import { openedFrom } from '$lib/nav/bar.svelte';
+	import { exerciseHref } from '$lib/exercises/link';
 	import type { Group } from '$lib/workout/groups';
 	import GripField from '$lib/workout/GripField.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
@@ -75,7 +75,7 @@
 	const gripped = $derived(hasGrips(meta) && ongrip !== undefined);
 
 	const details = $derived(
-		meta === undefined ? null : openedFrom(`/plan/exercises/${meta.id}`, from)
+		meta === undefined ? null : exerciseHref(meta.id, view.group?.grip, from)
 	);
 
 	const logged = $derived(

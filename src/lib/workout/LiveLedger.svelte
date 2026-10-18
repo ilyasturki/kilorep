@@ -24,7 +24,7 @@
 	import More from '$lib/ui/icons/More.svelte';
 	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
-	import { openedFrom } from '$lib/nav/bar.svelte';
+	import { exerciseHref } from '$lib/exercises/link';
 	import type { Entry, Group } from '$lib/workout/groups';
 	import { setNote, statusOf } from '$lib/workout/groups';
 
@@ -224,7 +224,7 @@
 					     ellipsised over empty grid. -->
 							<span data-exercise-head class="col-span-5 flex min-w-0 items-baseline gap-2 py-1">
 								<a
-									href={openedFrom(`/plan/exercises/${leg.meta.id}`, from)}
+									href={exerciseHref(leg.meta.id, leg.grip, from)}
 									class="truncate rounded-md text-md font-extrabold tracking-tight text-ink
 								focus-ring hover:underline"
 								>
