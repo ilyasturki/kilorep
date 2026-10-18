@@ -49,6 +49,8 @@
 			summary.workout > 0 && counted(summary.workout, 'workout', 'workouts'),
 			summary.template > 0 && counted(summary.template, 'plan', 'plans'),
 			summary.bodyweight > 0 && counted(summary.bodyweight, 'weigh-in', 'weigh-ins'),
+			summary.exercises > 0 && counted(summary.exercises, 'custom exercise', 'custom exercises'),
+			summary.grips > 0 && counted(summary.grips, 'custom grip', 'custom grips'),
 			summary.preference > 0 && counted(summary.preference, 'setting', 'settings'),
 			summary.session && 'A session in progress'
 		].filter((line) => line !== false);

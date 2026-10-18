@@ -260,11 +260,53 @@ describe('the backup file', () => {
 				template: 0,
 				bodyweight: 2,
 				preference: 1,
+				exercises: 0,
+				grips: 0,
 				session: false,
 				from: '2026-02-27',
 				to: '2026-05-03'
 			}
 		});
+	});
+
+	it('counts custom exercises and grips apart from the settings they are stored beside', () => {
+		const customs: StoreContents = {
+			records: [
+				{
+					id: 'exercise:custom_a',
+					kind: 'preference',
+					updatedAt: 1,
+					deletedAt: null,
+					payload: {
+						name: 'Tate Press',
+						equipment: 'Dumbbell',
+						loadMode: 'per-hand',
+						muscles: { primary: 'Triceps', secondary: [] },
+						variantOf: null,
+						archivedAt: null
+					}
+				},
+				{
+					id: 'grip:custom_b',
+					kind: 'preference',
+					updatedAt: 1,
+					deletedAt: null,
+					payload: { exerciseId: 'custom_a', label: 'Neutral', createdAt: 1 }
+				},
+				{
+					id: 'exertion-scale',
+					kind: 'preference',
+					updatedAt: 1,
+					deletedAt: null,
+					payload: { scale: 'rir' }
+				}
+			],
+			session: null
+		};
+
+		const read = readBackup(JSON.stringify(backupOf(customs, made)));
+
+		expect(read).toMatchObject({ ok: true, summary: { exercises: 1, grips: 1, preference: 1 } });
 	});
 
 	it('carries the format, the app version and when it was made', () => {

@@ -1,4 +1,5 @@
 import { bodyweightId, localDateOf } from '$lib/domain/bodyweight';
+import { CUSTOM_EXERCISE_PREFIX, CUSTOM_GRIP_PREFIX } from '$lib/domain/custom';
 import type { StoreContents } from '$lib/store/store';
 import type { RecordKind, WireRecord } from '$lib/sync/protocol';
 import { isShape, isWireRecord } from '$lib/sync/protocol';
@@ -15,7 +16,10 @@ export type Backup = StoreContents & {
 	exportedAt: string;
 };
 
+// A custom exercise or grip is a preference record on disk and counted apart from the settings.
 export type BackupSummary = Record<RecordKind, number> & {
+	exercises: number;
+	grips: number;
 	session: boolean;
 	from: string | null;
 	to: string | null;
@@ -130,6 +134,8 @@ function summaryOf(contents: StoreContents): BackupSummary {
 		template: 0,
 		bodyweight: 0,
 		preference: 0,
+		exercises: 0,
+		grips: 0,
 		session: contents.session !== null,
 		from: null,
 		to: null
@@ -137,8 +143,14 @@ function summaryOf(contents: StoreContents): BackupSummary {
 
 	const days: string[] = [];
 
-	for (const { kind, payload } of contents.records) {
-		summary[kind] += 1;
+	for (const { id, kind, payload } of contents.records) {
+		if (kind === 'preference' && id.startsWith(CUSTOM_EXERCISE_PREFIX)) {
+			summary.exercises += 1;
+		} else if (kind === 'preference' && id.startsWith(CUSTOM_GRIP_PREFIX)) {
+			summary.grips += 1;
+		} else {
+			summary[kind] += 1;
+		}
 
 		if (kind === 'workout' && isShape(payload)) {
 			const started = new Date(Number(payload.startedAt));
