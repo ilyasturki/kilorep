@@ -60,6 +60,7 @@ function performedRows(workout: Workout, drift: Drift | null): Record<string, un
 		const row: Record<string, unknown> = {
 			exerciseId: exercise.exerciseId,
 			name: nameOf(exercise.exerciseId),
+			plannedAs: exercise.plannedAs,
 			// Said only where it says something: most exercises have no grip axis at all, and
 			// two arms is what an unannotated set was. An undefined value leaves no key behind.
 			sets: exercise.sets.map((set) => ({

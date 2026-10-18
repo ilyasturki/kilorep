@@ -357,6 +357,7 @@ type WorkoutDetail = {
 	drift: { unplanned: string[]; missing: string[] } | null;
 	exercises: {
 		exerciseId: string;
+		plannedAs?: string;
 		group?: number;
 		drift?: { added: number; removed: number; retargeted: number };
 		sets: SetRow[];
@@ -1520,6 +1521,52 @@ describe('correcting a session', () => {
 		const after = await once<WorkoutDetail>('workout', { id: 'w1' });
 
 		expect(after.exercises[0].sets).toEqual(before.exercises[0].sets);
+	});
+
+	test('a swapped exercise keeps the slot it stood in for, through a read and a write back', async () => {
+		const logged = await once<Wrote>('log_workout', {
+			date: '2026-08-19',
+			exercises: [
+				{
+					exerciseId: 'dumbbell-bench-press',
+					plannedAs: 'bench-press',
+					sets: [{ weight: 30, reps: 10 }]
+				},
+				{ exerciseId: 'pull-up', plannedAs: 'chin-up', sets: [{ weight: 0, reps: 8 }] },
+				{ exerciseId: 'barbell-row', plannedAs: 'barbell-row', sets: [{ weight: 60, reps: 8 }] }
+			]
+		});
+
+		const before = await once<WorkoutDetail>('workout', { id: logged.id });
+
+		expect(before.exercises.map((row) => row.plannedAs)).toEqual([
+			'bench-press',
+			undefined,
+			undefined
+		]);
+
+		await once<Wrote>('edit_workout', {
+			id: logged.id,
+			version: before.version,
+			exercises: before.exercises
+		});
+
+		const after = await once<WorkoutDetail>('workout', { id: logged.id });
+
+		expect(after.exercises[0].plannedAs).toBe('bench-press');
+	});
+
+	test('a retired slug as the planned one is written as the entry it became', async () => {
+		const logged = await once<Wrote>('log_workout', {
+			date: '2026-08-19',
+			exercises: [
+				{ exerciseId: 'lat-pulldown', plannedAs: 'chin-up', sets: [{ weight: 50, reps: 10 }] }
+			]
+		});
+
+		const read = await once<WorkoutDetail>('workout', { id: logged.id });
+
+		expect(read.exercises[0].plannedAs).toBe('pull-up');
 	});
 
 	test('a set called completed still has to carry its numbers', async () => {

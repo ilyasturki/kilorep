@@ -4,6 +4,7 @@ import { MAX_REST_SECONDS, MIN_REST_SECONDS } from '$lib/domain/rest';
 import { catalogById } from '$lib/catalog';
 import { settleGrip } from '$lib/domain/grip';
 import { MARK_COLOURS, MARK_ICONS } from '$lib/domain/template';
+import { foldedTo } from '$lib/store/fold';
 import type { TemplateEntry, TemplateExercise } from '$lib/domain/template';
 import type { WorkoutEntry, WorkoutExercise, WorkoutSet } from '$lib/domain/workout';
 
@@ -172,6 +173,13 @@ export const PERFORMED_EXERCISE = z.object({
 	group: GROUP,
 	restSeconds: REST.optional(),
 	grip: GRIP.optional(),
+	plannedAs: z
+		.string()
+		.max(80)
+		.optional()
+		.describe(
+			'the catalogue id the plan had in this slot, when this exercise was swapped in for it; omit when it is what was planned'
+		),
 	sets: z.array(PERFORMED_SET).min(1).max(30)
 });
 
@@ -219,6 +227,13 @@ export function workoutEntriesOf(items: PerformedInput[]): WorkoutEntry[] {
 
 		if (grip !== undefined) {
 			exercise.grip = grip;
+		}
+
+		const planned =
+			item.plannedAs === undefined ? undefined : (foldedTo(item.plannedAs) ?? item.plannedAs);
+
+		if (planned !== undefined && planned !== item.exerciseId) {
+			exercise.plannedAs = planned;
 		}
 
 		return exercise;

@@ -151,6 +151,24 @@ describe('workouts', () => {
 		expect(dirty[0]).toMatchObject({ id: 'w1', updatedAt: 400, deletedAt: null });
 	});
 
+	it('a swapped exercise keeps the planned one it stood in for, through finish and update', async () => {
+		const swapped = workout('w1', 100, 'dumbbell-bench-press', [{ weight: 30, reps: 10 }]);
+
+		swapped.entries[0].exercises[0].plannedAs = 'bench-press';
+
+		await store.finishWorkout(swapped, 200);
+
+		const stored = (await store.getWorkout('w1'))!;
+
+		expect(stored.entries[0].exercises[0].plannedAs).toBe('bench-press');
+
+		stored.entries[0].exercises[0].sets[0].reps = 12;
+
+		await store.updateWorkout(stored, 300);
+
+		expect((await store.getWorkout('w1'))!.entries[0].exercises[0].plannedAs).toBe('bench-press');
+	});
+
 	it('an update never resurrects a tombstoned workout', async () => {
 		await store.finishWorkout(workout('w1', 100, 'bench-press', [{ weight: 80, reps: 8 }]), 200);
 
