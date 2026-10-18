@@ -225,7 +225,7 @@ and signed in by session, so the throttle from *Why this used to fail* never
 counts a thing. The smoke signs in through `/login` with the account's real
 password. A spec about a refused password sends one wrong attempt against its
 own account, and no more: every test in the run comes from the same address,
-fifty failures from it lock out every sign-in until the server restarts, and
+fifty failures from it lock out every sign-in for fifteen minutes, and
 `--repeat-each=3` on two projects is six runs of that spec.
 
 The app build lives at `APP_URL` (from `e2e/env.ts`): `test.use({ baseURL:
@@ -272,6 +272,7 @@ bunx playwright show-report
 bunx playwright show-trace test-results/<test>/trace.zip
 ```
 
-In CI the suite is a step of the `checks` job, after `build:app`, and the
-release workflow waits on that job — no APK is built from a red suite. The same
-two folders come back as the `playwright-report` artifact when it fails.
+In CI the suite is a step of the `checks` job, after `build:app`. That job runs
+on every push to main and every pull request, and the release workflow waits on
+it — no APK is built from a red suite. The same two folders come back as the
+`playwright-report` artifact when it fails.
