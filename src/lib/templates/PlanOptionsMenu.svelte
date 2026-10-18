@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { hasGrips } from '$lib/domain/grip';
-	import { restSettings } from '$lib/settings/rest.svelte';
 	import GripField from '$lib/workout/GripField.svelte';
 	import type { Planned } from '$lib/templates/plan';
 	import Menu from '$lib/ui/Menu.svelte';
@@ -9,7 +8,6 @@
 	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import ArrowsSplit from '$lib/ui/icons/ArrowsSplit.svelte';
 	import Eye from '$lib/ui/icons/Eye.svelte';
-	import Timer from '$lib/ui/icons/Timer.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	type Props = {
@@ -19,7 +17,6 @@
 		anchor?: HTMLElement | null;
 		onswap: () => void;
 		onsuperset: () => void;
-		onrest: () => void;
 		onbreak: () => void;
 		onremove: () => void;
 		ongrip: (grip: string) => void;
@@ -32,7 +29,6 @@
 		anchor = null,
 		onswap,
 		onsuperset,
-		onrest,
 		onbreak,
 		onremove,
 		ongrip
@@ -88,17 +84,6 @@
 			Superset with…
 		{/if}
 	</MenuItem>
-	{#if restSettings.current.enabled}
-		<MenuItem
-			onselect={() => {
-				open = false;
-				onrest();
-			}}
-		>
-			<Timer size={18} />
-			Rest duration
-		</MenuItem>
-	{/if}
 	<MenuItem
 		destructive
 		onselect={() => {

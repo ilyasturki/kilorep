@@ -9,11 +9,13 @@
 	import type { Exercise } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
 	import { loadModeNote } from '$lib/exercises/label';
-	import { restSettings } from '$lib/settings/rest.svelte';
 	import { planShape, planSummary, targetNote } from '$lib/templates/plan';
+	import type { PlanRest } from '$lib/templates/plan';
+	import PlanRestField from '$lib/templates/PlanRestField.svelte';
 	import StepperField from '$lib/ui/StepperField.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import More from '$lib/ui/icons/More.svelte';
+	import Timer from '$lib/ui/icons/Timer.svelte';
 	import { press } from '$lib/ui/press';
 
 	type Props = {
@@ -21,15 +23,35 @@
 		exercise: TemplateExercise;
 		grip?: Snippet;
 		open: boolean;
+		/** The entry's rest; null where rest is off in Settings and there is nothing to plan. */
+		rest: PlanRest | null;
+		/** A superset leg: its rest is the round's, shared with the other legs. */
+		round: boolean;
+		/** Whether the closed row states the rest — once per superset, on the leg that closes it. */
+		restShown: boolean;
 		ontoggle: () => void;
 		onoptions: (anchor: HTMLElement) => void;
 		onsets: (count: number) => void;
 		onreps: (reps: number | null) => void;
 		onsetreps: (setId: string, reps: number | null) => void;
+		onrest: (seconds: number | null | undefined) => void;
 	};
 
-	let { meta, exercise, grip, open, ontoggle, onoptions, onsets, onreps, onsetreps }: Props =
-		$props();
+	let {
+		meta,
+		exercise,
+		grip,
+		open,
+		rest,
+		round,
+		restShown,
+		ontoggle,
+		onoptions,
+		onsets,
+		onreps,
+		onsetreps,
+		onrest
+	}: Props = $props();
 
 	const shape = $derived(planShape(exercise));
 
@@ -39,19 +61,13 @@
 		[loadModeNote(meta.loadMode), gripLabel(meta, exercise.grip)].filter(Boolean).join(' · ')
 	);
 
-	const restNote = $derived.by(() => {
-		if (!restSettings.current.enabled || exercise.restSeconds === undefined) {
-			return null;
-		}
-
-		return exercise.restSeconds === null
-			? 'No rest'
-			: `Rest ${restLabel(exercise.restSeconds * 1000)}`;
-	});
+	const restText = $derived(
+		rest === null || rest.seconds === null ? 'No rest' : restLabel(rest.seconds * 1000)
+	);
 
 	const grow = $derived(prefersReducedMotion.current ? 0 : 200);
 
-	const notes = $derived([targetNote(shape), restNote].filter((note) => note !== null).join(' · '));
+	const notes = $derived(targetNote(shape) ?? '');
 
 	const ramp = $derived(shape.kind === 'range' || shape.kind === 'mixed');
 
@@ -107,10 +123,22 @@
 						{/if}
 					</span>
 
-					<span
-						class="shrink-0 text-md font-extrabold tracking-numeral text-ink-muted tabular-nums"
-					>
-						{planSummary(exercise)}
+					<span class="flex shrink-0 flex-col items-end">
+						<span class="text-md font-extrabold tracking-numeral text-ink-muted tabular-nums">
+							{planSummary(exercise)}
+						</span>
+
+						{#if rest !== null && restShown}
+							<span
+								class={[
+									'flex items-center gap-1 text-sm font-bold tabular-nums',
+									rest.stated ? 'text-ink' : 'text-ink-faint'
+								]}
+							>
+								<Timer size={12} class="shrink-0" />
+								{restText}
+							</span>
+						{/if}
 					</span>
 				</button>
 			</h2>
@@ -185,6 +213,20 @@
 
 		{#if notes !== ''}
 			<p class="px-1 text-sm font-bold text-ink-faint">{notes}</p>
+		{/if}
+
+		{#if rest !== null}
+			<div class="flex items-center gap-2 pl-1">
+				<span class="min-w-0 flex-1 truncate label-caps">
+					{round ? 'Rest per round' : 'Rest'}
+				</span>
+
+				<PlanRestField
+					{rest}
+					subject={round ? `after each round with ${meta.name}` : `after ${meta.name}`}
+					onchange={onrest}
+				/>
+			</div>
 		{/if}
 
 		{#if ramp || expanded}

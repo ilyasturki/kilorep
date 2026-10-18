@@ -7,6 +7,7 @@
 	import { drawableMark, startable, startFrom } from '$lib/domain/template';
 	import { cursors, firstUncompleted } from '$lib/domain/workout';
 	import { formatSince, lastDoneLine } from '$lib/history/label';
+	import { restSettings } from '$lib/settings/rest.svelte';
 	import { planLine, planMeta, rotationLine, templateTitle } from '$lib/templates/plan';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout } from '$lib/workout/active.svelte';
@@ -33,7 +34,10 @@
 	}
 
 	async function startTemplate(template: Template) {
-		const workout = startFrom(template, Date.now(), () => crypto.randomUUID());
+		const workout = startFrom(template, Date.now(), () => crypto.randomUUID(), {
+			planDefault: data.planRests[template.id],
+			settings: restSettings.current
+		});
 		const first = firstUncompleted(workout);
 
 		activeWorkout.begin(

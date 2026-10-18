@@ -2,19 +2,22 @@
 	import { catalogById } from '$lib/catalog';
 	import {
 		moveEntry,
+		setEntryRest,
 		setExerciseReps,
-		setExerciseRest,
 		setPlannedReps,
 		setSetCount
 	} from '$lib/domain/template';
 	import Card from '$lib/styleguide/Card.svelte';
 	import Frame from '$lib/styleguide/Frame.svelte';
+	import Spec from '$lib/styleguide/Spec.svelte';
 	import { caption } from '$lib/styleguide/chrome';
 	import { bench, marks, pushTemplate } from '$lib/styleguide/fixtures';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanLedger from '$lib/templates/PlanLedger.svelte';
+	import PlanRestField from '$lib/templates/PlanRestField.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
-	import { plannedEntries } from '$lib/templates/plan';
+	import { restSettings } from '$lib/settings/rest.svelte';
+	import { entryRest, plannedEntries, planDefaultRest } from '$lib/templates/plan';
 
 	type Props = { onoptions: (anchor: HTMLElement) => void };
 
@@ -31,18 +34,28 @@
 
 	const exercise = $derived(cardPlan.entries[0].exercises[0]);
 
+	const cardEntry = $derived(plannedEntries(cardPlan, catalogById)[0]);
+
 	const entries = $derived(plannedEntries(template, catalogById));
 
 	const mint = () => crypto.randomUUID();
+
+	let planRest = $state<number | null>();
 </script>
 
 <Card name="PlanCard" note="one exercise of a template — closed it is a row, open it is the fields">
-	<Frame label="tap the row to open it; stepping the set count adds and drops rows">
+	<Frame
+		label="tap the row to open it; rest steps inline, faint while inherited, ink once the plan states it"
+	>
 		<div class="p-3">
 			<PlanCard
 				meta={bench}
 				{exercise}
 				{open}
+				rest={entryRest(cardEntry.legs, restSettings.current)}
+				round={false}
+				restShown
+				onrest={(seconds) => setEntryRest(cardPlan, cardEntry.id, seconds)}
 				ontoggle={() => (open = !open)}
 				{onoptions}
 				onsets={(count) => setSetCount(cardPlan, exercise.id, count, mint)}
@@ -51,6 +64,25 @@
 			/>
 		</div>
 	</Frame>
+</Card>
+
+<Card name="PlanRestField" note="a rest a plan states or inherits, stepped where it is read">
+	<Spec label="faint while inherited, ink once stated; minus walks into Off, plus back out" full>
+		<PlanRestField
+			rest={planDefaultRest(planRest, restSettings.current)}
+			subject="in this plan"
+			onchange={(seconds) => (planRest = seconds)}
+		/>
+	</Spec>
+	<Spec label="dense — the ledger's cell, icon actions for a fine pointer" full>
+		<PlanRestField
+			dense
+			rest={planDefaultRest(planRest, restSettings.current)}
+			subject="in this plan"
+			onchange={(seconds) => (planRest = seconds)}
+		/>
+	</Spec>
+	<span class={caption}>one slot after the arms: OFF while inherited, DEFAULT once stated</span>
 </Card>
 
 <Card name="PlanLedger" note="the desktop's whole plan, one table" wide tall>
@@ -66,14 +98,16 @@
 				onsets={(id, count) => setSetCount(template, id, count, mint)}
 				onreps={(id, reps) => setExerciseReps(template, id, reps)}
 				onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
-				onrest={(id, seconds) => setExerciseRest(template, id, seconds)}
+				planDefault={undefined}
+				onrest={(entryId, seconds) => setEntryRest(template, entryId, seconds)}
 				oninsert={() => {}}
 				onreorder={(entryId, index) => moveEntry(template, entryId, index)}
 			/>
 		</div>
 	</Frame>
 	<span class={caption}>
-		one row per exercise — per-set rows only where the targets differ, or where the caret opens them
+		one row per exercise — per-set rows only where the targets differ, or where the caret opens
+		them; one rest per entry, on the row that closes a superset's round
 	</span>
 </Card>
 

@@ -1,13 +1,19 @@
 import { describe, expect, test } from 'vitest';
 
+import { catalogById } from '$lib/catalog';
+import { DEFAULT_REST_SECONDS, MAX_REST_SECONDS, defaultRestSettings } from '$lib/domain/rest';
 import {
+	entryRest,
+	planDefaultRest,
 	planLine,
 	planShape,
 	planSummary,
 	rotationLine,
+	steppedRest,
 	targetNote,
 	templateTitle
 } from '$lib/templates/plan';
+import type { Planned, PlanRest } from '$lib/templates/plan';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template, TemplateExercise } from '$lib/domain/template';
 
@@ -173,5 +179,71 @@ describe('rotationLine', () => {
 
 	test('a nameless anchor is named the way every other screen names it', () => {
 		expect(rotationLine({ plan: pull, after: namedPlan('blank', '  ') })).toBe('after Untitled');
+	});
+});
+
+function leg(exerciseId: string, restSeconds?: number | null): Planned {
+	const exercise: TemplateExercise = { id: `${exerciseId}-node`, exerciseId, sets: [] };
+
+	if (restSeconds !== undefined) {
+		exercise.restSeconds = restSeconds;
+	}
+
+	return { id: exercise.id, meta: catalogById[exerciseId], exercise };
+}
+
+function stated(seconds: number | null): PlanRest {
+	return { seconds, stated: true, fallback: 120 };
+}
+
+describe('rest as a plan shows it', () => {
+	const settings = Object.assign(defaultRestSettings(), { overrides: { squat: 240 } });
+
+	test('an exercise the plan is silent on reads faint, at what it inherits', () => {
+		expect(entryRest([leg('bench-press')], settings, 90)).toEqual({
+			seconds: 90,
+			stated: false,
+			fallback: 90
+		});
+		expect(entryRest([leg('squat')], settings, 90)).toMatchObject({ seconds: 240, stated: false });
+	});
+
+	test('a stated rest reads in ink, off included', () => {
+		expect(entryRest([leg('bench-press', 150)], settings)).toEqual({
+			seconds: 150,
+			stated: true,
+			fallback: DEFAULT_REST_SECONDS
+		});
+		expect(entryRest([leg('bench-press', null)], settings, 90)).toMatchObject({
+			seconds: null,
+			stated: true
+		});
+	});
+
+	test('a superset reads its one rest off the leg that closes the round', () => {
+		expect(entryRest([leg('bench-press', 300), leg('cable-fly', 60)], settings, 90)).toMatchObject({
+			seconds: 60
+		});
+	});
+
+	test("the plan's default inherits from Settings until it says otherwise", () => {
+		expect(planDefaultRest(undefined, settings)).toEqual({
+			seconds: DEFAULT_REST_SECONDS,
+			stated: false,
+			fallback: DEFAULT_REST_SECONDS
+		});
+		expect(planDefaultRest(null, settings)).toMatchObject({ seconds: null, stated: true });
+	});
+
+	test('the arms step by the ladder, and off is the rung under the shortest', () => {
+		expect(steppedRest(stated(120), 1, 120)).toBe(135);
+		expect(steppedRest(stated(15), -1, 120)).toBeNull();
+		expect(steppedRest(stated(null), -1, 120)).toBeNull();
+		expect(steppedRest(stated(MAX_REST_SECONDS), 1, 120)).toBe(MAX_REST_SECONDS);
+	});
+
+	test('plus out of off lands where the rest would be without it', () => {
+		expect(steppedRest({ seconds: null, stated: true, fallback: 90 }, 1, 120)).toBe(90);
+		expect(steppedRest({ seconds: null, stated: false, fallback: null }, 1, 120)).toBe(120);
 	});
 });

@@ -11,10 +11,11 @@ export const load: PageLoad = async ({ depends }) => {
 
 	// `lastPerformed()` is the same full history read as `listWorkouts()`, so the landing
 	// tab reads it once and derives the hints here rather than paying for it twice.
-	const [resume, templates, workouts] = await Promise.all([
+	const [resume, templates, workouts, planRests] = await Promise.all([
 		store.loadSnapshot(),
 		store.listTemplates(),
-		store.listWorkouts()
+		store.listWorkouts(),
+		store.planRests()
 	]);
 
 	const history = historyFrom(workouts);
@@ -26,5 +27,5 @@ export const load: PageLoad = async ({ depends }) => {
 
 	// No redirect while a session runs: this screen stays the tab's home and offers the way
 	// back in as a card, so back from the session has somewhere to land.
-	return { history, grips, templates, workouts };
+	return { history, grips, templates, workouts, planRests };
 };

@@ -1,7 +1,7 @@
 <script lang="ts" module>
 	// The head row and the set rows share it, so a plan and the session it becomes read as
 	// one system.
-	const cols = 'grid grid-cols-[3rem_minmax(0,1fr)_9rem_7rem_10rem_2.75rem] items-center';
+	const cols = 'grid grid-cols-[3rem_minmax(0,1fr)_10rem_7rem_10rem_2.75rem] items-center';
 
 	// LiveLedger's inline arm at StepperField's colours. Not the 76px field: that one is a
 	// thumb's control and stays on the phone, where the ruler backs it. `bg-sunken` rather
@@ -24,18 +24,13 @@
 	import { prefersReducedMotion } from 'svelte/motion';
 
 	import { gripLabel } from '$lib/domain/grip';
-	import {
-		MAX_REST_SECONDS,
-		REST_STEP_SECONDS,
-		restLabel,
-		restSecondsOf,
-		settleRestSeconds
-	} from '$lib/domain/rest';
+	import { roundLeg } from '$lib/domain/rest';
 	import { MAX_PLANNED_SETS, PLANNED_REPS } from '$lib/domain/template';
 	import { loadModeNote } from '$lib/exercises/label';
 	import { restSettings } from '$lib/settings/rest.svelte';
-	import { planShape } from '$lib/templates/plan';
+	import { entryRest, planShape } from '$lib/templates/plan';
 	import type { Planned, PlannedEntry } from '$lib/templates/plan';
+	import PlanRestField from '$lib/templates/PlanRestField.svelte';
 	import { DragOrder, SETTLE } from '$lib/ui/dragOrder.svelte';
 	import CaretDown from '$lib/ui/icons/CaretDown.svelte';
 	import DotsSixVertical from '$lib/ui/icons/DotsSixVertical.svelte';
@@ -49,13 +44,24 @@
 		onsets: (exerciseId: string, count: number) => void;
 		onreps: (exerciseId: string, reps: number | null) => void;
 		onsetreps: (setId: string, reps: number | null) => void;
-		onrest: (exerciseId: string, seconds: number | null | undefined) => void;
+		/** The plan's own default rest, under every exercise it does not time itself. */
+		planDefault: number | null | undefined;
+		onrest: (entryId: string, seconds: number | null | undefined) => void;
 		oninsert: (entryId: string) => void;
 		onreorder: (entryId: string, index: number) => boolean;
 	};
 
-	let { entries, onoptions, onsets, onreps, onsetreps, onrest, oninsert, onreorder }: Props =
-		$props();
+	let {
+		entries,
+		onoptions,
+		onsets,
+		onreps,
+		onsetreps,
+		planDefault,
+		onrest,
+		oninsert,
+		onreorder
+	}: Props = $props();
 
 	// Whole entries move — a superset travels as one block — and the grip is the only handle:
 	// every other pixel of these rows steps a number.
@@ -75,16 +81,6 @@
 		opened = opened.includes(exerciseId)
 			? opened.filter((id) => id !== exerciseId)
 			: [...opened, exerciseId];
-	}
-
-	// Either arm wakes a plan that rests for nothing onto the default, the way a seeded
-	// StepperField wakes onto its seed — stepping down from "off" has nowhere to start.
-	function nudgeRest(leg: Planned, direction: number) {
-		const seconds = restSecondsOf(leg.exercise, restSettings.current);
-		const next =
-			seconds === null ? restSettings.current.seconds : seconds + direction * REST_STEP_SECONDS;
-
-		onrest(leg.id, settleRestSeconds(next));
 	}
 
 	const stepReps = (reps: number | null, direction: number) =>
@@ -142,7 +138,7 @@
 						{@const ramp = shape.kind === 'range' || shape.kind === 'mixed'}
 						{@const shown = ramp || opened.includes(leg.id)}
 						{@const setup = setupOf(leg)}
-						{@const seconds = restSecondsOf(leg.exercise, restSettings.current)}
+						{@const closes = leg.id === roundLeg(entry.legs).id}
 
 						<div class={[cols, 'min-h-11 bg-canvas', at > 0 && 'border-t border-line-soft']}>
 							{#if leg.id === entry.legs[0].id}
@@ -185,32 +181,20 @@
 								{/if}
 							</span>
 
-							<!-- An inherited duration draws faint, one the plan states for itself in
-							     ink — so which exercises the plan has an opinion about is legible
-							     without opening anything. -->
-							<span class="flex items-center justify-center gap-1.5">
-								{#if restSettings.current.enabled}
-									{@render arm('−', `Shorten rest after ${leg.meta.name}`, () =>
-										nudgeRest(leg, -1)
-									)}
-									<span
-										class={[
-											'min-w-11 text-center text-base font-extrabold tracking-numeral tabular-nums',
-											seconds === null || leg.exercise.restSeconds === undefined
-												? 'text-ink-faint'
-												: 'text-ink'
-										]}
-									>
-										{seconds === null ? 'Off' : restLabel(seconds * 1000)}
-									</span>
-									{@render arm(
-										'+',
-										`Lengthen rest after ${leg.meta.name}`,
-										() => nudgeRest(leg, 1),
-										seconds !== null && seconds >= MAX_REST_SECONDS
-									)}
-								{:else}
+							<!-- One rest per entry, on the row that closes the round: a superset rests
+							     after its last leg, not between them. -->
+							<span class="flex items-center justify-center">
+								{#if !restSettings.current.enabled}
 									<span class="text-base font-extrabold text-ink-faint">—</span>
+								{:else if closes}
+									<PlanRestField
+										dense
+										rest={entryRest(entry.legs, restSettings.current, planDefault)}
+										subject={entry.superset
+											? `after each round of ${entry.title}`
+											: `after ${leg.meta.name}`}
+										onchange={(seconds) => onrest(entry.id, seconds)}
+									/>
 								{/if}
 							</span>
 

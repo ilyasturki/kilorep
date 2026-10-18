@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { MIN_REST_SECONDS } from '$lib/domain/rest';
 import type { Template } from '$lib/domain/template';
 import type { Workout, WorkoutSet } from '$lib/domain/workout';
 import type { WireRecord } from '$lib/sync/protocol';
@@ -509,6 +510,42 @@ describe('exercise notes', () => {
 		await store.applyRemote([wire('note:bench-press', 50, { text: 4 }, 'preference')]);
 
 		expect(await store.exerciseNote('bench-press')).toBe('');
+	});
+});
+
+describe("a plan's default rest", () => {
+	it('round-trips, settled, and lists by plan', async () => {
+		await store.setPlanRest('t1', 5, 100);
+		await store.setPlanRest('t2', null, 100);
+
+		expect(await store.planRest('t1')).toBe(MIN_REST_SECONDS);
+		expect(await store.planRest('t2')).toBeNull();
+		expect(await store.planRest('t3')).toBeUndefined();
+		expect(await store.planRests()).toEqual({ t1: MIN_REST_SECONDS, t2: null });
+	});
+
+	it('survives a save of the plan it belongs to', async () => {
+		await store.saveTemplate(template('t1', 100), 150);
+		await store.setPlanRest('t1', 90, 200);
+		await store.saveTemplate(template('t1', 100, 'Push day A'), 250);
+
+		expect(await store.planRest('t1')).toBe(90);
+	});
+
+	it('is neither a rest override nor read as one', async () => {
+		await store.setPlanRest('bench-press', 90, 100);
+
+		const settings = await store.restSettings();
+
+		expect(settings.overrides).toEqual({});
+	});
+
+	it('clearing tombstones it back to no default', async () => {
+		await store.setPlanRest('t1', 90, 100);
+		await store.clearPlanRest('t1', 200);
+
+		expect(await store.planRest('t1')).toBeUndefined();
+		expect(await store.planRests()).toEqual({});
 	});
 });
 

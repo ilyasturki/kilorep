@@ -15,23 +15,25 @@
 		removeExercise,
 		replaceExercise,
 		setExerciseGrip,
+		setEntryRest,
 		setExerciseReps,
-		setExerciseRest,
 		setPlannedReps,
 		setSetCount,
 		splitEntry,
 		startFrom,
 		supersetWith
 	} from '$lib/domain/template';
+	import { roundLeg } from '$lib/domain/rest';
 	import { firstUncompleted } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
+	import { restSettings } from '$lib/settings/rest.svelte';
 	import { syncSoon } from '$lib/sync/client';
 	import MarkPickerSheet from '$lib/templates/MarkPickerSheet.svelte';
-	import { plannedEntries, planMeta } from '$lib/templates/plan';
+	import { entryRest, plannedEntries, planDefaultRest, planMeta } from '$lib/templates/plan';
 	import PlanCard from '$lib/templates/PlanCard.svelte';
 	import PlanLedger from '$lib/templates/PlanLedger.svelte';
 	import PlanOptionsMenu from '$lib/templates/PlanOptionsMenu.svelte';
-	import PlanRestSheet from '$lib/templates/PlanRestSheet.svelte';
+	import PlanRestField from '$lib/templates/PlanRestField.svelte';
 	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import { activeWorkout, SESSION_DEP } from '$lib/workout/active.svelte';
 	import EntryStack from '$lib/workout/EntryStack.svelte';
@@ -61,6 +63,23 @@
 
 	// svelte-ignore state_referenced_locally
 	let persisted = $state(data.persisted);
+
+	// svelte-ignore state_referenced_locally
+	let planRest = $state(data.planRest);
+
+	function setPlanRest(seconds: number | null | undefined) {
+		planRest = seconds;
+
+		const now = Date.now();
+
+		void (seconds === undefined
+			? data.store.clearPlanRest(template.id, now)
+			: data.store.setPlanRest(template.id, seconds, now));
+
+		if (data.user) {
+			syncSoon(data.user.id);
+		}
+	}
 
 	let mounted = false;
 
@@ -155,7 +174,6 @@
 	let optionsAnchor = $state<HTMLElement | null>(null);
 	let swapOpen = $state(false);
 	let supersetOpen = $state(false);
-	let restOpen = $state(false);
 	let acting = $state<string | null>(null);
 
 	const actingGroup = $derived(legOf(entries, acting));
@@ -177,12 +195,6 @@
 	function gripPick(grip: string) {
 		if (actingGroup !== null) {
 			setExerciseGrip(template, actingGroup.id, actingGroup.meta, grip);
-		}
-	}
-
-	function restPick(seconds: number | null | undefined) {
-		if (acting !== null) {
-			setExerciseRest(template, acting, seconds);
 		}
 	}
 
@@ -234,7 +246,10 @@
 	async function launch() {
 		activeWorkout.finish();
 
-		const workout = startFrom($state.snapshot(template), Date.now(), () => crypto.randomUUID());
+		const workout = startFrom($state.snapshot(template), Date.now(), () => crypto.randomUUID(), {
+			planDefault: planRest,
+			settings: restSettings.current
+		});
 		const first = firstUncompleted(workout);
 
 		await data.store.saveSnapshot({
@@ -368,6 +383,25 @@
 	</div>
 {/snippet}
 
+{#snippet planRestRow()}
+	{#if restSettings.current.enabled}
+		<div class="flex items-center gap-2 pl-1">
+			<span class="min-w-0 flex-1">
+				<span class="block truncate label-caps">Plan rest</span>
+				<span class="block truncate text-sm font-bold text-ink-faint">
+					{planRest === undefined ? 'From Settings' : 'Whole plan'}
+				</span>
+			</span>
+
+			<PlanRestField
+				rest={planDefaultRest(planRest, restSettings.current)}
+				subject="in this plan"
+				onchange={setPlanRest}
+			/>
+		</div>
+	{/if}
+{/snippet}
+
 {#snippet nothing()}
 	<EmptyState title="Nothing planned" description="Add an exercise to shape the session.">
 		{#snippet icon()}
@@ -402,6 +436,7 @@
 		{#if deskViewport.current}
 			<div class="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-3 px-3 pt-3">
 				{@render identity(true)}
+				{@render planRestRow()}
 
 				{#if entries.length === 0}
 					{@render nothing()}
@@ -412,7 +447,8 @@
 						onsets={(id, count) => setSetCount(template, id, count, () => crypto.randomUUID())}
 						onreps={(id, reps) => setExerciseReps(template, id, reps)}
 						onsetreps={(setId, reps) => setPlannedReps(template, setId, reps)}
-						onrest={(id, seconds) => setExerciseRest(template, id, seconds)}
+						planDefault={planRest}
+						onrest={(entryId, seconds) => setEntryRest(template, entryId, seconds)}
 						oninsert={openInsert}
 						onreorder={(entryId, index) => moveEntry(template, entryId, index)}
 					/>
@@ -428,6 +464,7 @@
 		{:else}
 			<div bind:this={drag.root} class="column-content flex min-h-full flex-col gap-3 px-3 pt-3">
 				{@render identity(false)}
+				{@render planRestRow()}
 
 				{#each entries as entry (entry.id)}
 					{@const lifted = drag.isLifted(entry.id)}
@@ -469,6 +506,12 @@
 										meta={leg.meta}
 										exercise={leg.exercise}
 										open={openLegId === leg.id}
+										rest={restSettings.current.enabled
+											? entryRest(entry.legs, restSettings.current, planRest)
+											: null}
+										round={entry.superset}
+										restShown={leg.id === roundLeg(entry.legs).id}
+										onrest={(seconds) => setEntryRest(template, entry.id, seconds)}
 										ontoggle={() => (openLegId = openLegId === leg.id ? null : leg.id)}
 										onoptions={(anchor) => options(leg.id, anchor)}
 										onsets={(count) =>
@@ -549,13 +592,10 @@
 	anchor={optionsAnchor}
 	onswap={() => (swapOpen = true)}
 	onsuperset={() => (supersetOpen = true)}
-	onrest={() => (restOpen = true)}
 	onbreak={breakSuperset}
 	onremove={removePlanned}
 	ongrip={gripPick}
 />
-
-<PlanRestSheet bind:open={restOpen} group={actingGroup} onchange={restPick} />
 
 <AlertDialog
 	bind:open={deleteOpen}

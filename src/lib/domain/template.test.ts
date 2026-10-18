@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { catalogById } from '$lib/catalog';
-import { MAX_REST_SECONDS, MIN_REST_SECONDS } from '$lib/domain/rest';
+import { MAX_REST_SECONDS, MIN_REST_SECONDS, defaultRestSettings } from '$lib/domain/rest';
 import {
 	addExercise,
 	addExerciseTo,
@@ -21,6 +21,7 @@ import {
 	replaceExercise,
 	startable,
 	setExerciseReps,
+	setEntryRest,
 	setExerciseRest,
 	setPlannedReps,
 	setSetCount,
@@ -521,6 +522,68 @@ describe('planned rest', () => {
 	});
 });
 
+function restsOf(template: Template): (number | null | undefined)[] {
+	return template.entries[0].exercises.map((exercise) => exercise.restSeconds);
+}
+
+describe('a superset rests once per round', () => {
+	function paired(): Template {
+		const template = blankTemplate('t1', 100);
+
+		plan(template, 'cable-fly', 3);
+		plan(template, 'lateral-raise', 3);
+		joinEntry(template, 'cable-fly-entry', 'lateral-raise-node');
+
+		return template;
+	}
+
+	test('one duration is written on every leg', () => {
+		const template = paired();
+
+		expect(setEntryRest(template, 'cable-fly-entry', 75)).toBe(true);
+		expect(restsOf(template)).toEqual([75, 75]);
+	});
+
+	test('back to the default takes the key off every leg', () => {
+		const template = paired();
+
+		setEntryRest(template, 'cable-fly-entry', 75);
+		setEntryRest(template, 'cable-fly-entry', undefined);
+
+		expect(template.entries[0].exercises.some((exercise) => 'restSeconds' in exercise)).toBe(false);
+	});
+
+	test('never-rest holds for the whole round', () => {
+		const template = paired();
+
+		setEntryRest(template, 'cable-fly-entry', null);
+
+		expect(restsOf(template)).toEqual([null, null]);
+	});
+
+	test('a reordered round keeps its rest', () => {
+		const template = paired();
+
+		setEntryRest(template, 'cable-fly-entry', 75);
+		moveExercise(template, 'lateral-raise-node', -1);
+
+		expect(restsOf(template)).toEqual([75, 75]);
+	});
+
+	test('a leg joining the superset takes the round’s rest', () => {
+		const template = paired();
+
+		setEntryRest(template, 'cable-fly-entry', 75);
+		supersetWith(template, 'cable-fly-entry', 'pec-deck', { exercise: 'deck-node', sets: ['d1'] });
+
+		expect(restsOf(template)).toEqual([75, 75, 75]);
+	});
+
+	test('an unknown entry is refused', () => {
+		expect(setEntryRest(paired(), 'nope', 75)).toBe(false);
+	});
+});
+
 describe('copy-on-start', () => {
 	function pushDay(): Template {
 		const template = blankTemplate('t1', 100);
@@ -604,6 +667,20 @@ describe('copy-on-start', () => {
 		expect(benched.sets.every((set) => set.grip === 'close')).toBe(true);
 		expect('grip' in flown).toBe(false);
 		expect(flown.sets.every((set) => !('grip' in set))).toBe(true);
+	});
+
+	test("the plan's default rest fills the exercises nothing else times", () => {
+		const template = pushDay();
+		setExerciseRest(template, 'bench-press-node', 195);
+
+		const settings = Object.assign(defaultRestSettings(), { overrides: { 'cable-fly': 45 } });
+		plan(template, 'lateral-raise', 2);
+
+		const workout = startFrom(template, 5000, mint('w'), { planDefault: 90, settings });
+		const exercises = workout.entries.flatMap((e) => e.exercises);
+
+		expect(exercises.map((e) => e.restSeconds)).toEqual([195, undefined, 90]);
+		expect('restSeconds' in exercises[1]).toBe(false);
 	});
 
 	test('an empty template starts an empty workout', () => {

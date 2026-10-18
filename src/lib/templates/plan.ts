@@ -1,4 +1,13 @@
 import type { Exercise } from '$lib/domain/exercise';
+import {
+	MAX_REST_SECONDS,
+	MIN_REST_SECONDS,
+	REST_STEP_SECONDS,
+	restSecondsFor,
+	roundLeg,
+	snapRestSeconds
+} from '$lib/domain/rest';
+import type { RestSettings } from '$lib/domain/rest';
 import type { NextUp } from '$lib/domain/rotation';
 import type { Template, TemplateExercise } from '$lib/domain/template';
 import { entryTitle } from '$lib/workout/groups';
@@ -154,4 +163,51 @@ export function planSummary(exercise: TemplateExercise): string {
 	const shape = planShape(exercise);
 
 	return `${shape.sets} × ${shape.target}`;
+}
+
+/**
+ * A rest as a plan shows it: what it comes to, whether the plan says so itself — stated draws
+ * in ink, inherited faint — and what it falls back to when the plan stops saying so.
+ */
+export type PlanRest = { seconds: number | null; stated: boolean; fallback: number | null };
+
+/** One per entry: a superset rests once per round, read off the leg that closes it. */
+export function entryRest(
+	legs: Planned[],
+	settings: RestSettings,
+	planDefault?: number | null
+): PlanRest {
+	const { exercise } = roundLeg(legs);
+	const fallback = restSecondsFor(exercise.exerciseId, settings, planDefault);
+
+	return {
+		seconds: exercise.restSeconds === undefined ? fallback : exercise.restSeconds,
+		stated: exercise.restSeconds !== undefined,
+		fallback
+	};
+}
+
+export function planDefaultRest(
+	planDefault: number | null | undefined,
+	settings: RestSettings
+): PlanRest {
+	return {
+		seconds: planDefault === undefined ? settings.seconds : planDefault,
+		stated: planDefault !== undefined,
+		fallback: settings.seconds
+	};
+}
+
+/**
+ * One tap of an arm. Off is the rung under the shortest rest, so minus walks into it and plus
+ * walks back out — onto what the rest would be without it, or `wake` where that is off too.
+ */
+export function steppedRest(rest: PlanRest, direction: 1 | -1, wake: number): number | null {
+	if (rest.seconds === null) {
+		return direction > 0 ? (rest.fallback ?? wake) : null;
+	}
+
+	const next = rest.seconds + direction * REST_STEP_SECONDS;
+
+	return next < MIN_REST_SECONDS ? null : snapRestSeconds(Math.min(MAX_REST_SECONDS, next));
 }

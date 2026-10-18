@@ -4,6 +4,7 @@ import type { ExertionScale } from '$lib/domain/exertion';
 import type {
 	ExertionScalePreference,
 	NotePreference,
+	PlanRestPreference,
 	RestDefaultPreference,
 	RestOverridePreference,
 	WeightRangePreference
@@ -15,10 +16,13 @@ import {
 	WEIGHT_RANGE_ID,
 	isExertionScalePreference,
 	isNotePreference,
+	isPlanRestPreference,
 	isRestDefaultPreference,
 	isRestOverridePreference,
 	isWeightRangePreference,
 	noteId,
+	planRestId,
+	planRestTemplate,
 	restOverrideExercise,
 	restOverrideId
 } from '$lib/domain/preference';
@@ -107,6 +111,10 @@ function settleSnapshot(value: LegacySnapshot): Snapshot {
 		muted: value.muted === true,
 		dismissed: isRestSnapshot(value.dismissed) ? value.dismissed : null
 	};
+}
+
+function settledPlanRest({ seconds }: PlanRestPreference): number | null {
+	return seconds === null ? null : settleRestSeconds(seconds);
 }
 
 export class Store {
@@ -411,6 +419,42 @@ export class Store {
 
 	public async clearRestOverride(exerciseId: string, deletedAt: number): Promise<void> {
 		await this.tombstone(restOverrideId(exerciseId), 'preference', deletedAt);
+	}
+
+	/** A plan's own default rest: a number, `null` for never, `undefined` where it has none. */
+	public async planRest(templateId: string): Promise<number | null | undefined> {
+		const payload = await this.liveOne<unknown>(planRestId(templateId), 'preference');
+
+		return isPlanRestPreference(payload) ? settledPlanRest(payload) : undefined;
+	}
+
+	public async planRests(): Promise<Record<string, number | null>> {
+		const records = await this.db.getAllFromIndex('records', 'kind', 'preference');
+		const rests: Record<string, number | null> = {};
+
+		for (const record of records.filter((live) => live.deletedAt === null)) {
+			const templateId = planRestTemplate(record.id);
+
+			if (templateId !== null && isPlanRestPreference(record.payload)) {
+				rests[templateId] = settledPlanRest(record.payload);
+			}
+		}
+
+		return rests;
+	}
+
+	public async setPlanRest(
+		templateId: string,
+		seconds: number | null,
+		updatedAt: number
+	): Promise<void> {
+		const payload: PlanRestPreference = { seconds: settledPlanRest({ seconds }) };
+
+		await this.write(planRestId(templateId), 'preference', updatedAt, payload);
+	}
+
+	public async clearPlanRest(templateId: string, deletedAt: number): Promise<void> {
+		await this.tombstone(planRestId(templateId), 'preference', deletedAt);
 	}
 
 	public async exerciseNote(exerciseId: string): Promise<string> {

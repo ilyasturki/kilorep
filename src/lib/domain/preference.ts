@@ -33,6 +33,20 @@ export function restOverrideExercise(id: string): string | null {
 	return id.startsWith(REST_PREFIX) ? id.slice(REST_PREFIX.length) : null;
 }
 
+// A plan's default rest, beside the plan rather than in it: `saveTemplate` rebuilds the top-level
+// keys, and an older build saving the plan would drop one. Unset is the absence of the record.
+export type PlanRestPreference = { seconds: number | null };
+
+export const PLAN_REST_PREFIX = 'plan-rest:';
+
+export function planRestId(templateId: string): string {
+	return `${PLAN_REST_PREFIX}${templateId}`;
+}
+
+export function planRestTemplate(id: string): string | null {
+	return id.startsWith(PLAN_REST_PREFIX) ? id.slice(PLAN_REST_PREFIX.length) : null;
+}
+
 // Empty text is never stored — clearing tombstones the record instead.
 export type NotePreference = { text: string };
 
@@ -76,6 +90,10 @@ export function isRestOverridePreference(value: unknown): value is RestOverrideP
 		(value.seconds === null ||
 			(typeof value.seconds === 'number' && Number.isFinite(value.seconds)))
 	);
+}
+
+export function isPlanRestPreference(value: unknown): value is PlanRestPreference {
+	return isRestOverridePreference(value);
 }
 
 export function isNotePreference(value: unknown): value is NotePreference {

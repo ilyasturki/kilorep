@@ -26,18 +26,63 @@ export const defaultRestSettings = (): RestSettings => ({
 
 export type RestStart = { exerciseId: string; seconds: number; name?: string };
 
-export function restSecondsFor(exerciseId: string, settings: RestSettings): number | null {
+// Nearest word first: the exercise's own duration in Settings, then the plan's default, then
+// the Settings default.
+export function restSecondsFor(
+	exerciseId: string,
+	settings: RestSettings,
+	planDefault?: number | null
+): number | null {
 	const override = settings.overrides[exerciseId];
 
-	return override === undefined ? settings.seconds : override;
+	if (override !== undefined) {
+		return override;
+	}
+
+	return planDefault === undefined ? settings.seconds : planDefault;
 }
 
 export type PlannedRest = { exerciseId: string; restSeconds?: number | null };
 
-export function restSecondsOf(exercise: PlannedRest, settings: RestSettings): number | null {
+export function restSecondsOf(
+	exercise: PlannedRest,
+	settings: RestSettings,
+	planDefault?: number | null
+): number | null {
 	return exercise.restSeconds === undefined
-		? restSecondsFor(exercise.exerciseId, settings)
+		? restSecondsFor(exercise.exerciseId, settings, planDefault)
 		: exercise.restSeconds;
+}
+
+/** What a plan's default rest gives the session for one of its exercises. */
+export type StartingRest = { planDefault: number | null | undefined; settings: RestSettings };
+
+// The default fills only the silences: an exercise the plan already times, or one with its own
+// duration in Settings, keeps what it had.
+export function startingRest(
+	exercise: PlannedRest,
+	{ planDefault, settings }: StartingRest
+): number | null | undefined {
+	if (
+		exercise.restSeconds !== undefined ||
+		planDefault === undefined ||
+		settings.overrides[exercise.exerciseId] !== undefined
+	) {
+		return exercise.restSeconds;
+	}
+
+	return planDefault;
+}
+
+/** The leg a superset's one rest is read off: the last, which closes every full round. */
+export function roundLeg<E>(legs: E[]): E {
+	const leg = legs.at(-1);
+
+	if (leg === undefined) {
+		throw new RangeError('an entry holds at least one exercise');
+	}
+
+	return leg;
 }
 
 export function closesRound(entry: WorkoutEntry, setId: string): boolean {

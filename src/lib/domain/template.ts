@@ -1,6 +1,7 @@
 import type { Exercise } from './exercise.ts';
 import { settleGrip } from './grip.ts';
-import { settleRestSeconds } from './rest.ts';
+import { roundLeg, settleRestSeconds, startingRest } from './rest.ts';
+import type { StartingRest } from './rest.ts';
 import {
 	addExerciseTo as addToTree,
 	exerciseIn,
@@ -203,15 +204,6 @@ export function addExerciseTo(
 	return addToTree(template, entryId, ids, blankExercise(catalogId));
 }
 
-export function supersetWith(
-	template: Template,
-	entryId: string,
-	catalogId: string,
-	ids: ExerciseIds
-): boolean {
-	return supersetWithTree(template, entryId, catalogId, ids, blankExercise(catalogId));
-}
-
 export function replaceExercise(
 	template: Template,
 	exerciseId: string,
@@ -337,6 +329,14 @@ export function setExerciseGrip(
 
 // `undefined` means "inherit again" and deletes the key — `restSecondsOf` reads an absence,
 // never a present-but-undefined key.
+function restOn(exercise: TemplateExercise, seconds: number | null | undefined): void {
+	if (seconds === undefined) {
+		delete exercise.restSeconds;
+	} else {
+		exercise.restSeconds = seconds === null ? null : settleRestSeconds(seconds);
+	}
+}
+
 export function setExerciseRest(
 	template: Template,
 	exerciseId: string,
@@ -348,16 +348,56 @@ export function setExerciseRest(
 		return false;
 	}
 
-	if (seconds === undefined) {
-		delete exercise.restSeconds;
-	} else {
-		exercise.restSeconds = seconds === null ? null : settleRestSeconds(seconds);
+	restOn(exercise, seconds);
+
+	return true;
+}
+
+// Written on every leg: `restAfter` reads whichever leg closes the round, and a ragged round
+// is closed by a leg that is not the last.
+export function setEntryRest(
+	template: Template,
+	entryId: string,
+	seconds: number | null | undefined
+): boolean {
+	const entry = template.entries.find((candidate) => candidate.id === entryId);
+
+	if (entry === undefined) {
+		return false;
+	}
+
+	for (const exercise of entry.exercises) {
+		restOn(exercise, seconds);
 	}
 
 	return true;
 }
 
-export function startFrom(template: Template, startedAt: number, mint: () => string): Workout {
+// The joining leg takes the entry's round rest, so the superset still rests once per round.
+export function supersetWith(
+	template: Template,
+	entryId: string,
+	catalogId: string,
+	ids: ExerciseIds
+): boolean {
+	const entry = template.entries.find((candidate) => candidate.id === entryId);
+	const round = entry === undefined ? undefined : roundLeg(entry.exercises).restSeconds;
+
+	if (!supersetWithTree(template, entryId, catalogId, ids, blankExercise(catalogId))) {
+		return false;
+	}
+
+	setEntryRest(template, entryId, round);
+
+	return true;
+}
+
+export function startFrom(
+	template: Template,
+	startedAt: number,
+	mint: () => string,
+	rest?: StartingRest
+): Workout {
 	const entries: WorkoutEntry[] = template.entries.map((entry) => ({
 		id: mint(),
 		exercises: entry.exercises.map((exercise) => {
@@ -383,8 +423,10 @@ export function startFrom(template: Template, startedAt: number, mint: () => str
 				})
 			};
 
-			if (exercise.restSeconds !== undefined) {
-				copy.restSeconds = exercise.restSeconds;
+			const seconds = rest === undefined ? exercise.restSeconds : startingRest(exercise, rest);
+
+			if (seconds !== undefined) {
+				copy.restSeconds = seconds;
 			}
 
 			if (exercise.grip !== undefined) {

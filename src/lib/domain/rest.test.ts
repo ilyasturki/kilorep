@@ -16,7 +16,8 @@ import {
 	restSecondsFor,
 	restSecondsOf,
 	settleRestSeconds,
-	snapRestSeconds
+	snapRestSeconds,
+	startingRest
 } from '$lib/domain/rest';
 import type { RestSettings } from '$lib/domain/rest';
 import { commitSet, markSet, supersetWith } from '$lib/domain/workout';
@@ -100,6 +101,42 @@ describe('restSecondsOf', () => {
 		const never = settings({ overrides: { 'bench-press': null } });
 
 		expect(restSecondsOf({ exerciseId: 'bench-press', restSeconds: 90 }, never)).toBe(90);
+	});
+});
+
+describe("a plan's default rest", () => {
+	test('sits under the exercise’s own duration and over the Settings default', () => {
+		const over = settings({ overrides: { squat: 240 } });
+
+		expect(restSecondsFor('squat', over, 90)).toBe(240);
+		expect(restSecondsFor('bench-press', over, 90)).toBe(90);
+		expect(restSecondsFor('bench-press', over)).toBe(DEFAULT_REST_SECONDS);
+	});
+
+	test("the plan's word on one exercise outranks its default", () => {
+		expect(restSecondsOf({ exerciseId: 'bench-press', restSeconds: 150 }, settings(), 90)).toBe(
+			150
+		);
+	});
+
+	test('a plan that never rests says so for every exercise without a word of its own', () => {
+		expect(restSecondsOf({ exerciseId: 'bench-press' }, settings(), null)).toBeNull();
+		expect(restSecondsFor('squat', settings({ overrides: { squat: 240 } }), null)).toBe(240);
+	});
+
+	test('fills only the silences when a session starts', () => {
+		const at = { planDefault: 90, settings: settings({ overrides: { squat: 240 } }) };
+
+		expect(startingRest({ exerciseId: 'bench-press' }, at)).toBe(90);
+		expect(startingRest({ exerciseId: 'bench-press', restSeconds: 150 }, at)).toBe(150);
+		expect(startingRest({ exerciseId: 'bench-press', restSeconds: null }, at)).toBeNull();
+		expect(startingRest({ exerciseId: 'squat' }, at)).toBeUndefined();
+	});
+
+	test('a plan with no default copies nothing new', () => {
+		const at = { planDefault: undefined, settings: settings() };
+
+		expect(startingRest({ exerciseId: 'bench-press' }, at)).toBeUndefined();
 	});
 });
 
