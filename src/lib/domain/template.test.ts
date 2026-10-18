@@ -28,10 +28,14 @@ import {
 	splitEntry,
 	templateRank,
 	setExerciseGrip,
+	setExerciseOptional,
+	rankAfter,
 	startFrom,
-	supersetWith
+	supersetWith,
+	templateFrom
 } from '$lib/domain/template';
 import type { Template, TemplateMark } from '$lib/domain/template';
+import { freshWorkout } from '$lib/domain/fixture';
 
 let n = 0;
 
@@ -710,6 +714,19 @@ describe('copy-on-start', () => {
 		expect('restSeconds' in exercises[1]).toBe(false);
 	});
 
+	test('an optional exercise starts optional, and a required one carries no key', () => {
+		const template = pushDay();
+
+		expect(setExerciseOptional(template, 'cable-fly-node', true)).toBe(true);
+
+		const [benched, flown] = startFrom(template, 5000, mint('w')).entries.flatMap(
+			(e) => e.exercises
+		);
+
+		expect(flown.optional).toBe(true);
+		expect('optional' in benched).toBe(false);
+	});
+
 	test('an empty template starts an empty workout', () => {
 		const workout = startFrom(blankTemplate('t9', 100), 5000, mint('w'));
 
@@ -896,5 +913,110 @@ describe('drawableMark', () => {
 
 	test('a mark whose halves are both unknown draws nothing', () => {
 		expect(drawableMark(marked('hinge', 'chartreuse'))).toBeNull();
+	});
+});
+
+describe('optional exercises', () => {
+	test('marking writes true, and unmarking takes the key away', () => {
+		const template = blankTemplate('t1', 100);
+		plan(template, 'dip', 2);
+
+		setExerciseOptional(template, 'dip-node', true);
+		expect(template.entries[0].exercises[0].optional).toBe(true);
+
+		setExerciseOptional(template, 'dip-node', false);
+		expect('optional' in template.entries[0].exercises[0]).toBe(false);
+	});
+
+	test('an exercise that is not in the plan refuses', () => {
+		expect(setExerciseOptional(blankTemplate('t1', 100), 'nope', true)).toBe(false);
+	});
+});
+
+describe('a plan from a workout', () => {
+	function made(): Template {
+		const workout = freshWorkout(0);
+
+		workout.entries[1].exercises.push({
+			id: 'we-dip',
+			exerciseId: 'dip',
+			optional: true,
+			restSeconds: 90,
+			sets: [
+				{
+					id: 'dip-1',
+					type: 'normal',
+					plannedReps: null,
+					weight: 10,
+					reps: 9,
+					rpe: 8,
+					completed: true
+				}
+			]
+		});
+		workout.entries[2].exercises[0].grip = 'rope';
+
+		return templateFrom(workout, 'new', 500, mint('p'));
+	}
+
+	test('the shape comes across, supersets included', () => {
+		const template = made();
+
+		expect(template).toMatchObject({ id: 'new', name: '', createdAt: 500 });
+		expect(template.entries.map((entry) => entry.exercises.map((e) => e.exerciseId))).toEqual([
+			['bench-press'],
+			['incline-dumbbell-press', 'dip'],
+			['cable-fly'],
+			['pec-deck']
+		]);
+	});
+
+	test('warmups are dropped, working sets keep their targets and nothing performed', () => {
+		const [bench] = made().entries[0].exercises;
+
+		expect(bench.sets.map((set) => set.plannedReps)).toEqual([8, 8, 8, 8]);
+		expect(JSON.stringify(made())).not.toMatch(/weight|"reps"|rpe|completed/u);
+	});
+
+	test('grips, rest and the optional flag come with it', () => {
+		const template = made();
+		const [, dip] = template.entries[1].exercises;
+
+		expect(template.entries[2].exercises[0].grip).toBe('rope');
+		expect(dip).toMatchObject({ optional: true, restSeconds: 90 });
+		expect('optional' in template.entries[0].exercises[0]).toBe(false);
+	});
+
+	test('every id is minted, and an exercise of nothing but warmups plans nothing', () => {
+		const workout = freshWorkout(0);
+
+		for (const set of workout.entries[3].exercises[0].sets) {
+			set.type = 'warmup';
+		}
+
+		const template = templateFrom(workout, 'new', 500, mint('p'));
+		const ids = idsIn(template);
+
+		expect(template.entries).toHaveLength(3);
+		expect(ids.some((id) => idsIn(workout).includes(id) && id !== 'new')).toBe(false);
+		expect(new Set(ids).size).toBe(ids.length);
+	});
+});
+
+describe('rankAfter', () => {
+	test('lands behind the last plan in the rotation, archived ones aside', () => {
+		const archived = at('z', 900, 99_999);
+		archived.archivedAt = 1;
+
+		const templates = [at('a', 100, 5000), at('b', 200), archived];
+		const placed = at('new', 50, rankAfter(templates));
+
+		expect([...templates, placed].filter((t) => !isArchived(t)).toSorted(byRank).at(-1)?.id).toBe(
+			'new'
+		);
+	});
+
+	test('an empty rotation leaves the birthday to rank it', () => {
+		expect(rankAfter([])).toBeUndefined();
 	});
 });

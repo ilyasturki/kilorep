@@ -5,6 +5,7 @@ import type {
 	ExertionScalePreference,
 	NotePreference,
 	PlanRestPreference,
+	PlanOfferPreference,
 	RestDefaultPreference,
 	RestOverridePreference,
 	WeightRangePreference
@@ -17,12 +18,14 @@ import {
 	isExertionScalePreference,
 	isNotePreference,
 	isPlanRestPreference,
+	isPlanOfferPreference,
 	isRestDefaultPreference,
 	isRestOverridePreference,
 	isWeightRangePreference,
 	noteId,
 	planRestId,
 	planRestTemplate,
+	planOfferId,
 	restOverrideExercise,
 	restOverrideId
 } from '$lib/domain/preference';
@@ -223,6 +226,17 @@ export class Store {
 
 	public async deleteWorkout(id: string, deletedAt: number): Promise<void> {
 		await this.tombstone(id, 'workout', deletedAt);
+	}
+
+	// The newest session that ran this plan, or the newest of all without one.
+	public async latestWorkout(templateId?: string): Promise<FinishedWorkout | null> {
+		const workouts = await this.listWorkouts();
+
+		return (
+			workouts.findLast(
+				(workout) => templateId === undefined || workout.templateId === templateId
+			) ?? null
+		);
 	}
 
 	public async history(): Promise<History> {
@@ -492,6 +506,22 @@ export class Store {
 
 	public async clearExerciseNote(exerciseId: string, deletedAt: number): Promise<void> {
 		await this.tombstone(noteId(exerciseId), 'preference', deletedAt);
+	}
+
+	public async answeredOffer(templateId: string | null): Promise<string | null> {
+		const payload = await this.liveOne<unknown>(planOfferId(templateId), 'preference');
+
+		return isPlanOfferPreference(payload) ? payload.workoutId : null;
+	}
+
+	public async answerOffer(
+		templateId: string | null,
+		workoutId: string,
+		updatedAt: number
+	): Promise<void> {
+		const payload: PlanOfferPreference = { workoutId };
+
+		await this.write(planOfferId(templateId), 'preference', updatedAt, payload);
 	}
 
 	public async saveSnapshot(snapshot: Snapshot): Promise<void> {

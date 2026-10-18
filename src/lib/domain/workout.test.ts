@@ -34,7 +34,9 @@ import {
 	replaceExercise,
 	settle,
 	splitEntry,
-	supersetWith
+	supersetWith,
+	tally,
+	untouched
 } from '$lib/domain/workout';
 import type {
 	Prefill,
@@ -1147,6 +1149,104 @@ describe('advanceFrom', () => {
 	});
 });
 
+describe('an optional exercise', () => {
+	function withOptional(index: number): Workout {
+		const workout = freshWorkout(0);
+
+		workout.entries[index].exercises[0].optional = true;
+
+		return workout;
+	}
+
+	test('the session never opens on one nobody has started', () => {
+		const workout = freshWorkout(0);
+
+		workout.entries[0].exercises[0].optional = true;
+		workout.entries[0].exercises[0].sets[0].completed = false;
+
+		expect(idOf(firstUncompleted(workout))).toBe('incline-1');
+	});
+
+	test('the cursor passes it by for the next required exercise', () => {
+		const workout = withOptional(1);
+		commitSet(workout, 'bench-4', 80, 8);
+
+		expect(idOf(advanceFrom(workout, 'bench-4'))).toBe('fly-1');
+	});
+
+	test('tapped and logged, it is being done, and the cursor stays in it', () => {
+		const workout = withOptional(1);
+		commitSet(workout, 'incline-1', 30, 10);
+
+		expect(untouched(workout.entries[1].exercises[0])).toBe(false);
+		expect(idOf(advanceFrom(workout, 'incline-1'))).toBe('incline-2');
+	});
+
+	test('numbers typed into it are a start too', () => {
+		const workout = withOptional(1);
+		draftSet(workout, 'incline-1', { weight: 30, reps: null });
+
+		expect(untouched(workout.entries[1].exercises[0])).toBe(false);
+		expect(idOf(advanceFrom(workout, 'bench-4'))).toBe('incline-1');
+	});
+
+	test('its sets are still there to tap', () => {
+		const workout = withOptional(1);
+
+		expect(cursorFor(workout, 'incline-1')).not.toBeNull();
+		expect(idsOf(workout)).toContain('incline-2');
+	});
+
+	test('a superset leg left alone is skipped round by round', () => {
+		const workout = superset(freshWorkout(0));
+		workout.entries[1].exercises[1].optional = true;
+		commitSet(workout, 'a-1', 12, 15);
+
+		expect(idOf(advanceFrom(workout, 'a-1'))).toBe('a-2');
+	});
+
+	test('only optional ones are ever untouched', () => {
+		expect(untouched(freshWorkout(0).entries[1].exercises[0])).toBe(false);
+	});
+
+	test('left alone at the end, nothing is owed and the session reads as done', () => {
+		const workout = withOptional(3);
+
+		for (const cursor of cursors(workout)) {
+			if (cursor.exercise.exerciseId !== 'pec-deck' && !cursor.set.completed) {
+				commitSet(workout, cursor.set.id, 50, 8);
+			}
+		}
+
+		expect(firstUncompleted(workout)).toBeNull();
+		expect(advanceFrom(workout, 'fly-3')).toBeNull();
+	});
+});
+
+describe('tally', () => {
+	test('every unlogged set is owed in a session with nothing optional', () => {
+		const workout = freshWorkout(0);
+		commitSet(workout, 'bench-1', 80, 8);
+
+		expect(tally(workout)).toEqual({ logged: 2, owed: 12 });
+	});
+
+	test('an optional exercise left alone owes nothing', () => {
+		const workout = freshWorkout(0);
+		workout.entries[3].exercises[0].optional = true;
+
+		expect(tally(workout)).toEqual({ logged: 1, owed: 10 });
+	});
+
+	test('once started, its remaining sets are owed like any other', () => {
+		const workout = freshWorkout(0);
+		workout.entries[3].exercises[0].optional = true;
+		commitSet(workout, 'pecdeck-1', 45, 10);
+
+		expect(tally(workout)).toEqual({ logged: 2, owed: 12 });
+	});
+});
+
 describe('performing a superset', () => {
 	test('the legs interleave round by round', () => {
 		const workout = superset(freshWorkout(0));
@@ -1532,6 +1632,17 @@ describe('copy-on-repeat', () => {
 
 		expect(next.entries[1].exercises[0].plannedAs).toBe('incline-dumbbell-press');
 		expect('plannedAs' in next.entries[0].exercises[0]).toBe(false);
+	});
+
+	test('an optional exercise repeats as optional, and a required one carries no key', () => {
+		const past = freshWorkout(5000);
+		past.entries[2].exercises[0].optional = true;
+
+		const next = repeatFrom(past, 9000, mint('r'));
+		const exercises = next.entries.flatMap((entry) => entry.exercises);
+
+		expect(exercises.map((e) => e.optional)).toEqual([undefined, undefined, true, undefined]);
+		expect('optional' in exercises[0]).toBe(false);
 	});
 
 	test('an empty start repeats as an empty start', () => {

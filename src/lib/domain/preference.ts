@@ -56,6 +56,16 @@ export function noteId(exerciseId: string): string {
 	return `${NOTE_PREFIX}${exerciseId}`;
 }
 
+// The session whose plan offer was answered, by Update or Dismiss. One record per plan, plus
+// one unsuffixed for the sessions that had no plan.
+export type PlanOfferPreference = { workoutId: string };
+
+export const PLAN_OFFER_ID = 'plan-offer';
+
+export function planOfferId(templateId: string | null): string {
+	return templateId === null ? PLAN_OFFER_ID : `${PLAN_OFFER_ID}:${templateId}`;
+}
+
 export function isExertionScalePreference(value: unknown): value is ExertionScalePreference {
 	return (
 		typeof value === 'object' &&
@@ -98,4 +108,8 @@ export function isPlanRestPreference(value: unknown): value is PlanRestPreferenc
 
 export function isNotePreference(value: unknown): value is NotePreference {
 	return isPayload(value) && typeof value.text === 'string';
+}
+
+export function isPlanOfferPreference(value: unknown): value is PlanOfferPreference {
+	return isPayload(value) && typeof value.workoutId === 'string';
 }

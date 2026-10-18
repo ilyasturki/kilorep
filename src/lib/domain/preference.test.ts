@@ -4,7 +4,9 @@ import {
 	NOTE_PREFIX,
 	REST_PREFIX,
 	isNotePreference,
+	isPlanOfferPreference,
 	noteId,
+	planOfferId,
 	restOverrideExercise
 } from '$lib/domain/preference';
 
@@ -36,5 +38,21 @@ describe('isNotePreference', () => {
 		expect(isNotePreference(null)).toBe(false);
 		expect(isNotePreference('Seat 4')).toBe(false);
 		expect(isNotePreference(['Seat 4'])).toBe(false);
+	});
+});
+
+describe('plan offer answers', () => {
+	test('one record per plan, and one for the sessions with none', () => {
+		expect(planOfferId('t1')).toBe('plan-offer:t1');
+		expect(planOfferId(null)).toBe('plan-offer');
+		expect(planOfferId(null)).not.toBe(planOfferId('t1'));
+	});
+
+	test('a payload naming a workout is an answer, and nothing else is', () => {
+		expect(isPlanOfferPreference({ workoutId: 'w1' })).toBe(true);
+		expect(isPlanOfferPreference({ workoutId: 4 })).toBe(false);
+		expect(isPlanOfferPreference({ text: 'w1' })).toBe(false);
+		expect(isPlanOfferPreference(null)).toBe(false);
+		expect(isPlanOfferPreference(['w1'])).toBe(false);
 	});
 });

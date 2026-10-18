@@ -34,6 +34,7 @@ export type TemplateExercise = {
 	// Prescribed, not remembered: a plan that says rope means rope, and reaching for the bar
 	// instead is a deviation the drift prompt has a right to mention. Absent = the default.
 	grip?: string;
+	optional?: true;
 };
 
 export type TemplateEntry = {
@@ -121,6 +122,12 @@ export function reorder(templates: Template[], id: string, index: number): numbe
 	}
 
 	return (templateRank(before) + templateRank(after)) / 2;
+}
+
+export function rankAfter(templates: Template[]): number | undefined {
+	const ranks = startable(templates).map((template) => templateRank(template));
+
+	return ranks.length === 0 ? undefined : Math.max(...ranks) + RANK_GAP;
 }
 
 /**
@@ -413,6 +420,26 @@ export function supersetWith(
 	return true;
 }
 
+export function setExerciseOptional(
+	template: Template,
+	exerciseId: string,
+	optional: boolean
+): boolean {
+	const exercise = exerciseIn(template, exerciseId);
+
+	if (exercise === null) {
+		return false;
+	}
+
+	if (optional) {
+		exercise.optional = true;
+	} else {
+		delete exercise.optional;
+	}
+
+	return true;
+}
+
 export function startFrom(
 	template: Template,
 	startedAt: number,
@@ -454,9 +481,63 @@ export function startFrom(
 				copy.grip = exercise.grip;
 			}
 
+			if (exercise.optional === true) {
+				copy.optional = true;
+			}
+
 			return copy;
 		})
 	}));
 
 	return { id: mint(), templateId: template.id, startedAt, entries };
+}
+
+// Null for an exercise holding only warmups, which plan nothing.
+export function plannedFrom(exercise: WorkoutExercise, mint: () => string): TemplateExercise | null {
+	const working = exercise.sets.filter((set) => set.type !== 'warmup');
+
+	if (working.length === 0) {
+		return null;
+	}
+
+	const planned: TemplateExercise = {
+		id: mint(),
+		exerciseId: exercise.exerciseId,
+		sets: working.slice(0, MAX_PLANNED_SETS).map((set) => ({ id: mint(), plannedReps: set.plannedReps }))
+	};
+
+	if (exercise.restSeconds !== undefined) {
+		planned.restSeconds = exercise.restSeconds;
+	}
+
+	if (exercise.grip !== undefined) {
+		planned.grip = exercise.grip;
+	}
+
+	if (exercise.optional === true) {
+		planned.optional = true;
+	}
+
+	return planned;
+}
+
+export function templateFrom(
+	workout: Workout,
+	id: string,
+	createdAt: number,
+	mint: () => string
+): Template {
+	const entries: TemplateEntry[] = [];
+
+	for (const entry of workout.entries) {
+		const exercises = entry.exercises
+			.map((exercise) => plannedFrom(exercise, mint))
+			.filter((planned) => planned !== null);
+
+		if (exercises.length > 0) {
+			entries.push({ id: mint(), exercises });
+		}
+	}
+
+	return { ...blankTemplate(id, createdAt), entries };
 }

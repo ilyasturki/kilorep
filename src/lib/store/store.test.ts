@@ -100,6 +100,19 @@ describe('workouts', () => {
 		expect(listed[0].finishedAt).toBe(200);
 	});
 
+	it('an optional exercise and a swap stand-in survive finishing', async () => {
+		const ran = workout('w1', 100, 'dip', [{ weight: 0, reps: 8 }]);
+
+		Object.assign(ran.entries[0].exercises[0], { optional: true, plannedAs: 'bench-dip' });
+
+		await store.finishWorkout(ran, 200);
+
+		expect((await store.getWorkout('w1'))?.entries[0].exercises[0]).toMatchObject({
+			optional: true,
+			plannedAs: 'bench-dip'
+		});
+	});
+
 	it('lists oldest first regardless of finish order', async () => {
 		await store.finishWorkout(workout('late', 300, 'bench-press', []), 400);
 		await store.finishWorkout(workout('early', 100, 'bench-press', []), 500);
@@ -220,6 +233,54 @@ describe('workouts', () => {
 
 		expect(await store.getTemplate('t1')).not.toBeNull();
 		expect(await store.dirtyRecords()).toEqual([]);
+	});
+});
+
+describe('plan offers', () => {
+	it('an answer is remembered per plan, and the planless one apart from them all', async () => {
+		await store.answerOffer('t1', 'w1', 100);
+		await store.answerOffer(null, 'w9', 100);
+
+		expect(await store.answeredOffer('t1')).toBe('w1');
+		expect(await store.answeredOffer('t2')).toBeNull();
+		expect(await store.answeredOffer(null)).toBe('w9');
+	});
+
+	it('a later answer replaces the earlier one', async () => {
+		await store.answerOffer('t1', 'w1', 100);
+		await store.answerOffer('t1', 'w2', 200);
+
+		expect(await store.answeredOffer('t1')).toBe('w2');
+	});
+
+	it('an answer is a preference record, never a key on the plan', async () => {
+		await store.saveTemplate(template('t1', 100), 50);
+		await store.answerOffer('t1', 'w1', 100);
+
+		const dirty = await store.dirtyRecords();
+
+		expect(dirty.find((record) => record.id === 'plan-offer:t1')).toMatchObject({
+			kind: 'preference',
+			payload: { workoutId: 'w1' }
+		});
+		expect(JSON.stringify(await store.getTemplate('t1'))).not.toContain('w1');
+	});
+
+	it('the latest session is found per plan, and overall', async () => {
+		const ran = (id: string, startedAt: number, templateId: string | null): Workout => ({
+			...workout(id, startedAt, 'bench-press', []),
+			templateId
+		});
+
+		await store.finishWorkout(ran('a1', 100, 'a'), 150);
+		await store.finishWorkout(ran('a2', 300, 'a'), 350);
+		await store.finishWorkout(ran('free', 400, null), 450);
+		await store.finishWorkout(ran('b1', 200, 'b'), 250);
+
+		expect((await store.latestWorkout('a'))?.id).toBe('a2');
+		expect((await store.latestWorkout('b'))?.id).toBe('b1');
+		expect(await store.latestWorkout('c')).toBeNull();
+		expect((await store.latestWorkout())?.id).toBe('free');
 	});
 });
 
@@ -347,6 +408,23 @@ describe('templates', () => {
 
 		expect(await store.templateDeleted('t1')).toBe(true);
 		expect(await store.templateDeleted('never')).toBe(false);
+	});
+
+	it('an optional exercise stays optional through a save', async () => {
+		const planned = template('t1', 100);
+
+		planned.entries = [
+			{
+				id: 'e1',
+				exercises: [
+					{ id: 'x1', exerciseId: 'dip', sets: [{ id: 's1', plannedReps: 8 }], optional: true }
+				]
+			}
+		];
+
+		await store.saveTemplate(planned, 150);
+
+		expect((await store.getTemplate('t1'))?.entries[0].exercises[0].optional).toBe(true);
 	});
 
 	it('keeps kinds isolated in the shared records box', async () => {

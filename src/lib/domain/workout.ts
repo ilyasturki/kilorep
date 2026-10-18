@@ -68,6 +68,8 @@ export type WorkoutExercise = {
 	restSeconds?: number | null;
 	// The grip new sets here inherit. What was performed is on the sets themselves.
 	grip?: string;
+	// Copied from the plan at start; absent is required.
+	optional?: true;
 	// The exerciseId a swap took this leg's place from; absent on a leg that is what was planned.
 	plannedAs?: string;
 };
@@ -132,8 +134,20 @@ export function cursorFor(workout: Workout, setId: string): SetCursor | null {
 	return cursors(workout).find((c) => c.set.id === setId) ?? null;
 }
 
+/** An optional exercise nobody has started: passed over, owed nothing, skipped on the record. */
+export function untouched(exercise: WorkoutExercise): boolean {
+	return (
+		exercise.optional === true &&
+		!exercise.sets.some((set) => set.completed || set.entered === true)
+	);
+}
+
+function due(cursor: SetCursor): boolean {
+	return !cursor.set.completed && !untouched(cursor.exercise);
+}
+
 export function firstUncompleted(workout: Workout): SetCursor | null {
-	return cursors(workout).find((c) => !c.set.completed) ?? null;
+	return cursors(workout).find(due) ?? null;
 }
 
 // Forward only. Coming back for the gaps left behind dragged the lifter to an exercise two
@@ -142,7 +156,18 @@ export function advanceFrom(workout: Workout, setId: string): SetCursor | null {
 	const all = cursors(workout);
 	const at = all.findIndex((c) => c.set.id === setId);
 
-	return all.slice(at + 1).find((c) => !c.set.completed) ?? null;
+	return all.slice(at + 1).find(due) ?? null;
+}
+
+export type SetTally = { logged: number; owed: number };
+
+export function tally(workout: Workout): SetTally {
+	const all = cursors(workout);
+
+	return {
+		logged: all.filter((c) => c.set.completed).length,
+		owed: all.filter(due).length
+	};
 }
 
 export function hintFor(history: History, key: string, hintIndex: number): Recall | null {
@@ -637,6 +662,10 @@ export function repeatFrom(past: Workout, startedAt: number, mint: () => string)
 
 			if (exercise.plannedAs !== undefined) {
 				repeated.plannedAs = exercise.plannedAs;
+			}
+
+			if (exercise.optional === true) {
+				repeated.optional = true;
 			}
 
 			exercises.push(repeated);
