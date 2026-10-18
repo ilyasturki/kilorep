@@ -415,22 +415,24 @@
 						{/each}
 					</ChipGroup>
 
-					<button
-						type="button"
-						aria-label={ownGrips
-							? `Edit your ${axis.label.toLowerCase()}s`
-							: `Add a ${axis.label.toLowerCase()}`}
-						onclick={() => (gripsOpen = true)}
-						class="grid min-h-chip w-12 shrink-0 place-items-center rounded-xl border-[1.5px]
-						border-dashed border-line text-ink-muted focus-ring press:bg-surface-2"
-						{@attach press()}
-					>
-						{#if ownGrips}
-							<Pencil size={16} />
-						{:else}
-							<Plus size={16} />
-						{/if}
-					</button>
+					{#if exercise.archived !== true}
+						<button
+							type="button"
+							aria-label={ownGrips
+								? `Edit your ${axis.label.toLowerCase()}s`
+								: `Add a ${axis.label.toLowerCase()}`}
+							onclick={() => (gripsOpen = true)}
+							class="grid min-h-chip w-12 shrink-0 place-items-center rounded-xl border-[1.5px]
+							border-dashed border-line text-ink-muted focus-ring press:bg-surface-2"
+							{@attach press()}
+						>
+							{#if ownGrips}
+								<Pencil size={16} />
+							{:else}
+								<Plus size={16} />
+							{/if}
+						</button>
+					{/if}
 				</div>
 			</div>
 		{/if}
