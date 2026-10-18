@@ -1,19 +1,9 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from '../fixtures.ts';
-import { logSet, startPlan } from '../helpers.ts';
+import { bounds, logSet, startPlan, themeColor } from '../helpers.ts';
 
 test.use({ seeded: true });
-
-async function box(locator: Locator): Promise<{ top: number; bottom: number }> {
-	const rect = await locator.boundingBox();
-
-	if (rect === null) {
-		throw new Error(`${locator.toString()} has no box`);
-	}
-
-	return { top: rect.y, bottom: rect.y + rect.height };
-}
 
 function startCard(page: Page): Locator {
 	return page
@@ -35,24 +25,27 @@ test(
 		await expect(start).toBeVisible();
 		await expect(card.getByText('Next up', { exact: true })).toBeVisible();
 
-		const bar = await box(tabs);
-		expect(Math.abs((await box(card)).bottom - bar.top)).toBeLessThanOrEqual(1);
-		expect(bar.top - (await box(start)).bottom).toBeLessThanOrEqual(32);
+		const bar = await bounds(tabs);
+		const held = await bounds(card);
+		const thumb = await bounds(start);
+		expect(Math.abs(held.bottom - bar.top)).toBeLessThanOrEqual(1);
+		expect(bar.top - thumb.bottom).toBeLessThanOrEqual(32);
 
+		const others = await main
+			.locator('section', { has: page.getByRole('heading', { name: 'Start another' }) })
+			.getByRole('button')
+			.all();
 		const above = [
-			...(await main
-				.locator('section', { has: page.getByRole('heading', { name: 'Start another' }) })
-				.getByRole('button')
-				.all()),
+			...others,
 			main.getByRole('link', { name: 'All templates' }),
 			main.getByRole('link', { name: 'History' })
 		];
 		expect(above.length).toBeGreaterThanOrEqual(4);
 		await expect(main.getByRole('button', { name: /^Empty workout/u })).toBeVisible();
 
-		const top = (await box(card)).top;
 		for (const row of above) {
-			expect((await box(row)).bottom).toBeLessThanOrEqual(top);
+			const { bottom } = await bounds(row);
+			expect(bottom).toBeLessThanOrEqual(held.top);
 		}
 	}
 );
@@ -70,13 +63,22 @@ test(
 
 		await expect(card.getByRole('button', { name: 'START', exact: true })).toBeVisible();
 
-		const resting = await box(card);
-		expect((await box(history)).bottom).toBeGreaterThan(resting.top);
+		const resting = await bounds(card);
+		const hidden = await bounds(history);
+		expect(hidden.bottom).toBeGreaterThan(resting.top);
 
-		await main.evaluate((pane) => pane.scrollTo({ top: pane.scrollHeight }));
-		await expect.poll(async () => (await box(history)).bottom).toBeLessThanOrEqual(resting.top);
+		await main.evaluate((pane) => {
+			pane.scrollTo({ top: pane.scrollHeight });
+		});
+		await expect
+			.poll(async () => {
+				const { bottom } = await bounds(history);
 
-		const scrolled = await box(card);
+				return bottom;
+			})
+			.toBeLessThanOrEqual(resting.top);
+
+		const scrolled = await bounds(card);
 		expect(Math.abs(scrolled.top - resting.top)).toBeLessThanOrEqual(1);
 		expect(Math.abs(scrolled.bottom - resting.bottom)).toBeLessThanOrEqual(1);
 	}
@@ -160,23 +162,12 @@ for (const tab of ['/train', '/progress', '/bodyweight', '/settings']) {
 			return;
 		}
 
-		expect((await box(banner)).bottom).toBe(0);
-		expect((await box(main)).top).toBe(0);
+		const bar = await bounds(banner);
+		const pane = await bounds(main);
+		expect(bar.bottom).toBe(0);
+		expect(pane.top).toBe(0);
 
-		const [header, canvas] = await banner.evaluate((element) => [
-			getComputedStyle(element).backgroundColor,
-			getComputedStyle(document.documentElement).getPropertyValue('--canvas')
-		]);
-		const swatch = await page.evaluate((color) => {
-			const probe = document.createElement('i');
-			probe.style.color = color;
-			document.body.append(probe);
-			const read = getComputedStyle(probe).color;
-			probe.remove();
-
-			return read;
-		}, canvas);
-
-		expect(header).toBe(swatch);
+		const header = await banner.evaluate((element) => getComputedStyle(element).backgroundColor);
+		expect(header).toBe(await themeColor(page, '--canvas'));
 	});
 }

@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { StoredRecord } from '../src/lib/store/db.ts';
 
@@ -233,4 +233,32 @@ export async function waitForSync(page: Page): Promise<void> {
 export async function syncNow(page: Page): Promise<void> {
 	await page.context().setOffline(true);
 	await page.context().setOffline(false);
+}
+
+export type Bounds = { top: number; bottom: number; left: number; right: number };
+
+/** Where `locator` sits on the screen; throws while it is not laid out. */
+export async function bounds(locator: Locator): Promise<Bounds> {
+	const rect = await locator.boundingBox();
+
+	if (rect === null) {
+		throw new Error(`${locator.toString()} is not on the screen`);
+	}
+
+	return { top: rect.y, bottom: rect.y + rect.height, left: rect.x, right: rect.x + rect.width };
+}
+
+/** A theme colour (`--canvas`, `--accent`) as `getComputedStyle` reports one, to compare against. */
+export async function themeColor(page: Page, property: string): Promise<string> {
+	const color = await page.evaluate((name) => {
+		const probe = document.createElement('i');
+		probe.style.color = `var(${name})`;
+		document.body.append(probe);
+		const read = getComputedStyle(probe).color;
+		probe.remove();
+
+		return read;
+	}, property);
+
+	return color;
 }
