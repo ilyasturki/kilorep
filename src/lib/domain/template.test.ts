@@ -16,6 +16,7 @@ import {
 	MAX_PLANNED_SETS,
 	moveEntry,
 	moveExercise,
+	plansWith,
 	removeExercise,
 	removeSet,
 	reorder,
@@ -917,6 +918,44 @@ describe('archive', () => {
 
 	test('startable keeps a plan whose archivedAt was cleared rather than removed', () => {
 		expect(startable([archivedAt(null)])).toHaveLength(1);
+	});
+});
+
+describe('plansWith', () => {
+	test('names the plans in rotation that train the exercise, in their order', () => {
+		const push = blankTemplate('push', 100);
+		plan(push, 'bench-press', 3);
+
+		const legs = blankTemplate('legs', 200);
+		plan(legs, 'back-squat', 3);
+
+		const upper = blankTemplate('upper', 300);
+		plan(upper, 'pull-up', 3);
+		plan(upper, 'bench-press', 2);
+
+		expect(plansWith([upper, push, legs], 'bench-press').map((kept) => kept.id)).toEqual([
+			'upper',
+			'push'
+		]);
+	});
+
+	test('finds an exercise inside a superset', () => {
+		const upper = blankTemplate('upper', 100);
+		plan(upper, 'pull-up', 3);
+		addExerciseTo(upper, 'pull-up-entry', 'bench-press', {
+			exercise: 'bench-node',
+			sets: ['bench-1']
+		});
+
+		expect(plansWith([upper], 'bench-press')).toHaveLength(1);
+	});
+
+	test('leaves out an archived plan, which no longer programs anything', () => {
+		const old = blankTemplate('old', 100);
+		plan(old, 'bench-press', 3);
+		old.archivedAt = 500;
+
+		expect(plansWith([old], 'bench-press')).toEqual([]);
 	});
 });
 

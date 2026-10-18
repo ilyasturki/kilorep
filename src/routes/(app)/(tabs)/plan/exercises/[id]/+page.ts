@@ -3,7 +3,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { catalogById } from '$lib/catalog';
 import type { Exercise } from '$lib/domain/exercise';
 import { settleGrip } from '$lib/domain/grip';
-import { startable } from '$lib/domain/template';
+import { plansWith, startable } from '$lib/domain/template';
 import { foldedHref } from '$lib/exercises/link';
 import { getStore } from '$lib/store/store';
 
@@ -32,15 +32,16 @@ export const load: PageLoad = async ({ params, url }) => {
 
 	const store = await getStore();
 
-	const [past, lastPerformed, note, bodyweight] = await Promise.all([
+	const [past, lastPerformed, note, bodyweight, templates] = await Promise.all([
 		store.pastSessions(exercise.id),
 		store.lastPerformed(),
 		store.exerciseNote(exercise.id),
-		store.listBodyweight()
+		store.listBodyweight(),
+		store.listTemplates()
 	]);
 
-	const templates = past.length === 0 ? await store.listTemplates() : [];
 	const plans = startable(templates);
+	const programmedIn = plansWith(templates, exercise.id);
 
-	return { exercise, grip, past, lastPerformed, note, plans, bodyweight };
+	return { exercise, grip, past, lastPerformed, note, plans, programmedIn, bodyweight };
 };

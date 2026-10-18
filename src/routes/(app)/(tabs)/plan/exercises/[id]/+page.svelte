@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	import { catalog } from '$lib/catalog';
+	import { catalog, catalogById } from '$lib/catalog';
 	import { fillAppBar, openedFrom } from '$lib/nav/bar.svelte';
 	import { addressOf } from '$lib/nav/entries';
 	import { leaveFor } from '$lib/nav/go';
@@ -9,7 +9,7 @@
 	import { bodyweightShareOf, carriedFrom, carriedOn } from '$lib/domain/load';
 	import { restLabel } from '$lib/domain/rest';
 	import { bestEstimate, rawPr } from '$lib/domain/stats';
-	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
+	import { addExercise, drawableMark, PLANNED_SET_COUNT } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
 	import { gripLabel, musclesOf } from '$lib/domain/grip';
 	import type { PerformedSet } from '$lib/domain/workout';
@@ -29,8 +29,9 @@
 	import { narrowTo } from '$lib/store/derive';
 	import { getStore } from '$lib/store/store';
 	import { syncSoon } from '$lib/sync/client';
-	import { templateTitle } from '$lib/templates/plan';
+	import { planLine, templateTitle } from '$lib/templates/plan';
 	import PlanPickerSheet from '$lib/templates/PlanPickerSheet.svelte';
+	import TemplateMark from '$lib/templates/TemplateMark.svelte';
 	import AddRow from '$lib/ui/AddRow.svelte';
 	import Badge from '$lib/ui/Badge.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -426,6 +427,31 @@
 			<AddRow label="Add note" icon={Pencil} onclick={open} />
 		{/if}
 	</section>
+
+	{#if data.programmedIn.length > 0}
+		<section class="flex flex-col gap-2">
+			<h2 class="px-3 label-caps">Programmed in</h2>
+			<div class="list-group">
+				{#each data.programmedIn as template (template.id)}
+					{@const mark = drawableMark(template)}
+
+					{#snippet tile()}
+						{#if mark !== null}
+							<TemplateMark {mark} />
+						{/if}
+					{/snippet}
+
+					<ListRow
+						title={templateTitle(template)}
+						meta={planLine(template, catalogById)}
+						stacked
+						leading={mark === null ? undefined : tile}
+						href={openedFrom(`/plan/templates/${template.id}`, here)}
+					/>
+				{/each}
+			</div>
+		</section>
+	{/if}
 
 	{#if family.length > 0}
 		<section class="flex flex-col gap-2">

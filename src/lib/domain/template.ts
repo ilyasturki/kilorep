@@ -99,6 +99,14 @@ export function startable(templates: Template[]): Template[] {
 	return templates.filter((template) => !isArchived(template));
 }
 
+export function plansWith(templates: Template[], exerciseId: string): Template[] {
+	return startable(templates).filter((template) =>
+		template.entries.some((entry) =>
+			entry.exercises.some((exercise) => exercise.exerciseId === exerciseId)
+		)
+	);
+}
+
 // 1000, not 1: ranks are epoch-ms scale and must survive repeated midpoint halving in `reorder`.
 const RANK_GAP = 1000;
 
