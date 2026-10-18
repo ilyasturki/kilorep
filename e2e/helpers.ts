@@ -308,11 +308,13 @@ export async function finger(page: Page): Promise<Finger> {
 		async tap(point, roll) {
 			const rolled = { x: point.x + roll.x, y: point.y + roll.y };
 
-			await Promise.all([
-				send('mousePressed', point, 1),
-				send('mouseMoved', rolled, 1),
-				send('mouseReleased', rolled, 0)
-			]);
+			const pressed = send('mousePressed', point, 1);
+			at += 0.001;
+			const moved = send('mouseMoved', rolled, 1);
+			at += 0.001;
+			const released = send('mouseReleased', rolled, 0);
+
+			await Promise.all([pressed, moved, released]);
 			where = rolled;
 		}
 	};
