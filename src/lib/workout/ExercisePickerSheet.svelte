@@ -24,6 +24,7 @@
 	import Button from '$lib/ui/Button.svelte';
 	import Chip from '$lib/ui/Chip.svelte';
 	import ChipGroup from '$lib/ui/ChipGroup.svelte';
+	import { drawerSlop } from '$lib/ui/drawer-slop';
 	import SearchField from '$lib/ui/SearchField.svelte';
 	import ArrowsLeftRight from '$lib/ui/icons/ArrowsLeftRight.svelte';
 	import Check from '$lib/ui/icons/Check.svelte';
@@ -60,6 +61,8 @@
 		heaviest = {},
 		onpick
 	}: Props = $props();
+
+	const slop = drawerSlop();
 
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
@@ -504,7 +507,7 @@
 		<Drawer.Portal>
 			<Drawer.Overlay class="overlay-scrim-drawer" />
 
-			<Drawer.Content bind:ref={panel} class="overlay-panel overlay-drawer">
+			<Drawer.Content bind:ref={panel} class="overlay-panel overlay-drawer" {...slop}>
 				<Drawer.Handle class="mt-3" />
 
 				<div class="flex shrink-0 items-baseline justify-between gap-3 px-4 pt-3">

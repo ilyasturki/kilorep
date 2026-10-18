@@ -3,6 +3,7 @@
 	import { Dialog } from 'bits-ui';
 	import { Drawer } from 'vaul-svelte';
 	import Button from '$lib/ui/Button.svelte';
+	import { drawerSlop } from '$lib/ui/drawer-slop';
 	import type { Pane } from '$lib/ui/keyboard';
 	import { dockBottom, keyboardUp, visiblePane, watchVisiblePane } from '$lib/ui/keyboard';
 	import { registerOverlay } from '$lib/ui/overlays';
@@ -22,6 +23,8 @@
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
 	let panel = $state<HTMLElement | null>(null);
+
+	const slop = drawerSlop();
 
 	// Vaul's own `repositionInputs` is the bug this replaces: it writes an inline height
 	// measured against a lazily captured, never-cleared value, restoring a stale size.
@@ -106,7 +109,7 @@
 		<Drawer.Portal>
 			<Drawer.Overlay class="overlay-scrim-drawer" />
 
-			<Drawer.Content bind:ref={panel} class="overlay-panel overlay-drawer">
+			<Drawer.Content bind:ref={panel} class="overlay-panel overlay-drawer" {...slop}>
 				<Drawer.Handle class="mt-3" />
 				{@render header(false)}
 				{@render body()}

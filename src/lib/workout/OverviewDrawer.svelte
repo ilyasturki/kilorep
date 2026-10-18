@@ -3,6 +3,7 @@
 
 	import type { Entry } from '$lib/workout/groups';
 	import SessionPanel from '$lib/workout/SessionPanel.svelte';
+	import { drawerSlop } from '$lib/ui/drawer-slop';
 	import { registerOverlay } from '$lib/ui/overlays';
 
 	type Props = {
@@ -28,6 +29,8 @@
 		ondrop,
 		ondiscard
 	}: Props = $props();
+
+	const slop = drawerSlop();
 
 	$effect(() => {
 		if (!open) {
@@ -66,7 +69,7 @@
 	<Drawer.Portal>
 		<Drawer.Overlay class={scrim} />
 
-		<Drawer.Content class={panel}>
+		<Drawer.Content class={panel} {...slop}>
 			<SessionPanel
 				{entries}
 				{activeSetId}
