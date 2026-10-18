@@ -115,10 +115,9 @@ bun run dev:google   # http://localhost:5173, with .env.google loaded
 ```
 
 `.env.google` at the repo root, read by that script and by nothing else — plain
-`bun run dev` is untouched, and so are `bun run start`, the container and
-drizzle-kit. It ships with `ALLOW_REGISTRATION=1`; fill in the two Google lines.
-Missing, the script refuses to start rather than serving a login screen with no
-Google button on it.
+`bun run dev` is untouched, and so are `bun run start` and drizzle-kit. It ships
+with `ALLOW_REGISTRATION=1`; fill in the two Google lines. Missing, the script
+refuses to start rather than serving a login screen with no Google button on it.
 
 Nothing here can be diagnosed from the browser, which is why the file exists: an
 unconfigured client and a closed instance both answer with a login screen that
@@ -128,8 +127,8 @@ reason — a self-hosted instance with no identity provider has nothing to say a
 one. Half a client is the same as none; it resolves whole or not at all.
 
 `ALLOW_REGISTRATION` belongs in this file and never in `.env`, which `bun run
-start` and the container also read. It is needed because the first Google sign-in
-is a *creation*: the seeded account is `dev@kilorep.local`, which is nobody's
+start` also reads. It is needed because the first Google sign-in is a
+*creation*: the seeded account is `dev@kilorep.local`, which is nobody's
 Google address, so there is nothing for the identity to link to. Closed, the
 callback redirects back to `/login` with a refusal rather than failing — the one
 case here that does explain itself.

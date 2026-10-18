@@ -30,8 +30,7 @@ function usage(): never {
 			'  account password <email>          set a new password, revoking every credential',
 			'  account delete <email> [--yes]    delete an account and every credential it owns',
 			'',
-			'  --yes           confirm a delete with no terminal to ask at, for a script or a',
-			'                  `docker exec` without -t',
+			'  --yes           confirm a delete with no terminal to ask at, for a script',
 			'  --keep-tokens   leave the credentials alone on a password change, for a plain',
 			'                  rotation rather than a compromise'
 		].join('\n')

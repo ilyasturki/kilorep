@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe('migrations', () => {
-	test('are idempotent, as a restarting container replays them', () => {
+	test('are idempotent, as every restart of the server replays them', () => {
 		const applied = appliedMigrationCount(db);
 
 		expect(applied).toBeGreaterThan(0);

@@ -253,7 +253,7 @@
 				// proves it: `crypto.scrypt` *does* have an async form, so it uses it —
 				// see the note in `auth/password.ts`.
 				"node/no-sync": "off",
-				// Configuration reaches a container through its environment. Read in
+				// Configuration reaches the server through its environment. Read in
 				// `db/config.ts` and nowhere else.
 				"node/no-process-env": "off",
 				// The same argument as the endpoint override below, and the same
