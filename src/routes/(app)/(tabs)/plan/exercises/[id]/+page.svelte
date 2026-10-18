@@ -309,7 +309,12 @@
 				</div>
 			</div>
 
-			<ExerciseIllustration id={exercise.id} {grip} name={exercise.name} class="size-36 shrink-0" />
+			<ExerciseIllustration
+				id={exercise.id}
+				grip={chip}
+				name={exercise.name}
+				class="size-36 shrink-0"
+			/>
 		</div>
 
 		{#if axis !== undefined}
