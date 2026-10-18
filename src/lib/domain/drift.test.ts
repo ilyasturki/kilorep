@@ -5,6 +5,7 @@ import { applyDrift, driftFrom, hasDrift, hasSetDrift, planOffer } from '$lib/do
 import type { SetDrift } from '$lib/domain/drift';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template, TemplateExercise } from '$lib/domain/template';
+import { replaceExercise } from '$lib/domain/workout';
 import type { SetType, Workout, WorkoutExercise, WorkoutSet } from '$lib/domain/workout';
 
 type PlannedShape = [exerciseId: string, targets: (number | null)[]];
@@ -422,6 +423,45 @@ describe('a swapped slot', () => {
 		);
 
 		expect(drift.matched['w-x0-0']).toEqual(clean);
+	});
+});
+
+describe('a swap made by the picker', () => {
+	function swappedKeeping(done: number): { template: Template; workout: Workout } {
+		const template = laidOut([slot('squat')], [slot('leg-curl')]);
+		const workout = ran([lift('squat', 3, { done })], [lift('leg-curl')]);
+
+		replaceExercise(workout, 'w-x0-0', 'hack-squat', 'keep', mint);
+
+		return { template, workout };
+	}
+
+	test('keeping the logged sets, the two legs are the one slot done', () => {
+		const { template, workout } = swappedKeeping(1);
+		const drift = driftFrom(workout, template, known);
+
+		expect(drift.unplanned).toEqual([]);
+		expect(drift.missing).toEqual([]);
+		expect(hasDrift(drift)).toBe(true);
+		expect(Object.values(drift.matched).map((one) => one.instead)).toEqual([null, 'squat', null]);
+	});
+
+	test('and the offer adds no extra exercise nor swaps the plan', () => {
+		const { template, workout } = swappedKeeping(1);
+
+		expect(planOffer(template, workout, known)).toEqual({ changes: [], swaps: [] });
+	});
+
+	test('moving the logged sets over, it is a swap the plan may take', () => {
+		const template = laidOut([slot('squat')], [slot('leg-curl')]);
+		const workout = ran([lift('squat', 3, { done: 1 })], [lift('leg-curl')]);
+
+		replaceExercise(workout, 'w-x0-0', 'hack-squat', 'move', mint);
+
+		expect(planOffer(template, workout, known)).toEqual({
+			changes: [],
+			swaps: [{ legId: 'w-x0-0', from: 'squat', to: 'hack-squat' }]
+		});
 	});
 });
 
