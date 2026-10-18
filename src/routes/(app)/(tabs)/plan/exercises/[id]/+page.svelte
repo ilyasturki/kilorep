@@ -99,7 +99,7 @@
 
 	const recordNote = $derived(
 		repRecord
-			? `The most reps you have ever held ${scope} with nothing on the belt. The kilos are ` +
+			? `With nothing on the belt, the most reps you have ever held ${scope}. The kilos are ` +
 					'your body on the day, stated but never ranked — a heavier morning is not a record. ' +
 					'Put something on the belt and that leads again.'
 			: `The heaviest you have ever moved ${scope}, body weight included. What you lifted, ` +
