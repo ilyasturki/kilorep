@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat } from '$lib/format/locale';
 	import { invalidateAll } from '$app/navigation';
 
 	import { revokeOtherTokens, setPassword } from '$lib/api/auth';
@@ -21,7 +22,7 @@
 
 	let { user, onsignout, onrevokedothers }: Props = $props();
 
-	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+	const day = dateFormat({ day: 'numeric', month: 'short', year: 'numeric' });
 
 	let notice = $state('');
 	let signOutError = $state('');

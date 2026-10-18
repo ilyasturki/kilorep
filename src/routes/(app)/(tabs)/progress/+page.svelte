@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat, decimal, numberFormat } from '$lib/format/locale';
 	import { catalogById } from '$lib/catalog';
 	import { rollingAverage, localDateOf, weeklyRate, windowed } from '$lib/domain/bodyweight';
 	import { loadFactor } from '$lib/domain/exercise';
@@ -50,9 +51,10 @@
 
 	const carried = $derived(carriedFrom(data.bodyweight, (id) => catalogById[id]));
 
-	const kgFormat = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 });
+	const kgFormat = numberFormat({ maximumFractionDigits: 0 });
+	const tonnes = numberFormat({ minimumFractionDigits: 1, maximumFractionDigits: 1 });
 	const listFormat = new Intl.ListFormat('en-GB', { style: 'long', type: 'conjunction' });
-	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+	const day = dateFormat({ day: 'numeric', month: 'short' });
 
 	const work = $derived(weeklyWork(data.workouts, now, factorOf, carried));
 	const workMax = $derived(Math.max(...work.map((week) => week.kg)));
@@ -62,7 +64,7 @@
 		const kg = lastWeek.kg;
 
 		return kg >= 1000
-			? { value: (Math.round(kg / 100) / 10).toFixed(1), unit: 't' }
+			? { value: tonnes.format(Math.round(kg / 100) / 10), unit: 't' }
 			: { value: kgFormat.format(kg), unit: 'kg' };
 	});
 
@@ -109,10 +111,10 @@
 		const rounded = Math.round(delta * 2) / 2;
 
 		if (rounded > 0) {
-			return `+${rounded}`;
+			return `+${decimal(rounded)}`;
 		}
 
-		return rounded < 0 ? `−${Math.abs(rounded)}` : 'level';
+		return rounded < 0 ? `−${decimal(Math.abs(rounded))}` : 'level';
 	}
 
 	const habit = $derived(
@@ -163,7 +165,7 @@
 			return 'Holding steady over 4 weeks';
 		}
 
-		return `${rate > 0 ? '+' : '−'}${rounded} kg a week over 4 weeks`;
+		return `${rate > 0 ? '+' : '−'}${decimal(rounded)} kg a week over 4 weeks`;
 	});
 
 	const bare = $derived(data.workouts.length === 0 && data.bodyweight.length === 0);
@@ -444,7 +446,7 @@
 						<span class="flex items-end justify-between gap-4 px-1 pb-1">
 							<span class="flex flex-col gap-1">
 								<span class={HEADLINE}>
-									{Math.round(weightNow.kg * 10) / 10}<span class={UNIT}>&nbsp;kg</span>
+									{decimal(Math.round(weightNow.kg * 10) / 10)}<span class={UNIT}>&nbsp;kg</span>
 								</span>
 
 								<span class={SUB}>{rateLabel ?? 'Keep logging, a rate needs two weeks'}</span>

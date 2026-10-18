@@ -1,3 +1,5 @@
+import { dateFormat } from './locale.ts';
+
 export const DAY_MS = 86_400_000;
 
 function startOfDay(ms: number): number {
@@ -30,9 +32,9 @@ export function countedDays(days: number): string | null {
 	return days < 7 ? `${days}d` : null;
 }
 
-const CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
+const CLOCK = dateFormat({ hour: '2-digit', minute: '2-digit' });
 
-const DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+const DATE = dateFormat({ day: 'numeric', month: 'short' });
 
 /**
  * When sync last reached the server, at the precision that matters from that distance.

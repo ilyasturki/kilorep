@@ -18,7 +18,7 @@
 
 	const zone = getLocalTimeZone();
 
-	const formatter = new Intl.DateTimeFormat(undefined, {
+	const formatter = dateFormat({
 		day: 'numeric',
 		month: 'long',
 		year: 'numeric'
@@ -26,6 +26,7 @@
 </script>
 
 <script lang="ts">
+	import { LOCALE, dateFormat } from '$lib/format/locale';
 	import type { ClassValue } from 'svelte/elements';
 	import type { DateValue } from '@internationalized/date';
 	import { today } from '@internationalized/date';
@@ -76,6 +77,7 @@
 		maxValue={max}
 		weekStartsOn={1}
 		weekdayFormat="short"
+		locale={LOCALE}
 		class="min-h-0 flex-1 overflow-y-auto px-4"
 	>
 		{#snippet children({ months, weekdays })}

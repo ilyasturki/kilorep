@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat, decimal } from '$lib/format/locale';
 	import type { BodyweightEntry } from '$lib/domain/bodyweight';
 
 	type Props = {
@@ -107,13 +108,13 @@
 		return px < LEFT + 22 ? 'start' : 'middle';
 	}
 
-	const enGB = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat =>
-		new Intl.DateTimeFormat('en-GB', options);
+	const utc = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat =>
+		dateFormat({ ...options, timeZone: 'UTC' });
 
-	const monthLabel = enGB({ month: 'short', timeZone: 'UTC' });
-	const monthYearLabel = enGB({ month: 'short', year: '2-digit', timeZone: 'UTC' });
-	const dayLabel = enGB({ day: 'numeric', month: 'short', timeZone: 'UTC' });
-	const dayYearLabel = enGB({ day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+	const monthLabel = utc({ month: 'short' });
+	const monthYearLabel = utc({ month: 'short', year: '2-digit' });
+	const dayLabel = utc({ day: 'numeric', month: 'short' });
+	const dayYearLabel = utc({ day: 'numeric', month: 'short', year: 'numeric' });
 
 	const path = $derived(
 		line
@@ -153,8 +154,8 @@
 
 		return {
 			dot,
-			label: `${(yearly ? dayYearLabel : dayLabel).format(at(dot.date))} · ${dot.kg} kg`,
-			average: averaged === undefined ? null : `7d ${Math.round(averaged.kg * 10) / 10}`
+			label: `${(yearly ? dayYearLabel : dayLabel).format(at(dot.date))} · ${decimal(dot.kg)} kg`,
+			average: averaged === undefined ? null : `7d ${decimal(Math.round(averaged.kg * 10) / 10)}`
 		};
 	});
 </script>
@@ -198,7 +199,7 @@
 					text-anchor="end"
 					class="fill-ink-faint text-xs font-bold tabular-nums"
 				>
-					{tick}
+					{decimal(tick)}
 				</text>
 			{/each}
 

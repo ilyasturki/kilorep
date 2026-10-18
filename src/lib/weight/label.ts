@@ -1,21 +1,24 @@
 import { daysBetween } from '$lib/domain/bodyweight';
 import type { RangeStats } from '$lib/domain/bodyweight';
+import { dateFormat, numberFormat } from '$lib/format/locale';
 import { countedDays } from '$lib/format/when';
 
 // UTC throughout: `Date.parse` reads a date-only string as UTC midnight, so a
 // local-time format would print the day before in negative-offset zones.
-const enGB = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat =>
-	new Intl.DateTimeFormat('en-GB', options);
+const weekdayDay = dateFormat({ weekday: 'short', day: 'numeric', timeZone: 'UTC' });
 
-const weekdayDay = enGB({ weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+const weekday = dateFormat({ weekday: 'short', timeZone: 'UTC' });
 
-const weekday = enGB({ weekday: 'short', timeZone: 'UTC' });
+const dayMonth = dateFormat({ day: 'numeric', month: 'short', timeZone: 'UTC' });
 
-const dayMonth = enGB({ day: 'numeric', month: 'short', timeZone: 'UTC' });
+const dayMonthYear = dateFormat({
+	day: 'numeric',
+	month: 'short',
+	year: 'numeric',
+	timeZone: 'UTC'
+});
 
-const dayMonthYear = enGB({ day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-
-const monthYear = enGB({ month: 'short', year: 'numeric', timeZone: 'UTC' });
+const monthYear = dateFormat({ month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 export function formatLogDay(date: string, today: string): string {
 	const counted = countedDays(daysBetween(date, today));
@@ -34,7 +37,9 @@ export function formatMonth(month: string): string {
 	return monthYear.format(Date.parse(`${month}-01`));
 }
 
-const tenth = (kg: number): string => (Math.round(kg * 10) / 10).toFixed(1);
+const ONE_PLACE = numberFormat({ minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+const tenth = (kg: number): string => ONE_PLACE.format(Math.round(kg * 10) / 10);
 
 function signed(change: number): string {
 	const rounded = Math.round(change * 10) / 10;

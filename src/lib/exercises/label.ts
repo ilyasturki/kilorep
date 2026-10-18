@@ -1,8 +1,9 @@
 import type { Exercise, LoadMode } from '$lib/domain/exercise';
-import { bodyweightShareOf, setLabel } from '$lib/domain/load';
+import { bodyweightShareOf, setLabel as plainSetLabel } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import { bestSet } from '$lib/domain/stats';
 import type { PerformedSet } from '$lib/domain/workout';
+import { decimal } from '$lib/format/locale';
 import { formatSince } from '$lib/history/label';
 
 const LOAD_MODE_NOTES: Record<LoadMode, string> = {
@@ -35,10 +36,12 @@ export function loadUnitLabel(exercise: Exercise): string {
 
 /** One decimal: a share of a body weight lands on fractions no scale claims to resolve. */
 export function loadLabel(kg: number): string {
-	return String(Math.round(kg * 10) / 10);
+	return decimal(Math.round(kg * 10) / 10);
 }
 
-export { setLabel } from '$lib/domain/load';
+export function setLabel(exercise: Exercise | undefined, set: PerformedSet): string {
+	return plainSetLabel(exercise, set, decimal);
+}
 
 /** The raw best under the name every screen gives it. */
 export function bestLabel(exercise: Exercise, set: PerformedSet): string {
@@ -65,10 +68,10 @@ export function setFigures(
 	}
 
 	if (bodyweightShareOf(exercise) === 0) {
-		return { load: String(weight), reps: shownReps };
+		return { load: decimal(weight), reps: shownReps };
 	}
 
-	return { load: weight === 0 ? null : `+${weight}`, reps: shownReps };
+	return { load: weight === 0 ? null : `+${decimal(weight)}`, reps: shownReps };
 }
 
 export function lastSetLabel(

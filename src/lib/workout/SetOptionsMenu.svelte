@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { shown } from '$lib/format/locale';
 	import { armsOf, canCommit } from '$lib/domain/workout';
 	import type { Arms, SetCursor, SetType } from '$lib/domain/workout';
 	import { singleArmable } from '$lib/domain/exercise';
@@ -81,7 +82,7 @@
 	const logged = $derived(view.cursor !== null && view.cursor.set.completed);
 
 	const performed = $derived(
-		view.cursor === null ? '' : `${view.cursor.set.weight} × ${view.cursor.set.reps}`
+		view.cursor === null ? '' : `${shown(view.cursor.set.weight)} × ${view.cursor.set.reps}`
 	);
 
 	// Nothing to take back on a set that holds nothing: the card's offer is not the set's, and

@@ -1,5 +1,6 @@
 import { catalogById } from '$lib/catalog';
 import { DAY_MS, countedDays, midnightsBetween } from '$lib/format/when';
+import { dateFormat } from '$lib/format/locale';
 import type { Exercise } from '$lib/domain/exercise';
 import type { Template } from '$lib/domain/template';
 import type { Workout } from '$lib/domain/workout';
@@ -65,13 +66,13 @@ export function formatSince(then: number, now: number): string {
 
 export type When = { short: string; long: string };
 
-const dayMonth = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
-const dayMonthYear = new Intl.DateTimeFormat('en-GB', {
+const dayMonth = dateFormat({ day: 'numeric', month: 'short' });
+const dayMonthYear = dateFormat({
 	day: 'numeric',
 	month: 'short',
 	year: 'numeric'
 });
-const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
+const weekday = dateFormat({ weekday: 'short' });
 
 export function formatWhen(then: number, now: number): When {
 	const days = midnightsBetween(then, now);

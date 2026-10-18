@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decimal } from '$lib/format/locale';
 	import {
 		EXERTION_RUNGS,
 		exertionLabel,
@@ -36,8 +37,8 @@
 
 	const name = $derived(scaleName(scale));
 
-	const shown = $derived(rating === null ? '–' : String(shownExertion(rating, scale)));
-	const rated = $derived(exertionLabel(rating, scale));
+	const shown = $derived(rating === null ? '–' : decimal(shownExertion(rating, scale)));
+	const rated = $derived(exertionLabel(rating, scale, decimal));
 	const pillLabel = $derived(
 		rated === null ? `Rate this set in ${name}` : `Rated ${rated}, change it`
 	);
@@ -138,7 +139,7 @@
 				<Chip value={CLEAR} column aria-label="Clear the {name}">–</Chip>
 
 				{#each rungs as rung (rung)}
-					<Chip value={rung} column>{rung}</Chip>
+					<Chip value={rung} column>{decimal(Number(rung))}</Chip>
 				{/each}
 
 				<Chip value="custom" column aria-label="Other {name} value">

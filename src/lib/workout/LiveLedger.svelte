@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decimal, numberFormat, shown } from '$lib/format/locale';
 	import { flip } from 'svelte/animate';
 	import { prefersReducedMotion } from 'svelte/motion';
 
@@ -127,12 +128,12 @@
 	// A warmup recalls nothing, so its column names the rung it is offered instead.
 	function lastOf(cursor: SetCursor, meta: Exercise): string {
 		const ramp = cursor.set.completed ? null : rampFor(cursor, history, meta);
-		const rung = ramp === null ? null : rampLabel(ramp, meta);
+		const rung = ramp === null ? null : rampLabel(ramp, meta, decimal);
 
-		return rung ?? hintLabel(history, cursor, meta) ?? '—';
+		return rung ?? hintLabel(history, cursor, meta, null, decimal) ?? '—';
 	}
 
-	const show = (n: number | null) => (n === null ? '–' : String(n));
+	const grouped = numberFormat({ maximumFractionDigits: 0 });
 
 	// What the sets already logged add up to. Storage is kilograms whatever the display
 	// mode, so the sum is honest across exercises.
@@ -353,10 +354,10 @@
 							: cursor.set.completed
 								? 'text-ink'
 								: 'text-ink-faint'}
-						{@const shownRpe = exertionLabel(cursor.set.rpe, scale)}
+						{@const shownRpe = exertionLabel(cursor.set.rpe, scale, decimal)}
 						{@const load =
 							setFigures(leg.meta, offer.weight, offer.reps).load ??
-							(selected ? show(offer.weight) : null)}
+							(selected ? shown(offer.weight) : null)}
 
 						<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 						<div
@@ -461,7 +462,7 @@
 									class="min-w-9 text-center text-base font-extrabold tracking-numeral
 									tabular-nums {numerals}"
 								>
-									{show(offer.reps)}
+									{shown(offer.reps)}
 								</span>
 								{#if selected}
 									<button
@@ -499,7 +500,7 @@
 												lit ? 'bg-accent text-on-accent' : 'bg-black/8 text-ink hover:bg-black/14'
 											]}
 										>
-											{shownExertion(rung, scale)}
+											{decimal(shownExertion(rung, scale))}
 										</button>
 									{/each}
 									{#if cursor.set.rpe !== null && !EXERTION_RUNGS.includes(cursor.set.rpe)}
@@ -518,12 +519,14 @@
 											bg-accent px-1 text-sm font-extrabold text-on-accent tabular-nums
 											focus-ring"
 										>
-											{shownExertion(cursor.set.rpe, scale)}
+											{decimal(shownExertion(cursor.set.rpe, scale))}
 										</button>
 									{/if}
 								{:else if cursor.set.completed}
 									<span class="text-md font-extrabold text-ink-faint tabular-nums">
-										{shownRpe === null ? '—' : shownExertion(cursor.set.rpe as number, scale)}
+										{shownRpe === null
+											? '—'
+											: decimal(shownExertion(cursor.set.rpe as number, scale))}
 									</span>
 								{/if}
 							</span>
@@ -533,7 +536,7 @@
 									{#if canCommit(offer.weight, offer.reps)}
 										<button
 											type="button"
-											aria-label="Update set to {offer.weight} × {offer.reps}"
+											aria-label="Update set to {shown(offer.weight)} × {offer.reps}"
 											onclick={(e) => {
 												swallow(e);
 												oncommit(offer.weight as number, offer.reps as number);
@@ -548,7 +551,7 @@
 								{:else if selected && canCommit(offer.weight, offer.reps)}
 									<button
 										type="button"
-										aria-label="Log {offer.weight} × {offer.reps}"
+										aria-label="Log {shown(offer.weight)} × {offer.reps}"
 										onclick={(e) => {
 											swallow(e);
 											oncommit(offer.weight as number, offer.reps as number);
@@ -562,7 +565,7 @@
 								{:else if quick !== null}
 									<button
 										type="button"
-										aria-label="Log {quick.weight} × {quick.reps} as planned"
+										aria-label="Log {decimal(quick.weight)} × {quick.reps} as planned"
 										onclick={(e) => {
 											swallow(e);
 											onquick(cursor.set.id, quick.weight, quick.reps);
@@ -630,7 +633,7 @@
 		</span>
 		{#if anyLogged}
 			<span class="text-sm font-extrabold text-ink-faint tabular-nums">
-				{volume.toLocaleString('en-US')} kg lifted so far
+				{grouped.format(volume)} kg lifted so far
 			</span>
 		{/if}
 	</div>

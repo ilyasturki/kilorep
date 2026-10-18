@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat } from '$lib/format/locale';
 	import { invalidateAll } from '$app/navigation';
 
 	import { REFUSALS, backupName, backupOf, readBackup } from '$lib/data/backup';
@@ -16,7 +17,7 @@
 
 	let { userId }: { userId: string | null } = $props();
 
-	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+	const day = dateFormat({ day: 'numeric', month: 'short', year: 'numeric' });
 
 	let picker = $state<HTMLInputElement | null>(null);
 

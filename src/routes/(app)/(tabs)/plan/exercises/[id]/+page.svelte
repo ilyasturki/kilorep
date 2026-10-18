@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat, decimal } from '$lib/format/locale';
 	import { page } from '$app/state';
 
 	import { catalog, catalogById } from '$lib/catalog';
@@ -131,7 +132,7 @@
 
 	const loadNote = $derived(loadModeNote(exercise.loadMode));
 
-	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+	const day = dateFormat({ day: 'numeric', month: 'short' });
 
 	// Uneven widths: a row of identical blocks reads as a page still loading.
 	const GHOST_SETS = ['w-18', 'w-16', 'w-16'];
@@ -372,7 +373,7 @@
 				     nothing. -->
 				{#if carries && pr.load !== pr.set.weight}
 					<span class="text-sm font-bold text-ink-faint">
-						{pr.set.weight === 0 ? 'body weight' : `${pr.set.weight} added`}
+						{pr.set.weight === 0 ? 'body weight' : `${decimal(pr.set.weight)} added`}
 					</span>
 				{/if}
 			</div>

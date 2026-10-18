@@ -21,12 +21,16 @@ export function bodyweightShareOf(exercise: Exercise | undefined): number {
  * One logged set as a line. The weigh-in never prints: `80` on a bench and `+10` on a pull-up
  * are both what the lifter chose — the only number a list can compare across days.
  */
-export function setLabel(exercise: Exercise | undefined, set: PerformedSet): string {
+export function setLabel(
+	exercise: Exercise | undefined,
+	set: PerformedSet,
+	figure: (kg: number) => string = String
+): string {
 	if (bodyweightShareOf(exercise) === 0) {
-		return `${set.weight} × ${set.reps}`;
+		return `${figure(set.weight)} × ${set.reps}`;
 	}
 
-	return set.weight === 0 ? `${set.reps} reps` : `+${set.weight} × ${set.reps}`;
+	return set.weight === 0 ? `${set.reps} reps` : `+${figure(set.weight)} × ${set.reps}`;
 }
 
 /**

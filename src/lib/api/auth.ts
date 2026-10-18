@@ -1,5 +1,6 @@
 import { ApiError, NO_SERVER, apiBase, request, setDeviceToken } from './client.ts';
 import { GOOGLE_ENABLED_PATH, GOOGLE_START_PATH } from './routes.ts';
+import { dateFormat } from '$lib/format/locale';
 
 export type Account = {
 	id: string;
@@ -36,7 +37,7 @@ export async function login(email: string, password: string, fetch?: Fetch): Pro
 }
 
 export function deviceLabel(): string {
-	const day = new Intl.DateTimeFormat('en-GB', {
+	const day = dateFormat({
 		day: 'numeric',
 		month: 'short',
 		year: 'numeric'

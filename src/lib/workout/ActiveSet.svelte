@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decimal } from '$lib/format/locale';
 	import type { Exercise } from '$lib/domain/exercise';
 	import {
 		canCommit,
@@ -51,7 +52,7 @@
 		onoptions
 	}: Props = $props();
 
-	const hint = $derived(hintLabel(history, cursor, meta, exertionScale.current));
+	const hint = $derived(hintLabel(history, cursor, meta, exertionScale.current, decimal));
 
 	const warmup = $derived(cursor.workingIndex < 0);
 
@@ -59,7 +60,7 @@
 
 	const ramp = $derived(cursor.set.completed ? null : rampFor(cursor, history, meta));
 
-	const rung = $derived(ramp === null ? null : rampLabel(ramp, meta));
+	const rung = $derived(ramp === null ? null : rampLabel(ramp, meta, decimal));
 
 	// The plan's own number, which the reps field cannot say for itself: what it holds is the
 	// prefill, and from the second set on that is the weight and reps carried from the first.

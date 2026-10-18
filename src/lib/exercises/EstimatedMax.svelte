@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat, decimal } from '$lib/format/locale';
 	import type { Exercise } from '$lib/domain/exercise';
 	import type { CarriedOn } from '$lib/domain/load';
 	import { estTrend, WEEK } from '$lib/domain/progress';
@@ -54,13 +55,13 @@
 		const rung = Math.round(kg * 2) / 2;
 
 		if (rung > 0) {
-			return `+${rung}`;
+			return `+${decimal(rung)}`;
 		}
 
-		return rung < 0 ? `−${Math.abs(rung)}` : 'level';
+		return rung < 0 ? `−${decimal(Math.abs(rung))}` : 'level';
 	}
 
-	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+	const day = dateFormat({ day: 'numeric', month: 'short' });
 
 	let open = $state(false);
 	const panelId = $props.id();

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decimal, shown } from '$lib/format/locale';
 	import { scaleName, shownExertion } from '$lib/domain/exertion';
 	import { gripLabel, settleGrip } from '$lib/domain/grip';
 	import type { SetCursor } from '$lib/domain/workout';
@@ -81,8 +82,6 @@
 
 	const cell = 'text-right text-md tracking-numeral tabular-nums';
 	const dim = 'font-bold text-ink-faint';
-
-	const show = (n: number | null) => (n === null ? '–' : String(n));
 
 	function setName(cursor: SetCursor, letter: string): string {
 		return cursor.workingIndex < 0
@@ -226,7 +225,7 @@
 			<FigureCell
 				kind="reps"
 				value={set.reps}
-				shown={show(set.reps)}
+				shown={shown(set.reps)}
 				label="{name} reps"
 				{editing}
 				class={strayed ? 'font-extrabold text-accent-text' : num}
@@ -234,8 +233,10 @@
 				oncommit={(value) => onfigure(set.id, 'reps', value)}
 			/>
 
-			<span class="{cell} {dim}">{show(set.plannedReps)}</span>
-			<span class="{cell} {dim}">{set.rpe === null ? '–' : shownExertion(set.rpe, scale)}</span>
+			<span class="{cell} {dim}">{shown(set.plannedReps)}</span>
+			<span class="{cell} {dim}"
+				>{set.rpe === null ? '–' : decimal(shownExertion(set.rpe, scale))}</span
+			>
 
 			{#if said !== null}
 				<span class="col-span-4 col-start-2 pb-1.5 text-right text-sm font-bold text-ink-faint">

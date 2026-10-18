@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decimal } from '$lib/format/locale';
 	import type { BodyweightEntry } from '$lib/domain/bodyweight';
 	import { monthGroups } from '$lib/domain/bodyweight';
 	import { formatLogDay, formatMonth, formatMonthMeta } from '$lib/weight/label';
@@ -63,7 +64,7 @@
 						onhold={(anchor) => onhold(anchor, entry)}
 					>
 						{#snippet trailing()}
-							{entry.kg} kg
+							{decimal(entry.kg)} kg
 						{/snippet}
 					</ListRow>
 				{/each}

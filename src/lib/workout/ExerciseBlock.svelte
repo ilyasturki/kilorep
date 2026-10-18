@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { decimal } from '$lib/format/locale';
 	import { slide } from 'svelte/transition';
 
 	import { exertionLabel } from '$lib/domain/exertion';
@@ -106,7 +107,7 @@
 		if (cursor.set.completed) {
 			return active
 				? 'Editing'
-				: (exertionLabel(cursor.set.rpe, exertionScale.current) ?? 'Logged');
+				: (exertionLabel(cursor.set.rpe, exertionScale.current, decimal) ?? 'Logged');
 		}
 
 		return active ? 'Now' : null;

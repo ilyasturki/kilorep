@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat } from '$lib/format/locale';
 	import { invalidateAll } from '$app/navigation';
 
 	import { createToken, renameToken, revokeToken } from '$lib/api/auth';
@@ -21,7 +22,7 @@
 
 	let { tokens, minted = $bindable() }: Props = $props();
 
-	const day = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+	const day = dateFormat({ day: 'numeric', month: 'short', year: 'numeric' });
 
 	let copied = $state<'token' | 'command' | 'json' | null>(null);
 

@@ -6,6 +6,7 @@
 </script>
 
 <script lang="ts">
+	import { shown } from '$lib/format/locale';
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { goto } from '$app/navigation';
@@ -685,7 +686,7 @@
 		removing = {
 			id: setId,
 			title: cursor.workingIndex < 0 ? 'Remove warmup?' : `Remove set ${cursor.workingIndex + 1}?`,
-			lost: `${cursor.set.weight} × ${cursor.set.reps} goes with it, and nothing in the app can put it back.`
+			lost: `${shown(cursor.set.weight)} × ${cursor.set.reps} goes with it, and nothing in the app can put it back.`
 		};
 
 		removingOpen = true;

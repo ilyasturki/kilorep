@@ -194,7 +194,8 @@ export function hintLabel(
 	history: History,
 	cursor: SetCursor,
 	meta: Exercise | undefined,
-	scale: ExertionScale | null = null
+	scale: ExertionScale | null = null,
+	figure: (kg: number) => string = String
 ): string | null {
 	const hint = hintFor(history, cursorKey(cursor), cursor.workingIndex);
 
@@ -202,14 +203,14 @@ export function hintLabel(
 		return null;
 	}
 
-	const felt = scale === null ? '' : exertionSuffix(hint.rpe, scale);
+	const felt = scale === null ? '' : exertionSuffix(hint.rpe, scale, figure);
 
 	const grip =
 		hint.grip === undefined || hint.grip === settleGrip(meta, cursor.set.grip)
 			? ''
 			: ` · ${gripLabel(meta, hint.grip) ?? hint.grip}`;
 
-	return `${setLabel(meta, hint)}${felt}${grip}`;
+	return `${setLabel(meta, hint, figure)}${felt}${grip}`;
 }
 
 export type Prefill = { weight: number | null; reps: number | null };
@@ -300,7 +301,11 @@ export function rampFor(cursor: SetCursor, history: History, meta?: Exercise): R
 	return { weight: rampedDown(share * of, meta), reps, share, bar: false, of };
 }
 
-export function rampLabel(ramp: Ramp, meta: Exercise | undefined): string | null {
+export function rampLabel(
+	ramp: Ramp,
+	meta: Exercise | undefined,
+	figure: (kg: number) => string = String
+): string | null {
 	if (ramp.bar) {
 		return 'Empty bar';
 	}
@@ -309,7 +314,7 @@ export function rampLabel(ramp: Ramp, meta: Exercise | undefined): string | null
 		return null;
 	}
 
-	const of = bodyweightShareOf(meta) > 0 ? `+${ramp.of}` : String(ramp.of);
+	const of = bodyweightShareOf(meta) > 0 ? `+${figure(ramp.of)}` : figure(ramp.of);
 
 	return `${Math.round(ramp.share * 100)} % of ${of} kg`;
 }

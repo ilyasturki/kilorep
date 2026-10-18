@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat } from '$lib/format/locale';
 	import { catalogById } from '$lib/catalog';
 	import { planOffer } from '$lib/domain/drift';
 	import type { Template } from '$lib/domain/template';
@@ -31,7 +32,7 @@
 
 	const name = $derived(template === null ? '' : templateTitle(template));
 
-	const when = new Intl.DateTimeFormat('en-GB', {
+	const when = dateFormat({
 		weekday: 'short',
 		day: 'numeric',
 		month: 'short'

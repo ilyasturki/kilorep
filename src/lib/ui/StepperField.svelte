@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import { decimal } from '$lib/format/locale';
 	import { isEntryDraft, isWholeDraft, parseEntry, parseWhole, settle } from '$lib/domain/workout';
 
 	/**
@@ -27,7 +28,7 @@
 	export const NUMBER: Entry = {
 		draft: (raw) => (isEntryDraft(raw) ? raw : null),
 		parse: parseEntry,
-		format: String,
+		format: decimal,
 		inputmode: 'decimal'
 	};
 

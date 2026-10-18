@@ -38,12 +38,20 @@ export function scaleName(scale: ExertionScale): string {
 	return scale === 'rpe' ? 'RPE' : 'RIR';
 }
 
-export function exertionLabel(rpe: number | null | undefined, scale: ExertionScale): string | null {
-	return isExertion(rpe) ? `${scaleName(scale)} ${shownExertion(rpe, scale)}` : null;
+export function exertionLabel(
+	rpe: number | null | undefined,
+	scale: ExertionScale,
+	figure: (value: number) => string = String
+): string | null {
+	return isExertion(rpe) ? `${scaleName(scale)} ${figure(shownExertion(rpe, scale))}` : null;
 }
 
-export function exertionSuffix(rpe: number | null | undefined, scale: ExertionScale): string {
-	const label = exertionLabel(rpe, scale);
+export function exertionSuffix(
+	rpe: number | null | undefined,
+	scale: ExertionScale,
+	figure: (value: number) => string = String
+): string {
+	const label = exertionLabel(rpe, scale, figure);
 
 	return label === null ? '' : ` · ${label}`;
 }

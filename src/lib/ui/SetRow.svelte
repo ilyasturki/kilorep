@@ -28,10 +28,11 @@
 		'grid grid-cols-[5rem_1.375rem_2.5rem] items-baseline justify-start font-extrabold ' +
 		'@md:grid-cols-[6.5rem_1.625rem_3.5rem]';
 
-	const show = (n: number | null | undefined) => (n === null || n === undefined ? '–' : String(n));
+	const show = (n: number | null | undefined) => (n === null || n === undefined ? '–' : decimal(n));
 </script>
 
 <script lang="ts">
+	import { decimal } from '$lib/format/locale';
 	import type { Snippet } from 'svelte';
 	import SetMark from '$lib/ui/SetMark.svelte';
 	import More from '$lib/ui/icons/More.svelte';

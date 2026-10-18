@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat } from '$lib/format/locale';
 	import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
 	import { parseDate } from '@internationalized/date';
 	import type { DateValue } from '@internationalized/date';
@@ -80,7 +81,7 @@
 
 	const desk = $derived(deskViewport.current);
 
-	const when = new Intl.DateTimeFormat('en-GB', {
+	const when = dateFormat({
 		weekday: 'short',
 		day: 'numeric',
 		month: 'short',

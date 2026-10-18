@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dateFormat, decimal } from '$lib/format/locale';
 	import type { DateValue } from '@internationalized/date';
 	import { parseDate } from '@internationalized/date';
 
@@ -210,7 +211,7 @@
 	}
 
 	// UTC: a date-only string in a negative-offset zone would render the day before.
-	const day = new Intl.DateTimeFormat('en-GB', {
+	const day = dateFormat({
 		weekday: 'short',
 		day: 'numeric',
 		month: 'short',
@@ -343,7 +344,7 @@
 
 			{#if replaces !== null}
 				<p class="px-1 text-sm font-bold text-ink-faint">
-					Replaces the {replaces.kg} kg already logged that day.
+					Replaces the {decimal(replaces.kg)} kg already logged that day.
 				</p>
 			{/if}
 		{/if}
