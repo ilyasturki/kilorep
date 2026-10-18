@@ -474,7 +474,7 @@
 			return;
 		}
 
-		const offer = prefillFor(activeCursor, NO_HISTORY, activeLeg.meta);
+		const offer = prefillFor(activeCursor, NO_HISTORY);
 
 		if (canCommit(offer.weight, offer.reps)) {
 			logSet(offer.weight as number, offer.reps as number);

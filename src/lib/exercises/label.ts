@@ -1,8 +1,7 @@
 import type { Exercise, LoadMode } from '$lib/domain/exercise';
-import { bodyweightShareOf } from '$lib/domain/load';
+import { bodyweightShareOf, setLabel } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import { bestSet } from '$lib/domain/stats';
-import type { PerformedSet } from '$lib/domain/workout';
 import { formatSince } from '$lib/history/label';
 
 const LOAD_MODE_NOTES: Record<LoadMode, string> = {
@@ -38,16 +37,15 @@ export function loadLabel(kg: number): string {
 	return String(Math.round(kg * 10) / 10);
 }
 
-/**
- * One logged set as a line. The weigh-in never prints: `80` on a bench and `+10` on a pull-up
- * are both what the lifter chose — the only number a list can compare across days.
- */
-export function setLabel(exercise: Exercise, set: PerformedSet): string {
+export { setLabel } from '$lib/domain/load';
+
+/** A weight column's cell: `setLabel`'s rule for one number, `body` where nothing was added. */
+export function addedLabel(exercise: Exercise, weight: number): string {
 	if (bodyweightShareOf(exercise) === 0) {
-		return `${set.weight} × ${set.reps}`;
+		return String(weight);
 	}
 
-	return set.weight === 0 ? `${set.reps} reps` : `+${set.weight} × ${set.reps}`;
+	return weight === 0 ? 'body' : `+${weight}`;
 }
 
 /**

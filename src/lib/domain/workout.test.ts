@@ -99,7 +99,7 @@ function idOf(cursor: SetCursor | null): string | null {
 function prefillOf(workout: Workout, setId: string): Prefill {
 	const cursor = at(workout, setId);
 
-	return prefillFor(cursor, history, metaOf(cursor));
+	return prefillFor(cursor, history);
 }
 
 function completeAll(workout: Workout): void {
@@ -506,7 +506,7 @@ describe('addSet', () => {
 		addSet(workout, 'we-bench', 'bench-5');
 
 		const cursor = cursorFor(workout, 'bench-5')!;
-		const prefill = prefillFor(cursor, history, metaOf(cursor));
+		const prefill = prefillFor(cursor, history);
 
 		expect(cursor.workingIndex).toBe(4);
 		expect(prefill).toEqual({ weight: null, reps: null });
@@ -536,7 +536,7 @@ describe('addExercise', () => {
 		addExercise(workout, 'cable-fly', { entry: 'entry-5', exercise: 'we-fly2', sets: ['fly2-1'] });
 
 		const fly = at(workout, 'fly2-1');
-		const prefill = prefillFor(fly, history, metaOf(fly));
+		const prefill = prefillFor(fly, history);
 
 		expect(prefill).toEqual({ weight: 20, reps: 12 });
 	});

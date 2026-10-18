@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
+import { rawPr } from '$lib/domain/stats';
 import type { WorkoutEntry, WorkoutExercise, WorkoutSet } from '$lib/domain/workout';
 
 import type { FinishedWorkout } from './derive.ts';
 import {
 	frequentFrom,
-	gripSessionsFrom,
 	heaviestFrom,
 	historyFrom,
 	lastGripsFrom,
 	lastPerformedFrom,
-	sessionsByExercise,
-	sessionsByKey
+	narrowTo,
+	pastSessionsFrom,
+	sessionsByExercise
 } from './derive.ts';
 import { foldWorkout } from './fold.ts';
 
@@ -57,54 +58,13 @@ function workout(startedAt: number, ...entries: WorkoutEntry[]): FinishedWorkout
 
 const only = (sets: { weight: number; reps: number }[]): number[] => sets.map((set) => set.weight);
 
-describe('grip-keyed history', () => {
-	it('files the default grip under the bare slug and every other one beside it', () => {
-		const sessions = sessionsByKey([
-			workout(
-				100,
-				leg('triceps-pushdown', [
-					{ weight: 30, reps: 12, grip: 'rope' },
-					{ weight: 40, reps: 8, grip: 'bar' }
-				])
-			)
-		]);
+const grips = (sets: { grip?: string }[]): (string | undefined)[] => sets.map((set) => set.grip);
 
-		expect(Object.keys(sessions).toSorted()).toEqual(['triceps-pushdown', 'triceps-pushdown#bar']);
-		expect(only(sessions['triceps-pushdown'][0].sets)).toEqual([30]);
-		expect(only(sessions['triceps-pushdown#bar'][0].sets)).toEqual([40]);
-	});
-
-	it('merges sets logged before the axis existed into the default grip', () => {
-		const sessions = sessionsByKey([
-			workout(100, leg('triceps-pushdown', [{ weight: 30, reps: 12 }])),
-			workout(200, leg('triceps-pushdown', [{ weight: 32.5, reps: 12, grip: 'rope' }]))
-		]);
-
-		expect(sessions['triceps-pushdown']).toHaveLength(2);
-		expect(sessions['triceps-pushdown#bar']).toBeUndefined();
-	});
-
-	it('numbers both grips as the same exercise of the session, because they were one trip', () => {
-		const sessions = sessionsByKey([
-			workout(
-				100,
-				leg('squat', [{ weight: 100, reps: 5 }]),
-				leg('triceps-pushdown', [
-					{ weight: 30, reps: 12, grip: 'rope' },
-					{ weight: 40, reps: 8, grip: 'bar' }
-				])
-			)
-		]);
-
-		expect(sessions['triceps-pushdown'][0].position).toBe(2);
-		expect(sessions['triceps-pushdown#bar'][0].position).toBe(2);
-	});
-});
-
-describe('base-keyed reads', () => {
+describe('history across grips', () => {
 	const both = [
 		workout(
 			100,
+			leg('squat', [{ weight: 100, reps: 5 }]),
 			leg('triceps-pushdown', [
 				{ weight: 30, reps: 12, grip: 'rope' },
 				{ weight: 40, reps: 8, grip: 'bar' }
@@ -112,37 +72,99 @@ describe('base-keyed reads', () => {
 		)
 	];
 
-	it('keep every grip together under the slug', () => {
-		expect(only(sessionsByExercise(both)['triceps-pushdown'][0].sets)).toEqual([30, 40]);
-		expect(lastPerformedFrom(both)['triceps-pushdown']).toBeDefined();
-		expect(only(lastPerformedFrom(both)['triceps-pushdown']!.sets)).toEqual([30, 40]);
+	it('keeps every grip in one session of the exercise, each set saying which it was', () => {
+		const [session] = sessionsByExercise(both)['triceps-pushdown'];
+
+		expect(only(session.sets)).toEqual([30, 40]);
+		expect(grips(session.sets)).toEqual(['rope', 'bar']);
+		expect(session.position).toBe(2);
 	});
 
-	it('count the exercise once on the shelf, not once per grip', () => {
-		expect(frequentFrom(both)).toEqual(['triceps-pushdown']);
+	it('names the default on a set logged before the axis existed, and nothing where there is none', () => {
+		const sessions = sessionsByExercise([
+			workout(100, leg('triceps-pushdown', [{ weight: 30, reps: 12 }])),
+			workout(200, leg('squat', [{ weight: 100, reps: 5 }]))
+		]);
+
+		expect(grips(sessions['triceps-pushdown'][0].sets)).toEqual(['rope']);
+		expect(Object.hasOwn(sessions.squat[0].sets[0], 'grip')).toBe(false);
+	});
+
+	it('reads one exercise on the shelf and in recency, not one per grip', () => {
+		expect(frequentFrom(both).toSorted()).toEqual(['squat', 'triceps-pushdown']);
+		expect(only(lastPerformedFrom(both)['triceps-pushdown']!.sets)).toEqual([30, 40]);
 	});
 });
 
 describe('historyFrom', () => {
-	it('recalls the last session of each grip, not the last session of the exercise', () => {
+	it('recalls the exercise’s last session whatever the grip it was done with', () => {
 		const history = historyFrom([
-			workout(100, leg('triceps-pushdown', [{ weight: 40, reps: 8, grip: 'bar' }])),
-			workout(200, leg('triceps-pushdown', [{ weight: 32.5, reps: 12, grip: 'rope' }]))
+			workout(100, leg('pull-up', [{ weight: 0, reps: 8, grip: 'overhand' }])),
+			workout(200, leg('pull-up', [{ weight: 0, reps: 10, grip: 'underhand' }]))
 		]);
 
-		expect(only(history['triceps-pushdown'] ?? [])).toEqual([32.5]);
-		expect(only(history['triceps-pushdown#bar'] ?? [])).toEqual([40]);
+		expect(history['pull-up']).toEqual([{ weight: 0, reps: 10, rpe: null, grip: 'underhand' }]);
+		expect(history['pull-up#underhand']).toBeUndefined();
+	});
+});
+
+describe('bests across grips', () => {
+	const pulls = [
+		workout(100, leg('pull-up', [{ weight: 10, reps: 6, grip: 'underhand' }])),
+		workout(200, leg('pull-up', [{ weight: 12.5, reps: 3, grip: 'overhand' }])),
+		workout(300, leg('pull-up', [{ weight: 5, reps: 8, grip: 'neutral' }]))
+	];
+
+	it('rank every grip together on the ledger and the picker', () => {
+		expect(heaviestFrom(pulls)['pull-up']).toMatchObject({ weight: 12.5, reps: 3 });
+	});
+
+	it('are the same set the exercise screen’s raw best finds', () => {
+		const pr = rawPr(pastSessionsFrom(pulls, 'pull-up'), () => 80);
+
+		expect(pr).toMatchObject({ set: { weight: 12.5, reps: 3 }, date: 200, load: 92.5 });
+	});
+});
+
+describe('narrowTo', () => {
+	const mixed = [
+		workout(
+			100,
+			leg('pull-up', [
+				{ weight: 0, reps: 10, grip: 'overhand' },
+				{ weight: 0, reps: 12, grip: 'underhand' }
+			])
+		),
+		workout(200, leg('pull-up', [{ weight: 0, reps: 9, grip: 'overhand' }]))
+	];
+
+	const all = pastSessionsFrom(mixed, 'pull-up');
+
+	it('keeps one grip’s sets and drops the sessions that had none', () => {
+		const underhand = narrowTo(all, 'underhand');
+
+		expect(underhand).toHaveLength(1);
+		expect(underhand[0]).toMatchObject({ date: 100, position: 1 });
+		expect(underhand[0].sets.map((set) => set.reps)).toEqual([12]);
+		expect(narrowTo(all, 'neutral')).toEqual([]);
+	});
+
+	it('hands back the very sets it was given, so a best found in it matches its row', () => {
+		const overhand = narrowTo(all, 'overhand');
+
+		expect(overhand[0].sets[0]).toBe(all[0].sets[0]);
+		expect(rawPr(overhand, () => 0)!.set).toBe(all[0].sets[0]);
 	});
 });
 
 describe('lastGripsFrom', () => {
 	it('remembers what the exercise was last worked with, so an insert opens on it', () => {
-		const grips = lastGripsFrom([
+		const last = lastGripsFrom([
 			workout(100, leg('triceps-pushdown', [{ weight: 40, reps: 8, grip: 'bar' }], 'bar')),
 			workout(200, leg('triceps-pushdown', [{ weight: 32.5, reps: 12, grip: 'v-bar' }], 'v-bar'))
 		]);
 
-		expect(grips['triceps-pushdown']).toBe('v-bar');
+		expect(last['triceps-pushdown']).toBe('v-bar');
 	});
 
 	it('says nothing about a session that logged nothing', () => {
@@ -152,31 +174,11 @@ describe('lastGripsFrom', () => {
 	});
 });
 
-describe('gripSessionsFrom', () => {
-	it('hands back one exercise across all its grips, and nobody else’s', () => {
-		const gripped = gripSessionsFrom(
-			[
-				workout(
-					100,
-					leg('triceps-pushdown', [
-						{ weight: 30, reps: 12, grip: 'rope' },
-						{ weight: 40, reps: 8, grip: 'bar' }
-					]),
-					leg('squat', [{ weight: 100, reps: 5 }])
-				)
-			],
-			'triceps-pushdown'
-		);
-
-		expect(Object.keys(gripped).toSorted()).toEqual(['triceps-pushdown', 'triceps-pushdown#bar']);
-	});
-});
-
 describe('folded slugs', () => {
-	// The payoff of folding rather than stranding: the sets land on the chip they were performed
-	// with, and a wide-grip pulldown lands on the default, which is where plain pulldowns already are.
-	it('read as their parent under the grip they became', () => {
-		const sessions = sessionsByKey(
+	// The payoff of folding rather than stranding: the sets land on their parent stamped with the
+	// grip they were performed with, and a wide-grip pulldown lands on the default.
+	it('read as their parent, each set under the grip it became', () => {
+		const sessions = sessionsByExercise(
 			[
 				workout(
 					100,
@@ -187,8 +189,10 @@ describe('folded slugs', () => {
 			].map((entry) => foldWorkout(entry))
 		);
 
-		expect(only(sessions['lat-pulldown'][0].sets)).toEqual([55, 50]);
-		expect(only(sessions['lat-pulldown#neutral'][0].sets)).toEqual([60]);
+		const [session] = sessions['lat-pulldown'];
+
+		expect(only(session.sets)).toEqual([60, 55, 50]);
+		expect(only(narrowTo(sessions['lat-pulldown'], 'neutral')[0].sets)).toEqual([60]);
 	});
 
 	it('leave a workout that names nothing retired untouched', () => {

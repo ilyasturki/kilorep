@@ -68,18 +68,42 @@ function session(grip?: string, ...sets: WorkoutSet[]): Workout {
 
 const history: History = {
 	'triceps-pushdown': [
-		{ weight: 30, reps: 12, rpe: null },
-		{ weight: 30, reps: 11, rpe: null },
-		{ weight: 30, reps: 10, rpe: null }
-	],
-	'triceps-pushdown#bar': [
-		{ weight: 45, reps: 10, rpe: null },
-		{ weight: 45, reps: 9, rpe: null }
+		{ weight: 30, reps: 12, rpe: null, grip: 'rope' },
+		{ weight: 30, reps: 11, rpe: null, grip: 'rope' },
+		{ weight: 45, reps: 10, rpe: null, grip: 'bar' },
+		{ weight: 45, reps: 9, rpe: null, grip: 'bar' }
 	]
 };
 
-describe('hintIndex', () => {
-	test('counts the grip where the label counts the exercise', () => {
+const pullUp: Exercise = {
+	id: 'pull-up',
+	name: 'Pull-Up',
+	aliases: [],
+	equipment: 'Bodyweight',
+	loadMode: 'total',
+	bodyweightShare: 1,
+	muscles: { primary: 'Back', secondary: ['Biceps'] },
+	grips: {
+		label: 'Grip',
+		default: 'overhand',
+		values: [
+			{ id: 'overhand', label: 'Pronated' },
+			{ id: 'underhand', label: 'Supinated' }
+		]
+	}
+};
+
+function pulls(...sets: WorkoutSet[]): Workout {
+	return {
+		id: 'w',
+		templateId: null,
+		startedAt: 0,
+		entries: [{ id: 'e', exercises: [{ id: 'we', exerciseId: 'pull-up', sets, grip: 'overhand' }] }]
+	};
+}
+
+describe('hints across grips', () => {
+	test('set N recalls set N of last time, whatever grip either was done with', () => {
 		const workout = session(
 			'rope',
 			open('s1', 'rope'),
@@ -91,22 +115,46 @@ describe('hintIndex', () => {
 		const [a, b, c, d] = entryCursors(workout.entries[0]);
 
 		expect([a, b, c, d].map((cursor) => cursor.workingIndex)).toEqual([0, 1, 2, 3]);
-		expect([a, b, c, d].map((cursor) => cursor.hintIndex)).toEqual([0, 1, 0, 1]);
 
-		// So the first bar set recalls the first bar set, not the third rope one. The bar's
-		// history has two entries; the fourth set of the exercise is its second, and asking for
-		// a fourth would go quiet on a set that has last time's numbers to give.
 		expect(hintLabel(history, cursorFor(workout, 's2')!, pushdown)).toBe('30 × 11');
 		expect(hintLabel(history, cursorFor(workout, 's3')!, pushdown)).toBe('45 × 10');
 		expect(hintLabel(history, cursorFor(workout, 's4')!, pushdown)).toBe('45 × 9');
 	});
 
-	test('a warmup counts for neither', () => {
+	test('a pull-up done supinated last week is today’s hint done pronated, and says so', () => {
+		const last: History = {
+			'pull-up': [
+				{ weight: 0, reps: 8, rpe: null, grip: 'underhand' },
+				{ weight: 5, reps: 6, rpe: null, grip: 'underhand' }
+			]
+		};
+
+		const workout = pulls(open('p1', 'overhand'), open('p2', 'overhand'), open('p3', 'underhand'));
+
+		expect(hintLabel(last, cursorFor(workout, 'p1')!, pullUp)).toBe('8 reps · Supinated');
+		expect(hintLabel(last, cursorFor(workout, 'p2')!, pullUp)).toBe('+5 × 6 · Supinated');
+		expect(prefillFor(cursorFor(workout, 'p1')!, last)).toEqual({ weight: 0, reps: 8 });
+	});
+
+	test('names nothing when the grip is the one in use', () => {
+		const last: History = { 'pull-up': [{ weight: 0, reps: 8, rpe: null, grip: 'overhand' }] };
+
+		const stamped = pulls(open('p1', 'overhand'));
+		// A set stamped before the axis existed is the default's.
+		const unstamped = pulls(open('p1'));
+
+		expect(hintLabel(last, cursorFor(stamped, 'p1')!, pullUp)).toBe('8 reps');
+		expect(hintLabel(last, cursorFor(unstamped, 'p1')!, pullUp)).toBe('8 reps');
+	});
+
+	test('a warmup recalls nothing and counts for nothing', () => {
 		const workout = session('rope', open('w1', 'rope', 'warmup'), open('s1', 'rope'));
 		const [warm, first] = entryCursors(workout.entries[0]);
 
-		expect(warm.hintIndex).toBe(-1);
-		expect(first.hintIndex).toBe(0);
+		expect(warm.workingIndex).toBe(-1);
+		expect(first.workingIndex).toBe(0);
+		expect(hintLabel(history, warm, pushdown)).toBeNull();
+		expect(hintLabel(history, first, pushdown)).toBe('30 × 12');
 	});
 });
 
@@ -179,24 +227,22 @@ describe('arms', () => {
 });
 
 describe('prefill across a grip change', () => {
-	test('carries only from a set on the same grip, then falls through to that grip’s history', () => {
+	test('carries the set just logged, whichever grip it was on', () => {
 		const workout = session('rope', open('s1', 'rope'), open('s2', 'bar'));
 
 		commitSet(workout, 's1', 32.5, 12);
 
-		expect(prefillFor(cursorFor(workout, 's2')!, history, pushdown)).toEqual({
-			weight: 45,
-			reps: 10
+		expect(prefillFor(cursorFor(workout, 's2')!, history)).toEqual({
+			weight: 32.5,
+			reps: 12
 		});
 	});
 
-	test('and still carries within one grip', () => {
-		const workout = session('rope', open('s1', 'rope'), open('s2', 'rope'));
+	test('and with nothing logged yet, recalls last time’s set in that place', () => {
+		const workout = session('rope', open('s1', 'bar'));
 
-		commitSet(workout, 's1', 32.5, 12);
-
-		expect(prefillFor(cursorFor(workout, 's2')!, history, pushdown)).toEqual({
-			weight: 32.5,
+		expect(prefillFor(cursorFor(workout, 's1')!, history)).toEqual({
+			weight: 30,
 			reps: 12
 		});
 	});

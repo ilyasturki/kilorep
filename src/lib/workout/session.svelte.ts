@@ -1,5 +1,5 @@
 import { catalogById } from '$lib/catalog';
-import { historyKey, settleGrip } from '$lib/domain/grip';
+import { settleGrip } from '$lib/domain/grip';
 import {
 	addExercise as insertExercise,
 	addSet as appendSet,
@@ -69,9 +69,7 @@ export class WorkoutSession {
 	}
 
 	#setCount(catalogId: string): number {
-		const meta = catalogById[catalogId];
-
-		return insertedSetCount(this.history, historyKey(catalogId, meta, this.#opening(catalogId)));
+		return insertedSetCount(this.history, catalogId);
 	}
 
 	public get finished(): boolean {

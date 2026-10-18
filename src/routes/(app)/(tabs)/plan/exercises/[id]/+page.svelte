@@ -11,11 +11,13 @@
 	import { bestEstimate, rawPr } from '$lib/domain/stats';
 	import { addExercise, PLANNED_SET_COUNT } from '$lib/domain/template';
 	import type { Template } from '$lib/domain/template';
-	import { historyKey, musclesOf, settleGrip } from '$lib/domain/grip';
+	import { gripLabel, musclesOf } from '$lib/domain/grip';
+	import type { PerformedSet } from '$lib/domain/workout';
 	import { kin } from '$lib/exercises/browse';
 	import EstimatedMax from '$lib/exercises/EstimatedMax.svelte';
 	import ExerciseIllustration from '$lib/exercises/ExerciseIllustration.svelte';
 	import {
+		addedLabel,
 		lastSetLabel,
 		lastSinceLabel,
 		loadLabel,
@@ -24,6 +26,7 @@
 	} from '$lib/exercises/label';
 	import { restSettings } from '$lib/settings/rest.svelte';
 	import RestDurationField from '$lib/settings/RestDurationField.svelte';
+	import { narrowTo } from '$lib/store/derive';
 	import { getStore } from '$lib/store/store';
 	import { syncSoon } from '$lib/sync/client';
 	import { templateTitle } from '$lib/templates/plan';
@@ -56,20 +59,27 @@
 
 	const family = $derived(kin(catalog, exercise));
 
-	// The whole screen answers for one grip at a time. A raw best that mixed the rope's numbers
-	// into the bar's would be a record nobody set, and a history list that interleaved them would
-	// read as one lift getting stronger and weaker by turns.
 	const axis = $derived(exercise.grips);
 
-	let chip = $state<string | null>(null);
+	// The chip value standing for All. Never a grip: it narrows nothing and no set can hold it.
+	const ALL = '*';
 
-	const grip = $derived(settleGrip(exercise, chip));
+	// `null` is All. Reset by navigation, so a neighbour's grip never lands on this exercise.
+	let chip = $derived<string | null>(data.grip);
 
-	const muscles = $derived(musclesOf(exercise, grip));
+	const muscles = $derived(chip === null ? exercise.muscles : musclesOf(exercise, chip));
 
-	const past = $derived(data.gripped[historyKey(exercise.id, exercise, grip)] ?? []);
+	const past = $derived(chip === null ? data.past : narrowTo(data.past, chip));
 
 	const sessions = $derived(past.toReversed());
+
+	const scope = $derived.by(() => {
+		if (axis === undefined) {
+			return 'on this exercise';
+		}
+
+		return chip === null ? 'on this exercise, any grip' : `with this ${axis.label.toLowerCase()}`;
+	});
 
 	const carried = $derived(carriedFrom(data.bodyweight, () => exercise));
 
@@ -80,23 +90,43 @@
 	// A lift the body is part of cannot call its record the heaviest: the heaviest day on a
 	// pull-up is the day the scale read highest, which is the one thing the record is now
 	// careful not to rank. Where the belt was empty the reps are what won, and the tile names
-	// them — `Best set` was the first try and it answers to the `Best` badge in the history
-	// below, which is the other statistic entirely.
+	// them.
 	const carries = $derived(bodyweightShareOf(exercise) > 0);
 
 	const repRecord = $derived(carries && pr !== null && pr.set.weight === 0);
 
-	const HEAVIEST_NOTE =
-		'The heaviest you have ever moved on this grip, body weight included. What you lifted, ' +
-		'not a formula.';
+	const recordName = $derived(repRecord ? 'Most reps' : 'Heaviest ever');
 
-	const REPS_NOTE =
-		'The most reps you have ever held on this grip with nothing on the belt. The kilos are ' +
-		'your body on the day, stated but never ranked — a heavier morning is not a record. Put ' +
-		'something on the belt and that leads again.';
+	const recordNote = $derived(
+		repRecord
+			? `The most reps you have ever held ${scope} with nothing on the belt. The kilos are ` +
+					'your body on the day, stated but never ranked — a heavier morning is not a record. ' +
+					'Put something on the belt and that leads again.'
+			: `The heaviest you have ever moved ${scope}, body weight included. What you lifted, ` +
+					'not a formula.'
+	);
 
 	// The heaviest day and the strongest day are two questions, and the same list answers both.
 	const best = $derived(bestEstimate(past, on));
+
+	const marksNote = $derived(
+		`PR marks the set behind ${recordName}. Top e1RM marks the set that estimates the ` +
+			'highest one-rep max, which can be a lighter set done for more reps. Often both land on ' +
+			'the same set.'
+	);
+
+	// In All, a row says which grip it was done with; narrowed, the chip above already does.
+	function gripsIn(sets: PerformedSet[]): string | null {
+		if (axis === undefined || chip !== null) {
+			return null;
+		}
+
+		const names = [...new Set(sets.map((set) => set.grip))].map(
+			(grip) => gripLabel(exercise, grip) ?? grip
+		);
+
+		return names.join(', ');
+	}
 
 	const loadNote = $derived(loadModeNote(exercise.loadMode));
 
@@ -283,8 +313,8 @@
 		</div>
 
 		{#if axis !== undefined}
-			<!-- Everything below answers for the chip that is on: the best, and the sessions. A
-			     grip nothing has been logged on yet still gets a chip — an empty history is an
+			<!-- All, or one grip narrowing everything below: the best, the estimate, the sessions.
+			     A grip nothing has been logged on yet still gets a chip — an empty history is an
 			     answer, and hiding it would say the gym has no bar. -->
 			<div class="flex flex-col gap-2 px-1">
 				<span class="label-caps">{axis.label}</span>
@@ -297,14 +327,15 @@
 					class="-mx-1.5 px-1.5"
 					label={axis.label}
 					bind:value={
-						() => grip ?? '',
+						() => chip ?? ALL,
 						(next) => {
 							if (typeof next === 'string' && next !== '') {
-								chip = next;
+								chip = next === ALL ? null : next;
 							}
 						}
 					}
 				>
+					<Chip value={ALL}>All</Chip>
 					{#each axis.values as value (value.id)}
 						<Chip value={value.id}>{value.label}</Chip>
 					{/each}
@@ -314,8 +345,8 @@
 
 		{#if pr !== null}
 			<div class="flex w-fit flex-wrap items-baseline gap-x-2 rounded-xl bg-surface px-3 py-2">
-				<Tooltip text={repRecord ? REPS_NOTE : HEAVIEST_NOTE}>
-					<span class="label-caps">{repRecord ? 'Most reps' : 'Heaviest ever'}</span>
+				<Tooltip text={recordNote}>
+					<span class="label-caps">{recordName}</span>
 				</Tooltip>
 				<span class="text-md font-extrabold tracking-tight">
 					{loadLabel(pr.load)} × {pr.set.reps}
@@ -396,9 +427,19 @@
 	{/if}
 
 	<section class="flex flex-col gap-2">
-		<h2 class="px-3 label-caps">History</h2>
+		<h2 class="px-3">
+			{#if sessions.length > 0}
+				<Tooltip text={marksNote}>
+					<span class="label-caps">History</span>
+				</Tooltip>
+			{:else}
+				<span class="label-caps">History</span>
+			{/if}
+		</h2>
 
-		{#if sessions.length === 0}
+		{#if sessions.length === 0 && data.past.length > 0}
+			<p class="px-3 text-md font-bold text-ink-faint">Nothing logged {scope} yet.</p>
+		{:else if sessions.length === 0}
 			<div
 				class="flex flex-col gap-4 rounded-2xl border-[1.5px] border-dashed border-line
 					bg-surface px-3 py-4"
@@ -448,6 +489,7 @@
 					     against it: two sessions can share a day, and only one of them set it. -->
 					{@const heaviest = pr !== null && session.sets.includes(pr.set)}
 					{@const strongest = best !== null && session.sets.includes(best.set)}
+					{@const gripped = gripsIn(session.sets)}
 
 					<a
 						href="/history/{session.workoutId}"
@@ -468,13 +510,15 @@
 					>
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-bold text-ink-faint">
-								{day.format(session.date)} · {ordinal(session.position)} exercise
+								{day.format(session.date)} · {ordinal(session.position)} exercise{gripped === null
+									? ''
+									: ` · ${gripped}`}
 							</span>
 							{#if heaviest}
 								<Badge tone="accent">PR</Badge>
 							{/if}
 							{#if strongest}
-								<Badge>Best</Badge>
+								<Badge>Top e1RM</Badge>
 							{/if}
 							<span aria-hidden="true" class="ml-auto text-xl leading-none text-ink-faint">
 								›
@@ -486,6 +530,8 @@
 								<!-- The badge names the day and the chip names the set that earned it: on a
 								     day whose heaviest single is not its best estimate, the two land apart. -->
 								{@const claimed = set === pr?.set ? 'pr' : set === best?.set ? 'best' : null}
+								<!-- `setLabel`'s rule in two weights: `10 reps` where nothing was added. -->
+								{@const bare = carries && set.weight === 0}
 
 								<!-- The heavier claim is filled and the other is ringed. `surface-2` was the
 								     first try and it inverts by theme: lighter than `sunken` on a white card,
@@ -497,7 +543,9 @@
 										claimed === 'best' && 'ring-2 ring-ink-faint ring-inset'
 									]}
 								>
-									<span class="text-md font-extrabold tracking-tight">{set.weight}</span>
+									<span class="text-md font-extrabold tracking-tight">
+										{bare ? set.reps : addedLabel(exercise, set.weight)}
+									</span>
 									<span
 										class={[
 											'text-sm font-bold',
@@ -508,7 +556,7 @@
 													: 'text-ink-faint'
 										]}
 									>
-										×{set.reps}
+										{bare ? 'reps' : `×${set.reps}`}
 									</span>
 								</span>
 							{/each}

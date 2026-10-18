@@ -2,6 +2,7 @@ import { error, redirect } from '@sveltejs/kit';
 
 import { catalogById } from '$lib/catalog';
 import type { Exercise } from '$lib/domain/exercise';
+import { settleGrip } from '$lib/domain/grip';
 import { startable } from '$lib/domain/template';
 import { foldedTo } from '$lib/store/fold';
 import { getStore } from '$lib/store/store';
@@ -25,18 +26,21 @@ export const load: PageLoad = async ({ params, url }) => {
 		error(404, 'No such exercise');
 	}
 
+	// Opened from a workout, the page starts on the grip in use there; otherwise on All (`null`).
+	const asked = url.searchParams.get('grip');
+	const grip = asked === null || asked === '' ? null : (settleGrip(exercise, asked) ?? null);
+
 	const store = await getStore();
 
-	const [gripped, lastPerformed, note, bodyweight] = await Promise.all([
-		store.gripSessions(exercise.id),
+	const [past, lastPerformed, note, bodyweight] = await Promise.all([
+		store.pastSessions(exercise.id),
 		store.lastPerformed(),
 		store.exerciseNote(exercise.id),
 		store.listBodyweight()
 	]);
 
-	// Never trained, on any grip: `gripSessions` keeps no empty key.
-	const templates = Object.keys(gripped).length === 0 ? await store.listTemplates() : [];
+	const templates = past.length === 0 ? await store.listTemplates() : [];
 	const plans = startable(templates);
 
-	return { exercise, gripped, lastPerformed, note, plans, bodyweight };
+	return { exercise, grip, past, lastPerformed, note, plans, bodyweight };
 };

@@ -50,7 +50,7 @@
 	// What the tray offers before a finger lands on it: the set's own numbers where it has any,
 	// and where it has none the offer worked out afresh — the carry, the target, last time.
 	// Nothing here is written back, so leaving the set is not the same as filling it in.
-	const offer = $derived(prefillFor(cursor, history, meta));
+	const offer = $derived(prefillFor(cursor, history));
 
 	const weight = $derived(offer.weight);
 	const reps = $derived(offer.reps);

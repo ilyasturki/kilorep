@@ -1,21 +1,42 @@
 import { catalogById } from '$lib/catalog';
 import { isExertion } from '$lib/domain/exertion';
-import { historyKey } from '$lib/domain/grip';
+import { settleGrip } from '$lib/domain/grip';
 import type { PastSession } from '$lib/domain/stats';
 import { rawPr } from '$lib/domain/stats';
-import type { History, PerformedSet, Workout } from '$lib/domain/workout';
+import type { Exercise } from '$lib/domain/exercise';
+import type { History, PerformedSet, Workout, WorkoutSet } from '$lib/domain/workout';
 
 export type FinishedWorkout = Workout & { finishedAt: number };
 
 /**
- * One logged set, filed twice.
+ * One logged set, under the exercise it was performed on.
  *
- * `base` is the catalog slug and `key` the slug plus the grip it was performed with — the same
- * string whenever the grip is the exercise's default. Everything downstream picks the one it
- * means: a hint wants the grip that is about to be repeated, and a shelf of what was trained
- * lately wants the exercise, whichever handle was on the cable.
+ * The grip rides on the set rather than in the key: a pull-up is one movement whichever way the
+ * hands faced, so everything here answers for the exercise, and a view that wants one grip
+ * narrows the sets it was handed.
  */
-type Logged = { base: string; key: string; set: PerformedSet };
+type Logged = { exerciseId: string; set: PerformedSet };
+
+/** A completed working set as history reads it, or null for anything else. */
+function performedOf(set: WorkoutSet, meta: Exercise | undefined): PerformedSet | null {
+	if (!set.completed || set.type === 'warmup' || set.weight === null || set.reps === null) {
+		return null;
+	}
+
+	const out: PerformedSet = {
+		weight: set.weight,
+		reps: set.reps,
+		rpe: isExertion(set.rpe) ? set.rpe : null
+	};
+
+	const grip = settleGrip(meta, set.grip);
+
+	if (grip !== undefined) {
+		out.grip = grip;
+	}
+
+	return out;
+}
 
 function loggedIn(workout: Workout): Logged[] {
 	const out: Logged[] = [];
@@ -25,16 +46,10 @@ function loggedIn(workout: Workout): Logged[] {
 			const meta = catalogById[exercise.exerciseId];
 
 			for (const set of exercise.sets) {
-				if (set.completed && set.type !== 'warmup' && set.weight !== null && set.reps !== null) {
-					out.push({
-						base: exercise.exerciseId,
-						key: historyKey(exercise.exerciseId, meta, set.grip),
-						set: {
-							weight: set.weight,
-							reps: set.reps,
-							rpe: isExertion(set.rpe) ? set.rpe : null
-						}
-					});
+				const done = performedOf(set, meta);
+
+				if (done !== null) {
+					out.push({ exerciseId: exercise.exerciseId, set: done });
 				}
 			}
 		}
@@ -45,7 +60,7 @@ function loggedIn(workout: Workout): Logged[] {
 
 export function performedSets(workout: Workout, exerciseId: string): PerformedSet[] {
 	return loggedIn(workout)
-		.filter((logged) => logged.base === exerciseId)
+		.filter((logged) => logged.exerciseId === exerciseId)
 		.map((logged) => logged.set);
 }
 
@@ -64,10 +79,7 @@ function positionsIn(workout: Workout): Record<string, number> {
 	return Object.fromEntries(exercisesIn(workout).map((id, index) => [id, index + 1]));
 }
 
-function group(
-	workouts: FinishedWorkout[],
-	keyOf: (logged: Logged) => string
-): Record<string, PastSession[]> {
+export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, PastSession[]> {
 	const out: Record<string, PastSession[]> = {};
 
 	for (const workout of workouts.toSorted((a, b) => a.startedAt - b.startedAt)) {
@@ -75,52 +87,44 @@ function group(
 		const sessions = new Map<string, PastSession>();
 
 		for (const logged of loggedIn(workout)) {
-			const key = keyOf(logged);
-			const open = sessions.get(key) ?? {
+			const open = sessions.get(logged.exerciseId) ?? {
 				date: workout.startedAt,
 				workoutId: workout.id,
-				position: positions[logged.base],
+				position: positions[logged.exerciseId],
 				sets: []
 			};
 
 			open.sets.push(logged.set);
-			sessions.set(key, open);
+			sessions.set(logged.exerciseId, open);
 		}
 
-		for (const [key, session] of sessions) {
-			(out[key] ??= []).push(session);
+		for (const [exerciseId, session] of sessions) {
+			(out[exerciseId] ??= []).push(session);
 		}
 	}
 
 	return out;
 }
 
-/** Keyed by catalog slug: recency, frequency and everything that aggregates across grips. */
-export function sessionsByExercise(workouts: FinishedWorkout[]): Record<string, PastSession[]> {
-	return group(workouts, (logged) => logged.base);
-}
-
-/** Keyed by slug and grip: hints, and the exercise screen's own best and trend. */
-export function sessionsByKey(workouts: FinishedWorkout[]): Record<string, PastSession[]> {
-	return group(workouts, (logged) => logged.key);
-}
-
 export function pastSessionsFrom(workouts: FinishedWorkout[], exerciseId: string): PastSession[] {
 	return sessionsByExercise(workouts)[exerciseId] ?? [];
 }
 
-/** Every grip's history for one exercise, the default's under the bare slug. */
-export function gripSessionsFrom(
-	workouts: FinishedWorkout[],
-	exerciseId: string
-): Record<string, PastSession[]> {
-	const prefix = `${exerciseId}#`;
+/**
+ * One grip's share of an exercise's history: the sets performed with it, in the sessions that
+ * had any.
+ *
+ * The sets are the same objects, never copies — a best found in the narrowed list is matched
+ * back against the rows by identity.
+ */
+export function narrowTo(sessions: PastSession[], grip: string): PastSession[] {
+	return sessions.flatMap((session) => {
+		const sets = session.sets.filter((set) => set.grip === grip);
 
-	return Object.fromEntries(
-		Object.entries(sessionsByKey(workouts)).filter(
-			([key]) => key === exerciseId || key.startsWith(prefix)
-		)
-	);
+		return sets.length === 0
+			? []
+			: [{ date: session.date, workoutId: session.workoutId, position: session.position, sets }];
+	});
 }
 
 export type LastPerformed = Record<string, PastSession | undefined>;
@@ -149,17 +153,15 @@ export function heaviestFrom(workouts: FinishedWorkout[]): Heaviest {
 }
 
 /**
- * Last time's sets, per exercise and grip — what the logging card recalls.
- *
- * Grip-keyed where `lastPerformed` is not: a hint is a promise about the set in front of you,
- * and a rope's numbers offered for a bar set is the hint lying.
+ * Last time's sets, per exercise — what the logging card recalls, whatever the grip. Each set
+ * keeps the grip it was performed with, so the card can say so when today's differs.
  */
 export function historyFrom(workouts: FinishedWorkout[]): History {
 	return Object.fromEntries(
-		Object.entries(sessionsByKey(workouts)).flatMap(([key, sessions]) => {
+		Object.entries(sessionsByExercise(workouts)).flatMap(([exerciseId, sessions]) => {
 			const last = sessions.at(-1);
 
-			return last === undefined ? [] : [[key, last.sets]];
+			return last === undefined ? [] : [[exerciseId, last.sets]];
 		})
 	);
 }
@@ -198,7 +200,7 @@ export function frequentFrom(workouts: FinishedWorkout[], limit: number = SHELF)
 	const counts = new Map<string, { sessions: number; last: number }>();
 
 	for (const workout of recent) {
-		const trained = new Set(loggedIn(workout).map((logged) => logged.base));
+		const trained = new Set(loggedIn(workout).map((logged) => logged.exerciseId));
 
 		for (const exerciseId of trained) {
 			const seen = counts.get(exerciseId) ?? { sessions: 0, last: workout.startedAt };

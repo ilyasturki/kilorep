@@ -527,8 +527,8 @@ describe('history derivation', () => {
 		const history = await store.history();
 
 		expect(history['bench-press']).toEqual([
-			{ weight: 80, reps: 8, rpe: null },
-			{ weight: 77.5, reps: 8, rpe: null }
+			{ weight: 80, reps: 8, rpe: null, grip: 'standard' },
+			{ weight: 77.5, reps: 8, rpe: null, grip: 'standard' }
 		]);
 	});
 
@@ -541,7 +541,7 @@ describe('history derivation', () => {
 
 		const history = await store.history();
 
-		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
+		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null, grip: 'standard' }]);
 	});
 
 	it('reads a record written before ratings existed as unrated', async () => {
@@ -554,7 +554,7 @@ describe('history derivation', () => {
 
 		const history = await store.history();
 
-		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null }]);
+		expect(history['bench-press']).toEqual([{ weight: 80, reps: 8, rpe: null, grip: 'standard' }]);
 	});
 });
 
@@ -567,7 +567,7 @@ describe('last performed', () => {
 				date: 100,
 				workoutId: 'w1',
 				position: 1,
-				sets: [{ weight: 80, reps: 8, rpe: null }]
+				sets: [{ weight: 80, reps: 8, rpe: null, grip: 'standard' }]
 			}
 		});
 	});
@@ -582,7 +582,7 @@ describe('last performed', () => {
 			date: 200,
 			workoutId: 'w2',
 			position: 1,
-			sets: [{ weight: 85, reps: 5, rpe: null }]
+			sets: [{ weight: 85, reps: 5, rpe: null, grip: 'standard' }]
 		});
 	});
 
@@ -605,8 +605,18 @@ describe('past sessions', () => {
 		const past = await store.pastSessions('bench-press');
 
 		expect(past).toEqual([
-			{ date: 100, workoutId: 'w1', position: 1, sets: [{ weight: 80, reps: 8, rpe: null }] },
-			{ date: 200, workoutId: 'w2', position: 1, sets: [{ weight: 82.5, reps: 6, rpe: null }] }
+			{
+				date: 100,
+				workoutId: 'w1',
+				position: 1,
+				sets: [{ weight: 80, reps: 8, rpe: null, grip: 'standard' }]
+			},
+			{
+				date: 200,
+				workoutId: 'w2',
+				position: 1,
+				sets: [{ weight: 82.5, reps: 6, rpe: null, grip: 'standard' }]
+			}
 		]);
 	});
 

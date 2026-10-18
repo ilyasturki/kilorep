@@ -63,12 +63,8 @@ export function gripLabel(
 }
 
 /**
- * The key a set's history is filed under.
- *
- * The default value files under the bare slug and the others suffix it. That is not a
- * shortcut: it is what lets sets logged before the axis existed stay the default chip's
- * history without a migration, and what keeps every consumer that reads a plain `exerciseId`
- * — recency, the frequent shelf, volume, sets per muscle — reading the common case unchanged.
+ * The slug plus a non-default grip — the key history was split under while a grip split it.
+ * Nothing derives under it now: history reads per exercise, the grip riding on each set.
  */
 export function historyKey(
 	exerciseId: string,

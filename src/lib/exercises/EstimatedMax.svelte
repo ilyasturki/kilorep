@@ -13,7 +13,7 @@
 
 	type Props = {
 		exercise: Exercise;
-		/** One grip's whole history, oldest first — the same list the best and the rows read. */
+		/** The history the page shows, oldest first — the same list the best and the rows read. */
 		past: PastSession[];
 		carried: CarriedOn;
 		now: number;

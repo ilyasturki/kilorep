@@ -35,7 +35,6 @@ import { openDatabase } from './db.ts';
 import type { FinishedWorkout, Heaviest, LastGrips, LastPerformed } from './derive.ts';
 import {
 	frequentFrom,
-	gripSessionsFrom,
 	heaviestFrom,
 	historyFrom,
 	lastGripsFrom,
@@ -248,10 +247,6 @@ export class Store {
 
 	public async pastSessions(exerciseId: string): Promise<PastSession[]> {
 		return pastSessionsFrom(await this.listWorkouts(), exerciseId);
-	}
-
-	public async gripSessions(exerciseId: string): Promise<Record<string, PastSession[]>> {
-		return gripSessionsFrom(await this.listWorkouts(), exerciseId);
 	}
 
 	public async saveTemplate(template: Template, updatedAt: number): Promise<void> {

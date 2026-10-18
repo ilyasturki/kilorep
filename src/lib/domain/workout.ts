@@ -1,7 +1,8 @@
 import type { Exercise } from './exercise.ts';
 import { exertionSuffix, isExertion, settleExertion } from './exertion.ts';
 import type { ExertionScale } from './exertion.ts';
-import { historyKey, settleGrip } from './grip.ts';
+import { gripLabel, settleGrip } from './grip.ts';
+import { setLabel } from './load.ts';
 import {
 	addExerciseTo as addToTree,
 	exerciseIn,
@@ -29,7 +30,8 @@ export type SetType = 'normal' | 'warmup' | 'drop' | 'failure';
  */
 export type Arms = 'both' | 'one';
 
-export type PerformedSet = { weight: number; reps: number; rpe: number | null };
+// `grip` is the settled value, absent only on an exercise with no axis.
+export type PerformedSet = { weight: number; reps: number; rpe: number | null; grip?: string };
 
 export type History = Record<string, PerformedSet[] | undefined>;
 
@@ -79,35 +81,17 @@ export type SetCursor = {
 	exercise: WorkoutExercise;
 	entry: WorkoutEntry;
 	workingIndex: number;
-	/**
-	 * Which set this is *of its own grip*, and so which set of last time's it recalls.
-	 *
-	 * Apart from `workingIndex` because the two answer different questions: three rope sets
-	 * followed by two bar sets are sets 1–5 of the exercise, and sets 1–3 of the rope and 1–2
-	 * of the bar. The label counts the exercise; the hint counts the grip, or the fourth set
-	 * would ask the bar's two-set history for a third entry and go quiet.
-	 */
-	hintIndex: number;
 };
 
 export function legCursors(entry: WorkoutEntry, exercise: WorkoutExercise): SetCursor[] {
 	let working = 0;
 
-	// Keyed on the raw value, not the settled one: sets are stamped when they are made, so
-	// within one leg the grips that mean the same thing are spelled the same way.
-	const perGrip = new Map<string | undefined, number>();
-
-	return exercise.sets.map((set) => {
-		if (set.type === 'warmup') {
-			return { set, exercise, entry, workingIndex: -1, hintIndex: -1 };
-		}
-
-		const seen = perGrip.get(set.grip) ?? 0;
-
-		perGrip.set(set.grip, seen + 1);
-
-		return { set, exercise, entry, workingIndex: working++, hintIndex: seen };
-	});
+	return exercise.sets.map((set) => ({
+		set,
+		exercise,
+		entry,
+		workingIndex: set.type === 'warmup' ? -1 : working++
+	}));
 }
 
 export function interleave(legs: SetCursor[][]): SetCursor[] {
@@ -161,8 +145,8 @@ export function hintFor(history: History, key: string, hintIndex: number): Perfo
 	return (history[key] ?? [])[hintIndex] ?? null;
 }
 
-export function cursorKey(cursor: SetCursor, meta: Exercise | undefined): string {
-	return historyKey(cursor.exercise.exerciseId, meta, cursor.set.grip);
+export function cursorKey(cursor: SetCursor): string {
+	return cursor.exercise.exerciseId;
 }
 
 export function hintLabel(
@@ -171,7 +155,7 @@ export function hintLabel(
 	meta: Exercise | undefined,
 	scale: ExertionScale | null = null
 ): string | null {
-	const hint = hintFor(history, cursorKey(cursor, meta), cursor.hintIndex);
+	const hint = hintFor(history, cursorKey(cursor), cursor.workingIndex);
 
 	if (hint === null) {
 		return null;
@@ -179,7 +163,12 @@ export function hintLabel(
 
 	const felt = scale === null ? '' : exertionSuffix(hint.rpe, scale);
 
-	return `${hint.weight} × ${hint.reps}${felt}`;
+	const grip =
+		hint.grip === undefined || hint.grip === settleGrip(meta, cursor.set.grip)
+			? ''
+			: ` · ${gripLabel(meta, hint.grip) ?? hint.grip}`;
+
+	return `${setLabel(meta, hint)}${felt}${grip}`;
 }
 
 export type Prefill = { weight: number | null; reps: number | null };
@@ -191,14 +180,7 @@ function carriedInto(cursor: SetCursor): Prefill {
 	for (let i = at - 1; i >= 0; i--) {
 		const set = sets[i];
 
-		// Same grip only: the stack the rope moved is not the stack the bar moves, and carrying
-		// one into the other would open the first bar set on a number nobody lifted with a bar.
-		if (
-			set.type === 'warmup' ||
-			set.weight === null ||
-			set.reps === null ||
-			set.grip !== cursor.set.grip
-		) {
+		if (set.type === 'warmup' || set.weight === null || set.reps === null) {
 			continue;
 		}
 
@@ -212,11 +194,7 @@ function carriedInto(cursor: SetCursor): Prefill {
 // the set behind the lifter's back: a set reached and left again holds nothing, so the offer
 // cannot go stale — the older version stored it on the way in, and a set visited before the one
 // above it was logged read its plan's target back over the reps just performed.
-export function prefillFor(
-	cursor: SetCursor,
-	history: History,
-	meta: Exercise | undefined
-): Prefill {
+export function prefillFor(cursor: SetCursor, history: History): Prefill {
 	// Once the lifter has spoken there is nothing to offer, and a blank they made is a blank.
 	// A completed set counts as spoken even without the flag: records written before `entered`
 	// existed hold logged numbers, and the offer for those is what they hold, not the carry.
@@ -224,7 +202,7 @@ export function prefillFor(
 		return { weight: cursor.set.weight, reps: cursor.set.reps };
 	}
 
-	const recalled = hintFor(history, cursorKey(cursor, meta), cursor.hintIndex) ?? {
+	const recalled = hintFor(history, cursorKey(cursor), cursor.workingIndex) ?? {
 		weight: null,
 		reps: null
 	};

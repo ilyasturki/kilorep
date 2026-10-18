@@ -82,22 +82,19 @@
 
 	const scale = $derived(exertionScale.current);
 
-	function offerOf(
-		cursor: SetCursor,
-		meta: Exercise
-	): { weight: number | null; reps: number | null } {
-		return prefillFor(cursor, history, meta);
+	function offerOf(cursor: SetCursor): { weight: number | null; reps: number | null } {
+		return prefillFor(cursor, history);
 	}
 
 	// One gesture logs the numbers the row shows; a row with nothing to offer has no gesture.
 	// The selected row's own gesture routes through `oncommit` instead, where update and
 	// commit part ways — this one is for the rows the cursor is not standing on.
-	function quickOf(cursor: SetCursor, meta: Exercise): { weight: number; reps: number } | null {
+	function quickOf(cursor: SetCursor): { weight: number; reps: number } | null {
 		if (cursor.set.completed || cursor.set.type === 'warmup') {
 			return null;
 		}
 
-		const offer = offerOf(cursor, meta);
+		const offer = offerOf(cursor);
 
 		return canCommit(offer.weight, offer.reps)
 			? { weight: offer.weight as number, reps: offer.reps as number }
@@ -265,8 +262,8 @@
 							{@const offer =
 								cursor.set.completed && !selected
 									? { weight: cursor.set.weight, reps: cursor.set.reps }
-									: offerOf(cursor, leg.meta)}
-							{@const quick = quickOf(cursor, leg.meta)}
+									: offerOf(cursor)}
+							{@const quick = quickOf(cursor)}
 							{@const numerals = active
 								? 'text-accent-text'
 								: cursor.set.completed

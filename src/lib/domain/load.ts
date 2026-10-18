@@ -1,6 +1,7 @@
 import type { BodyweightEntry } from './bodyweight.ts';
 import { localDateOf } from './bodyweight.ts';
 import type { Exercise } from './exercise.ts';
+import type { PerformedSet } from './workout.ts';
 
 /** Body weight one exercise carried on the day a session ran, in kg. */
 export type Carried = (exerciseId: string, at: number) => number;
@@ -14,6 +15,18 @@ export function carriedOn(carried: Carried, exerciseId: string): CarriedOn {
 
 export function bodyweightShareOf(exercise: Exercise | undefined): number {
 	return exercise === undefined ? 0 : (exercise.bodyweightShare ?? 0);
+}
+
+/**
+ * One logged set as a line. The weigh-in never prints: `80` on a bench and `+10` on a pull-up
+ * are both what the lifter chose — the only number a list can compare across days.
+ */
+export function setLabel(exercise: Exercise | undefined, set: PerformedSet): string {
+	if (bodyweightShareOf(exercise) === 0) {
+		return `${set.weight} × ${set.reps}`;
+	}
+
+	return set.weight === 0 ? `${set.reps} reps` : `+${set.weight} × ${set.reps}`;
 }
 
 /**

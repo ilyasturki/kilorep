@@ -186,7 +186,7 @@
 			return null;
 		}
 
-		const offer = prefillFor(cursor, history, meta);
+		const offer = prefillFor(cursor, history);
 		const place = cursor.workingIndex < 0 ? 'warmup' : `set ${cursor.workingIndex + 1}`;
 		const numbers =
 			offer.weight === null || offer.reps === null ? '' : ` · ${offer.weight} × ${offer.reps}`;

@@ -62,7 +62,7 @@
 	const setup = $derived([meta.equipment, gripLabel(meta, grip)].filter(Boolean).join(' · '));
 
 	function offerOf(cursor: SetCursor): { weight: number | null; reps: number | null } {
-		return prefillFor(cursor, history, meta);
+		return prefillFor(cursor, history);
 	}
 
 	// One gesture logs the numbers the row shows; a row with nothing to offer has no gesture.
