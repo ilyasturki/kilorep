@@ -144,33 +144,53 @@ export async function exerciseAction(page: Page, name: string, action: string): 
 	await menuItem(page, action).click();
 }
 
-/** Holds a press until what the hold opens is on screen. */
-export async function longPress(page: Page, target: Locator, opens: Locator): Promise<void> {
+type Point = { x: number; y: number };
+
+async function centreOf(target: Locator): Promise<Point> {
 	const box = await target.boundingBox();
 
 	if (box === null) {
-		throw new Error('nothing to press');
+		throw new Error('nothing there to touch');
 	}
 
-	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-	await page.mouse.down();
-	await expect(opens).toBeVisible();
-	await page.mouse.up();
+	return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-/** A thumb dragged sideways across a row, rightward for a positive `dx`. */
-export async function swipe(page: Page, target: Locator, dx: number): Promise<void> {
-	const box = await target.boundingBox();
+// A finger rather than the mouse: its pointer is captured by what it lands on, so the release
+// still reaches the row when a sheet opened over it mid-press.
+async function touch(page: Page, path: Point[], held?: Locator): Promise<void> {
+	const cdp = await page.context().newCDPSession(page);
+	const [start, ...moves] = path;
 
-	if (box === null) {
-		throw new Error('nothing to swipe');
+	await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] });
+
+	if (held !== undefined) {
+		await expect(held).toBeVisible();
 	}
 
-	const y = box.y + box.height / 2;
-	const x = dx > 0 ? box.x + 24 : box.x + box.width - 24;
+	for (const point of moves) {
+		await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point] });
+	}
 
-	await page.mouse.move(x, y);
-	await page.mouse.down();
-	await page.mouse.move(x + dx, y, { steps: 12 });
-	await page.mouse.up();
+	await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+	await cdp.detach();
+}
+
+/** Holds a finger down until what the hold opens is on screen. */
+export async function longPress(page: Page, target: Locator, opens: Locator): Promise<void> {
+	await touch(page, [await centreOf(target)], opens);
+}
+
+/** A finger dragged from the middle of `target` by `dx`, `dy`, in even steps. */
+export async function drag(page: Page, target: Locator, dx: number, dy: number): Promise<void> {
+	const from = await centreOf(target);
+	const steps = 16;
+
+	await touch(
+		page,
+		Array.from({ length: steps + 1 }, (_, at) => ({
+			x: from.x + (dx * at) / steps,
+			y: from.y + (dy * at) / steps
+		}))
+	);
 }
