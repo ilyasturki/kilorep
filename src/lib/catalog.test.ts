@@ -5,6 +5,7 @@ import type { Exercise } from '$lib/domain/exercise';
 import { gripsOf, settleGrip } from '$lib/domain/grip';
 import { bodyweightShareOf } from '$lib/domain/load';
 import { normalize } from '$lib/domain/search';
+import drawn from '$lib/exercises/illustrations.json';
 
 describe('catalog aliases', () => {
 	it('are spelled once each, non-empty, compared-form, and never the entry name', () => {
@@ -195,5 +196,40 @@ describe('shipped grips', () => {
 
 		expect(settleGrip(row, 'rope')).toBe('rope');
 		expect(settleGrip(row, 'straight')).toBe('wide');
+	});
+});
+
+describe('illustrations', () => {
+	const shipped = new Set(drawn);
+
+	it('draw every entry and every grip but the default', () => {
+		for (const exercise of catalog) {
+			expect(shipped.has(exercise.id), exercise.id).toBe(true);
+
+			for (const value of exercise.grips?.values ?? []) {
+				const name = `${exercise.id}--${value.id}`;
+
+				if (value.id !== exercise.grips?.default) {
+					expect(shipped.has(name), name).toBe(true);
+				}
+			}
+		}
+	});
+
+	it('key a grip drawing on a real entry and one of its non-default values', () => {
+		for (const name of drawn) {
+			const [id = '', grip] = name.split('--');
+			const axis = catalogById[id]?.grips;
+
+			expect(catalogById[id], name).toBeDefined();
+
+			if (grip !== undefined) {
+				expect(
+					axis?.values.some((value) => value.id === grip),
+					name
+				).toBe(true);
+				expect(axis?.default, name).not.toBe(grip);
+			}
+		}
 	});
 });
