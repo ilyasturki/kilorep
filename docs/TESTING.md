@@ -171,3 +171,107 @@ that is the correct result, not a leak.
 on the web and `null` only in the app build, and it is `null` that the guards
 read as local-only rather than signed-out. Testing that branch means the APK,
 or a unit test against `setApiBase(null)`.
+
+## The end-to-end suite
+
+Everything above is for a person, or an agent, driving the app by hand. What a
+release must never break is written down instead, in `e2e/*.spec.ts`, and run
+by Playwright before every APK.
+
+```sh
+bun run test:e2e                                  # the whole suite, both projects
+bun run test:e2e e2e/smoke.spec.ts                # one file
+bun run test:e2e --project phone -g 'reaches History'   # one test, one project
+```
+
+On NixOS the browser Playwright downloads does not run. Point it at the
+system's instead, every time:
+
+```sh
+export PLAYWRIGHT_CHROMIUM=/home/yasso/.local/state/nix/profile/bin/chromium
+```
+
+**What it drives is what ships.** `e2e/serve.ts` builds the server (`bun run
+build:server`) and the app bundle, then starts `node build/server/index.js` on
+a fresh database in a temp directory, migrated on boot and thrown away after
+the run. The app bundle is built into `build/e2e-app` with `DEFAULT_SERVER`
+pointed at that server — never into `build/app`, which `cap sync` would ship —
+and served beside it. The server listens on `E2E_PORT` (default 4400), the app
+bundle on the port after it; a session running beside another picks its own
+pair. A server already on the port fails the run rather than being reused: a
+stale build from another worktree is never what gets tested. The builds take
+seconds, so there is no option to skip them.
+
+Two projects run every spec: `phone` (420×860, touch, the coarse-pointer
+styles) and `desk` (1280×800). A test that only exists on one carries a tag —
+`test('…', { tag: '@phone' }, …)`, or `@desk` — and the other project skips
+it. The browser speaks `en-US` whatever the machine does; a spec about French
+formatting sets `test.use({ locale: 'fr-FR' })`.
+
+**Accounts, one per test.** Tests run in parallel and write freely, so none
+shares an account. Import `test` and `expect` from `e2e/fixtures.ts`, never
+from `@playwright/test`, and ask for what the test needs:
+
+| Fixture | What it is |
+| --- | --- |
+| `account` | A fresh, empty account, with `page` already signed in to it — on the web build and the app build both. `{ id, email, password }`. |
+| `test.use({ seeded: true })` | Makes that account the seeded one: the eight weeks of *The content* above, planted for it in the run's database relative to now, and already pulled onto the device when the test starts. |
+| `secondDevice` | A page in a second browser, signed in to the same account and holding nothing yet. Two of these make a sync test. |
+| `token` | An API token for the account, for MCP and HTTP specs: `Authorization: Bearer <token>`. |
+| `db` | The run's database, for the rare spec that has to look behind the API. |
+
+None of them types a password. Accounts are written straight into the database
+and signed in by session, so the throttle from *Why this used to fail* never
+counts a thing. The smoke signs in through `/login` with the account's real
+password. A spec about a refused password sends one wrong attempt against its
+own account, and no more: every test in the run comes from the same address,
+fifty failures from it lock out every sign-in until the server restarts, and
+`--repeat-each=3` on two projects is six runs of that spec.
+
+The app build lives at `APP_URL` (from `e2e/env.ts`): `test.use({ baseURL:
+APP_URL })` and every `page.goto('/settings')` lands there. With `account` it is
+signed in; without, it is a fresh install with no server named — the *No
+server* state above, reachable at last.
+
+**Helpers**, from `e2e/helpers.ts`, for the steps every area repeats:
+
+- `startPlan(page, name)` and `startEmpty(page)` start a session from Train.
+- `addExercise(page, name)` goes through the picker, in a session or a plan.
+- `logSet(page, { kg, reps })` logs the set the session points at — typed into
+  the tray on a phone, stepped on the desk ledger. Leave out what should stay
+  as offered.
+- `finish(page)` presses FINISH, answers the "sets still owed" question when it
+  is asked, and resolves to the record's id. `openRecord(page, title)` opens the
+  newest History row with that title.
+- `readStore(page)` is the page's IndexedDB as plain data: `{ records, meta }`.
+- `waitForSync(page)` waits until the server has acked every local write. It
+  checks the store, so call it once the write is in there; called a moment too
+  early it finds nothing dirty and returns. `syncNow(page)` starts a sync the
+  way the network coming back does — the way to make a second device pull.
+
+**Adding a spec.** One file per area, in `e2e/`, named for what it holds. Find
+things the way a person does — role and name, `getByRole('button', { name:
+'Log set' })` — and never by class. Wait on what the screen says, with
+`expect`, and never with `waitForTimeout`: the suite runs with no retries, so a
+sleep that is long enough on this machine is a red build on a slower one.
+
+Before a spec lands it passes three times over on both projects:
+
+```sh
+bun run test:e2e e2e/<area>.spec.ts --repeat-each=3
+```
+
+A spec that fails one run in three is fixed, never retried and never skipped.
+
+**When it fails**, the list reporter says which line; `playwright-report/` has
+the HTML report and `test-results/` the trace of every failed test, with the
+page at each step:
+
+```sh
+bunx playwright show-report
+bunx playwright show-trace test-results/<test>/trace.zip
+```
+
+In CI the suite is a step of the `checks` job, after `build:app`, and the
+release workflow waits on that job — no APK is built from a red suite. The same
+two folders come back as the `playwright-report` artifact when it fails.
