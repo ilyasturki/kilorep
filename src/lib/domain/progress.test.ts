@@ -13,6 +13,8 @@ import type { Exercise, LoadMode, Muscle } from '$lib/domain/exercise';
 import type { Carried } from '$lib/domain/load';
 import type { PastSession } from '$lib/domain/stats';
 import type { SetType, Workout, WorkoutSet } from '$lib/domain/workout';
+import type { FinishedWorkout } from '$lib/store/derive';
+import { sessionsByExercise } from '$lib/store/derive';
 
 const DAY = 86_400_000;
 
@@ -100,6 +102,26 @@ describe('recentPrs', () => {
 		expect(prs).toEqual([
 			{ exerciseId: 'pull-up', set: { weight: 10, reps: 8, rpe: null }, date: 90, load: 88 }
 		]);
+	});
+
+	test('a grip never tried before is no first-ever session: the exercise’s best is beaten', () => {
+		function pulls(startedAt: number, grip: string, weight: number, reps: number): FinishedWorkout {
+			const done: WorkoutSet = set(weight, reps);
+
+			done.grip = grip;
+
+			return Object.assign(workout(startedAt, 'pull-up', [done]), { finishedAt: startedAt + 1 });
+		}
+
+		const sessions = sessionsByExercise([
+			pulls(10, 'underhand', 10, 6),
+			pulls(90, 'overhand', 12.5, 3)
+		]);
+
+		expect(recentPrs(sessions, 50, bare)).toMatchObject([
+			{ exerciseId: 'pull-up', set: { weight: 12.5, reps: 3, grip: 'overhand' }, date: 90 }
+		]);
+		expect(mainLifts(sessions, 0, () => 1, bare)).toEqual(['pull-up']);
 	});
 
 	test('newest first across exercises', () => {
