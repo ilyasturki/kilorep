@@ -16,18 +16,15 @@ export const load: PageLoad = async ({ params }) => {
 	// has to be in the sheet before it can be picked.
 	const plan = workout.templateId ?? null;
 
-	const [templates, { lastPerformed, heaviest, frequent }, newest, newestOfPlan, answered] =
+	const [templates, { lastPerformed, heaviest, frequent }, newestHere, answered] =
 		await Promise.all([
 			store.listTemplates(),
 			store.pickerData(),
-			store.latestWorkout(),
-			plan === null ? null : store.latestWorkout(plan),
+			store.latestWorkout(plan ?? undefined),
 			store.answeredOffer(plan)
 		]);
 
 	// Only the newest session of a plan offers to change it, and only until it is answered.
-	const newestHere = plan === null ? newest : newestOfPlan;
-
 	const offer = {
 		templateId: plan,
 		open: answered !== workout.id && newestHere !== null && newestHere.id === workout.id
