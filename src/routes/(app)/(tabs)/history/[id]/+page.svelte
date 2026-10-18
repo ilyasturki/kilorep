@@ -28,7 +28,6 @@
 	import { syncSoon } from '$lib/sync/client';
 	import { entriesWithMeta, entryOf, legName, legOf, setNote, shelfOf } from '$lib/workout/groups';
 	import { WorkoutSession } from '$lib/workout/session.svelte';
-	import EntryStack from '$lib/workout/EntryStack.svelte';
 	import ExerciseBlock from '$lib/workout/ExerciseBlock.svelte';
 	import ExerciseOptionsMenu from '$lib/workout/ExerciseOptionsMenu.svelte';
 	import ExercisePickerSheet from '$lib/workout/ExercisePickerSheet.svelte';
@@ -771,21 +770,18 @@
 					</div>
 				{:else}
 					{#each entries as entry (entry.id)}
-						<div class="relative flex flex-col gap-2 rounded-2xl">
-							<EntryStack legs={entry.legs} superset={entry.superset}>
-								{#snippet leg(leg)}
-									{@const instead = drift?.matched[leg.id]?.instead ?? null}
-									<RecordLedger
-										meta={leg.meta}
-										grip={leg.grip}
-										note={leg.note}
-										cursors={leg.cursors}
-										badges={badgesFor(leg.cursors[0]?.exercise, leg.meta)}
-										instead={instead === null ? undefined : (catalogById[instead]?.name ?? instead)}
-									/>
-								{/snippet}
-							</EntryStack>
-						</div>
+						<RecordLedger
+							legs={entry.legs}
+							cursors={entry.cursors}
+							badges={(leg) => badgesFor(leg.cursors[0]?.exercise, leg.meta)}
+							instead={(leg) => {
+								const planned = drift?.matched[leg.id]?.instead;
+
+								return planned === undefined || planned === null
+									? undefined
+									: (catalogById[planned]?.name ?? planned);
+							}}
+						/>
 					{/each}
 				{/if}
 
