@@ -63,11 +63,13 @@
 		{ variant: 'chrome', label: 'Reopen' }
 	] as const;
 
-	const marks: { status: SetStatus; index?: number }[] = [
-		{ status: 'done' },
-		{ status: 'active', index: 3 },
-		{ status: 'pending', index: 4 },
-		{ status: 'warmup' }
+	const marks: { status: SetStatus; index?: number; warmup?: boolean; caption: string }[] = [
+		{ status: 'done', caption: 'status="done"' },
+		{ status: 'active', index: 3, caption: 'status="active"' },
+		{ status: 'pending', index: 4, caption: 'status="pending"' },
+		{ status: 'warmup', caption: 'status="warmup"' },
+		{ status: 'active', warmup: true, caption: 'active warmup' },
+		{ status: 'done', warmup: true, caption: 'done warmup' }
 	];
 
 	type Stepper = {
@@ -392,10 +394,10 @@
 
 			<Card name="SetMark" note="the dot a set is counted by">
 				<div class="flex flex-wrap items-center gap-5">
-					{#each marks as mark (mark.status)}
+					{#each marks as mark (mark.caption)}
 						<div class="flex flex-col items-center gap-1.5">
-							<SetMark status={mark.status} index={mark.index} />
-							<span class={caption}>status="{mark.status}"</span>
+							<SetMark status={mark.status} index={mark.index} warmup={mark.warmup} />
+							<span class={caption}>{mark.caption}</span>
 						</div>
 					{/each}
 				</div>

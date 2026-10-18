@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { armsOf } from '$lib/domain/workout';
-	import type { Arms, SetCursor } from '$lib/domain/workout';
+	import type { Arms, SetCursor, SetType } from '$lib/domain/workout';
 	import { singleArmable } from '$lib/domain/exercise';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { scaleName } from '$lib/domain/exertion';
@@ -8,6 +8,7 @@
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import ArmsField from '$lib/workout/ArmsField.svelte';
 	import GripField from '$lib/workout/GripField.svelte';
+	import SetTypeField from '$lib/workout/SetTypeField.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Menu from '$lib/ui/Menu.svelte';
 	import MenuItem from '$lib/ui/MenuItem.svelte';
@@ -27,6 +28,7 @@
 		onremove: () => void;
 		ongrip?: (grip: string) => void;
 		onarms?: (arms: Arms) => void;
+		ontype?: (type: SetType) => void;
 		onexertion?: () => void;
 	};
 
@@ -41,6 +43,7 @@
 		onremove,
 		ongrip,
 		onarms,
+		ontype,
 		onexertion
 	}: Props = $props();
 
@@ -121,6 +124,10 @@
 </script>
 
 <Menu bind:open {title} {anchor}>
+	{#if view.cursor !== null && ontype !== undefined}
+		<SetTypeField value={view.cursor.set.type} onpick={(next) => ontype(next)} />
+	{/if}
+
 	{#if view.cursor !== null && onarms !== undefined && singleArmable(view.meta)}
 		<ArmsField value={arms} onpick={(next) => onarms(next)} />
 	{/if}

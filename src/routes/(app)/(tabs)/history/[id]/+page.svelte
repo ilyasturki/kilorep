@@ -12,7 +12,7 @@
 	import type { Template } from '$lib/domain/template';
 	import { canCommit, firstUncompleted, prefillFor, untouched } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
-	import type { Arms, History, SwapMode, WorkoutExercise } from '$lib/domain/workout';
+	import type { Arms, History, SetType, SwapMode, WorkoutExercise } from '$lib/domain/workout';
 	import { workoutTitle } from '$lib/history/label';
 	import { launchRepeat, repeatBlocked } from '$lib/history/repeat';
 	import RecordLedger from '$lib/history/RecordLedger.svelte';
@@ -35,6 +35,7 @@
 	import SwapSetsDialog from '$lib/workout/SwapSetsDialog.svelte';
 	import LiveLedger from '$lib/workout/LiveLedger.svelte';
 	import LiveTray from '$lib/workout/LiveTray.svelte';
+	import NoteSheet from '$lib/workout/NoteSheet.svelte';
 	import SetOptionsMenu from '$lib/workout/SetOptionsMenu.svelte';
 	import AlertDialog from '$lib/ui/AlertDialog.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -268,6 +269,32 @@
 		acting = null;
 	}
 
+	function warmUpActing() {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.addWarmup(acting);
+		acting = null;
+	}
+
+	let noteOpen = $state(false);
+	let noting = $state<string | null>(null);
+
+	const notingLeg = $derived(legOf(entries, noting));
+
+	function noteActing() {
+		noting = acting;
+		noteOpen = true;
+		acting = null;
+	}
+
+	function saveNote(text: string) {
+		if (session !== null && noting !== null) {
+			session.setNote(noting, text);
+		}
+	}
+
 	function moveActing(to: number) {
 		if (session === null || actingEntry === null) {
 			return;
@@ -388,6 +415,12 @@
 	function armSet(arms: Arms) {
 		if (session !== null && optionsSetId !== null) {
 			session.setSetArms(optionsSetId, arms);
+		}
+	}
+
+	function typeSet(type: SetType) {
+		if (session !== null && optionsSetId !== null) {
+			session.setSetType(optionsSetId, type);
 		}
 	}
 
@@ -523,7 +556,7 @@
 			return;
 		}
 
-		const offer = prefillFor(activeCursor, NO_HISTORY);
+		const offer = prefillFor(activeCursor, NO_HISTORY, activeLeg.meta);
 
 		if (canCommit(offer.weight, offer.reps)) {
 			logSet(offer.weight as number, offer.reps as number);
@@ -718,6 +751,7 @@
 									<RecordLedger
 										meta={leg.meta}
 										grip={leg.grip}
+										note={leg.note}
 										cursors={leg.cursors}
 										badges={badgesFor(leg.cursors[0]?.exercise, leg.meta)}
 										instead={instead === null ? undefined : (catalogById[instead]?.name ?? instead)}
@@ -793,6 +827,7 @@
 									<ExerciseBlock
 										meta={leg.meta}
 										grip={leg.grip}
+										note={leg.note}
 										cursors={leg.cursors}
 										history={NO_HISTORY}
 										activeSetId={session.activeSetId}
@@ -915,6 +950,8 @@
 	onbreak={breakSuperset}
 	onremove={removeExercise}
 	ongrip={gripExercise}
+	onwarmup={warmUpActing}
+	onnote={noteActing}
 	onmoveup={actingIndex > 0 ? () => moveActing(actingIndex - 1) : undefined}
 	onmovedown={actingIndex >= 0 && actingIndex < entries.length - 1
 		? () => moveActing(actingIndex + 1)
@@ -958,7 +995,15 @@
 	onremove={removeSet}
 	ongrip={gripSet}
 	onarms={armSet}
+	ontype={typeSet}
 	onexertion={desk ? () => (exertionOpen = true) : undefined}
+/>
+
+<NoteSheet
+	bind:open={noteOpen}
+	name={notingLeg === null ? 'Note' : notingLeg.meta.name}
+	note={notingLeg?.note}
+	onsave={saveNote}
 />
 
 <AlertDialog

@@ -11,13 +11,14 @@
 	type Props = {
 		meta: Exercise;
 		grip?: string;
+		note?: string;
 		cursors: SetCursor[];
 		badges: string[];
 		/** The planned exercise's name, when this one was swapped in for it. */
 		instead?: string;
 	};
 
-	let { meta, grip, cursors, badges, instead }: Props = $props();
+	let { meta, grip, note: written, cursors, badges, instead }: Props = $props();
 
 	const note = $derived(
 		[
@@ -48,6 +49,9 @@
 			{#if note}
 				<p class="truncate text-sm font-bold text-ink-faint">{note}</p>
 			{/if}
+			{#if written !== undefined}
+				<p class="pt-0.5 text-sm font-bold text-ink-muted">{written}</p>
+			{/if}
 		</div>
 
 		{#each badges as badge (badge)}
@@ -67,7 +71,8 @@
 		{@const set = cursor.set}
 		{@const warmup = set.type === 'warmup'}
 		{@const said = setNote(meta, grip, set)}
-		{@const strayed = set.completed && set.plannedReps !== null && set.reps !== set.plannedReps}
+		{@const strayed =
+			!warmup && set.completed && set.plannedReps !== null && set.reps !== set.plannedReps}
 		{@const ink = warmup ? 'text-ink-muted' : 'text-ink'}
 		{@const num = set.completed ? `font-extrabold ${ink}` : dim}
 

@@ -20,6 +20,9 @@
 	type Props = {
 		meta: Exercise;
 		grip?: string;
+		note?: string;
+		/** Last time's note, drawn until this session writes its own. */
+		last?: string;
 		cursors: SetCursor[];
 		history: History;
 		activeSetId: string | null;
@@ -43,6 +46,8 @@
 	let {
 		meta,
 		grip,
+		note,
+		last,
 		cursors,
 		history,
 		activeSetId,
@@ -65,12 +70,12 @@
 	const optional = $derived(cursors[0]?.exercise.optional === true);
 
 	function offerOf(cursor: SetCursor): { weight: number | null; reps: number | null } {
-		return prefillFor(cursor, history);
+		return prefillFor(cursor, history, meta);
 	}
 
 	// One gesture logs the numbers the row shows; a row with nothing to offer has no gesture.
 	function quickOf(cursor: SetCursor): { weight: number; reps: number } | null {
-		if (cursor.set.completed || cursor.set.type === 'warmup') {
+		if (cursor.set.completed) {
 			return null;
 		}
 
@@ -134,6 +139,15 @@
 		</h2>
 	</div>
 
+	{#if note !== undefined}
+		<p class="-mt-1 line-clamp-2 px-1 pb-1 text-sm font-bold text-ink-muted">{note}</p>
+	{:else if last !== undefined}
+		<p class="-mt-1 line-clamp-2 px-1 pb-1 text-sm font-bold text-ink-faint">
+			<span class="label-caps">Last time</span>
+			{last}
+		</p>
+	{/if}
+
 	<div class="list-group">
 		{#each cursors as cursor (cursor.set.id)}
 			{@const status = statusOf(cursor)}
@@ -151,11 +165,12 @@
 				<SwipeRow
 					status={active && !cursor.set.completed ? 'active' : status}
 					index={cursor.workingIndex + 1}
+					warmup={cursor.set.type === 'warmup'}
 					figures={setFigures(meta, shown.weight, shown.reps)}
 					selected={editing}
 					right={rowRight(cursor)}
 					quick={quickOf(cursor)}
-					onselect={cursor.set.type === 'warmup' ? undefined : () => onselect(cursor.set.id)}
+					onselect={() => onselect(cursor.set.id)}
 					onquick={() => {
 						const quick = quickOf(cursor);
 

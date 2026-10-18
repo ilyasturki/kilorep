@@ -1,6 +1,13 @@
 <script lang="ts">
 	import type { Exercise } from '$lib/domain/exercise';
-	import { canCommit, hintLabel, neverLogged, prefillFor } from '$lib/domain/workout';
+	import {
+		canCommit,
+		hintLabel,
+		neverLogged,
+		prefillFor,
+		rampFor,
+		rampLabel
+	} from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
 	import Button from '$lib/ui/Button.svelte';
@@ -43,18 +50,22 @@
 
 	const hint = $derived(hintLabel(history, cursor, meta, exertionScale.current));
 
-	const recalls = $derived(
-		hints && cursor.workingIndex >= 0 && (hint !== null || neverLogged(history, cursor))
-	);
+	const warmup = $derived(cursor.workingIndex < 0);
+
+	const recalls = $derived(hints && !warmup && (hint !== null || neverLogged(history, cursor)));
+
+	const ramp = $derived(cursor.set.completed ? null : rampFor(cursor, history, meta));
+
+	const rung = $derived(ramp === null ? null : rampLabel(ramp, meta));
 
 	// The plan's own number, which the reps field cannot say for itself: what it holds is the
 	// prefill, and from the second set on that is the weight and reps carried from the first.
-	const planned = $derived(cursor.set.plannedReps);
+	const planned = $derived(warmup ? null : cursor.set.plannedReps);
 
 	// What the tray offers before a finger lands on it: the set's own numbers where it has any,
 	// and where it has none the offer worked out afresh — the carry, the target, last time.
 	// Nothing here is written back, so leaving the set is not the same as filling it in.
-	const offer = $derived(prefillFor(cursor, history));
+	const offer = $derived(prefillFor(cursor, history, meta));
 
 	const weight = $derived(offer.weight);
 	const reps = $derived(offer.reps);
@@ -118,6 +129,15 @@
 				<div class="flex items-baseline gap-1.5">
 					<span class="label-caps">Target</span>
 					<span class="text-base font-extrabold tracking-numeral text-ink">{planned} reps</span>
+				</div>
+			{/if}
+
+			{#if warmup}
+				<div class="flex min-w-0 items-baseline gap-1.5">
+					<span class="label-caps">Warmup</span>
+					{#if rung !== null}
+						<span class="text-base font-extrabold tracking-numeral text-ink">{rung}</span>
+					{/if}
 				</div>
 			{/if}
 

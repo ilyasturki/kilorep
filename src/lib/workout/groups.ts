@@ -27,21 +27,26 @@ export function setNote(
 		parts.push('One arm');
 	}
 
+	if (set.type === 'drop' || set.type === 'failure') {
+		parts.push(set.type === 'drop' ? 'Drop' : 'Failure');
+	}
+
 	return parts.length === 0 ? null : parts.join(' · ');
 }
 
 export function statusOf(cursor: SetCursor): SetStatus {
-	if (cursor.set.type === 'warmup') {
-		return 'warmup';
+	if (cursor.set.completed) {
+		return 'done';
 	}
 
-	return cursor.set.completed ? 'done' : 'pending';
+	return cursor.set.type === 'warmup' ? 'warmup' : 'pending';
 }
 
 export type Group = {
 	id: string;
 	meta: Exercise;
 	grip?: string;
+	note?: string;
 	cursors: SetCursor[];
 };
 
@@ -106,6 +111,7 @@ export function entriesWithMeta(workout: Workout, catalog: Record<string, Exerci
 			id: exercise.id,
 			meta: catalog[exercise.exerciseId],
 			grip: exercise.grip,
+			note: exercise.note,
 			cursors: legCursors(entry, exercise)
 		}));
 

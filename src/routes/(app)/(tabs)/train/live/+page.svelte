@@ -14,7 +14,7 @@
 	import { restAfter } from '$lib/domain/rest';
 	import { canCommit, prefillFor, tally } from '$lib/domain/workout';
 	import type { Pick } from '$lib/exercises/picker';
-	import type { Arms, SwapMode } from '$lib/domain/workout';
+	import type { Arms, SetType, SwapMode } from '$lib/domain/workout';
 	import { fillAppBar } from '$lib/nav/bar.svelte';
 	import { leaveFor } from '$lib/nav/go';
 	import { exertionScale } from '$lib/settings/exertion.svelte';
@@ -31,6 +31,7 @@
 	import SwapSetsDialog from '$lib/workout/SwapSetsDialog.svelte';
 	import LiveLedger from '$lib/workout/LiveLedger.svelte';
 	import LiveTray from '$lib/workout/LiveTray.svelte';
+	import NoteSheet from '$lib/workout/NoteSheet.svelte';
 	import OverviewDrawer from '$lib/workout/OverviewDrawer.svelte';
 	import OverviewPeek from '$lib/workout/OverviewPeek.svelte';
 	import { persistSession } from '$lib/workout/persist.svelte';
@@ -510,6 +511,32 @@
 		acting = null;
 	}
 
+	function warmUpActing() {
+		if (session === null || acting === null) {
+			return;
+		}
+
+		session.addWarmup(acting);
+		acting = null;
+	}
+
+	let noteOpen = $state(false);
+	let noting = $state<string | null>(null);
+
+	const notingLeg = $derived(legOf(entries, noting));
+
+	function noteActing() {
+		noting = acting;
+		noteOpen = true;
+		acting = null;
+	}
+
+	function saveNote(text: string) {
+		if (session !== null && noting !== null) {
+			session.setNote(noting, text);
+		}
+	}
+
 	function moveActing(to: number) {
 		if (session === null || actingEntry === null) {
 			return;
@@ -709,6 +736,12 @@
 		}
 	}
 
+	function typeSet(type: SetType) {
+		if (session !== null && optionsSetId !== null) {
+			session.setSetType(optionsSetId, type);
+		}
+	}
+
 	function unlogSet() {
 		if (session === null || optionsSetId === null) {
 			return;
@@ -754,7 +787,7 @@
 			return;
 		}
 
-		const offer = prefillFor(activeCursor, data.history);
+		const offer = prefillFor(activeCursor, data.history, activeLeg.meta);
 
 		if (canCommit(offer.weight, offer.reps)) {
 			logSet(offer.weight as number, offer.reps as number);
@@ -828,6 +861,7 @@
 					<LiveLedger
 						{entries}
 						history={data.history}
+						notes={data.notes}
 						activeSetId={session.activeSetId}
 						from="/train/live"
 						onselect={jumpTo}
@@ -870,6 +904,8 @@
 									<ExerciseBlock
 										meta={leg.meta}
 										grip={leg.grip}
+										note={leg.note}
+										last={data.notes[leg.meta.id]}
 										cursors={leg.cursors}
 										history={data.history}
 										activeSetId={session.activeSetId}
@@ -1019,6 +1055,8 @@
 		onbreak={breakSuperset}
 		onremove={removeExercise}
 		ongrip={gripExercise}
+		onwarmup={warmUpActing}
+		onnote={noteActing}
 		onmoveup={actingIndex > 0 ? () => moveActing(actingIndex - 1) : undefined}
 		onmovedown={actingIndex >= 0 && actingIndex < entries.length - 1
 			? () => moveActing(actingIndex + 1)
@@ -1036,7 +1074,16 @@
 		onremove={removeSet}
 		ongrip={gripSet}
 		onarms={armSet}
+		ontype={typeSet}
 		onexertion={desk ? () => (exertionOpen = true) : undefined}
+	/>
+
+	<NoteSheet
+		bind:open={noteOpen}
+		name={notingLeg === null ? 'Note' : notingLeg.meta.name}
+		note={notingLeg?.note}
+		last={notingLeg === null ? undefined : data.notes[notingLeg.meta.id]}
+		onsave={saveNote}
 	/>
 
 	<ExertionDialog

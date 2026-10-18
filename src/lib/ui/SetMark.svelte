@@ -23,11 +23,17 @@
 		index?: number;
 		// For a mark drawn on an accent-soft ground, where the done tint would melt into it.
 		contrast?: boolean;
+		// W in every state: a check on a logged warmup would read as a working set.
+		warmup?: boolean;
 	};
 
-	let { status, index, contrast = false }: Props = $props();
+	let { status, index, contrast = false, warmup = false }: Props = $props();
 
-	const label = $derived(fixedLabels[status] ?? `set ${index ?? ''} ${status}`.trim());
+	const label = $derived(
+		warmup && status !== 'warmup'
+			? `warmup ${status === 'done' ? 'logged' : status}`
+			: (fixedLabels[status] ?? `set ${index ?? ''} ${status}`.trim())
+	);
 </script>
 
 <div
@@ -38,10 +44,10 @@
 		contrast && status === 'done' ? 'bg-surface text-accent-text' : shells[status]
 	]}
 >
-	{#if status === 'done'}
-		<Check size={17} />
-	{:else if status === 'warmup'}
+	{#if warmup || status === 'warmup'}
 		W
+	{:else if status === 'done'}
+		<Check size={17} />
 	{:else}
 		{index ?? ''}
 	{/if}

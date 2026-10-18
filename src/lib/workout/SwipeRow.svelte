@@ -13,6 +13,7 @@
 	type Props = {
 		status: SetStatus;
 		index?: number;
+		warmup?: boolean;
 		/** From `setFigures`: `load` in kilograms, `null` where the body is the whole load. */
 		figures: { load: string | null; reps: string };
 		/** A logged row the cursor stands on, being edited. */
@@ -36,6 +37,7 @@
 	let {
 		status,
 		index,
+		warmup = false,
 		figures,
 		selected = false,
 		right,
@@ -319,7 +321,7 @@
 				onselect !== undefined && 'pointer-fine:duration-100'
 			]}
 		>
-			<SetMark {status} {index} contrast={selected} />
+			<SetMark {status} {index} {warmup} contrast={selected} />
 
 			<!-- Fixed tracks, so a row of `+10 kg × 8` and one of `8 reps` keep their reps in line. -->
 			<span

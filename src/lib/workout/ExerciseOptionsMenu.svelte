@@ -12,6 +12,8 @@
 	import ArrowsMerge from '$lib/ui/icons/ArrowsMerge.svelte';
 	import ArrowsSplit from '$lib/ui/icons/ArrowsSplit.svelte';
 	import Eye from '$lib/ui/icons/Eye.svelte';
+	import Fire from '$lib/ui/icons/Fire.svelte';
+	import Pencil from '$lib/ui/icons/Pencil.svelte';
 	import Trash from '$lib/ui/icons/Trash.svelte';
 
 	type Props = {
@@ -29,6 +31,8 @@
 		onbreak?: () => void;
 		onremove: () => void;
 		ongrip?: (grip: string) => void;
+		onwarmup?: () => void;
+		onnote?: () => void;
 		onmoveup?: () => void;
 		onmovedown?: () => void;
 	};
@@ -44,6 +48,8 @@
 		onbreak,
 		onremove,
 		ongrip,
+		onwarmup,
+		onnote,
 		onmoveup,
 		onmovedown
 	}: Props = $props();
@@ -116,6 +122,8 @@
 		open = false;
 		go?.();
 	}
+
+	const noted = $derived(view.group !== null && view.group.note !== undefined);
 </script>
 
 <Menu bind:open title={name} {anchor}>
@@ -137,6 +145,19 @@
 		<MenuItem href={details} onselect={() => (open = false)}>
 			<Eye size={18} />
 			View exercise
+		</MenuItem>
+	{/if}
+
+	{#if onwarmup !== undefined}
+		<MenuItem onselect={() => move(onwarmup)}>
+			<Fire size={18} />
+			Add warmup
+		</MenuItem>
+	{/if}
+	{#if onnote !== undefined}
+		<MenuItem onselect={() => move(onnote)}>
+			<Pencil size={18} />
+			{noted ? 'Edit note' : 'Add note'}
 		</MenuItem>
 	{/if}
 

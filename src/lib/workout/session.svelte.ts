@@ -154,15 +154,17 @@ export class WorkoutSession {
 		}
 	}
 
-	// A warmup put in front of sets already logged is a correction, and taking the cursor back
-	// to it would end the rest those sets earned the moment it was logged.
+	// The cursor goes to the top of the ramp, and only on an exercise not yet begun: a warmup
+	// put in front of logged sets is a correction, and logging it would end their rest.
 	public addWarmup(exerciseId: string): void {
 		const exercise = cursors(this.workout).find((c) => c.exercise.id === exerciseId)?.exercise;
-		const untouched = exercise !== undefined && !exercise.sets.some((set) => set.completed);
-		const set = insertWarmup(this.workout, exerciseId, crypto.randomUUID());
 
-		if (set !== null && untouched) {
-			this.#focus(set.id);
+		if (insertWarmup(this.workout, exerciseId, crypto.randomUUID()) === null) {
+			return;
+		}
+
+		if (exercise !== undefined && !exercise.sets.some((set) => set.completed)) {
+			this.#focus(exercise.sets[0].id);
 		}
 	}
 

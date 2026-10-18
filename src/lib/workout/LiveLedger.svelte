@@ -11,7 +11,7 @@
 	} from '$lib/domain/exertion';
 	import type { Exercise } from '$lib/domain/exercise';
 	import { gripLabel } from '$lib/domain/grip';
-	import { canCommit, hintLabel, prefillFor } from '$lib/domain/workout';
+	import { canCommit, hintLabel, prefillFor, rampFor, rampLabel } from '$lib/domain/workout';
 	import type { History, SetCursor } from '$lib/domain/workout';
 	import { weightStep } from '$lib/domain/exercise';
 	import { setFigures } from '$lib/exercises/label';
@@ -25,12 +25,15 @@
 	import RowsPlusBottom from '$lib/ui/icons/RowsPlusBottom.svelte';
 	import StackPlus from '$lib/ui/icons/StackPlus.svelte';
 	import { exerciseHref } from '$lib/exercises/link';
+	import type { LastNotes } from '$lib/store/derive';
 	import type { Entry, Group } from '$lib/workout/groups';
 	import { setNote, statusOf } from '$lib/workout/groups';
 
 	type Props = {
 		entries: Entry[];
 		history: History;
+		/** Last time's notes, each drawn under its exercise until this session writes its own. */
+		notes?: LastNotes;
 		activeSetId: string | null;
 		/** The address an exercise's own page walks back to — this screen, not the browse list. */
 		from?: string;
@@ -50,6 +53,7 @@
 	let {
 		entries,
 		history,
+		notes = {},
 		activeSetId,
 		from,
 		onselect,
@@ -82,19 +86,22 @@
 
 	const scale = $derived(exertionScale.current);
 
-	function offerOf(cursor: SetCursor): { weight: number | null; reps: number | null } {
-		return prefillFor(cursor, history);
+	function offerOf(
+		cursor: SetCursor,
+		meta: Exercise
+	): { weight: number | null; reps: number | null } {
+		return prefillFor(cursor, history, meta);
 	}
 
 	// One gesture logs the numbers the row shows; a row with nothing to offer has no gesture.
 	// The selected row's own gesture routes through `oncommit` instead, where update and
 	// commit part ways — this one is for the rows the cursor is not standing on.
-	function quickOf(cursor: SetCursor): { weight: number; reps: number } | null {
-		if (cursor.set.completed || cursor.set.type === 'warmup') {
+	function quickOf(cursor: SetCursor, meta: Exercise): { weight: number; reps: number } | null {
+		if (cursor.set.completed) {
 			return null;
 		}
 
-		const offer = offerOf(cursor);
+		const offer = offerOf(cursor, meta);
 
 		return canCommit(offer.weight, offer.reps)
 			? { weight: offer.weight as number, reps: offer.reps as number }
@@ -102,16 +109,22 @@
 	}
 
 	function rowLabel(cursor: SetCursor, leg: Group): string {
-		const name = cursor.workingIndex < 0 ? 'Warmup' : `Set ${cursor.workingIndex + 1}`;
+		const warmup = cursor.workingIndex < 0;
+		const name = warmup ? 'Warmup' : `Set ${cursor.workingIndex + 1}`;
 		const note = setNote(leg.meta, leg.grip, cursor.set);
 		// The tray says this on the phone; here the row is the only place the plan can speak.
-		const target = cursor.set.plannedReps === null ? null : `target ${cursor.set.plannedReps}`;
+		const target =
+			warmup || cursor.set.plannedReps === null ? null : `target ${cursor.set.plannedReps}`;
 
 		return [name, note, target].filter((part) => part !== null).join(' · ');
 	}
 
+	// A warmup recalls nothing, so its column names the rung it is offered instead.
 	function lastOf(cursor: SetCursor, meta: Exercise): string {
-		return hintLabel(history, cursor, meta) ?? '—';
+		const ramp = cursor.set.completed ? null : rampFor(cursor, history, meta);
+		const rung = ramp === null ? null : rampLabel(ramp, meta);
+
+		return rung ?? hintLabel(history, cursor, meta) ?? '—';
 	}
 
 	const show = (n: number | null) => (n === null ? '–' : String(n));
@@ -122,7 +135,7 @@
 		Math.round(
 			entries
 				.flatMap((entry) => entry.cursors)
-				.filter((cursor) => cursor.set.completed)
+				.filter((cursor) => cursor.set.completed && cursor.set.type !== 'warmup')
 				.reduce((sum, cursor) => sum + (cursor.set.weight ?? 0) * (cursor.set.reps ?? 0), 0)
 		)
 	);
@@ -196,6 +209,7 @@
 							.filter(Boolean)
 							.join(' · ')}
 						{@const done = leg.cursors.filter((cursor) => cursor.set.completed).length}
+						{@const last = notes[leg.meta.id]}
 
 						<div
 							data-exercise
@@ -263,6 +277,23 @@
 							</button>
 						</div>
 
+						{#if leg.note !== undefined || last !== undefined}
+							<div class={[cols, 'bg-canvas pb-1.5']}>
+								<span></span>
+								<p
+									class={[
+										'col-span-6 -mt-1 line-clamp-2 text-sm font-bold',
+										leg.note === undefined ? 'text-ink-faint' : 'text-ink-muted'
+									]}
+								>
+									{#if leg.note === undefined}
+										<span class="label-caps">Last time</span>
+									{/if}
+									{leg.note ?? last}
+								</p>
+							</div>
+						{/if}
+
 						{#each leg.cursors as cursor (cursor.set.id)}
 							{@const status = statusOf(cursor)}
 							{@const selected = cursor.set.id === activeSetId}
@@ -270,8 +301,8 @@
 							{@const offer =
 								cursor.set.completed && !selected
 									? { weight: cursor.set.weight, reps: cursor.set.reps }
-									: offerOf(cursor)}
-							{@const quick = quickOf(cursor)}
+									: offerOf(cursor, leg.meta)}
+							{@const quick = quickOf(cursor, leg.meta)}
 							{@const numerals = active
 								? 'text-accent-text'
 								: cursor.set.completed
@@ -285,13 +316,13 @@
 							<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 							<div
 								data-active-set={selected ? '' : undefined}
-								onclick={status === 'warmup' ? undefined : () => onselect(cursor.set.id)}
+								onclick={() => onselect(cursor.set.id)}
 								class={[
 									cols,
 									'min-h-11 scroll-my-3 border-t border-line-soft',
 									selected ? 'bg-accent-soft' : 'bg-surface',
-									status !== 'warmup' && !selected && 'hover:bg-hover press:bg-surface-2',
-									status === 'warmup' && 'opacity-[0.72]',
+									!selected && 'hover:bg-hover press:bg-surface-2',
+									status === 'warmup' && !selected && 'opacity-[0.72]',
 									'pointer-fine:transition-[background-color] pointer-fine:duration-100'
 								]}
 								{@attach press()}
@@ -300,6 +331,7 @@
 									<SetMark
 										status={active ? 'active' : status}
 										index={cursor.workingIndex + 1}
+										warmup={cursor.set.type === 'warmup'}
 										contrast={selected}
 									/>
 								</span>

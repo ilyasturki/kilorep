@@ -15,9 +15,28 @@
 		action?: Snippet;
 		children: Snippet;
 		footer?: Snippet;
+		/** The field the sheet opens on, if any; absent, the overlay places focus itself. */
+		initialFocus?: () => HTMLElement | null;
 	};
 
-	let { open = $bindable(false), title, description, action, children, footer }: Props = $props();
+	let {
+		open = $bindable(false),
+		title,
+		description,
+		action,
+		children,
+		footer,
+		initialFocus
+	}: Props = $props();
+
+	function claimFocus(event: Event) {
+		const target = initialFocus === undefined ? null : initialFocus();
+
+		if (target !== null) {
+			event.preventDefault();
+			target.focus();
+		}
+	}
 
 	$effect(() => (open ? registerOverlay(() => (open = false)) : undefined));
 
@@ -73,7 +92,7 @@
 		<Dialog.Portal>
 			<Dialog.Overlay class="overlay-scrim" />
 
-			<Dialog.Content class="overlay-panel overlay-sheet">
+			<Dialog.Content class="overlay-panel overlay-sheet" onOpenAutoFocus={claimFocus}>
 				{@render header(true)}
 				{@render body()}
 			</Dialog.Content>
@@ -84,7 +103,12 @@
 		<Drawer.Portal>
 			<Drawer.Overlay class="overlay-scrim-drawer" />
 
-			<Drawer.Content bind:ref={panel} class="overlay-panel overlay-drawer" {...slop}>
+			<Drawer.Content
+				bind:ref={panel}
+				class="overlay-panel overlay-drawer"
+				onOpenAutoFocus={claimFocus}
+				{...slop}
+			>
 				<Drawer.Handle class="mt-3" />
 				{@render header(false)}
 				{@render body()}
