@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vitest/config';
 
+import { version } from './package.json';
+
 export default defineConfig({
 	plugins: [svelte({ configFile: false, compilerOptions: { runes: true } })],
 	resolve: {
@@ -10,7 +12,8 @@ export default defineConfig({
 	define: {
 		'import.meta.env.DEFAULT_SERVER': JSON.stringify(
 			process.env.DEFAULT_SERVER ?? 'https://kilorep.com'
-		)
+		),
+		'import.meta.env.APP_VERSION': JSON.stringify(version)
 	},
 	test: {
 		include: ['src/**/*.test.ts', 'tests/**/*.test.ts']

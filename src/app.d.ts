@@ -5,6 +5,8 @@ declare global {
 		readonly APP_BUILD: boolean;
 
 		readonly DEFAULT_SERVER: string;
+
+		readonly APP_VERSION: string;
 	}
 
 	namespace App {

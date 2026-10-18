@@ -5,6 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
 
+import { version } from './package.json';
+
 const isAppBuild = process.env.BUILD_TARGET === 'app';
 
 const adapter = isAppBuild
@@ -26,7 +28,8 @@ export default defineConfig({
 		'import.meta.env.APP_BUILD': JSON.stringify(isAppBuild),
 		'import.meta.env.DEFAULT_SERVER': JSON.stringify(
 			process.env.DEFAULT_SERVER ?? 'https://kilorep.com'
-		)
+		),
+		'import.meta.env.APP_VERSION': JSON.stringify(version)
 	},
 	server: {
 		watch: {
