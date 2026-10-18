@@ -127,6 +127,16 @@ describe('RecordEditor figures', () => {
 		expect(editor.dirty).toBe(false);
 	});
 
+	test('a number changed and typed back leaves the draft clean', () => {
+		const editor = new RecordEditor(record());
+
+		editor.figure('s1', 'weight', 85);
+		editor.figure('s1', 'weight', 80);
+
+		expect(setOf(editor, 's1').entered).toBe(true);
+		expect(editor.dirty).toBe(false);
+	});
+
 	test('weights settle to the hundredth and reps to the whole', () => {
 		const editor = new RecordEditor(record());
 
@@ -165,6 +175,23 @@ describe('RecordEditor dates', () => {
 		expect(new Date(editor.draft.startedAt).getDate()).toBe(3);
 		expect(editor.draft.finishedAt - editor.draft.startedAt).toBe(70 * MINUTE);
 		expect(editor.dirty).toBe(true);
+	});
+});
+
+describe('RecordEditor dates without a length', () => {
+	test('its own day leaves a record with no end untouched', () => {
+		vi.stubEnv('TZ', 'Europe/Paris');
+
+		const written = record();
+
+		written.finishedAt = Number.NaN;
+
+		const editor = new RecordEditor(written);
+
+		editor.moveTo('2026-06-10');
+
+		expect(editor.draft.finishedAt).toBeNaN();
+		expect(editor.dirty).toBe(false);
 	});
 });
 

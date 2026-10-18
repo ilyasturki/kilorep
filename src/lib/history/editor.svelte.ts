@@ -1,3 +1,4 @@
+import { localDateOf } from '$lib/domain/bodyweight';
 import { retime } from '$lib/domain/retime';
 import { canCommit, cursorFor, draftSet, markSet, settle } from '$lib/domain/workout';
 import type { FinishedWorkout } from '$lib/store/derive';
@@ -10,12 +11,12 @@ function settledFigure(which: Figure, value: number): number {
 	return which === 'reps' ? Math.max(0, Math.round(value)) : settle(value);
 }
 
-/**
- * A finished workout being corrected: every edit lands in a copy, and only `save` writes it.
- *
- * The structural edits — sets, exercises, supersets, grips — are the live session's own, run
- * over the copy through a `WorkoutSession` holding the same proxy.
- */
+// `entered` steers only a live session's prefill: typing a number back leaves the record unchanged.
+function comparable(record: FinishedWorkout): string {
+	return JSON.stringify(record, (key, value: unknown) => (key === 'entered' ? undefined : value));
+}
+
+/** A finished workout being corrected: every edit lands in a copy, and only `save` writes it. */
 export class RecordEditor {
 	public draft: FinishedWorkout;
 
@@ -28,15 +29,14 @@ export class RecordEditor {
 	public constructor(record: FinishedWorkout) {
 		const copy = structuredClone(record);
 
-		this.#original = JSON.stringify(copy);
+		this.#original = comparable(copy);
 		this.draft = $state(copy);
-		this.dirty = $derived(JSON.stringify(this.draft) !== this.#original);
+		this.dirty = $derived(comparable(this.draft) !== this.#original);
 		// No history: the record predates every hint it could read.
 		this.session = new WorkoutSession({}, { workout: this.draft, activeSetId: null });
 	}
 
-	// A set holding both numbers is one that happened: typing them into the record says so, and
-	// clearing either takes the set back out of the count.
+	// Both numbers held logs the set; clearing either unlogs it.
 	public figure(setId: string, which: Figure, value: number | null): void {
 		const set = cursorFor(this.draft, setId)?.set;
 
@@ -68,6 +68,11 @@ export class RecordEditor {
 	}
 
 	public moveTo(date: string): void {
+		// retime would still rewrite a missing or early end, dirtying an untouched record.
+		if (date === localDateOf(new Date(this.draft.startedAt))) {
+			return;
+		}
+
 		const span = retime(this.draft, { date });
 
 		this.draft.startedAt = span.startedAt;

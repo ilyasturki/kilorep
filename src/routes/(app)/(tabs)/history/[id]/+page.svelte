@@ -54,7 +54,6 @@
 	// svelte-ignore state_referenced_locally
 	const workout = $state(data.workout);
 
-	// Every edit lands in this draft; Save writes it once, and dropping it is Discard.
 	let editor = $state<RecordEditor | null>(null);
 
 	const editing = $derived(editor !== null);
@@ -108,8 +107,7 @@
 		editor = null;
 	}
 
-	// A figure being typed into holds its number until it lets go of focus: anything that
-	// reads the draft lets go of it first.
+	// A figure cell commits its number only on blur.
 	function settleFigure() {
 		const focused = document.activeElement;
 
@@ -118,26 +116,37 @@
 		}
 	}
 
+	let saving = false;
+
+	// The draft stays open until the write lands: a refused write leaves it to be saved again.
 	async function save() {
 		settleFigure();
 
 		const draft = editor;
 
-		if (draft === null) {
+		if (draft === null || saving) {
 			return;
 		}
 
-		editor = null;
-		Object.assign(workout, draft.record());
+		saving = true;
 
-		if ((await draft.save(data.store, Date.now())) && data.user) {
-			syncSoon(data.user.id);
+		try {
+			const wrote = await draft.save(data.store, Date.now());
+
+			Object.assign(workout, draft.record());
+			editor = null;
+
+			if (wrote && data.user) {
+				syncSoon(data.user.id);
+			}
+		} finally {
+			saving = false;
 		}
 	}
 
 	let leaveOpen = $state(false);
 
-	// Where a navigation the dialog stopped was going, carried on once Discard is confirmed.
+	// The navigation the dialog stopped, resumed once Discard is confirmed.
 	let pending: (() => void) | null = null;
 
 	function discard() {
@@ -164,8 +173,7 @@
 
 	let release: (() => void) | null = null;
 
-	// Back stops editing, as it closes a sheet. Asking first, it has to stand as an overlay
-	// again: the stack popped it before calling here.
+	// The stack popped this overlay before calling here, so asking first re-registers it.
 	function back() {
 		discard();
 
@@ -187,8 +195,6 @@
 		};
 	});
 
-	// Back itself is the overlay's to answer; this catches the links and jumps that would
-	// leave a draft behind.
 	beforeNavigate((navigation) => {
 		if (editor === null) {
 			return;
@@ -196,7 +202,7 @@
 
 		settleFigure();
 
-		if (!editor.dirty || navigation.type === 'popstate') {
+		if (!editor.dirty) {
 			return;
 		}
 
@@ -204,10 +210,19 @@
 
 		const to = navigation.to?.url;
 
-		if (navigation.type !== 'leave' && to !== undefined) {
+		if (navigation.type === 'popstate') {
+			const { delta } = navigation;
+
+			pending = () => history.go(delta);
+		} else if (navigation.type === 'leave' || to === undefined) {
+			return;
+		} else if (navigation.willUnload) {
+			pending = () => location.assign(to);
+		} else {
 			pending = () => void goto(to);
-			leaveOpen = true;
 		}
+
+		leaveOpen = true;
 	});
 
 	let insertOpen = $state(false);
@@ -459,8 +474,7 @@
 
 	let linkOpen = $state(false);
 
-	// One tap and written at once, as Delete beside it is: the link is not part of the record's
-	// numbers, and opening a draft to change it would ask for a Save the lifter never meant.
+	// Written at once, outside the draft: relinking never asks for a Save.
 	async function relink(templateId: string | null) {
 		workout.templateId = templateId;
 

@@ -28,8 +28,7 @@
 	const parsed = (raw: string): number | null =>
 		kind === 'reps' ? parseWhole(raw) : parseEntry(raw);
 
-	// Set by the press about to focus the cell: its mouseup would drop the caret where the finger
-	// landed, and typing would then insert beside the number instead of replacing it.
+	// The focusing press's mouseup would drop a caret over the selection that typing should replace.
 	let pressed = false;
 
 	function arm(event: PointerEvent & { currentTarget: HTMLInputElement }) {
