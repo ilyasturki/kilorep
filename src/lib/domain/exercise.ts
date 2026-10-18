@@ -1,4 +1,6 @@
-export type LoadMode = 'total' | 'per-hand' | 'unilateral';
+export const LOAD_MODES = ['total', 'per-hand', 'unilateral'] as const;
+
+export type LoadMode = (typeof LOAD_MODES)[number];
 
 export function loadFactor(mode: LoadMode): number {
 	return mode === 'total' ? 1 : 2;
@@ -30,16 +32,19 @@ export function weightStep(equipment: Equipment, from: number, direction: number
 	return fine ? 1 : 2;
 }
 
-export type Equipment =
-	| 'Barbell'
-	| 'EZ-Bar'
-	| 'Dumbbell'
-	| 'Cable'
-	| 'Machine'
-	| 'Smith Machine'
-	| 'Bodyweight'
-	| 'Kettlebell'
-	| 'Band';
+export const EQUIPMENT = [
+	'Barbell',
+	'EZ-Bar',
+	'Dumbbell',
+	'Cable',
+	'Machine',
+	'Smith Machine',
+	'Bodyweight',
+	'Kettlebell',
+	'Band'
+] as const;
+
+export type Equipment = (typeof EQUIPMENT)[number];
 
 /** Implements a single hand or foot can take on its own: a dumbbell, a stack, a bell, a band. */
 const HANDHELD: ReadonlySet<Equipment> = new Set([
@@ -94,6 +99,7 @@ export type Grip = {
 	id: string;
 	label: string;
 	muscles?: MuscleTargets;
+	custom?: true;
 };
 
 /** The one way an exercise can be varied without becoming another exercise. */
@@ -147,4 +153,7 @@ export type Exercise = {
 	 * would claim a measurement nobody took.
 	 */
 	bodyweightShare?: number;
+	custom?: true;
+	/** A deleted custom that history or a plan still names: it resolves, and no list offers it. */
+	archived?: true;
 };

@@ -127,6 +127,23 @@ describe('the catalog as a whole', () => {
 		}
 	});
 
+	// A custom id carries an underscore, so a slug keeping to this shape can never collide with one.
+	it('spells every slug and every grip id as lowercase words joined by hyphens', () => {
+		const shape = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+
+		for (const exercise of catalog) {
+			expect(exercise.id).toMatch(shape);
+
+			for (const grip of gripsOf(exercise)) {
+				expect(grip.id, exercise.id).toMatch(shape);
+			}
+		}
+
+		for (const slug of Object.keys(FOLDED)) {
+			expect(slug).toMatch(shape);
+		}
+	});
+
 	it('states a movement pattern on every entry', () => {
 		for (const exercise of catalog) {
 			expect(exercise.pattern, exercise.id).toBeDefined();
