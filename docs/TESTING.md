@@ -254,6 +254,10 @@ server* state above, reachable at last.
   `page` and waits until its launch sync has pulled them. It reloads rather
   than calling `syncNow`: going offline mid-launch fails that pull, and a
   failed pull with nothing to push is never retried.
+- `finishedSession(daysAgo, exercises)`, beside it, is one such workout: each
+  exercise as `{ exerciseId, grip?, sets: [{ kg, reps, grip? }] }`, every set
+  completed. It writes grips and slugs as given, so a session logged before
+  a grip retired or an entry folded can be planted as it was stored.
 
 **Adding a spec.** One file per area, in `e2e/`, named for what it holds. Find
 things the way a person does — role and name, `getByRole('button', { name:
