@@ -4,8 +4,7 @@
 	import { Drawer } from 'vaul-svelte';
 	import Button from '$lib/ui/Button.svelte';
 	import { drawerSlop } from '$lib/ui/drawer-slop';
-	import type { Pane } from '$lib/ui/keyboard';
-	import { dockBottom, keyboardUp, visiblePane, watchVisiblePane } from '$lib/ui/keyboard';
+	import { dockSheet } from '$lib/ui/keyboard';
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { wideViewport } from '$lib/ui/viewport';
 
@@ -28,31 +27,7 @@
 
 	// Vaul's own `repositionInputs` is the bug this replaces: it writes an inline height
 	// measured against a lazily captured, never-cleared value, restoring a stale size.
-	$effect(() => {
-		if (!open || panel === null) {
-			return;
-		}
-
-		const node = panel;
-
-		const dock = (pane: Pane): void => {
-			if (keyboardUp(pane)) {
-				node.style.setProperty('--sheet-keys', `${dockBottom(pane)}px`);
-				node.style.setProperty('--sheet-pane', `${pane.height}px`);
-			} else {
-				node.style.removeProperty('--sheet-keys');
-				node.style.removeProperty('--sheet-pane');
-			}
-
-			// A settled drag leaves vaul's inline `transition: transform`, which clobbers the
-			// stylesheet's `bottom`/`max-height` legs; clearing it hands the rule back.
-			node.style.removeProperty('transition');
-		};
-
-		dock(visiblePane());
-
-		return watchVisiblePane(dock);
-	});
+	$effect(() => (open && panel !== null ? dockSheet(panel) : undefined));
 </script>
 
 {#snippet header(closable: boolean)}

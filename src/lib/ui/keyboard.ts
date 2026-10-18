@@ -56,6 +56,22 @@ export function keyboardUp(pane: Pane): boolean {
 	return keyboardHeight(pane) > KEYBOARD_MIN;
 }
 
+// The shell shrank the layout itself, so anything docked at its bottom already stands above the keys.
+export function shellResized(pane: Pane): boolean {
+	return pane.ground - pane.layout > KEYBOARD_MIN;
+}
+
+export type SheetDock = { keys: number; pane: number };
+
+// Null in the shell too: mid-animation its visual viewport reads a fraction of the layout it shows.
+export function sheetDock(pane: Pane): SheetDock | null {
+	if (!keyboardUp(pane) || shellResized(pane)) {
+		return null;
+	}
+
+	return { keys: dockBottom(pane), pane: pane.height };
+}
+
 // Keyboard arrival fires `resize`; the browser's own pan to the focused input fires only `scroll`.
 export function watchVisiblePane(onchange: (pane: Pane) => void): () => void {
 	const port = view();
@@ -77,4 +93,39 @@ export function watchVisiblePane(onchange: (pane: Pane) => void): () => void {
 		port.removeEventListener('resize', tell);
 		port.removeEventListener('scroll', tell);
 	};
+}
+
+/**
+ * Keeps a bottom sheet above the keyboard: `--sheet-keys` / `--sheet-pane` for app.css to dock
+ * it by, and `data-shell-keys` where the shell resized the WebView instead.
+ */
+export function dockSheet(
+	node: HTMLElement,
+	onkeys: (up: boolean) => void = () => {
+		/* empty */
+	}
+): () => void {
+	const dock = (pane: Pane): void => {
+		onkeys(keyboardUp(pane));
+
+		const at = sheetDock(pane);
+
+		if (at === null) {
+			node.style.removeProperty('--sheet-keys');
+			node.style.removeProperty('--sheet-pane');
+		} else {
+			node.style.setProperty('--sheet-keys', `${at.keys}px`);
+			node.style.setProperty('--sheet-pane', `${at.pane}px`);
+		}
+
+		node.toggleAttribute('data-shell-keys', keyboardUp(pane) && shellResized(pane));
+
+		// A settled drag leaves vaul's inline `transition: transform`, which clobbers the
+		// stylesheet's `bottom`/`max-height` legs; clearing it hands the rule back.
+		node.style.removeProperty('transition');
+	};
+
+	dock(visiblePane());
+
+	return watchVisiblePane(dock);
 }

@@ -34,8 +34,7 @@
 	import Check from '$lib/ui/icons/Check.svelte';
 	import MagnifyingGlass from '$lib/ui/icons/MagnifyingGlass.svelte';
 	import Plus from '$lib/ui/icons/Plus.svelte';
-	import type { Pane } from '$lib/ui/keyboard';
-	import { dockBottom, keyboardUp, visiblePane, watchVisiblePane } from '$lib/ui/keyboard';
+	import { dockSheet } from '$lib/ui/keyboard';
 	import { registerOverlay } from '$lib/ui/overlays';
 	import { press } from '$lib/ui/press';
 	import { wideViewport } from '$lib/ui/viewport';
@@ -330,29 +329,11 @@
 	// `repositionInputs` is not that.
 	let panel = $state<HTMLElement | null>(null);
 
-	$effect(() => {
-		if (!open || panel === null) {
-			return;
-		}
+	let keysUp = $state(false);
 
-		const node = panel;
-
-		const dock = (pane: Pane): void => {
-			if (keyboardUp(pane)) {
-				node.style.setProperty('--sheet-keys', `${dockBottom(pane)}px`);
-				node.style.setProperty('--sheet-pane', `${pane.height}px`);
-			} else {
-				node.style.removeProperty('--sheet-keys');
-				node.style.removeProperty('--sheet-pane');
-			}
-
-			node.style.removeProperty('transition');
-		};
-
-		dock(visiblePane());
-
-		return watchVisiblePane(dock);
-	});
+	$effect(() =>
+		open && panel !== null ? dockSheet(panel, (up) => (keysUp = up)) : undefined
+	);
 
 	function metaLine(exercise: Exercise): string {
 		const set = lastSetLabel(exercise, lastPerformed[exercise.id]);
@@ -684,23 +665,6 @@
 					{/if}
 				</div>
 
-				{#if swap && outgoing !== null}
-					<div class="shrink-0 px-4 pt-2.5">
-						<div class="flex items-center gap-3 rounded-2xl bg-canvas p-3">
-							<span class="size-11 shrink-0">
-								<ExerciseIllustration id={outgoing.id} name={outgoing.name} class="size-full" />
-							</span>
-							<div class="flex min-w-0 flex-col">
-								<span class="label-caps">Replacing</span>
-								<span class="truncate text-base font-extrabold text-ink">{outgoing.name}</span>
-								<span class="truncate text-sm font-bold tracking-numeral text-ink-faint">
-									{metaLine(outgoing)}
-								</span>
-							</div>
-						</div>
-					</div>
-				{/if}
-
 				<div class="shrink-0 px-4 pt-2.5">
 					<SearchField
 						label={swap ? 'Search for a replacement' : 'Search exercises'}
@@ -755,7 +719,9 @@
 					{/each}
 				</div>
 
-				{#if swap}
+				<!-- Typing with nothing picked, the comparison has nothing to say and the keys have
+				     already taken half the sheet; it comes back with the pick or the keys going down. -->
+				{#if swap && (!keysUp || chosen !== null)}
 					<div class="flex shrink-0 flex-col gap-2.5 border-t border-line-soft px-4 pt-3">
 						{@render compare()}
 

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Pane } from './keyboard';
-import { dockBottom, keyboardHeight, keyboardUp } from './keyboard';
+import { dockBottom, keyboardHeight, keyboardUp, sheetDock, shellResized } from './keyboard';
 
 const LAYOUT = 800;
 
@@ -60,6 +60,29 @@ describe('visible pane geometry', () => {
 
 		expect(keyboardHeight(pane)).toBe(0);
 		expect(dockBottom(pane)).toBe(0);
+	});
+});
+
+describe('sheetDock', () => {
+	it('docks a sheet on the keys a browser lays over the page', () => {
+		expect(sheetDock(covered(0, LAYOUT - KEYS))).toEqual({ keys: KEYS, pane: LAYOUT - KEYS });
+	});
+
+	it('leaves a sheet alone with no keyboard up', () => {
+		expect(sheetDock(covered(0, LAYOUT))).toBeNull();
+	});
+
+	it('leaves a sheet alone in a WebView the shell already shrank above the keys', () => {
+		const pane = { top: 0, height: LAYOUT - KEYS, layout: LAYOUT - KEYS, ground: LAYOUT };
+
+		expect(shellResized(pane)).toBe(true);
+		expect(sheetDock(pane)).toBeNull();
+	});
+
+	it('ignores the shell’s visual viewport mid-animation, a fraction of the layout it shows', () => {
+		const pane = { top: 0, height: 160, layout: LAYOUT - KEYS, ground: LAYOUT };
+
+		expect(sheetDock(pane)).toBeNull();
 	});
 });
 

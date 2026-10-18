@@ -792,7 +792,7 @@ body {
 	animation-timing-function: var(--ease-medium);
 }
 
-/* Keyboard-up geometry. `--sheet-keys` / `--sheet-pane` are written by Sheet.svelte and absent when no
+/* Keyboard-up geometry. `--sheet-keys` / `--sheet-pane` are written by `dockSheet` and absent when no
    keyboard shows. The doubled selector beats vaul's own global rules; `transform` is restated because
    the `transition` shorthand would drop vaul's leg and a released drag would snap instead of settle. */
 [data-vaul-drawer].overlay-drawer {
@@ -807,6 +807,12 @@ body {
 		transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
 		bottom var(--dur-medium) var(--ease-medium),
 		max-height var(--dur-medium) var(--ease-medium);
+}
+
+/* `data-shell-keys`: the WebView itself shrank, and sliding the sheet's height down from the
+   keyboardless one would stand it past the top edge for the length of the slide. */
+[data-vaul-drawer].overlay-drawer[data-shell-keys] {
+	transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 [data-vaul-drawer][data-vaul-snap-points='false'][data-vaul-drawer-direction='bottom'][data-state='open'] {
