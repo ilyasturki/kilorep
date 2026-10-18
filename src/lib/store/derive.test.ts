@@ -106,6 +106,49 @@ describe('historyFrom', () => {
 		expect(history['pull-up']).toEqual([{ weight: 0, reps: 10, rpe: null, grip: 'underhand' }]);
 		expect(history['pull-up#underhand']).toBeUndefined();
 	});
+
+	const bench = (startedAt: number, ...weights: number[]): FinishedWorkout =>
+		workout(
+			startedAt,
+			leg(
+				'bench-press',
+				weights.map((weight) => ({ weight, reps: 5 }))
+			)
+		);
+
+	it('fills the sets last time never reached from the latest session that did', () => {
+		const history = historyFrom([
+			bench(100, 60, 60, 60, 60, 55),
+			bench(200, 70, 70, 70, 65),
+			bench(300, 80, 80)
+		]);
+		const slots = history['bench-press'] ?? [];
+
+		expect(only(slots)).toEqual([80, 80, 70, 65, 55]);
+		expect(slots.map((slot) => slot.earlier ?? false)).toEqual([false, false, true, true, true]);
+	});
+
+	it('reads a set left unchecked as a set last time did not reach', () => {
+		const unchecked = bench(200, 80, 80, 80);
+		unchecked.entries[0].exercises[0].sets[2].completed = false;
+
+		const history = historyFrom([bench(100, 70, 70, 70), unchecked]);
+
+		expect(only(history['bench-press'] ?? [])).toEqual([80, 80, 70]);
+	});
+
+	it('warmups take no slot', () => {
+		const warmed = workout(
+			100,
+			leg('bench-press', [
+				{ weight: 40, reps: 10, type: 'warmup' },
+				{ weight: 80, reps: 5 }
+			])
+		);
+		const history = historyFrom([warmed]);
+
+		expect(only(history['bench-press'] ?? [])).toEqual([80]);
+	});
 });
 
 describe('bests across grips', () => {
@@ -154,37 +197,6 @@ describe('narrowTo', () => {
 
 		expect(overhand[0].sets[0]).toBe(all[0].sets[0]);
 		expect(rawPr(overhand, () => 0)!.set).toBe(all[0].sets[0]);
-	});
-
-	const bench = (...weights: number[]): Logged[] => weights.map((weight) => ({ weight, reps: 5 }));
-
-	it('fills the sets last time never reached from the latest session that did', () => {
-		const history = historyFrom([
-			workout(100, leg('bench-press', bench(60, 60, 60, 60, 55))),
-			workout(200, leg('bench-press', bench(70, 70, 70, 65))),
-			workout(300, leg('bench-press', bench(80, 80)))
-		]);
-		const slots = history['bench-press'] ?? [];
-
-		expect(only(slots)).toEqual([80, 80, 70, 65, 55]);
-		expect(slots.map((slot) => slot.earlier ?? false)).toEqual([false, false, true, true, true]);
-	});
-
-	it('reads a set left unchecked as a set last time did not reach', () => {
-		const unchecked = workout(200, leg('bench-press', bench(80, 80, 80)));
-		unchecked.entries[0].exercises[0].sets[2].completed = false;
-
-		const history = historyFrom([workout(100, leg('bench-press', bench(70, 70, 70))), unchecked]);
-
-		expect(only(history['bench-press'] ?? [])).toEqual([80, 80, 70]);
-	});
-
-	it('warmups take no slot', () => {
-		const history = historyFrom([
-			workout(100, leg('bench-press', [{ weight: 40, reps: 10, type: 'warmup' }, ...bench(80)]))
-		]);
-
-		expect(only(history['bench-press'] ?? [])).toEqual([80]);
 	});
 });
 
