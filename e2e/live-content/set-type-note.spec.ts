@@ -5,6 +5,16 @@ import { addExercise, startEmpty } from '../helpers.ts';
 
 import { drag, exerciseAction, exerciseBlock, longPress, onDesk, setRow } from './support.ts';
 
+async function top(target: Locator): Promise<number> {
+	const box = await target.boundingBox();
+
+	if (box === null) {
+		throw new Error('nothing there to measure');
+	}
+
+	return box.y;
+}
+
 function overlays(page: Page): Locator {
 	return page.getByRole('dialog').or(page.getByRole('menu'));
 }
@@ -51,6 +61,16 @@ test('a set sheet opens on its type, and Warmup on set 1 renumbers the rest unti
 	await expect(types.first()).toHaveAccessibleName('Warmup');
 	await expect(types.nth(1)).toHaveAccessibleName('Drop');
 	await expect(types.nth(2)).toHaveAccessibleName('Failure');
+
+	const typeRow = await top(types.first());
+	const acts = sheet
+		.getByRole('button', { name: /set$/u })
+		.or(sheet.getByRole('menuitem', { name: /set$/u }));
+
+	await expect(acts.first()).toBeVisible();
+	for (const act of await acts.all()) {
+		expect(await top(act)).toBeGreaterThan(typeRow);
+	}
 
 	await sheet.getByRole('radio', { name: 'Warmup' }).click();
 	await closeSheets(page);
