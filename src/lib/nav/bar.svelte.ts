@@ -106,8 +106,10 @@ export function backTo(url: URL, behind: string | null = null): string | null {
 	// An address of ours and nothing else: one slash, and the character after it neither a
 	// slash nor a backslash. `//host` is protocol-relative, and a browser folds `/\` to `//`
 	// before it resolves, so both spellings leave the app — as does anything with a scheme.
+	// A browser also drops every tab and newline before it resolves, so `/<tab>/host` is
+	// `//host`: none may appear anywhere.
 	// `‹` is a plain anchor, and `from` arrives from whatever URL was opened.
-	if (from !== null && /^\/(?![/\\])/u.test(from)) {
+	if (from !== null && /^\/(?![/\\])[^\t\n\r]*$/u.test(from)) {
 		return from;
 	}
 

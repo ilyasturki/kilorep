@@ -190,8 +190,19 @@ describe('backTo', () => {
 		const script = ['java', 'script:alert(1)'].join('');
 
 		// `/\evil.test` is the one that reads as ours and is not: a browser folds the backslash
-		// to a slash before it resolves, and the anchor lands off-site.
-		const hostile = ['//evil.test', String.raw`/\evil.test`, 'https://evil.test', script, ''];
+		// to a slash before it resolves, and the anchor lands off-site. It drops tabs and newlines
+		// first, too, so a control between the two characters still makes them `//`.
+		const hostile = [
+			'//evil.test',
+			String.raw`/\evil.test`,
+			'/\t/evil.test',
+			'/\n/evil.test',
+			'/\r/evil.test',
+			'/\t\\evil.test',
+			'https://evil.test',
+			script,
+			''
+		];
 
 		for (const value of hostile) {
 			const address = `/plan/exercises/deadlift?from=${encodeURIComponent(value)}`;
