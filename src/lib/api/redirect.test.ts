@@ -31,6 +31,13 @@ describe('resolveRedirect', () => {
 		expect(resolveRedirect('https://kilorep.example.com:8443/start', ORIGIN)).toBe(AFTER_LOGIN);
 	});
 
+	test('refuses a same-origin path that would read as protocol-relative', () => {
+		expect(resolveRedirect(`${ORIGIN}//evil.example/login`, ORIGIN)).toBe(AFTER_LOGIN);
+		expect(resolveRedirect('/.//evil.example', ORIGIN)).toBe(AFTER_LOGIN);
+		expect(resolveRedirect('/..//evil.example', ORIGIN)).toBe(AFTER_LOGIN);
+		expect(resolveRedirect(String.raw`${ORIGIN}/\evil.example`, ORIGIN)).toBe(AFTER_LOGIN);
+	});
+
 	test('refuses a scheme that is not navigation at all', () => {
 		// oxlint-disable-next-line eslint/no-script-url
 		expect(resolveRedirect('javascript:alert(1)', ORIGIN)).toBe(AFTER_LOGIN);

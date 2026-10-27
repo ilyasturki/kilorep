@@ -18,6 +18,10 @@ export function resolveRedirect(value: string | null | undefined, origin: string
 		return AFTER_LOGIN;
 	}
 
+	if (target.pathname.startsWith('//')) {
+		return AFTER_LOGIN;
+	}
+
 	if (target.pathname.replace(/\/+$/u, '') === LOGIN) {
 		return AFTER_LOGIN;
 	}
