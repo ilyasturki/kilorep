@@ -9,6 +9,7 @@ import { SESSION_COOKIE, sessionCookieOptions, startWebSession } from '$lib/serv
 import { registrationOpen } from '$lib/server/config';
 import { getDatabase } from '$lib/server/db/client';
 import { requireGoogleClient } from '$lib/server/http/guards';
+import { notify } from '$lib/server/notify';
 import { DEVICE_REDIRECT } from '$lib/api/routes';
 import { resolveRedirect } from '$lib/api/redirect';
 
@@ -77,6 +78,14 @@ export const GET: RequestHandler = async ({ url, cookies, locals }) => {
 				? 'this server does not accept new accounts'
 				: 'that email address already belongs to another account'
 		);
+	}
+
+	if (resolution.outcome === 'created') {
+		notify({
+			title: 'New user',
+			message: `Signed up with Google from the ${challenge === undefined ? 'web' : 'app'}`,
+			tags: ['tada']
+		});
 	}
 
 	if (challenge !== undefined) {
