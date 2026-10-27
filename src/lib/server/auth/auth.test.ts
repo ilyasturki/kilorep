@@ -20,6 +20,8 @@ import {
 	emailProblem,
 	findUserByEmail,
 	findUserByGoogleSub,
+	freshSignIn,
+	googleReauth,
 	issueToken,
 	listTokens,
 	renameToken,
@@ -273,23 +275,70 @@ describe('setPassword', () => {
 	});
 });
 
-describe('currentPasswordRequired', () => {
-	test('asks a password-only account for the one it has', async () => {
-		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+const FRESH_SIGN_IN_MS = 10 * 60 * 1000;
 
-		expect(currentPasswordRequired(user)).toBe(true);
-		expect(publicUser(user)).toMatchObject({ hasPassword: true, currentPasswordRequired: true });
+function later(token: { createdAt: Date }, ms: number): Date {
+	return new Date(token.createdAt.getTime() + ms);
+}
+
+describe('freshSignIn', () => {
+	test('holds for a web sign-in until ten minutes have passed', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+		const { record } = issueToken(db, user.id, 'Web', 'web');
+
+		expect(freshSignIn(record, later(record, 0))).toBe(true);
+		expect(freshSignIn(record, later(record, FRESH_SIGN_IN_MS - 1))).toBe(true);
+		expect(freshSignIn(record, later(record, FRESH_SIGN_IN_MS))).toBe(false);
 	});
 
-	test('asks a Google-only account for nothing, because it holds nothing to ask for', () => {
+	test('never holds for a device or API token, which any credential can mint', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+		const { record: phone } = issueToken(db, user.id, 'Pixel 8', 'device');
+		const { record: mcp } = issueToken(db, user.id, 'MCP on the desk', 'api');
+
+		expect(freshSignIn(phone, later(phone, 0))).toBe(false);
+		expect(freshSignIn(mcp, later(mcp, 0))).toBe(false);
+	});
+});
+
+describe('currentPasswordRequired', () => {
+	test('asks a password-only account for the one it has, however fresh the sign-in', async () => {
+		const user = await createUser(db, 'lifter@example.com', PASSWORD);
+		const { record } = issueToken(db, user.id, 'Web', 'web');
+		const now = later(record, 0);
+
+		expect(currentPasswordRequired(user, record, now)).toBe(true);
+		expect(googleReauth(user, record, now)).toBe(false);
+		expect(publicUser(user, record, now)).toMatchObject({
+			hasPassword: true,
+			currentPasswordRequired: true,
+			googleReauth: false
+		});
+	});
+
+	test('asks a Google-only account for nothing, but for a fresh web sign-in', () => {
 		const created = resolveGoogleIdentity(db, { subject: 'sub-1', email: 'g@example.com' }, true);
 		const user = created.ok ? created.user : undefined;
+		const { record: web } = issueToken(db, user!.id, 'Web', 'web');
+		const { record: phone } = issueToken(db, user!.id, 'Pixel 8', 'device');
 
-		expect(currentPasswordRequired(user!)).toBe(false);
-		expect(publicUser(user!)).toMatchObject({ hasPassword: false, currentPasswordRequired: false });
+		expect(publicUser(user!, web, later(web, 0))).toMatchObject({
+			hasPassword: false,
+			currentPasswordRequired: false,
+			googleReauth: false
+		});
+		expect(publicUser(user!, web, later(web, FRESH_SIGN_IN_MS))).toMatchObject({
+			hasPassword: false,
+			currentPasswordRequired: false,
+			googleReauth: true
+		});
+		expect(publicUser(user!, phone, later(phone, 0))).toMatchObject({
+			currentPasswordRequired: false,
+			googleReauth: true
+		});
 	});
 
-	test('stops asking once Google is linked to an account that had a password', async () => {
+	test('lets only a fresh web sign-in stand in for a Google-linked password', async () => {
 		await createUser(db, 'lifter@example.com', PASSWORD);
 		const linked = resolveGoogleIdentity(
 			db,
@@ -299,8 +348,26 @@ describe('currentPasswordRequired', () => {
 
 		const user = linked.ok ? linked.user : undefined;
 		expect(user!.passwordHash).not.toBeNull();
-		expect(currentPasswordRequired(user!)).toBe(false);
-		expect(publicUser(user!)).toMatchObject({ hasPassword: true, currentPasswordRequired: false });
+
+		const { record: web } = issueToken(db, user!.id, 'Web', 'web');
+		const { record: phone } = issueToken(db, user!.id, 'Pixel 8', 'device');
+		const { record: mcp } = issueToken(db, user!.id, 'MCP on the desk', 'api');
+
+		expect(currentPasswordRequired(user!, web, later(web, 0))).toBe(false);
+		expect(publicUser(user!, web, later(web, 0))).toMatchObject({
+			hasPassword: true,
+			currentPasswordRequired: false,
+			googleReauth: false
+		});
+
+		expect(currentPasswordRequired(user!, web, later(web, FRESH_SIGN_IN_MS))).toBe(true);
+		expect(currentPasswordRequired(user!, phone, later(phone, 0))).toBe(true);
+		expect(currentPasswordRequired(user!, mcp, later(mcp, 0))).toBe(true);
+		expect(publicUser(user!, mcp, later(mcp, 0))).toMatchObject({
+			hasPassword: true,
+			currentPasswordRequired: true,
+			googleReauth: true
+		});
 	});
 });
 

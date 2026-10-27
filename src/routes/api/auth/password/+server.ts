@@ -1,6 +1,11 @@
 import { error } from '@sveltejs/kit';
 
-import { currentPasswordRequired, revokeOtherTokens, setPassword } from '$lib/server/auth/accounts';
+import {
+	currentPasswordRequired,
+	freshSignIn,
+	revokeOtherTokens,
+	setPassword
+} from '$lib/server/auth/accounts';
 import { passwordProblem, verifyPassword } from '$lib/server/auth/password';
 import {
 	acquireVerificationSlot,
@@ -30,7 +35,13 @@ export const POST: RequestHandler = async ({ request, locals, getClientAddress }
 
 	const db = getDatabase();
 
-	if (currentPasswordRequired(user)) {
+	const now = new Date();
+
+	if (user.passwordHash === null && !freshSignIn(token, now)) {
+		error(403, 'sign in with Google again on the web, then set the password');
+	}
+
+	if (currentPasswordRequired(user, token, now)) {
 		const current = requiredString(body, 'current');
 
 		const address = getClientAddress();

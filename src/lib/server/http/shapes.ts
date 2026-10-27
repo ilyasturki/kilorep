@@ -1,4 +1,4 @@
-import { currentPasswordRequired } from '../auth/accounts.ts';
+import { currentPasswordRequired, googleReauth } from '../auth/accounts.ts';
 
 import type { AuthToken, User } from '../db/schema.ts';
 
@@ -23,15 +23,17 @@ export type PublicUser = {
 	createdAt: number;
 	hasPassword: boolean;
 	currentPasswordRequired: boolean;
+	googleReauth: boolean;
 };
 
-export function publicUser(user: User): PublicUser {
+export function publicUser(user: User, token: AuthToken, now: Date = new Date()): PublicUser {
 	return {
 		id: user.id,
 		email: user.email,
 		createdAt: user.createdAt.getTime(),
 		hasPassword: user.passwordHash !== null,
-		currentPasswordRequired: currentPasswordRequired(user)
+		currentPasswordRequired: currentPasswordRequired(user, token, now),
+		googleReauth: googleReauth(user, token, now)
 	};
 }
 

@@ -75,8 +75,20 @@ export async function createUser(db: Database, email: string, password: string):
 	return insertUser(db, email, passwordHash, null);
 }
 
-export function currentPasswordRequired(user: User): boolean {
-	return user.passwordHash !== null && user.googleSub === null;
+const FRESH_SIGN_IN_MS = 10 * 60 * 1000;
+
+// `web` alone: POST /api/auth/tokens mints `device` and `api` tokens from any credential.
+export function freshSignIn(token: AuthToken, now: Date): boolean {
+	return token.kind === 'web' && now.getTime() - token.createdAt.getTime() < FRESH_SIGN_IN_MS;
+}
+
+export function currentPasswordRequired(user: User, token: AuthToken, now: Date): boolean {
+	return user.passwordHash !== null && (user.googleSub === null || !freshSignIn(token, now));
+}
+
+// True when a new Google sign-in on the web would waive the proof this credential lacks.
+export function googleReauth(user: User, token: AuthToken, now: Date): boolean {
+	return user.googleSub !== null && !freshSignIn(token, now);
 }
 
 export async function setPassword(db: Database, userId: string, password: string): Promise<void> {

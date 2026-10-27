@@ -8,5 +8,5 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = ({ locals }) => {
 	const { user, token } = requireCredential(locals);
 
-	return json({ user: publicUser(user), credential: publicToken(token, true) });
+	return json({ user: publicUser(user, token), credential: publicToken(token, true) });
 };

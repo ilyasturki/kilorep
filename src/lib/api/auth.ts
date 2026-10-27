@@ -8,6 +8,7 @@ export type Account = {
 	createdAt: number;
 	hasPassword: boolean;
 	currentPasswordRequired: boolean;
+	googleReauth: boolean;
 };
 
 export type PublicToken = {

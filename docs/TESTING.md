@@ -30,8 +30,8 @@ That revokes every credential the account owns, which is the command's default
 and the reason it is the recovery path: nothing here sends email, so a password
 nobody remembers is answered at the machine. `--keep-tokens` opts out when the
 change is a plain rotation. A Google-linked account has a second way, and it is
-deliberately unadvertised in the UI: sign in with Google, then set a new
-password from Settings, which asks for no old one.
+deliberately unadvertised in the UI: sign in with Google on the web, then within
+ten minutes set a new password from Settings, which asks for no old one.
 
 ## Why this used to fail
 
