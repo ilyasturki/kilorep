@@ -44,6 +44,7 @@
 <svelte:head>
 	<title>{title}</title>
 	<meta name="description" content={description} />
+	<link rel="canonical" href={`${site}/`} />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content={site} />
 	<meta property="og:title" content={title} />
