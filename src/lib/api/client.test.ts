@@ -7,11 +7,23 @@ import {
 	apiBase,
 	deviceToken,
 	lastServer,
+	movedServer,
 	request,
 	setApiBase,
 	setDeviceToken,
 	setLastServer
 } from './client.ts';
+
+describe('a saved server address', () => {
+	it('follows the hosted instance off its old domain', () => {
+		expect(movedServer('https://kilorep.com')).toBe('https://kilorep.ilyasturki.com');
+	});
+
+	it('leaves any other address alone', () => {
+		expect(movedServer('https://gym.example.com')).toBe('https://gym.example.com');
+		expect(movedServer(null)).toBeNull();
+	});
+});
 
 const CAPTURED: { url: string; init: RequestInit }[] = [];
 

@@ -31,14 +31,19 @@ export const DEFAULT_SERVER = import.meta.env.DEFAULT_SERVER;
 
 let restored = false;
 
+// kilorep.com is not renewed: installs that saved it must follow before it lapses on 2027-06-10.
+export function movedServer(base: string | null): string | null {
+	return base === 'https://kilorep.com' ? 'https://kilorep.ilyasturki.com' : base;
+}
+
 // Deferred to call time: the marketing page prerenders under Node, where
 // `localStorage` does not exist.
 function restore(): void {
 	if (import.meta.env.APP_BUILD && !restored) {
 		restored = true;
-		configured = localStorage.getItem(SERVER_KEY);
+		configured = movedServer(localStorage.getItem(SERVER_KEY));
 		credential = localStorage.getItem(TOKEN_KEY);
-		previous = localStorage.getItem(LAST_SERVER_KEY);
+		previous = movedServer(localStorage.getItem(LAST_SERVER_KEY));
 	}
 }
 

@@ -119,7 +119,7 @@ Create a token in Settings, under API tokens. It is shown once. Then point the c
 	"mcpServers": {
 		"kilorep": {
 			"type": "http",
-			"url": "https://kilorep.com/api/mcp",
+			"url": "https://kilorep.ilyasturki.com/api/mcp",
 			"headers": { "Authorization": "Bearer kr_..." }
 		}
 	}
@@ -129,7 +129,7 @@ Create a token in Settings, under API tokens. It is shown once. Then point the c
 Or, for Claude Code:
 
 ```sh
-claude mcp add --transport http kilorep https://kilorep.com/api/mcp \
+claude mcp add --transport http kilorep https://kilorep.ilyasturki.com/api/mcp \
   --header "Authorization: Bearer kr_..."
 ```
 

@@ -11,7 +11,7 @@ export default defineConfig({
 	},
 	define: {
 		'import.meta.env.DEFAULT_SERVER': JSON.stringify(
-			process.env.DEFAULT_SERVER ?? 'https://kilorep.com'
+			process.env.DEFAULT_SERVER ?? 'https://kilorep.ilyasturki.com'
 		),
 		'import.meta.env.APP_VERSION': JSON.stringify(pkg.version),
 		'import.meta.env.CHEAP_SCRYPT': 'true'
