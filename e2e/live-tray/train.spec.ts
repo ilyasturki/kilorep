@@ -180,11 +180,13 @@ test('the ages on idle Train move on with the clock', async ({ page, account: _a
 	await page.clock.install();
 	await page.goto('/train');
 
-	const ages = page.getByRole('main').getByText(/^(?:Trained )?(?:[1-9]|1[0-2])d ago$/u);
+	const ages = page.getByRole('main').getByText(/^(?:Today|(?:[1-9]|1[0-2])d ago)$/u);
 	await expect(ages.first()).toBeVisible();
 
 	const before = await ages.allTextContents();
-	const after = before.map((age) => age.replace(/\d+/u, (days) => String(Number(days) + 1)));
+	const after = before.map((age) =>
+		age === 'Today' ? '1d ago' : age.replace(/\d+/u, (days) => String(Number(days) + 1))
+	);
 
 	await page.clock.fastForward('24:00:00');
 	await expect(ages).toHaveText(after);
