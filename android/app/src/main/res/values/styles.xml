@@ -2,7 +2,7 @@
 <resources>
 
     <!-- Base application theme. DayNight rather than Capacitor's Light default:
-         DESIGN.md makes both themes first-class, and a light-locked shell puts a
+         both themes are first-class, and a light-locked shell puts a
          white frame around a dark app. -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>

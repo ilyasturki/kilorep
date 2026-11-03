@@ -19,8 +19,8 @@
         android:theme="@style/AppTheme">
 
         <!--
-            Portrait only. DESIGN.md's whole frame is "one hand, phone at arm's
-            length on a bench" and every screen is laid out for a single thumb
+            Portrait only. The app is built for one hand, phone at arm's length
+            on a bench, and every screen is laid out for a single thumb
             column; landscape would be a second layout nobody has designed and
             nobody in a gym asked for. Reversible in one line if that turns out
             to be wrong on a tablet.

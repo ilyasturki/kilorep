@@ -231,7 +231,7 @@
    It does not replace `press:bg-surface-2` — Material's model is both at once, a tint that
    lands instantly with a sweep crossing it, and the tint alone was the app's whole answer
    to a tap. The commit button keeps only the tint, marked by its absence of `data-ripple`:
-   it is the one control DESIGN.md singles out and its brightness press was chosen for it.
+   it is the tallest control, pressed with shaking hands, and its brightness press was chosen for it.
 
    `position: relative` is what makes the layer land on the host `ui/ripple.ts` picks, and it
    is written here rather than as a class because the attribute already says exactly which
