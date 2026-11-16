@@ -7,8 +7,10 @@ const MARKS = /^PR marks the set behind Heaviest ever\. Top e1RM marks/u;
 
 const PRS = /^Each PR is a new Heaviest ever on that exercise/u;
 
-// touchscreen.tap clicks in the instant it touches; bits-ui arms its outside-press listener 10ms after.
+// bits-ui listens for outside presses 1ms after the bubble opens, then arms the dismissing click 10ms
+// into the press; touchscreen.tap clicks in the instant it touches, and a busy page can tap before either.
 async function fingerTap(page: Page, x: number, y: number): Promise<void> {
+	await page.clock.runFor(100);
 	const cdp = await page.context().newCDPSession(page);
 	await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
 	await page.clock.runFor(100);
