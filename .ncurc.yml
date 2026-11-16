@@ -1,0 +1,3 @@
+reject:
+  # TypeScript 7 ships no JS API, which svelte-check needs to type-check components; drop once it supports TypeScript 7.
+  - typescript
