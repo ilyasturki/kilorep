@@ -473,7 +473,8 @@ function bodyweightLog(now: number): SeedBodyweight[] {
 	for (let back = 0; back < WEIGH_DAYS; back++) {
 		const away = back >= 23 && back <= 25;
 
-		if (cursor.getDay() !== 0 && !away) {
+		// Yesterday even on a Monday: the Weight screen's e2e reads it whatever the weekday.
+		if ((back === 0 || cursor.getDay() !== 0) && !away) {
 			const kg =
 				Math.round((END_KG + back * SLOPE_PER_DAY + WOBBLE[back % WOBBLE.length]) * 10) / 10;
 
